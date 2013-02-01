@@ -1,0 +1,5 @@
+../sealion/tmp
+../sealion/etc/certificates
+var/dbs/*
+.gitignore
+*~

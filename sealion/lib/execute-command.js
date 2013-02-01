@@ -4,8 +4,9 @@ var SendData = require('./send-data.js');
 
 var Sealion = { };
 
-Sealion.ExecuteCommand = function(sqliteObj ) {
+Sealion.ExecuteCommand = function(serviceDetails, sqliteObj) {
     this.result = new Result();
+    this.result.serviceDetails = serviceDetails;
     this.sqliteObj = sqliteObj;
 };
 
@@ -32,15 +33,14 @@ Sealion.ExecuteCommand.prototype.processCommandResult = function (error, stdout,
     });
 };
 
-Sealion.ExecuteCommand.prototype.executeCommand = function(command, options) {
+Sealion.ExecuteCommand.prototype.executeCommand = function(options) {
 
     var tempThis = this;
     
-    this.result.command = command;
     this.result.options = options;
     this.result.timeStamp = new Date().getTime();
     
-    var child = exec(command, options, function(error, stdout, stderr){
+    var child = exec(this.result.serviceDetails.command, { }, function(error, stdout, stderr){
         tempThis.processCommandResult(error, stdout, stderr);
     });
 };

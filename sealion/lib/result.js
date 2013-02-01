@@ -8,6 +8,7 @@ Sealion.Result = function ( ) {
     this.command = '';
     this.code = 0;
     this.output = '';
+    this.serviceDetails = { };
     this.filteredOutput = { };
 };
 

@@ -1,5 +1,5 @@
 var sqlite3 = require('sqlite3');
-
+var path = require('path');
 var Sealion = { };
 
 Sealion.createTableStmt = 
@@ -12,7 +12,7 @@ Sealion.createTableStmt =
 Sealion.insertDataStmt = 
         'INSERT INTO repository(date_time, result) VALUES(?,?)';
 
-Sealion.dbPath = '/home/webyog/sealionagent/var/dbs/RepositoryDB.db';
+Sealion.dbPath = path.resolve(__dirname, '../var/dbs/RepositoryDB.db');
 
 Sealion.StoreDataInDb = function () {
     var tempThis = this;

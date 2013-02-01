@@ -10,8 +10,8 @@ var sqliteObj = new Sqlite3();
 var socketObj = new SocketIo();
 
 Sealion.onExecuteTrigger = function(serviceDetails) { 
-    var ec = new ExecuteCommand(sqliteObj);
-    ec.executeCommand(serviceDetails.command, { });
+    var ec = new ExecuteCommand(serviceDetails, sqliteObj);
+    ec.executeCommand();
 }
 
 Sealion.interId = [];
