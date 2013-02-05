@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# to be replaced with /usr/local/
+installationPath=~/testSealionDir
+userName="sealionAgent"
+groupName="sealionAgent"
+untarFolderName="sealion-agent"
+installationDirectory=$installationPath"/"$untarFolderName
+
+# line to be removed, as folder path /usr/local already exists
+mkdir -p $installationPath
+
+function untar_payload()
+{
+    match=$(grep --text --line-number '^SEALION_TARFILE:$' $0 | cut -d ':' -f 1)
+    tarFileStart=$((match +1))
+    tail -n +$tarFileStart $0 | tar -xzf - -C $installationPath
+    if [ $? -ne 0 ]; then
+        echo "Sealion Agent: Exiting... Error while expanding files!!!"
+        exit 1001
+    fi
+}
+
+echo "Sealion Agent: Extracting Files..."
+    untar_payload
+echo "Sealion Agent: Files Extracted Successfully"
+
+echo "Sealion Agent: Creating Sealion Agent's User..."
+    sudo useradd -r -d $installationDirectory $userName
+    if [ $? -ne 0 ]; then
+        echo "Sealion Agent: Problem in creating user!!!"
+    fi
+    sudo chown -R $userName:$userName $installationDirectory 
+echo "Sealion Agent: Sealion Agent's User creation successful"
+
+echo "Sealion Agent: Starting agent..."
+    cd $installationDirectory
+    sudo -u $userName ./bin/nodejs/bin/node index.js
+echo "SealionAgent: Service is running, exiting installer"
+
+exit 0

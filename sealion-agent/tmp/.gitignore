@@ -1,0 +1,4 @@
+# Just leave the directory emplty except .gitignore
+*
+
+!.gitignore
