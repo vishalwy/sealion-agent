@@ -1,40 +1,54 @@
 #!/bin/bash
 
-# to be replaced with /usr/local/
-installationPath=~/testSealionDir
+installationPath=/usr/local
 userName="sealionAgent"
 groupName="sealionAgent"
 untarFolderName="sealion-agent"
 installationDirectory=$installationPath"/"$untarFolderName
+tmpFilePath=/tmp/sealion-agent
+tmpFileName=$tmpFilePath"/sealion-agent.tmp"
 
-# line to be removed, as folder path /usr/local already exists
-mkdir -p $installationPath
+agentToken=`cat $tmpFileName`
 
-function untar_payload()
-{
-    match=$(grep --text --line-number '^SEALION_TARFILE:$' $0 | cut -d ':' -f 1)
-    tarFileStart=$((match +1))
-    tail -n +$tarFileStart $0 | tar -xzf - -C $installationPath
-    if [ $? -ne 0 ]; then
-        echo "Sealion Agent: Exiting... Error while expanding files!!!"
-        exit 1001
-    fi
-}
+if [ $? -ne 0 ] ; then
+    echo "Sealion-Agent Error#400003: Error in reading agent token. terminating the process"
+    exit 400003    
+fi
 
 echo "Sealion Agent: Extracting Files..."
-    untar_payload
+    match=$(grep --text --line-number '^SEALION_TARFILE:$' $0 | cut -d ':' -f 1)
+    tarFileStart=$((match +1))
+    sudo tail -n +$tarFileStart $0 | tar -xzf - -C $installationPath --overwrite
+    if [ $? -ne 0 ]; then
+        echo "Sealion-Agent Error#400004: Exiting... Error while expanding files!!!"
+        exit 400004
+    fi
 echo "Sealion Agent: Files Extracted Successfully"
+
+rm -r $tmpFilePath
+if [ $? -ne 0 ] ; then
+    echo "Sealion-Agent Error#400006: Error in deleting temporary file"
+fi
 
 echo "Sealion Agent: Creating Sealion Agent's User..."
     sudo useradd -r -d $installationDirectory $userName
-    if [ $? -ne 0 ]; then
-        echo "Sealion Agent: Problem in creating user!!!"
+    tempVar=$?
+    if [ $tempVar -ne 0 ] ; then
+        if [ $tempVar -eq 9 ] ; then
+            echo "Sealion-Agent Warning: Username 'sealionAgent' already exists, using same user"
+        else
+            echo "Sealion-Agent Error#400005: Can't create user!!!"
+            sudo rm -r $installationDirectory
+            exit 400005
+        fi
     fi
-    sudo chown -R $userName:$userName $installationDirectory 
 echo "Sealion Agent: Sealion Agent's User creation successful"
 
 echo "Sealion Agent: Starting agent..."
     cd $installationDirectory
+    sudo echo $agentToken > etc/config/agent-config.json
+    sudo mkdir -p var/dbs/
+    sudo chown -R $userName:$userName $installationDirectory 
     sudo -u $userName ./bin/nodejs/bin/node index.js
 echo "SealionAgent: Service is running, exiting installer"
 

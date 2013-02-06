@@ -18,9 +18,7 @@ echo "Sealion Packager: Compressing file..."
 echo "Sealion Packager: File successfully compressed"
 
 echo "Sealion Packager: Generating installer..."
-    sed \
-        -e 's/binary=./binary=1/'\
-            $installerFile >$outputFile
+    cat $installerFile >$outputFile
     echo $tagName >>$outputFile
     cat $compressedFileName >>$outputFile
 echo "Sealion Packager: Installer generated"

@@ -1,5 +1,5 @@
-../sealion/tmp
-../sealion/etc/certificates
-var/dbs/*
+../sealion-agent/tmp
+../sealion-agent/etc/certificates
+var
 .gitignore
 *~
