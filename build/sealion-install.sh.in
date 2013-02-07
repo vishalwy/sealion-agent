@@ -27,7 +27,7 @@ echo "Sealion Agent: Files Extracted Successfully"
 
 rm -r $tmpFilePath
 if [ $? -ne 0 ] ; then
-    echo "Sealion-Agent Error#400006: Error in deleting temporary file"
+    echo "Sealion-Agent Error#400006: Error in deleting temporary files"
 fi
 
 echo "Sealion Agent: Creating Sealion Agent's User..."
