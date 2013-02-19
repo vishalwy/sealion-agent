@@ -1,6 +1,6 @@
-var https = require('https');
-var serverOption = require('../etc/config/server-config.js');
+var serverOption = require('../etc/config/server-config.json').serverDetails;
 var Sqlite3 = require('./sqlite-wrapper.js');
+var global = require('./global.js');
 
 var Sealion = { };
 var needCheckStoredData = true;
@@ -9,10 +9,11 @@ var needCheckStoredData = true;
 Sealion.SendData = function (sqliteObj) {
     this.dataToInsert = '';
     this.sqliteObj = sqliteObj;
+    this.activityID = '';
 };
 
 Sealion.SendData.prototype.handleError = function() {
-    this.sqliteObj.insertData(this.dataToInsert);
+    this.sqliteObj.insertData(this.dataToInsert, this.activityID);
     needCheckStoredData = true;
 }
 
@@ -22,7 +23,7 @@ Sealion.SendData.prototype.sendStoredData = function() {
     var tempThis = this;
     
     if(db) {
-        db.all('SELECT * FROM repository LIMIT 0,1', function(error, rows) {
+        db.all('SELECT row_id, activityID, date_time, result FROM repository LIMIT 0,1', function(error, rows) {
             
             if(error) {
                 needCheckStoredData = true;
@@ -30,14 +31,21 @@ Sealion.SendData.prototype.sendStoredData = function() {
             } else {
                 if(rows.length > 0) {
                     console.log(rows[0].row_id);
-                    var request = https.request(serverOption, function(response) {
-                        var post_response = '';        
-                        
-                        response.on('data', function(dataChunk) {
-                            post_response += dataChunk;
-                        });    
                     
-                        response.on('end', function(data) {
+                    var path = '/data/' + global.orgID + '/' + global.agentID + '/' + rows[0].activityID;
+                    var url = serverOption.sourceURL + path;
+                    var toSend = JSON.parse(rows[0].result);
+                    
+                    var sendOptions = {
+                          'uri' : url
+                        , 'json' : toSend
+                    };
+                    
+                    global.request.post(sendOptions, function(err, response, data) {
+                        if(err) {
+                            needCheckStoredData = true;
+                            console.log("Error in Sending stored data");
+                        } else {
                             if(response.statusCode === 200) {
                                 var tempSqliteObj = new Sqlite3();
                                 var tempDB = tempSqliteObj.getDb();
@@ -54,21 +62,8 @@ Sealion.SendData.prototype.sendStoredData = function() {
                             } else {
                                 needCheckStoredData = true;
                             }
-                        });
+                        }
                     });
-                
-                    request.on('error', function(error) {
-                        needCheckStoredData = true;
-                        console.log("Error in Sending stored data");
-                    });
-                    
-                    request.on('uncaughtException', function(error) {
-                        needCheckStoredData = true;
-                        console.log("uncaught exception in sending stored data");
-                    });
-                    
-                    request.write(rows[0].result);
-                    request.end();                        
                 } else {
                     needCheckStoredData = false;
                 }
@@ -78,33 +73,25 @@ Sealion.SendData.prototype.sendStoredData = function() {
     }
 }
 
-Sealion.SendData.prototype.dataSend = function (data) {
+Sealion.SendData.prototype.dataSend = function (result) {
     var tempThis = this;
     
-    this.dataToInsert = data;
+    var toSend = {'returnCode' : result.code
+                , 'timestamp' : result.timeStamp
+                , 'data' : result.output };
+                
+    this.dataToInsert = JSON.stringify(toSend);
+    this.activityID = result.activityDetails._id;
     
-    var tempFunction = function(error) {
-        tempThis.handleError();
+    
+    var path = '/data/' + global.orgID + '/' + global.agentID + '/' + result.activityDetails._id;
+    var url = serverOption.sourceURL + path;
+    var sendOptions = {
+          'uri' : url
+        , 'json' : toSend
     };
     
-    var request = https.request(serverOption, function(response) {
-        var post_response = '';
-        
-        response.on('data', function(dataChunk) {
-            post_response += dataChunk;
-        });
-        
-        response.on('end', function(data) {
-            if(response.statusCode !== 200) {
-                tempThis.handleError();
-            } else {
-                if(needCheckStoredData) {
-                    needCheckStoredData = false;
-                    tempThis.sendStoredData();
-                }
-            }
-        });
-        
+    global.request.post(sendOptions, function(err, response, data) {
         response.on('error', function(error) {
             tempThis.handleError();
         });
@@ -112,17 +99,19 @@ Sealion.SendData.prototype.dataSend = function (data) {
         response.on('uncaughtException', function(error) {
             tempThis.handleError();
         });
-    });
-    
-    request.write(data);
-    request.end();
-    
-    request.on('error', function(error) {
-        tempThis.handleError();
-    });
-    
-    request.on('uncaughtException', function(error) {
-        tempThis.handleError();
+        
+        if(err) {
+            tempThis.handleError();
+        } else {
+            if(response.statusCode === 200) {
+                if(needCheckStoredData) {
+                    needCheckStoredData = false;
+                    tempThis.sendStoredData();
+                }
+            } else {
+                tempThis.handleError();
+            }
+        }
     });
 }
 

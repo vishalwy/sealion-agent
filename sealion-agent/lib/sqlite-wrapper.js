@@ -6,11 +6,12 @@ Sealion.createTableStmt =
         'CREATE TABLE IF NOT EXISTS repository \
             ( \
             row_id INTEGER PRIMARY KEY, \
+            activityID TEXT, \
             date_time TEXT, \
             result TEXT )';
 
 Sealion.insertDataStmt = 
-        'INSERT INTO repository(date_time, result) VALUES(?,?)';
+        'INSERT INTO repository(date_time, activityID, result) VALUES(?,?,?)';
 
 Sealion.dbPath = path.resolve(__dirname, '../var/dbs/RepositoryDB.db');
 
@@ -48,7 +49,7 @@ Sealion.StoreDataInDb.prototype.closeDb = function( ) {
     this.db.close();
 }
 
-Sealion.StoreDataInDb.prototype.insertData = function (data) {
+Sealion.StoreDataInDb.prototype.insertData = function (data, activityID) {
     var tempThis = this;
     
     this.db.serialize( function () {
@@ -61,7 +62,7 @@ Sealion.StoreDataInDb.prototype.insertData = function (data) {
            console.log("sqlite prepared statement unhandled exception");  
         });
                 
-        stmt.run(new Date().toJSON(), data, function(error) {
+        stmt.run(new Date().toJSON(), activityID, data, function(error) {
             if(error) {
                 console.log("sqlite prepared statement stmt.run runtime error while inserting in DB");
             }

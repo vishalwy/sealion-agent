@@ -1,5 +1,5 @@
 var io = require('socket.io-client');
-var socketIoOptions = require('../etc/config/socket-io-config.js');
+var socketIoOptions = require('../etc/config/server-config.json').socketIODetails;
 
 var Sealion = { };
 
@@ -16,10 +16,14 @@ Sealion.HandleSocketIO.prototype.attemptReconnect = function() {
 }
 
 
-Sealion.HandleSocketIO.prototype.createConnection = function( ) {
+Sealion.HandleSocketIO.prototype.createConnection = function(cookieData) {
     var tempThis = this;
+    this.socket = io.connect(socketIoOptions.url, {'cookies':cookieData});
     
-    this.socket = io.connect(socketIoOptions.host/*, socketIoOptions.options*/);
+    
+    this.socket.on('connection', function(client) {
+        console.log("Connection Made");
+    });
     
     this.socket.on('connect', function() {
         console.log("Socket IO connected");
@@ -32,7 +36,8 @@ Sealion.HandleSocketIO.prototype.createConnection = function( ) {
     });
 
     this.socket.on('error', function(error) {
-        console.log("Error in Socket.io connection");
+        console.log(this.socket.handshake);
+        console.log("Error in Socket.io connection" + error);
     });
     
     this.socket.on('unhandledException', function(error) {

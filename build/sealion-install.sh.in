@@ -1,8 +1,8 @@
 #!/bin/bash
 
 installationPath=/usr/local
-userName="sealionAgent"
-groupName="sealionAgent"
+userName="sealion"
+groupName="sealion"
 untarFolderName="sealion-agent"
 installationDirectory=$installationPath"/"$untarFolderName
 tmpFilePath=/tmp/sealion-agent
@@ -48,7 +48,7 @@ echo "Sealion Agent: Starting agent..."
     cd $installationDirectory
     sudo echo $agentToken > etc/config/agent-config.json
     sudo mkdir -p var/dbs/
-    sudo chown -R $userName:$userName $installationDirectory 
+    sudo chown -R $userName:$userName $installationDirectory
     sudo -u $userName ./bin/nodejs/bin/node index.js
 echo "SealionAgent: Service is running, exiting installer"
 
