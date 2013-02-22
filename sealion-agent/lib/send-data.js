@@ -32,7 +32,8 @@ Sealion.SendData.prototype.sendStoredData = function() {
                 if(rows.length > 0) {
                     console.log(rows[0].row_id);
                     
-                    var path = '/data/' + global.orgID + '/' + global.agentID + '/' + rows[0].activityID;
+                    //var path = '/data/' + global.orgID + '/' + global.agentID + '/' + rows[0].activityID;
+                    var path = '/data/' + rows[0].activityID;
                     var url = serverOption.sourceURL + path;
                     var toSend = JSON.parse(rows[0].result);
                     
@@ -84,7 +85,8 @@ Sealion.SendData.prototype.dataSend = function (result) {
     this.activityID = result.activityDetails._id;
     
     
-    var path = '/data/' + global.orgID + '/' + global.agentID + '/' + result.activityDetails._id;
+    //var path = '/data/' + global.orgID + '/' + global.agentID + '/' + result.activityDetails._id;
+    var path = '/data/' + result.activityDetails._id;
     var url = serverOption.sourceURL + path;
     var sendOptions = {
           'uri' : url
@@ -92,24 +94,70 @@ Sealion.SendData.prototype.dataSend = function (result) {
     };
     
     global.request.post(sendOptions, function(err, response, data) {
-        response.on('error', function(error) {
-            tempThis.handleError();
-        });
-        
-        response.on('uncaughtException', function(error) {
-            tempThis.handleError();
-        });
         
         if(err) {
+            console.log(err);
             tempThis.handleError();
         } else {
-            if(response.statusCode === 200) {
-                if(needCheckStoredData) {
-                    needCheckStoredData = false;
-                    tempThis.sendStoredData();
-                }
-            } else {
-                tempThis.handleError();
+            var bodyJSON = response.body;
+
+            switch(response.statusCode) {
+                case 200 : {
+                        if(needCheckStoredData) {
+                            needCheckStoredData = false;
+                            tempThis.sendStoredData();
+                        }    
+                    }
+                    break;
+                case 400 : {
+                        if(bodyJSON.code) {
+                            switch(bodyJSON.code) {
+                                case 230011 : {
+                                        console.log('save data in database');
+                                    }
+                                    break;
+                                case 230014 : {
+                                        console.log('drop data because of incorrect activityID');
+                                    }
+                                    break;
+                                default : {
+                                        tempThis.handleError();    
+                                    }
+                            }
+                        } else {
+                            tempThis.handleError();
+                        }
+                    }
+                    break;
+                case 401 : {
+                        if(bodyJSON.code) {
+                            switch(bodyJSON.code) {
+                                case 230012 : {
+                                        console.log('agent not allowed to send data for this activity');
+                                    }
+                                    break;
+                                case 220002 : {
+                                        console.log('authentication failed');
+                                    }
+                                    break;
+                                default : {
+                                        tempThis.handleError();
+                                    }
+                                    break;
+                            }    
+                        } else {
+                            tempThis.handleError();
+                        }
+                    }
+                    break;
+                case 409 : {
+                        console.log('Duplicate Data');                   
+                    }
+                    break;
+                default: {
+                        tempThis.handleError();    
+                    }
+                    break;
             }
         }
     });

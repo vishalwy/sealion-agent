@@ -47,17 +47,6 @@ var startServices = function(activities) {
             );
         }
     }
-    
-    // check if socket.io is connected or not
-    Sealion.interId.push(
-        setInterval(
-            checkConnection,
-            216000000)
-        );
-}
-
-var checkConnection = function() {
-    socketObj.attemptReconnect();
 }
 
 var stopServices = function() {
