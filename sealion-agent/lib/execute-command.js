@@ -18,7 +18,7 @@ Sealion.ExecuteCommand.prototype.handleCommandOutput = function () {
     sendData.dataSend(this.result);
 };
 
-Sealion.ExecuteCommand.prototype.processCommandResult = function (error, stdout, stderror) {
+Sealion.ExecuteCommand.prototype.processCommandResult = function (error, stdout, stderr) {
     
     var tempThis = this;
 

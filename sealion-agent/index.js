@@ -1,8 +1,10 @@
-var services = require('./lib/execute-services.js');
+var authenticate = require('./lib/authentication.js').authenticate;
 //var authentication = require('./lib/authentication.js');
 
 //services.startServices();
 
-services.startListeningSocketIO();
+//services.startListeningSocketIO();
 
 //setTimeout(services.stopServices, 50000);
+
+authenticate();

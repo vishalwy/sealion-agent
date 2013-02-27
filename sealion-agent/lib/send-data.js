@@ -1,6 +1,9 @@
 var serverOption = require('../etc/config/server-config.json').serverDetails;
+var dataPath = require('../etc/config/paths-config.json').dataPath;
 var Sqlite3 = require('./sqlite-wrapper.js');
 var global = require('./global.js');
+var updateConfig = require('./update-config.js');
+var authenticate = require('./authentication.js');
 
 var Sealion = { };
 var needCheckStoredData = true;
@@ -17,6 +20,11 @@ Sealion.SendData.prototype.handleError = function() {
     needCheckStoredData = true;
 }
 
+Sealion.SendData.prototype.handleErroneousData = function( ) {
+    this.sqliteObj.insertErroneousData(this.dataToInsert, this.activityID);
+}
+
+
 Sealion.SendData.prototype.sendStoredData = function() {
     var sobj = new Sqlite3();
     var db = sobj.getDb();
@@ -30,10 +38,8 @@ Sealion.SendData.prototype.sendStoredData = function() {
                 console.log("error in retreiving data");
             } else {
                 if(rows.length > 0) {
-                    console.log(rows[0].row_id);
                     
-                    //var path = '/data/' + global.orgID + '/' + global.agentID + '/' + rows[0].activityID;
-                    var path = '/data/' + rows[0].activityID;
+                    var path = dataPath + rows[0].activityID;
                     var url = serverOption.sourceURL + path;
                     var toSend = JSON.parse(rows[0].result);
                     
@@ -77,16 +83,15 @@ Sealion.SendData.prototype.sendStoredData = function() {
 Sealion.SendData.prototype.dataSend = function (result) {
     var tempThis = this;
     
-    var toSend = {'returnCode' : result.code
+    var toSend = {
+                  'returnCode' : result.code
                 , 'timestamp' : result.timeStamp
                 , 'data' : result.output };
                 
     this.dataToInsert = JSON.stringify(toSend);
     this.activityID = result.activityDetails._id;
     
-    
-    //var path = '/data/' + global.orgID + '/' + global.agentID + '/' + result.activityDetails._id;
-    var path = '/data/' + result.activityDetails._id;
+    var path = dataPath + result.activityDetails._id;
     var url = serverOption.sourceURL + path;
     var sendOptions = {
           'uri' : url
@@ -113,11 +118,13 @@ Sealion.SendData.prototype.dataSend = function (result) {
                         if(bodyJSON.code) {
                             switch(bodyJSON.code) {
                                 case 230011 : {
-                                        console.log('save data in database');
+                                        console.log('Sealion-Agent Error#430001: Payload Missing');
+                                        tempThis.handleErroneousData();
                                     }
                                     break;
                                 case 230014 : {
-                                        console.log('drop data because of incorrect activityID');
+                                        console.log('Sealion-Agent Error#430002: improper ActivityID, updating config-file');
+                                        updateConfig();
                                     }
                                     break;
                                 default : {
@@ -133,11 +140,13 @@ Sealion.SendData.prototype.dataSend = function (result) {
                         if(bodyJSON.code) {
                             switch(bodyJSON.code) {
                                 case 230012 : {
-                                        console.log('agent not allowed to send data for this activity');
+                                        console.log('Sealion-Agent Error#430003: Agent not allowed to send data with ActivityID: ' + result.activityDetails._id + ', updating config-file');
+                                            updateConfig();
                                     }
                                     break;
-                                case 220002 : {
-                                        console.log('authentication failed');
+                                case 220001 : {
+                                        console.log('Sealion-Agent Error#430005: Authentication Failed, Needs reauthentication');
+                                        authenticate.reauthenticate();
                                     }
                                     break;
                                 default : {
@@ -151,7 +160,7 @@ Sealion.SendData.prototype.dataSend = function (result) {
                     }
                     break;
                 case 409 : {
-                        console.log('Duplicate Data');                   
+                        console.log('Sealion-Agent Error#430004: Duplicate data. Data dropped');                   
                     }
                     break;
                 default: {

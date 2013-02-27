@@ -9,9 +9,20 @@ Sealion.createTableStmt =
             activityID TEXT, \
             date_time TEXT, \
             result TEXT )';
+            
+Sealion.createErroneousTableStmt = 
+        'CREATE TABLE IF NOT EXISTS erroneousRepository \
+            ( \
+            row_id INTEGER PRIMARY KEY, \
+            activityID TEXT, \
+            date_time TEXT, \
+            result TEXT )';
 
 Sealion.insertDataStmt = 
         'INSERT INTO repository(date_time, activityID, result) VALUES(?,?,?)';
+
+Sealion.insertErroneousDataStmt = 
+        'INSERT INTO erroneousRepository(date_time, activityID, result) VALUES(?,?,?)';
 
 Sealion.dbPath = path.resolve(__dirname, '../var/dbs/RepositoryDB.db');
 
@@ -25,6 +36,12 @@ Sealion.StoreDataInDb = function () {
             tempThis.db.run('PRAGMA busy_timeout = 3000000');
                         
             tempThis.db.run(Sealion.createTableStmt, function(error) {
+                if(error) {
+                    console.log("Error in table creation!!!");
+                }
+            });
+            
+            tempThis.db.run(Sealion.createErroneousTableStmt, function(error) {
                 if(error) {
                     console.log("Error in table creation!!!");
                 }
@@ -48,6 +65,28 @@ Sealion.StoreDataInDb.prototype.getDb = function() {
 Sealion.StoreDataInDb.prototype.closeDb = function( ) {
     this.db.close();
 }
+
+Sealion.StoreDataInDb.prototype.insertErroneousData = function(data, activityID) {
+    var tempThis = this;
+    this.db.serialize( function () {
+    var stmt = tempThis.db.prepare(Sealion.insertErroneousDataStmt);
+        stmt.on('error', function(error) {
+            console.log("sqlite prepared statement runtime error while deleting from DB");
+        });
+        
+        stmt.on('unhandledException', function(error) {
+           console.log("sqlite prepared statement unhandled exception");  
+        });
+                
+        stmt.run(new Date().toJSON(), activityID, data, function(error) {
+            if(error) {
+                console.log("sqlite prepared statement stmt.run runtime error while inserting in DB");
+            }
+        });
+        stmt.finalize();
+    });
+}
+
 
 Sealion.StoreDataInDb.prototype.insertData = function (data, activityID) {
     var tempThis = this;

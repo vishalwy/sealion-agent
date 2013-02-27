@@ -1,5 +1,7 @@
 var SealionGlobal = {
-    request : { }
+      request : { }
+    , services : [ ]
+    , interId : [ ]
 };
 
 module.exports = SealionGlobal;

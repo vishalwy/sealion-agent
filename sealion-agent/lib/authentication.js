@@ -2,12 +2,14 @@ var fs = require('fs');
 var options = require('../etc/config/server-config.json').serverDetails;
 var services = require('./execute-services.js');
 var SealionGlobal = require('./global.js');
-var cookie = { };
+var authPath = require('../etc/config/paths-config.json').agentAuth;
 
 SealionGlobal.request = require('request');
 
 var attemptNumber = 0;
 var j = SealionGlobal.request.jar();
+var allowAuth = true;
+
 SealionGlobal.request = SealionGlobal.request.defaults({jar:j});
 
 function sendAuthRequest() {
@@ -22,15 +24,14 @@ function sendAuthRequest() {
         process.exit(1);
     }
 
-    options.path = '/sessions/agents';
-
-    var url = options.sourceURL + options.path;
+    var url = options.sourceURL + authPath;
     var sendOptions = {
           'uri' : url
         , 'json' : agentDetails
     };
     
     SealionGlobal.request.post( sendOptions , function(err, response, data) {
+        allowAuth = true;
         if(err) {
             console.log('Sealion-Agent Error#420001: Unable to create connection, attempting to reconnect');
             if(options.maxConnectAttempts < 0) {
@@ -46,16 +47,12 @@ function sendAuthRequest() {
             var bodyJSON = response.body;            
             switch(response.statusCode) {
                 case 200: {
-                        cookie = response.headers['set-cookie'];
+                        var cookie = response.headers['set-cookie'];
                         var temp = SealionGlobal.request.cookie(cookie[0]); 
                         j.add(temp);
                         
                         services.startListeningSocketIO(temp.name + "=" + temp.value);
-                        
-                            // code to update files will come here
-               
-                        //SealionGlobal.orgID = bodyJSON.orgID;
-                        //SealionGlobal.agentID = bodyJSON.agentID;
+                            // code to update agent files will come here
                
                         services.startServices(bodyJSON.activities);
                     }
@@ -85,7 +82,7 @@ function sendAuthRequest() {
     });
 }
 
-function authenticate() {
+var authenticate = function () {
     if(options.maxConnectAttempts < 0) {
         sendAuthRequest();    
     } else if(attemptNumber < options.maxConnectAttempts){ 
@@ -98,4 +95,15 @@ function authenticate() {
     }
 }
 
-authenticate();
+var reauthenticate = function() {
+    if(allowAuth) {
+        allowAuth = false;
+        services.stopServices();
+        process.nextTick( function() {
+            authenticate();
+        });
+    }
+}
+
+exports.authenticate = authenticate;
+exports.reauthenticate = reauthenticate;
