@@ -35,37 +35,37 @@ Sealion.HandleSocketIO.prototype.attemptReconnect = function(cookieData, self) {
 Sealion.HandleSocketIO.prototype.createConnection = function(cookieData) {
     var tempThis = this;
     
-    var onConnect = function() {
-        console.log("Socket IO connected");
-    }
-    
-    var onError = function(error) {
-        console.log("Error in Socket.io connection " + error);
-        if(tempThis.isReconnect) {
-            tempThis.attemptReconnect(cookieData, tempThis);
-        }
-    }
-    
-    var onUnhandledException = function(error) {
-        console.log('Socket.io Caught unhandled exception');
-        if(tempThis.isReconnect) {
-            tempThis.attemptReconnect(cookieData, tempThis);
-        }
-    }
-    
-    var onMsg = function(msg) {
-        console.log(msg);
-    }   
-    
-    var onDisconnect = function() {
-        console.log("Socket.io Connection disconnected");
-        if(tempThis.isReconnect) {
-            tempThis.attemptReconnect(cookieData, tempThis);
-        }
-    } 
-    
-    
     if(! this.socket) {
+    
+        var onConnect = function() {
+            console.log("Socket IO connected");
+        }
+    
+        var onError = function(error) {
+            console.log("Error in Socket.io connection " + error);
+            if(tempThis.isReconnect) {
+                tempThis.attemptReconnect(cookieData, tempThis);
+            }
+        }
+    
+        var onUnhandledException = function(error) {
+            console.log('Socket.io Caught unhandled exception');
+            if(tempThis.isReconnect) {
+                tempThis.attemptReconnect(cookieData, tempThis);
+            }
+        }
+    
+        var onMsg = function(msg) {
+            console.log(msg);
+        }   
+        
+        var onDisconnect = function() {
+            console.log("Socket.io Connection disconnected");
+            if(tempThis.isReconnect) {
+                tempThis.attemptReconnect(cookieData, tempThis);
+            }
+        } 
+        
         this.socket = io.connect(socketIoOptions.url, {'cookies':cookieData});
         this.socket.on('connect', onConnect);
         this.socket.on('error', onError);
@@ -84,7 +84,7 @@ Sealion.HandleSocketIO.prototype.createConnection = function(cookieData) {
 
 Sealion.HandleSocketIO.prototype.closeConnection = function( ) {
     this.isReconnect = false;
-    this.socket.disconnect();
+    this.socket.socket.disconnect();
 }
 
 module.exports = Sealion.HandleSocketIO; 

@@ -1,6 +1,7 @@
 var ExecuteCommand = require('./execute-command.js');
 var Sqlite3 = require('./sqlite-wrapper.js');
 var SocketIo = require('./handle-socket-io.js');
+var SendData = require('./send-data.js');
 var services = require('./global.js').services;
 var interId = require('./global.js').interId;
 
@@ -35,7 +36,7 @@ var addActivity = function(activity) {
     removeActivity(activity);
     interId[activity['_id']] = setInterval(
         Sealion.onExecuteTrigger,
-        activity['interval'] ? activity['interval'] * 1000 : Sealion.DEFAULT_INTERVAL, 
+        /*activity['interval'] ? activity['interval'] * 1000 : Sealion.DEFAULT_INTERVAL*/ 5000, 
         activity 
     );
     services[activity['_id']] = activity;
@@ -58,18 +59,22 @@ var startAllActivities = function(activities) {
             
             interId[services[counter]['_id']] = setInterval(
                     Sealion.onExecuteTrigger, 
-                    services[counter]['interval'] ? services[counter]['interval'] * 1000 : Sealion.DEFAULT_INTERVAL, 
+                    /*services[counter]['interval'] ? services[counter]['interval'] * 1000 : Sealion.DEFAULT_INTERVAL*/ 5000, 
                     services[counter]                    
                 );
         }
     }
+    
+    var sendData = new SendData(sqliteObj);
+    sendData.sendStoredData();
 }
 
 var stopAllActivities = function() {
     for(var counter in interId) {
         clearInterval(interId[counter]);
     }
-    sqliteObj.closeDb();
+    
+    //sqliteObj.closeDb();
     socketObj.closeConnection();
 }
 

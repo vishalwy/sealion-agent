@@ -50,7 +50,7 @@ Sealion.StoreDataInDb = function () {
     });
     
     this.db.on('error', function(error) { 
-        console.log("found error in database operation");
+        console.log("found error in database operation " + error);
     });
     
     this.db.on('unhandledException', function(error) {
@@ -90,7 +90,6 @@ Sealion.StoreDataInDb.prototype.insertErroneousData = function(data, activityID)
 
 Sealion.StoreDataInDb.prototype.insertData = function (data, activityID) {
     var tempThis = this;
-    
     this.db.serialize( function () {
         var stmt = tempThis.db.prepare(Sealion.insertDataStmt);
         stmt.on('error', function(error) {

@@ -20,8 +20,38 @@ Sealion.SendData.prototype.handleError = function() {
     needCheckStoredData = true;
 }
 
-Sealion.SendData.prototype.handleErroneousData = function( ) {
-    this.sqliteObj.insertErroneousData(this.dataToInsert, this.activityID);
+Sealion.SendData.prototype.handleErroneousData = function(data, activityID) {
+    this.sqliteObj.insertErroneousData(data, activityID);
+}
+
+Sealion.SendData.prototype.deleteDataWithActivityID = function(activityID) {
+    var tempSqliteObj = new Sqlite3();
+    var tempDB = tempSqliteObj.getDb();
+    tempDB.run('DELETE FROM repository WHERE activityID = ?', activityID, function(error){
+        if(error) {
+            console.log("error in deleting activity data from DB");
+        } else {
+            process.nextTick(function () {
+                self.sendStoredData();
+            });
+        }
+    });
+    tempSqliteObj.closeDb();
+}
+
+Sealion.SendData.prototype.deleteData = function(self, rowId) {
+    var tempSqliteObj = new Sqlite3();
+    var tempDB = tempSqliteObj.getDb();
+    tempDB.run('DELETE FROM repository WHERE row_id = ?', rowId, function(error){
+        if(error) {
+            console.log("error in deleting data from DB");
+        } else {
+            process.nextTick(function () {
+                self.sendStoredData();
+            });
+        }
+    });
+    tempSqliteObj.closeDb();
 }
 
 
@@ -53,21 +83,61 @@ Sealion.SendData.prototype.sendStoredData = function() {
                             needCheckStoredData = true;
                             console.log("Error in Sending stored data");
                         } else {
-                            if(response.statusCode === 200) {
-                                var tempSqliteObj = new Sqlite3();
-                                var tempDB = tempSqliteObj.getDb();
-                                tempDB.run('DELETE FROM repository WHERE row_id = ?', rows[0].row_id, function(error){
-                                    if(error) {
-                                        console.log("error in deleting data from DB");
-                                    } else {
-                                        process.nextTick(function () {
-                                            tempThis.sendStoredData();
-                                        });
+                            var bodyJSON = response.body;
+                            switch(response.statusCode) {
+                                case 200 : {
+                                        tempThis.deleteData(tempThis, rows[0].row_id);
                                     }
-                                });
-                                tempSqliteObj.closeDb();
-                            } else {
-                                needCheckStoredData = true;
+                                    break;
+                                case 400 : {
+                                        needCheckStoredData = true;
+                                        switch(bodyJSON.code) {
+                                            case 230011 : {
+                                                    console.log('Sealion-Agent Error#440001: Payload Missing in stored data');
+                                                    tempThis.handleErroneousData(rows[0].result, rows[0].activityID);        
+                                                    tempThis.deleteData(tempThis, rows[0].row_id); 
+                                                }
+                                                break;
+                                            case 230014 : {
+                                                    console.log('Sealion-Agent Error#440002: improper ActivityID, deleting from repository');
+                                                    tempThis.deleteDataWithActivityID(rows[0].activityID);
+                                                }
+                                                break;
+                                        }
+                                    }
+                                    break;
+                                case 401 : {
+                                        needCheckStoredData = true;
+                                        switch(bodyJSON.code) {
+                                            case 230012 : {
+                                                    console.log('Sealion-Agent Error#440003: Agent not allowed to send data with ActivityID: ' + 
+                                                            rows[0].activityID + ', deleting from repository');
+                                                    tempThis.deleteDataWithActivityID(rows[0].activityID);
+                                                }
+                                                break;
+                                            case 220001 : {
+                                                    console.log('Sealion-Agent Error#440005: Authentication Failed, Needs reauthentication');
+                                                    authenticate.reauthenticate();
+                                                }
+                                                break;
+                                        }
+                                    }
+                                    break;
+                                case 409 : {
+                                        needCheckStoredData = true;
+                                        switch(bodyJSON.code) {
+                                            case 230013 : {
+                                                    console.log('Sealion-Agent Error#440004: Duplicate data. Data deleted from repository');
+                                                    tempThis.deleteData(tempThis, rows[0].row_id);
+                                                }
+                                                break;
+                                        }
+                                    }
+                                    break;
+                                default : {
+                                    needCheckStoredData = true;
+                                    }
+                                    break;
                             }
                         }
                     });
@@ -101,7 +171,6 @@ Sealion.SendData.prototype.dataSend = function (result) {
     global.request.post(sendOptions, function(err, response, data) {
         
         if(err) {
-            console.log(err);
             tempThis.handleError();
         } else {
             var bodyJSON = response.body;
@@ -119,7 +188,7 @@ Sealion.SendData.prototype.dataSend = function (result) {
                             switch(bodyJSON.code) {
                                 case 230011 : {
                                         console.log('Sealion-Agent Error#430001: Payload Missing');
-                                        tempThis.handleErroneousData();
+                                        tempThis.handleErroneousData(tempThis.dataToInsert, tempThis.activityID);
                                     }
                                     break;
                                 case 230014 : {
