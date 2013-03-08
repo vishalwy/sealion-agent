@@ -1,10 +1,28 @@
+var daemon = require('daemon');
+var lockFile = require('./etc/config/lockfile.json').lockFile;
 var authenticate = require('./lib/authentication.js').authenticate;
-//var authentication = require('./lib/authentication.js');
+var fs = require('fs');
 
-//services.startServices();
+var args = process.argv;
+var dPID;
 
-//services.startListeningSocketIO();
+switch(args[2]) {
+    case "stop":
+        process.kill(parseInt(fs.readFileSync(lockFile)));
+        fs.unlinkSync(lockFile);
+        process.exit(0);
+    break;
 
-//setTimeout(services.stopServices, 50000);
+    case "start":
+        dPID = daemon.start('/tmp/sealion.log', '/tmp/sealion.err');
+        daemon.lock(lockFile);
+        fs.writeFileSync(lockFile, dPID.toString(), 'utf8');    
+    break;
+
+    default:
+        console.log('Usage: [start|stop]');
+        process.exit(0);
+    break;
+}
 
 authenticate();

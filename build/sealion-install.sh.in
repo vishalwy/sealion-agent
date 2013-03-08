@@ -47,9 +47,11 @@ echo "Sealion Agent: Sealion Agent's User creation successful"
 echo "Sealion Agent: Starting agent..."
     cd $installationDirectory
     sudo echo $agentToken > etc/config/agent-config.json
-    sudo mkdir -p var/dbs/
+    sudo mkdir -p var/dbs var/log /tmp/sealion-agent
     sudo chown -R $userName:$userName $installationDirectory
-    sudo -u $userName ./bin/nodejs/bin/node index.js
+    sudo mv etc/sealion /etc/init.d/sealion
+    sudo update-rc.d sealion defaults
+    sudo -u $userName service sealion start
 echo "SealionAgent: Service is running, exiting installer"
 
 exit 0

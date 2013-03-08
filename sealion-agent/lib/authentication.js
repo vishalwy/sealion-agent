@@ -13,6 +13,7 @@ var allowAuth = true;
 SealionGlobal.request = SealionGlobal.request.defaults({jar:j});
 
 function sendAuthRequest() {
+    
     var agentDetails= { };
     var msg ='';
     
@@ -30,6 +31,8 @@ function sendAuthRequest() {
         , 'json' : agentDetails
     };
     
+    
+        
     SealionGlobal.request.post( sendOptions , function(err, response, data) {
         allowAuth = true;
         if(err) {

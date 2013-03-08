@@ -23,11 +23,11 @@ Sealion.transformServiceJSON = function(servicesJSON) {
         var obj = { };
         obj.serviceName = activityDetails.serviceName;
         obj.activityName = activityDetails.activityName;
-        obj._id = activity;
+        obj._id = activityDetails._id;
         obj.command = activityDetails.command;
         obj.interval = activityDetails.interval;
 
-        services[activity] = obj;
+        services[activityDetails._id] = obj;
     }
 }
 
@@ -36,7 +36,7 @@ var addActivity = function(activity) {
     removeActivity(activity);
     interId[activity['_id']] = setInterval(
         Sealion.onExecuteTrigger,
-        /*activity['interval'] ? activity['interval'] * 1000 : Sealion.DEFAULT_INTERVAL*/ 5000, 
+        activity['interval'] ? activity['interval'] * 1000 : Sealion.DEFAULT_INTERVAL, 
         activity 
     );
     services[activity['_id']] = activity;
@@ -59,7 +59,7 @@ var startAllActivities = function(activities) {
             
             interId[services[counter]['_id']] = setInterval(
                     Sealion.onExecuteTrigger, 
-                    /*services[counter]['interval'] ? services[counter]['interval'] * 1000 : Sealion.DEFAULT_INTERVAL*/ 5000, 
+                    services[counter]['interval'] ? services[counter]['interval'] * 1000 : Sealion.DEFAULT_INTERVAL, 
                     services[counter]                    
                 );
         }
@@ -86,9 +86,16 @@ var closeSocketIO = function() {
     socketObj.closeConnection();
 }
 
+var closeAll = function(){
+    stopAllActivities();
+    sqliteObj.closeDb();
+    closeSocketIO();
+}
+
 exports.startServices = startAllActivities;
 exports.stopServices = stopAllActivities;
 exports.startListeningSocketIO = startListeningSocketIO;
 exports.closeSocketIO = closeSocketIO;
 exports.removeActivity = removeActivity;
 exports.addActivity = addActivity;
+exports.shutDown = closeAll;

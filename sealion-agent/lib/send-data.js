@@ -27,6 +27,8 @@ Sealion.SendData.prototype.handleErroneousData = function(data, activityID) {
 Sealion.SendData.prototype.deleteDataWithActivityID = function(activityID) {
     var tempSqliteObj = new Sqlite3();
     var tempDB = tempSqliteObj.getDb();
+    var self = this;
+    
     tempDB.run('DELETE FROM repository WHERE activityID = ?', activityID, function(error){
         if(error) {
             console.log("error in deleting activity data from DB");
@@ -42,6 +44,7 @@ Sealion.SendData.prototype.deleteDataWithActivityID = function(activityID) {
 Sealion.SendData.prototype.deleteData = function(self, rowId) {
     var tempSqliteObj = new Sqlite3();
     var tempDB = tempSqliteObj.getDb();
+    var self =  this;
     tempDB.run('DELETE FROM repository WHERE row_id = ?', rowId, function(error){
         if(error) {
             console.log("error in deleting data from DB");
@@ -155,6 +158,7 @@ Sealion.SendData.prototype.dataSend = function (result) {
     
     var toSend = {
                   'returnCode' : result.code
+                , 'returnCode' : result.code
                 , 'timestamp' : result.timeStamp
                 , 'data' : result.output };
                 
