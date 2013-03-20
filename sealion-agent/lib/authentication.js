@@ -3,6 +3,7 @@ var options = require('../etc/config/server-config.json').serverDetails;
 var services = require('./execute-services.js');
 var SealionGlobal = require('./global.js');
 var authPath = require('../etc/config/paths-config.json').agentAuth;
+var lockFile = require('../etc/config/lockfile.json').lockFile;
 
 SealionGlobal.request = require('request');
 
@@ -11,6 +12,10 @@ var j = SealionGlobal.request.jar();
 var allowAuth = true;
 
 SealionGlobal.request = SealionGlobal.request.defaults({jar:j});
+
+function cleanUp() {
+    fs.unlinkSync(lockFile);
+}
 
 function sendAuthRequest() {
     
@@ -22,6 +27,7 @@ function sendAuthRequest() {
     } catch (err) {
         console.log('Sealion-Agent Error#410001: Agent-token missing or can not be read');
         console.log('Bye!!! Terminating service');
+        cleanUp();
         process.exit(1);
     }
 
@@ -63,12 +69,14 @@ function sendAuthRequest() {
                 case 400: {
                         console.log('Sealion-Agent Error#410003: Bad request, agent-token missing in request');
                         console.log('Bye!!! Terminating service');
+                        cleanUp();
                         process.exit(1);
                     }
                     break;
                 case 401: {
                         console.log('Sealion-Agent Error#410002: Invalid Agent-token');
                         console.log('Bye!!! Terminating service');
+                        cleanUp();
                         process.exit(1);
                     }
                     break;    
@@ -77,6 +85,7 @@ function sendAuthRequest() {
                                 " Sealion Agent Error #" + bodyJSON.code + " : " + bodyJSON.message;
                         console.log(msg);
                         console.log('Bye!!! Terminating service');
+                        cleanUp();
                         process.exit(1);
                     }
                     break;
@@ -94,6 +103,7 @@ var authenticate = function () {
     } else {
         console.log('Sealion-Agent Error#410004: Max Recconect attempts exceeded. Unable to reconnect');
         console.log('Bye!!! Terminating service');
+        cleanUp();
         process.exit(1);    
     }
 }

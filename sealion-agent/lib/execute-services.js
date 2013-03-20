@@ -55,7 +55,7 @@ var startAllActivities = function(activities) {
     
     for(var counter in services) {
         if(services[counter]['activityName'] && services[counter]['command']) {
-            console.log("starting service for " + services[counter]['activityName']);
+            console.log('starting service for ' + services[counter]['activityName']);
             
             interId[services[counter]['_id']] = setInterval(
                     Sealion.onExecuteTrigger, 
@@ -71,11 +71,9 @@ var startAllActivities = function(activities) {
 
 var stopAllActivities = function() {
     for(var counter in interId) {
+        console.log('stopping service for ' + services[counter]['activityName']);
         clearInterval(interId[counter]);
     }
-    
-    //sqliteObj.closeDb();
-    socketObj.closeConnection();
 }
 
 var startListeningSocketIO = function(cookieData) {

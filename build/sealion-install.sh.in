@@ -7,12 +7,13 @@ untarFolderName="sealion-agent"
 installationDirectory=$installationPath"/"$untarFolderName
 tmpFilePath=/tmp/sealion-agent
 tmpFileName=$tmpFilePath"/sealion-agent.tmp"
+initFile=/etc/init.d/sealion
 
 agentToken=`cat $tmpFileName`
 
 if [ $? -ne 0 ] ; then
     echo "Sealion-Agent Error#400003: Error in reading agent token. terminating the process"
-    exit 400003    
+    exit 1    
 fi
 
 echo "Sealion Agent: Extracting Files..."
@@ -21,25 +22,25 @@ echo "Sealion Agent: Extracting Files..."
     sudo tail -n +$tarFileStart $0 | tar -xzf - -C $installationPath --overwrite
     if [ $? -ne 0 ]; then
         echo "Sealion-Agent Error#400004: Exiting... Error while expanding files!!!"
-        exit 400004
+        exit 1
     fi
 echo "Sealion Agent: Files Extracted Successfully"
 
-rm -r $tmpFilePath
+sudo rm -rf $tmpFilePath
 if [ $? -ne 0 ] ; then
     echo "Sealion-Agent Error#400006: Error in deleting temporary files"
 fi
 
 echo "Sealion Agent: Creating Sealion Agent's User..."
-    sudo useradd -r -d $installationDirectory $userName
+    sudo useradd -r -d $installationDirectory $userName 2> /dev/null
     tempVar=$?
     if [ $tempVar -ne 0 ] ; then
         if [ $tempVar -eq 9 ] ; then
-            echo "Sealion-Agent Warning: Username 'sealionAgent' already exists, using same user"
+            echo "Sealion-Agent Warning: Username 'sealion' already exists, using same user"
         else
             echo "Sealion-Agent Error#400005: Can't create user!!!"
             sudo rm -r $installationDirectory
-            exit 400005
+            exit 1
         fi
     fi
 echo "Sealion Agent: Sealion Agent's User creation successful"
@@ -47,11 +48,23 @@ echo "Sealion Agent: Sealion Agent's User creation successful"
 echo "Sealion Agent: Starting agent..."
     cd $installationDirectory
     sudo echo $agentToken > etc/config/agent-config.json
-    sudo mkdir -p var/dbs var/log /tmp/sealion-agent
+    sudo mkdir -p var/dbs
+    sudo mkdir -p var/log 
     sudo chown -R $userName:$userName $installationDirectory
-    sudo mv etc/sealion /etc/init.d/sealion
-    sudo update-rc.d sealion defaults
+    sudo cp -u etc/sealion $initFile
+    sudo chmod +x $initFile 
+    
+    # update initialization script
+    sudo update-rc.d sealion defaults 2>/dev/null 1>/dev/null
+    if [ $? -ne 0 ] ; then
+        echo "Sealion Agent: Unable to update init.d file. Quiting"
+        exit 1
+    fi
+    
     sudo -u $userName service sealion start
-echo "SealionAgent: Service is running, exiting installer"
-
+if [ $? -ne 0 ] ; then
+    echo "SealionAgent: Service can't be started due to errors" 
+else
+    echo "SealionAgent: Service is running, exiting installer"
+fi
 exit 0
