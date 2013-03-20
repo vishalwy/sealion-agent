@@ -1,0 +1,95 @@
+#! /bin/sh
+
+### BEGIN INIT INFO
+# Provides:          sealion
+# Required-Start:    
+# Required-Stop:     
+# Should-Start:      
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Sealion agent for 
+# Description:       Sealion is cloud based server debugging tool.
+#                    This is Sealion's Agent to send monitoring data to Sealion server
+# 
+### END INIT INFO
+
+# Author: Shubhansh Varshney <shubhansh.varshney@webyog.com>
+
+LOCK_FILE=/tmp/sealion.pid
+
+cd /usr/local/sealion-agent/
+
+#
+# Function that starts the sealion agent's service
+#
+do_start()
+{
+    if [ ! -f $LOCK_FILE ] 
+	then
+        ./bin/nodejs/bin/node index.js start
+        return 0
+	else
+	    return 1
+	fi
+}
+
+#
+# Function that stops the sealion agent's service
+#
+do_stop()
+{
+
+    if [ -f $LOCK_FILE ]
+	then
+	    ./bin/nodejs/bin/node index.js stop
+	    rm -f $LOCK_FILE
+	    return 0
+	else
+	    return 1
+	fi
+}
+
+
+case "$1" in
+  start)
+	do_start
+	case "$?" in
+		0) 
+		    echo "Sealion service started successfully" 
+		;;
+		1) 
+		    echo "Sealion service already running" 
+		;;
+	esac
+	;;
+  stop)
+	do_stop
+	case "$?" in
+		0) 
+		    echo "Sealion service stopped successfully" 
+		;;
+		1) 
+		    echo "Sealion service not running" 
+		;;
+	esac
+	;;
+  restart|force-reload)
+	do_stop
+	case "$?" in
+	  0)
+		do_start
+		case "$?" in
+			0) 
+			    echo "Sealion service restarted successfully"
+			;;
+			1) 
+			    echo "Old service is still running"
+			;;
+		esac
+		;;
+	  *)
+	      echo "Failed to stop Sealion Service"	
+	  ;;
+	esac
+    ;;
+esac
