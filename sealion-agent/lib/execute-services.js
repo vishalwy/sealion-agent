@@ -5,19 +5,17 @@ var SendData = require('./send-data.js');
 var services = require('./global.js').services;
 var interId = require('./global.js').interId;
 
-var Sealion = { };
-    
-Sealion.DEFAULT_INTERVAL = 300000;
+var DEFAULT_INTERVAL = 300000;
 
 var sqliteObj = new Sqlite3();
 var socketObj = new SocketIo();
 
-Sealion.onExecuteTrigger = function(activityDetails) {
+function onExecuteTrigger(activityDetails) {
     var ec = new ExecuteCommand(activityDetails, sqliteObj);
     ec.executeCommand({ });
 }
 
-Sealion.transformServiceJSON = function(servicesJSON) {
+function transformServiceJSON(servicesJSON) {
     for(var activity in servicesJSON) {
         var activityDetails = servicesJSON[activity];
         var obj = { };
@@ -31,18 +29,18 @@ Sealion.transformServiceJSON = function(servicesJSON) {
     }
 }
 
-var addActivity = function(activity) {
+function addActivity(activity) {
     console.log("adding activity" + activity['_id']);
     removeActivity(activity);
     interId[activity['_id']] = setInterval(
-        Sealion.onExecuteTrigger,
-        activity['interval'] ? activity['interval'] * 1000 : Sealion.DEFAULT_INTERVAL, 
+        onExecuteTrigger,
+        activity['interval'] ? activity['interval'] * 1000 : DEFAULT_INTERVAL, 
         activity 
     );
     services[activity['_id']] = activity;
 }
 
-var removeActivity = function(activity) {
+function removeActivity(activity) {
     console.log("removing activity" + activity['_id']);
     if(interId[activity['_id']]) {
         clearInterval(interId[activity['_id']]);
@@ -50,16 +48,16 @@ var removeActivity = function(activity) {
     }
 }
 
-var startAllActivities = function(activities) {
-    Sealion.transformServiceJSON(activities);
+function startAllActivities(activities) {
+    transformServiceJSON(activities);
     
     for(var counter in services) {
         if(services[counter]['activityName'] && services[counter]['command']) {
             console.log('starting service for ' + services[counter]['activityName']);
             
             interId[services[counter]['_id']] = setInterval(
-                    Sealion.onExecuteTrigger, 
-                    services[counter]['interval'] ? services[counter]['interval'] * 1000 : Sealion.DEFAULT_INTERVAL, 
+                    onExecuteTrigger, 
+                    services[counter]['interval'] ? services[counter]['interval'] * 1000 : DEFAULT_INTERVAL, 
                     services[counter]                    
                 );
         }
@@ -69,22 +67,22 @@ var startAllActivities = function(activities) {
     sendData.sendStoredData();
 }
 
-var stopAllActivities = function() {
+function stopAllActivities() {
     for(var counter in interId) {
         console.log('stopping service for ' + services[counter]['activityName']);
         clearInterval(interId[counter]);
     }
 }
 
-var startListeningSocketIO = function(cookieData) {
+function startListeningSocketIO(cookieData) {
     socketObj.createConnection(cookieData); 
 }
 
-var closeSocketIO = function() {
+function closeSocketIO() {
     socketObj.closeConnection();
 }
 
-var closeAll = function(){
+function closeAll(){
     stopAllActivities();
     sqliteObj.closeDb();
     closeSocketIO();

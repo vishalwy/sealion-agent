@@ -5,26 +5,25 @@ var global = require('./global.js');
 var updateConfig = require('./update-config.js');
 var authenticate = require('./authentication.js');
 
-var Sealion = { };
 var needCheckStoredData = true;
 
 
-Sealion.SendData = function (sqliteObj) {
+function SendData(sqliteObj) {
     this.dataToInsert = '';
     this.sqliteObj = sqliteObj;
     this.activityID = '';
 };
 
-Sealion.SendData.prototype.handleError = function() {
+SendData.prototype.handleError = function() {
     this.sqliteObj.insertData(this.dataToInsert, this.activityID);
     needCheckStoredData = true;
 }
 
-Sealion.SendData.prototype.handleErroneousData = function(data, activityID) {
+SendData.prototype.handleErroneousData = function(data, activityID) {
     this.sqliteObj.insertErroneousData(data, activityID);
 }
 
-Sealion.SendData.prototype.deleteDataWithActivityID = function(activityID) {
+SendData.prototype.deleteDataWithActivityID = function(activityID) {
     var tempSqliteObj = new Sqlite3();
     var tempDB = tempSqliteObj.getDb();
     var self = this;
@@ -41,7 +40,7 @@ Sealion.SendData.prototype.deleteDataWithActivityID = function(activityID) {
     tempSqliteObj.closeDb();
 }
 
-Sealion.SendData.prototype.deleteData = function(self, rowId) {
+SendData.prototype.deleteData = function(self, rowId) {
     var tempSqliteObj = new Sqlite3();
     var tempDB = tempSqliteObj.getDb();
     var self =  this;
@@ -58,7 +57,7 @@ Sealion.SendData.prototype.deleteData = function(self, rowId) {
 }
 
 
-Sealion.SendData.prototype.sendStoredData = function() {
+SendData.prototype.sendStoredData = function() {
     var sobj = new Sqlite3();
     var db = sobj.getDb();
     var tempThis = this;
@@ -153,12 +152,11 @@ Sealion.SendData.prototype.sendStoredData = function() {
     }
 }
 
-Sealion.SendData.prototype.dataSend = function (result) {
+SendData.prototype.dataSend = function (result) {
     var tempThis = this;
     
     var toSend = {
                   'returnCode' : result.code
-                , 'returnCode' : result.code
                 , 'timestamp' : result.timeStamp
                 , 'data' : result.output };
                 
@@ -245,4 +243,4 @@ Sealion.SendData.prototype.dataSend = function (result) {
     });
 }
 
-module.exports = Sealion.SendData;
+module.exports = SendData;

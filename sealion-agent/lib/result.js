@@ -1,7 +1,4 @@
-
-var Sealion = { };
-
-Sealion.Result = function ( ) {
+var Result = function ( ) {
     this.server = '';
     this.service = '';
     this.timeStamp = '';
@@ -12,8 +9,8 @@ Sealion.Result = function ( ) {
     this.filteredOutput = { };
 };
 
-Sealion.Result.prototype.filter = function( ) {
+Result.prototype.filter = function( ) {
 
 };
 
-module.exports = Sealion.Result;
+module.exports = Result;

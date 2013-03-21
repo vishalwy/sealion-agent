@@ -3,22 +3,20 @@ var exec = require ('child_process').exec;
 var SendData = require('./send-data.js');
 var global = require('./global.js');
 
-var Sealion = { };
-
-Sealion.ExecuteCommand = function(activityDetails, sqliteObj) {
+var ExecuteCommand = function(activityDetails, sqliteObj) {
     this.result = new Result();
     this.result.activityDetails = activityDetails;
     this.sqliteObj = sqliteObj;
 };
 
-Sealion.ExecuteCommand.prototype.handleCommandOutput = function () {
+ExecuteCommand.prototype.handleCommandOutput = function () {
     var tempThis = this;
     var sendData = new SendData(this.sqliteObj);
     
     sendData.dataSend(this.result);
 };
 
-Sealion.ExecuteCommand.prototype.processCommandResult = function (error, stdout, stderr) {
+ExecuteCommand.prototype.processCommandResult = function (error, stdout, stderr) {
     
     var tempThis = this;
 
@@ -34,7 +32,7 @@ Sealion.ExecuteCommand.prototype.processCommandResult = function (error, stdout,
     });
 };
 
-Sealion.ExecuteCommand.prototype.executeCommand = function(options) {
+ExecuteCommand.prototype.executeCommand = function(options) {
 
     var tempThis = this;
     
@@ -46,4 +44,4 @@ Sealion.ExecuteCommand.prototype.executeCommand = function(options) {
     });
 };
 
-module.exports = Sealion.ExecuteCommand;
+module.exports = ExecuteCommand;

@@ -1,14 +1,12 @@
 var io = require('socket.io-client');
 var socketIoOptions = require('../etc/config/server-config.json').socketIODetails;
 
-var Sealion = { };
-
-Sealion.HandleSocketIO = function ( ) {
+function HandleSocketIO( ) {
     this.attemptCount = 0;
     this.isReconnect = true;
 };
 
-Sealion.HandleSocketIO.prototype.reconnect = function(cookieData, self) {
+HandleSocketIO.prototype.reconnect = function(cookieData, self) {
     if(! self.socket) {
         self.createConnection(cookieData);       
     } else if( ! self.socket.socket.connected) {
@@ -18,7 +16,7 @@ Sealion.HandleSocketIO.prototype.reconnect = function(cookieData, self) {
     }
 } 
 
-Sealion.HandleSocketIO.prototype.attemptReconnect = function(cookieData, self) {
+HandleSocketIO.prototype.attemptReconnect = function(cookieData, self) {
     
     if(self.attemptCount >= socketIoOptions.reconnectInterval.length) {
         setTimeout(self.reconnect, 
@@ -32,7 +30,7 @@ Sealion.HandleSocketIO.prototype.attemptReconnect = function(cookieData, self) {
     }
 }
 
-Sealion.HandleSocketIO.prototype.createConnection = function(cookieData) {
+HandleSocketIO.prototype.createConnection = function(cookieData) {
     var tempThis = this;
     
     if(! this.socket) {
@@ -82,9 +80,9 @@ Sealion.HandleSocketIO.prototype.createConnection = function(cookieData) {
     this.attemptCount = 0;
 }
 
-Sealion.HandleSocketIO.prototype.closeConnection = function( ) {
+HandleSocketIO.prototype.closeConnection = function( ) {
     this.isReconnect = false;
     this.socket.socket.disconnect();
 }
 
-module.exports = Sealion.HandleSocketIO; 
+module.exports = HandleSocketIO;

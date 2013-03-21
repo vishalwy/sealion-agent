@@ -4,10 +4,9 @@ var removeActivity = require('./execute-services.js').removeActivity;
 var addActivity = require('./execute-services.js').addActivity;
 var configPath = require('../etc/config/paths-config.json').configPath;
 
-var Sealion = { };
 var allowUpdate = true;
 
-var transformBodyJSON = function(bodyJSON, services) { 
+function transformBodyJSON(bodyJSON, services) { 
     for(var activity in bodyJSON) {
         var activityDetails = bodyJSON[activity];
         var obj = new Object();
@@ -21,7 +20,7 @@ var transformBodyJSON = function(bodyJSON, services) {
     }
 }
 
-var isActivityDiff = function(source, target) {
+function isActivityDiff(source, target) {
     if(source.command !== target.command) {
         return true;
     }
@@ -33,7 +32,7 @@ var isActivityDiff = function(source, target) {
     return false;
 }
 
-var evaluateServices = function(services) {
+function evaluateServices(services) {
     for(var activityId in services) {
         if(globals.services[activityId]) {
             if(isActivityDiff(globals.services[activityId], services[activityId])) {
@@ -52,7 +51,7 @@ var evaluateServices = function(services) {
 }
 
 
-var updateConfig = function( ) {
+function updateConfig( ) {
     var self = this;
     var url = serverOptions.sourceURL + configPath;
     
@@ -74,7 +73,7 @@ var updateConfig = function( ) {
     }
 }
 
-var handleResponse = function(response) {
+function handleResponse(response) {
     var bodyJSON = response.body;
     var services = { };
     switch(response.statusCode) {

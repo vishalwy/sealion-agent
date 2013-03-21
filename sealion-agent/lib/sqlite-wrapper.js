@@ -1,8 +1,7 @@
 var sqlite3 = require('sqlite3');
 var path = require('path');
-var Sealion = { };
 
-Sealion.createTableStmt = 
+var createTableStmt = 
         'CREATE TABLE IF NOT EXISTS repository \
             ( \
             row_id INTEGER PRIMARY KEY, \
@@ -10,7 +9,7 @@ Sealion.createTableStmt =
             date_time TEXT, \
             result TEXT )';
             
-Sealion.createErroneousTableStmt = 
+var createErroneousTableStmt = 
         'CREATE TABLE IF NOT EXISTS erroneousRepository \
             ( \
             row_id INTEGER PRIMARY KEY, \
@@ -18,30 +17,30 @@ Sealion.createErroneousTableStmt =
             date_time TEXT, \
             result TEXT )';
 
-Sealion.insertDataStmt = 
+var insertDataStmt = 
         'INSERT INTO repository(date_time, activityID, result) VALUES(?,?,?)';
 
-Sealion.insertErroneousDataStmt = 
+var insertErroneousDataStmt = 
         'INSERT INTO erroneousRepository(date_time, activityID, result) VALUES(?,?,?)';
 
-Sealion.dbPath = path.resolve(__dirname, '../var/dbs/RepositoryDB.db');
+var dbPath = path.resolve(__dirname, '../var/dbs/RepositoryDB.db');
 
-Sealion.StoreDataInDb = function () {
+function StoreDataInDb() {
     var tempThis = this;
-    this.db = new sqlite3.Database(Sealion.dbPath, function(error) {
+    this.db = new sqlite3.Database(dbPath, function(error) {
         if(error) {
             console.log("error in opening db");
         } else {
             tempThis.db.run('PRAGMA journal_mode = WAL');
             tempThis.db.run('PRAGMA busy_timeout = 3000000');
                         
-            tempThis.db.run(Sealion.createTableStmt, function(error) {
+            tempThis.db.run(createTableStmt, function(error) {
                 if(error) {
                     console.log("Error in table creation!!!");
                 }
             });
             
-            tempThis.db.run(Sealion.createErroneousTableStmt, function(error) {
+            tempThis.db.run(createErroneousTableStmt, function(error) {
                 if(error) {
                     console.log("Error in table creation!!!");
                 }
@@ -58,18 +57,18 @@ Sealion.StoreDataInDb = function () {
     });    
 };
 
-Sealion.StoreDataInDb.prototype.getDb = function() {
+StoreDataInDb.prototype.getDb = function() {
     return this.db;
 }
 
-Sealion.StoreDataInDb.prototype.closeDb = function( ) {
+StoreDataInDb.prototype.closeDb = function( ) {
     this.db.close();
 }
 
-Sealion.StoreDataInDb.prototype.insertErroneousData = function(data, activityID) {
+StoreDataInDb.prototype.insertErroneousData = function(data, activityID) {
     var tempThis = this;
     this.db.serialize( function () {
-    var stmt = tempThis.db.prepare(Sealion.insertErroneousDataStmt);
+    var stmt = tempThis.db.prepare(insertErroneousDataStmt);
         stmt.on('error', function(error) {
             console.log("sqlite prepared statement runtime error while deleting from DB");
         });
@@ -88,10 +87,10 @@ Sealion.StoreDataInDb.prototype.insertErroneousData = function(data, activityID)
 }
 
 
-Sealion.StoreDataInDb.prototype.insertData = function (data, activityID) {
+StoreDataInDb.prototype.insertData = function (data, activityID) {
     var tempThis = this;
     this.db.serialize( function () {
-        var stmt = tempThis.db.prepare(Sealion.insertDataStmt);
+        var stmt = tempThis.db.prepare(insertDataStmt);
         stmt.on('error', function(error) {
             console.log("sqlite prepared statement runtime error while deleting from DB");
         });
@@ -109,4 +108,4 @@ Sealion.StoreDataInDb.prototype.insertData = function (data, activityID) {
     });
 };
 
-module.exports = Sealion.StoreDataInDb;
+module.exports = StoreDataInDb;

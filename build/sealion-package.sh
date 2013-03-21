@@ -1,10 +1,11 @@
 #!/bin/bash
 
 # variable initialization
+version="-v"`cat version`
 compressedFileName=tmp/sealion-agent.tar.gz
 compressedFileFolder=tmp/
 folderPath=../sealion-agent/
-outputFile=../release/sealion-agent.sh
+outputFile=../release/sealion-agent$version.sh
 installerFile=sealion-install.sh.in
 ignoreFile=.tarignore
 tagName="SEALION_TARFILE:"

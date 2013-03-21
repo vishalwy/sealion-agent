@@ -94,7 +94,7 @@ function sendAuthRequest() {
     });
 }
 
-var authenticate = function () {
+function authenticate() {
     if(options.maxConnectAttempts < 0) {
         sendAuthRequest();    
     } else if(attemptNumber < options.maxConnectAttempts){ 
@@ -108,7 +108,7 @@ var authenticate = function () {
     }
 }
 
-var reauthenticate = function() {
+function reauthenticate() {
     if(allowAuth) {
         allowAuth = false;
         services.stopServices();
