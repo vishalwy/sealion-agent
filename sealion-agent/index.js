@@ -30,6 +30,16 @@ switch(args[2]) {
 
     case "start":
         try {
+            var data = fs.readFileSync(lockFile);
+            console.log('Sealion service already running');
+            process.exit(1);
+        } catch (err) {
+            if(err.code != 'ENOENT') {
+                console.log('Error in reading lock file ' + err);
+            }
+        }
+    
+        try {
             dPID = daemon.start('/tmp/sealion.log', '/tmp/sealion.err');
             daemon.lock(lockFile);
             fs.writeFileSync(lockFile, dPID.toString(), 'utf8');

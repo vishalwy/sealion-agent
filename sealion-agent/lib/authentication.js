@@ -8,10 +8,11 @@ var lockFile = require('../etc/config/lockfile.json').lockFile;
 SealionGlobal.request = require('request');
 
 var attemptNumber = 0;
-var j = SealionGlobal.request.jar();
+// var j = SealionGlobal.request.jar();
 var allowAuth = true;
 
-SealionGlobal.request = SealionGlobal.request.defaults({jar:j});
+
+//SealionGlobal.request = SealionGlobal.request.defaults({jar:j});
 
 function cleanUp() {
     fs.unlinkSync(lockFile);
@@ -58,11 +59,11 @@ function sendAuthRequest() {
                 case 200: {
                         var cookie = response.headers['set-cookie'];
                         var temp = SealionGlobal.request.cookie(cookie[0]); 
-                        j.add(temp);
-                        
+                        //j.add(temp);
+                        SealionGlobal.sessionCookie = temp.name + "=" + temp.value;
                         services.startListeningSocketIO(temp.name + "=" + temp.value);
                             // code to update agent files will come here
-               
+                        
                         services.startServices(bodyJSON.activities);
                     }
                     break;
@@ -108,8 +109,8 @@ function authenticate() {
     }
 }
 
-function reauthenticate() {
-    if(allowAuth) {
+function reauthenticate(ssId) {
+    if(allowAuth && ssId == SealionGlobal.sessionCookie) {
         allowAuth = false;
         services.stopServices();
         process.nextTick( function() {

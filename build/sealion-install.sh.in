@@ -26,11 +26,6 @@ echo "Sealion Agent: Extracting Files..." >&1
     fi
 echo "Sealion Agent: Files Extracted Successfully" >&1
 
-sudo rm -rf $tmpFilePath
-if [ $? -ne 0 ] ; then
-    echo "Sealion-Agent Error#400006: Error in deleting temporary files" >&2
-fi
-
 echo "Sealion Agent: Creating Sealion Agent's User..." >&1
     sudo useradd -r -d $installationDirectory $userName 2> /dev/null
     tempVar=$?
@@ -45,27 +40,9 @@ echo "Sealion Agent: Creating Sealion Agent's User..." >&1
     fi
 echo "Sealion Agent: Sealion Agent's User creation successful" >&1
 
-echo "Sealion Agent: Starting agent..." >&1
-    cd $installationDirectory
-    sudo echo $agentToken > etc/config/agent-config.json
-    sudo mkdir -p var/dbs
-    sudo mkdir -p var/log 
-    sudo chown -R $userName:$userName $installationDirectory
-    sudo cp -u etc/sealion $initFile
-    sudo chmod +x $initFile 
-    
-    # update initialization script
-    sudo update-rc.d sealion defaults 2>/dev/null 1>/dev/null
-    if [ $? -ne 0 ] ; then
-        echo "Sealion Agent: Unable to update init.d file. Quiting" >&2
-        exit 1
-    fi
-    
-    sudo -u $userName /etc/init.d/sealion start
-if [ $? -ne 0 ] ; then
-    echo "SealionAgent: Service can't be started due to errors" >&2
-    exit 1 
-else
-    echo "SealionAgent: Service is running, exiting installer" >&1
-    exit 0
-fi
+cd $installationDirectory
+sudo echo $agentToken > etc/config/agent-config.json
+sudo mkdir -p var/dbs
+sudo mkdir -p var/log 
+sudo chown -R $userName:$userName $installationDirectory
+exit 0

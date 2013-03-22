@@ -74,7 +74,7 @@ SendData.prototype.sendStoredData = function() {
                     var path = dataPath + rows[0].activityID;
                     var url = serverOption.sourceURL + path;
                     var toSend = JSON.parse(rows[0].result);
-                    
+                    var sessionId = global.sessionCookie;
                     var sendOptions = {
                           'uri' : url
                         , 'json' : toSend
@@ -119,7 +119,7 @@ SendData.prototype.sendStoredData = function() {
                                                 break;
                                             case 220001 : {
                                                     console.log('Sealion-Agent Error#440005: Authentication Failed, Needs reauthentication');
-                                                    authenticate.reauthenticate();
+                                                    authenticate.reauthenticate(sessionId);
                                                 }
                                                 break;
                                         }
@@ -165,10 +165,12 @@ SendData.prototype.dataSend = function (result) {
     
     var path = dataPath + result.activityDetails._id;
     var url = serverOption.sourceURL + path;
+    var sessionId = global.sessionCookie;
     var sendOptions = {
           'uri' : url
         , 'json' : toSend
     };
+    
     
     global.request.post(sendOptions, function(err, response, data) {
         
@@ -217,7 +219,8 @@ SendData.prototype.dataSend = function (result) {
                                     break;
                                 case 220001 : {
                                         console.log('Sealion-Agent Error#430005: Authentication Failed, Needs reauthentication');
-                                        authenticate.reauthenticate();
+                                        tempThis.handleError();
+                                        authenticate.reauthenticate(sessionId);
                                     }
                                     break;
                                 default : {
