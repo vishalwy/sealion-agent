@@ -1,15 +1,13 @@
 #!/bin/bash
 
-installationPath=/usr/local
-userName="sealion"
-groupName="sealion"
-untarFolderName="sealion-agent"
-installationDirectory=$installationPath"/"$untarFolderName
-tmpFilePath=/tmp/sealion-agent
-tmpFileName=$tmpFilePath"/sealion-agent.tmp"
-initFile=/etc/init.d/sealion
+INSTALLATION_PATH=/usr/local
+USER_NAME="sealion"
+UNTAR_FOLDER_NAME="sealion-agent"
+INSTALLATION_DIRECTORY=$INSTALLATION_PATH"/"$UNTAR_FOLDER_NAME
+TMP_FILE_PATH=/tmp/sealion-agent
+TMP_FILE_NAME=$TMP_FILE_PATH"/sealion-agent.tmp"
 
-agentToken=`cat $tmpFileName`
+AGENT_TOKEN=`cat $TMP_FILE_NAME`
 
 if [ $? -ne 0 ] ; then
     echo "Sealion-Agent Error#400003: Error in reading agent token. terminating the process" >&2
@@ -17,32 +15,17 @@ if [ $? -ne 0 ] ; then
 fi
 
 echo "Sealion Agent: Extracting Files..." >&1
-    match=$(grep --text --line-number '^SEALION_TARFILE:$' $0 | cut -d ':' -f 1)
-    tarFileStart=$((match +1))
-    sudo tail -n +$tarFileStart $0 | tar -xzf - -C $installationPath --overwrite
+    MATCH=$(grep --text --line-number '^SEALION_TARFILE:$' $0 | cut -d ':' -f 1)
+    TAR_FILE_START=$((MATCH +1))
+    sudo tail -n +$TAR_FILE_START $0 | tar -xzf - -C $INSTALLATION_PATH --overwrite
     if [ $? -ne 0 ]; then
         echo "Sealion-Agent Error#400004: Exiting... Error while expanding files!!!" >&2
         exit 1
     fi
 echo "Sealion Agent: Files Extracted Successfully" >&1
 
-echo "Sealion Agent: Creating Sealion Agent's User..." >&1
-    sudo useradd -r -d $installationDirectory $userName 2> /dev/null
-    tempVar=$?
-    if [ $tempVar -ne 0 ] ; then
-        if [ $tempVar -eq 9 ] ; then
-            echo "Sealion-Agent Warning: Username 'sealion' already exists, using same user" >&1
-        else
-            echo "Sealion-Agent Error#400005: Can't create user!!!" >&2
-            sudo rm -r $installationDirectory
-            exit 1
-        fi
-    fi
-echo "Sealion Agent: Sealion Agent's User creation successful" >&1
-
-cd $installationDirectory
-sudo echo $agentToken > etc/config/agent-config.json
-sudo mkdir -p var/dbs
-sudo mkdir -p var/log 
-sudo chown -R $userName:$userName $installationDirectory
+cd $INSTALLATION_DIRECTORY
+echo $AGENT_TOKEN > etc/config/agent-config.json
+mkdir -p var/dbs
+mkdir -p var/log
 exit 0

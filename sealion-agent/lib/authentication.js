@@ -4,6 +4,7 @@ var services = require('./execute-services.js');
 var SealionGlobal = require('./global.js');
 var authPath = require('../etc/config/paths-config.json').agentAuth;
 var lockFile = require('../etc/config/lockfile.json').lockFile;
+var updateAgent = require('./update-agent.js');
 
 SealionGlobal.request = require('request');
 
@@ -112,6 +113,7 @@ function authenticate() {
 function reauthenticate(ssId) {
     if(allowAuth && ssId == SealionGlobal.sessionCookie) {
         allowAuth = false;
+        SealionGlobal.sessionCookie='';
         services.stopServices();
         process.nextTick( function() {
             authenticate();

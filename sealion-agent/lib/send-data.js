@@ -80,6 +80,11 @@ SendData.prototype.sendStoredData = function() {
                         , 'json' : toSend
                     };
                     
+                    if(sessionId == '') {
+                        needCheckStoredData = true;
+                        return;
+                    }
+                    
                     global.request.post(sendOptions, function(err, response, data) {
                         if(err) {
                             needCheckStoredData = true;
@@ -170,6 +175,11 @@ SendData.prototype.dataSend = function (result) {
           'uri' : url
         , 'json' : toSend
     };
+    
+    if(sessionId == '') {
+        tempThis.handleError();
+        return;
+    }
     
     
     global.request.post(sendOptions, function(err, response, data) {

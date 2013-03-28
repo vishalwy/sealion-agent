@@ -26,7 +26,7 @@ do_start()
 {
     if [ ! -f $LOCK_FILE ] 
 	then
-        ./bin/nodejs/bin/node index.js start
+        ./bin/node index.js start
         return 0
 	else
 	    return 1
@@ -41,7 +41,7 @@ do_stop()
 
     if [ -f $LOCK_FILE ]
 	then
-	    ./bin/nodejs/bin/node index.js stop
+	    ./bin/node index.js stop
 	    rm -f $LOCK_FILE
 	    return 0
 	else

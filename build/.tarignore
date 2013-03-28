@@ -2,6 +2,7 @@
 ../sealion-agent/etc/certificates
 ../sealion-agent/lib/test_socket_io.js
 ../sealion-agent/lib/socket-io-testing.js
+../sealion-agent/bin/nodejs
 var
 .gitignore
 *~

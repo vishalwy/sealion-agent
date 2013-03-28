@@ -7,7 +7,7 @@ var fs = require('fs');
 var args = process.argv;
 var dPID;
 
-if (process.getuid && process.setuid) {
+if (process.setuid) {
   try {
     process.setuid('sealion');
   } catch (err) {
@@ -29,14 +29,10 @@ switch(args[2]) {
     break;
 
     case "start":
-        try {
-            var data = fs.readFileSync(lockFile);
+        var exist = fs.existsSync(lockFile);
+        if(exist){
             console.log('Sealion service already running');
             process.exit(1);
-        } catch (err) {
-            if(err.code != 'ENOENT') {
-                console.log('Error in reading lock file ' + err);
-            }
         }
     
         try {
