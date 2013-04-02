@@ -1,8 +1,7 @@
 ../sealion-agent/tmp
 ../sealion-agent/etc/certificates
-../sealion-agent/lib/test_socket_io.js
-../sealion-agent/lib/socket-io-testing.js
 ../sealion-agent/bin/nodejs
-var
+../sealion-agent/var/dbs/*
+../sealion-agent/var/log/*
 .gitignore
 *~

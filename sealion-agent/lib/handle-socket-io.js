@@ -71,7 +71,9 @@ HandleSocketIO.prototype.createConnection = function(cookieData) {
         this.socket.on('msg', onMsg);
         this.socket.on('disconnect', onDisconnect);
     } else {
-        this.socket.socket.disconnect();
+        if(this.socket.socket.connected) {
+           this.socket.socket.disconnect();
+        }
         this.socket.socket.setCookie({'cookies':cookieData});
         this.socket.socket.connect();
     }
@@ -82,7 +84,9 @@ HandleSocketIO.prototype.createConnection = function(cookieData) {
 
 HandleSocketIO.prototype.closeConnection = function( ) {
     this.isReconnect = false;
-    this.socket.socket.disconnect();
+    if(this.socket.socket.connected) {
+        this.socket.socket.disconnect();
+    }
 }
 
 module.exports = HandleSocketIO;

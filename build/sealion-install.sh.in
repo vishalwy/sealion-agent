@@ -25,7 +25,5 @@ echo "Sealion Agent: Extracting Files..." >&1
 echo "Sealion Agent: Files Extracted Successfully" >&1
 
 cd $INSTALLATION_DIRECTORY
-echo $AGENT_TOKEN > etc/config/agent-config.json
-mkdir -p var/dbs
-mkdir -p var/log
+sudo -u $USER_NAME echo $AGENT_TOKEN > etc/config/agent-config.json
 exit 0

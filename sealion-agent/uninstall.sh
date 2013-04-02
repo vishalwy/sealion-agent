@@ -1,12 +1,17 @@
+SYMLINK_PATHS=( K K S S S S K )
+
+clean_up()
+{
+    for (( i = 0 ; i < $1 ; i++ )) 
+    do
+        sudo rm -f /etc/rc$i.d/${SYMLINK_PATHS[$i]}20sealion
+    done
+}
+
 sudo service sealion stop 2> /dev/null
 
 echo "Sealion Agent: Removing initialization files"
-    sudo update-rc.d -f sealion remove 2> /dev/null 1>/dev/null
-    if [ $? -ne 0 ] ; then
-        echo "Sealion Agent: init.d links not removed"
-    else
-        echo "Sealion Agent: init.d links removed"
-    fi
+    clean_up 7
     
     sudo rm -f /etc/init.d/sealion
     if [ $? -ne 0 ] ; then

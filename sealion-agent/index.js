@@ -36,7 +36,7 @@ switch(args[2]) {
         }
     
         try {
-            dPID = daemon.start('/tmp/sealion.log', '/tmp/sealion.err');
+            dPID = daemon.start('var/log/sealion.log', 'var/log/sealion.err');
             daemon.lock(lockFile);
             fs.writeFileSync(lockFile, dPID.toString(), 'utf8');
         } catch(err) {
