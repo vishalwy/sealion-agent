@@ -13,6 +13,7 @@ var lockFile = require('./etc/config/lockfile.json').lockFile;
 var authenticate = require('./lib/authentication.js').authenticate;
 var shutDown = require('./lib/execute-services.js').shutDown;
 var fs = require('fs');
+var logData = require('./lib/log.js');
 
 var args = process.argv;
 var dPID;
@@ -26,7 +27,7 @@ if (process.setuid) {
   try {
     process.setuid('sealion');
   } catch (err) {
-    console.log('Failed to set uid. ' + err);
+    logData('Failed to set uid. ' + err);
     process.exit(1);
   }
 }
@@ -41,7 +42,7 @@ switch(args[2]) {
             fs.unlinkSync(lockFile);
             process.exit(0);
         } catch (err) {
-            console.log('Failed to stop process. ' + err);
+            logData('Failed to stop process. ' + err);
             process.exit(1);
         }
     break;
@@ -50,7 +51,7 @@ switch(args[2]) {
         // check if lock file exists, if yes then exit, as instance already running
         var exist = fs.existsSync(lockFile);
         if(exist){
-            console.log('Sealion service already running');
+            logData('Sealion service already running');
             process.exit(1);
         }
     
@@ -60,13 +61,13 @@ switch(args[2]) {
             daemon.lock(lockFile);
             fs.writeFileSync(lockFile, dPID.toString(), 'utf8');
         } catch(err) {
-            console.log('Failed to start service. ' + err);
+            logData('Failed to start service. ' + err);
             process.exit(1);
         }    
     break;
 
     default:
-        console.log('Usage: [start|stop]');
+        logData('Usage: [start|stop]');
         process.exit(0);
     break;
 }
@@ -75,14 +76,14 @@ switch(args[2]) {
 // Handle message SIGTERM
 process.on('SIGTERM', function() {
     shutDown();
-    console.log('SIGTERM: services closed');
+    logData('SIGTERM: services closed');
     process.exit(0);        
 });
 
 // Handle message SIGINT
 process.on('SIGINT', function() {
     shutDown();
-    console.log('SIGINT: services closed');        
+    logData('SIGINT: services closed');        
     process.exit(0);
 });
 

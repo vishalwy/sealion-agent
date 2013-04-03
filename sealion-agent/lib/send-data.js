@@ -15,6 +15,7 @@ var Sqlite3 = require('./sqlite-wrapper.js');
 var global = require('./global.js');
 var updateConfig = require('./update-config.js');
 var authenticate = require('./authentication.js');
+var logData = require('./log.js');
 
 // variable to check if SQLite DB should be checked for sending stored data to server
 var needCheckStoredData = true;
@@ -49,7 +50,7 @@ SendData.prototype.deleteDataWithActivityID = function(activityID) {
     
     tempDB.run('DELETE FROM repository WHERE activityID = ?', activityID, function(error){
         if(error) {
-            console.log("error in deleting activity data from DB");
+            logData("error in deleting activity data from DB");
         } else {
             process.nextTick(function () {
                 self.sendStoredData();
@@ -67,7 +68,7 @@ SendData.prototype.deleteData = function(self, rowId) {
     var self =  this;
     tempDB.run('DELETE FROM repository WHERE row_id = ?', rowId, function(error){
         if(error) {
-            console.log("error in deleting data from DB");
+            logData("error in deleting data from DB");
         } else {
             process.nextTick(function () {
                 self.sendStoredData();
@@ -88,7 +89,7 @@ SendData.prototype.sendStoredData = function() {
             
             if(error) {
                 needCheckStoredData = true;
-                console.log("error in retreiving data");
+                logData("error in retreiving data");
             } else {
                 if(rows.length > 0) {
                     
@@ -109,7 +110,7 @@ SendData.prototype.sendStoredData = function() {
                     global.request.post(sendOptions, function(err, response, data) {
                         if(err) {
                             needCheckStoredData = true;
-                            console.log("Error in Sending stored data");
+                            logData("Error in Sending stored data");
                         } else {
                             var bodyJSON = response.body;
                             switch(response.statusCode) {
@@ -121,13 +122,13 @@ SendData.prototype.sendStoredData = function() {
                                         needCheckStoredData = true;
                                         switch(bodyJSON.code) {
                                             case 230011 : {
-                                                    console.log('Sealion-Agent Error#440001: Payload Missing in stored data');
+                                                    logData('Sealion-Agent Error#440001: Payload Missing in stored data');
                                                     tempThis.handleErroneousData(rows[0].result, rows[0].activityID);        
                                                     tempThis.deleteData(tempThis, rows[0].row_id); 
                                                 }
                                                 break;
                                             case 230014 : {
-                                                    console.log('Sealion-Agent Error#440002: improper ActivityID, deleting from repository');
+                                                    logData('Sealion-Agent Error#440002: improper ActivityID, deleting from repository');
                                                     tempThis.deleteDataWithActivityID(rows[0].activityID);
                                                 }
                                                 break;
@@ -138,13 +139,13 @@ SendData.prototype.sendStoredData = function() {
                                         needCheckStoredData = true;
                                         switch(bodyJSON.code) {
                                             case 230012 : {
-                                                    console.log('Sealion-Agent Error#440003: Agent not allowed to send data with ActivityID: ' + 
+                                                    logData('Sealion-Agent Error#440003: Agent not allowed to send data with ActivityID: ' + 
                                                             rows[0].activityID + ', deleting from repository');
                                                     tempThis.deleteDataWithActivityID(rows[0].activityID);
                                                 }
                                                 break;
                                             case 220001 : {
-                                                    console.log('Sealion-Agent Error#440005: Authentication Failed, Needs reauthentication');
+                                                    logData('Sealion-Agent Error#440005: Authentication Failed, Needs reauthentication');
                                                     authenticate.reauthenticate(sessionId);
                                                 }
                                                 break;
@@ -155,7 +156,7 @@ SendData.prototype.sendStoredData = function() {
                                         needCheckStoredData = true;
                                         switch(bodyJSON.code) {
                                             case 230013 : {
-                                                    console.log('Sealion-Agent Error#440004: Duplicate data. Data deleted from repository');
+                                                    logData('Sealion-Agent Error#440004: Duplicate data. Data deleted from repository');
                                                     tempThis.deleteData(tempThis, rows[0].row_id);
                                                 }
                                                 break;
@@ -223,12 +224,12 @@ SendData.prototype.dataSend = function (result) {
                         if(bodyJSON.code) {
                             switch(bodyJSON.code) {
                                 case 230011 : {
-                                        console.log('Sealion-Agent Error#430001: Payload Missing');
+                                        logData('Sealion-Agent Error#430001: Payload Missing');
                                         tempThis.handleErroneousData(tempThis.dataToInsert, tempThis.activityID);
                                     }
                                     break;
                                 case 230014 : {
-                                        console.log('Sealion-Agent Error#430002: improper ActivityID, updating config-file');
+                                        logData('Sealion-Agent Error#430002: improper ActivityID, updating config-file');
                                         updateConfig();
                                     }
                                     break;
@@ -245,12 +246,12 @@ SendData.prototype.dataSend = function (result) {
                         if(bodyJSON.code) {
                             switch(bodyJSON.code) {
                                 case 230012 : {
-                                        console.log('Sealion-Agent Error#430003: Agent not allowed to send data with ActivityID: ' + result.activityDetails._id + ', updating config-file');
+                                        logData('Sealion-Agent Error#430003: Agent not allowed to send data with ActivityID: ' + result.activityDetails._id + ', updating config-file');
                                             updateConfig();
                                     }
                                     break;
                                 case 220001 : {
-                                        console.log('Sealion-Agent Error#430005: Authentication Failed, Needs reauthentication');
+                                        logData('Sealion-Agent Error#430005: Authentication Failed, Needs reauthentication');
                                         tempThis.handleError();
                                         authenticate.reauthenticate(sessionId);
                                     }
@@ -266,7 +267,7 @@ SendData.prototype.dataSend = function (result) {
                     }
                     break;
                 case 409 : {
-                        console.log('Sealion-Agent Error#430004: Duplicate data. Data dropped');                   
+                        logData('Sealion-Agent Error#430004: Duplicate data. Data dropped');                   
                     }
                     break;
                 default: {

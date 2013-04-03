@@ -13,6 +13,7 @@ var SocketIo = require('./handle-socket-io.js');
 var SendData = require('./send-data.js');
 var services = require('./global.js').services;
 var interId = require('./global.js').interId;
+var logData = require('./log.js');
 
 // @const default time interval for command execution 5 mins in ms
 var DEFAULT_INTERVAL = 300000;
@@ -56,19 +57,24 @@ function transformServiceJSON(servicesJSON) {
 
 // Function adds activity for executing commands. Used when new activities are to be added or altered
 function addActivity(activity) {
-    console.log("adding activity" + activity['_id']);
+    logData("adding activity" + activity['_id']);
     removeActivity(activity);
+        
     interId[activity['_id']] = setInterval(
         onExecuteTrigger,
         activity['interval'] ? activity['interval'] * 1000 : DEFAULT_INTERVAL, 
         activity 
     );
     services[activity['_id']] = activity;
+    
+    process.nextTick(function () {
+        onExecuteTrigger(activity);
+    });
 }
 
 // Removes activity from executing repeatedly. Used when activities are altered or removed
 function removeActivity(activity) {
-    console.log("removing activity" + activity['_id']);
+    logData("removing activity" + activity['_id']);
     if(interId[activity['_id']]) {
         clearInterval(interId[activity['_id']]);
         delete(services[activity['_id']])
@@ -81,18 +87,18 @@ function startAllActivities(activities) {
     
     for(var counter in services) {
         if(services[counter]['activityName'] && services[counter]['command']) {
-            // execute commands instatntaneously once recieved then schedule the activities
-            process.nextTick(function () {
-                onExecuteTrigger(services[counter]);
-            });
-            
-            console.log('starting service for ' + services[counter]['activityName']);
+            logData('starting service for ' + services[counter]['activityName']);
             
             interId[services[counter]['_id']] = setInterval(
                     onExecuteTrigger, 
                     services[counter]['interval'] ? services[counter]['interval'] * 1000 : DEFAULT_INTERVAL, 
                     services[counter]                    
                 );
+            
+            // execute command instatntaneously once recieved after scheduling the activity
+            process.nextTick(function () {
+                onExecuteTrigger(services[counter]);
+            });
         }
     }
 }
@@ -100,7 +106,7 @@ function startAllActivities(activities) {
 // stops all activities running
 function stopAllActivities() {
     for(var counter in interId) {
-        console.log('stopping service for ' + services[counter]['activityName']);
+        logData('stopping service for ' + services[counter]['activityName']);
         clearInterval(interId[counter]);
     }
 }

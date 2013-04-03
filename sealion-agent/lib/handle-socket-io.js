@@ -10,7 +10,7 @@ Author: Shubhansh <shubhansh.varshney@webyog.com>
 
 var io = require('socket.io-client');
 var socketIoOptions = require('../etc/config/server-config.json').socketIODetails;
-
+var logData = require('./log.js');
 
 /** @constructor */
 function HandleSocketIO( ) {
@@ -59,29 +59,29 @@ HandleSocketIO.prototype.createConnection = function() {
     if(! this.socket) {
     
         var onConnect = function() {
-            console.log("Socket IO connected");
+            logData("Socket IO connected");
         }
     
         var onError = function(error) {
-            console.log("Error in Socket.io connection " + error);
+            logData("Error in Socket.io connection " + error);
             if(tempThis.isReconnect) {
                 tempThis.attemptReconnect(tempThis);
             }
         }
     
         var onUnhandledException = function(error) {
-            console.log('Socket.io Caught unhandled exception');
+            logData('Socket.io Caught unhandled exception');
             if(tempThis.isReconnect) {
                 tempThis.attemptReconnect(tempThis);
             }
         }
     
         var onMsg = function(msg) {
-            console.log(msg);
+            logData(msg);
         }   
         
         var onDisconnect = function() {
-            console.log("Socket.io Connection disconnected");
+            logData("Socket.io Connection disconnected");
             if(tempThis.isReconnect) {
                 tempThis.attemptReconnect(tempThis);
             }

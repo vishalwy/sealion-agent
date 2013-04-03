@@ -16,6 +16,7 @@ var SealionGlobal = require('./global.js');
 var authPath = require('../etc/config/paths-config.json').agentAuth;
 var lockFile = require('../etc/config/lockfile.json').lockFile;
 var updateAgent = require('./update-agent.js');
+var logData = require('./log.js');
 
 SealionGlobal.request = require('request');
 
@@ -38,8 +39,8 @@ function sendAuthRequest() {
     try{
         agentDetails.agentToken = require('../etc/config/agent-config.json').agentToken;
     } catch (err) {
-        console.log('Sealion-Agent Error#410001: Agent-token missing or can not be read');
-        console.log('Bye!!! Terminating service');
+        logData('Sealion-Agent Error#410001: Agent-token missing or can not be read');
+        logData('Bye!!! Terminating service');
         cleanUp();
         process.exit(1);
     }
@@ -54,7 +55,7 @@ function sendAuthRequest() {
     SealionGlobal.request.post( sendOptions , function(err, response, data) {
         allowAuth = true;
         if(err) {
-            console.log('Sealion-Agent Error#420001: Unable to create connection, attempting to reconnect');
+            logData('Sealion-Agent Error#420001: Unable to create connection, attempting to reconnect');
             
             /*
             if maxConnectAttempts is less than 0 that means we need to continously
@@ -88,15 +89,15 @@ function sendAuthRequest() {
                     }
                     break;
                 case 400: {
-                        console.log('Sealion-Agent Error#410003: Bad request, agent-token missing in request');
-                        console.log('Bye!!! Terminating service');
+                        logData('Sealion-Agent Error#410003: Bad request, agent-token missing in request');
+                        logData('Bye!!! Terminating service');
                         cleanUp();
                         process.exit(1);
                     }
                     break;
                 case 401: {
-                        console.log('Sealion-Agent Error#410002: Invalid Agent-token');
-                        console.log('Bye!!! Terminating service');
+                        logData('Sealion-Agent Error#410002: Invalid Agent-token');
+                        logData('Bye!!! Terminating service');
                         cleanUp();
                         process.exit(1);
                     }
@@ -104,8 +105,8 @@ function sendAuthRequest() {
                 default: {
                         msg = "Status code: " + response.statusCode + 
                                 " Sealion Agent Error #" + bodyJSON.code + " : " + bodyJSON.message;
-                        console.log(msg);
-                        console.log('Bye!!! Terminating service');
+                        logData(msg);
+                        logData('Bye!!! Terminating service');
                         cleanUp();
                         process.exit(1);
                     }
@@ -128,8 +129,8 @@ function authenticate() {
         attemptNumber++;
         sendAuthRequest();
     } else {
-        console.log('Sealion-Agent Error#410004: Max Recconect attempts exceeded. Unable to reconnect');
-        console.log('Bye!!! Terminating service');
+        logData('Sealion-Agent Error#410004: Max Recconect attempts exceeded. Unable to reconnect');
+        logData('Bye!!! Terminating service');
         cleanUp();
         process.exit(1);    
     }

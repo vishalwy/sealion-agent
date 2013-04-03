@@ -13,7 +13,7 @@ var serverOptions = require('../etc/config/server-config.json').serverDetails;
 var removeActivity = require('./execute-services.js').removeActivity;
 var addActivity = require('./execute-services.js').addActivity;
 var configPath = require('../etc/config/paths-config.json').configPath;
-
+var logData = require('./log.js');
 var allowUpdate = true;
 
 // transforms activity JSON recieved to an associative array of objects for internal use
@@ -80,7 +80,7 @@ function updateConfig( ) {
         globals.request.get(options, function(err, response, data){
             allowUpdate = true;
             if(err) {
-                console.log('Error in retreving config file');
+                logData('Error in retreving config file');
             } else {
                 handleResponse(response);     
             }
