@@ -1,21 +1,36 @@
+/*
+Module is class representation of oject used to execute commands
+*/
+
+/*********************************************
+
+Author: Shubhansh
+
+*********************************************/
+
+
 var Result = require('./result.js');
 var exec = require ('child_process').exec;
 var SendData = require('./send-data.js');
 var global = require('./global.js');
 
+/** @constructor to execute command class*/
 var ExecuteCommand = function(activityDetails, sqliteObj) {
     this.result = new Result();
     this.result.activityDetails = activityDetails;
     this.sqliteObj = sqliteObj;
 };
 
+// handles command execution output and initiates sending process
 ExecuteCommand.prototype.handleCommandOutput = function () {
     var tempThis = this;
+    // create object to send data for this command
     var sendData = new SendData(this.sqliteObj);
     
     sendData.dataSend(this.result);
 };
 
+// function to process command execution output
 ExecuteCommand.prototype.processCommandResult = function (error, stdout, stderr) {
     
     var tempThis = this;
@@ -32,6 +47,7 @@ ExecuteCommand.prototype.processCommandResult = function (error, stdout, stderr)
     });
 };
 
+// function executes command
 ExecuteCommand.prototype.executeCommand = function(options) {
 
     var tempThis = this;

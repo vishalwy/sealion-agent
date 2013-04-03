@@ -1,6 +1,17 @@
+/* 
+module to handle basic SQLite operations
+*/
+
+/*********************************************
+
+Author: Shubhansh <shubhansh.varshney@webyog.com>
+
+*********************************************/
+
 var sqlite3 = require('sqlite3');
 var path = require('path');
 
+/** @const */
 var createTableStmt = 
         'CREATE TABLE IF NOT EXISTS repository \
             ( \
@@ -9,6 +20,7 @@ var createTableStmt =
             date_time TEXT, \
             result TEXT )';
             
+/** @const */            
 var createErroneousTableStmt = 
         'CREATE TABLE IF NOT EXISTS erroneousRepository \
             ( \
@@ -25,6 +37,7 @@ var insertErroneousDataStmt =
 
 var dbPath = path.resolve(__dirname, '../var/dbs/RepositoryDB.db');
 
+/** @constructor */
 function StoreDataInDb() {
     var tempThis = this;
     this.db = new sqlite3.Database(dbPath, function(error) {

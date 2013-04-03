@@ -1,3 +1,12 @@
+/*
+
+*/
+/*********************************************
+
+Author: Shubhansh <shubhansh.varshney@webyog.com>
+
+*********************************************/
+
 var ExecuteCommand = require('./execute-command.js');
 var Sqlite3 = require('./sqlite-wrapper.js');
 var SocketIo = require('./handle-socket-io.js');
@@ -5,16 +14,32 @@ var SendData = require('./send-data.js');
 var services = require('./global.js').services;
 var interId = require('./global.js').interId;
 
+// @const default time interval for command execution 5 mins in ms
 var DEFAULT_INTERVAL = 300000;
 
+// Create SQLite connection
 var sqliteObj = new Sqlite3();
+
+// Create object to handle SocketIO connection
 var socketObj = new SocketIo();
 
+// function to handle trigger to execute command
 function onExecuteTrigger(activityDetails) {
+    // create an object of Execute Command class to execute command
     var ec = new ExecuteCommand(activityDetails, sqliteObj);
     ec.executeCommand({ });
 }
 
+// function to transform JSON data recieved regarding activities to array of objects for internal purposes
+/*
+obj = {
+    serviceName: Name of the service e.g. Linux, MySQL
+    activityName: Name of the activity e.g. top, iostat
+    _id: activity_id
+    command: command to be executed under this activity
+    interval: interval at which commands have to be executed
+}
+*/
 function transformServiceJSON(servicesJSON) {
     for(var activity in servicesJSON) {
         var activityDetails = servicesJSON[activity];
@@ -29,6 +54,7 @@ function transformServiceJSON(servicesJSON) {
     }
 }
 
+// Function adds activity for executing commands. Used when new activities are to be added or altered
 function addActivity(activity) {
     console.log("adding activity" + activity['_id']);
     removeActivity(activity);
@@ -40,6 +66,7 @@ function addActivity(activity) {
     services[activity['_id']] = activity;
 }
 
+// Removes activity from executing repeatedly. Used when activities are altered or removed
 function removeActivity(activity) {
     console.log("removing activity" + activity['_id']);
     if(interId[activity['_id']]) {
@@ -48,11 +75,17 @@ function removeActivity(activity) {
     }
 }
 
+// starts all activities from JSON recieved at authentication
 function startAllActivities(activities) {
     transformServiceJSON(activities);
     
     for(var counter in services) {
         if(services[counter]['activityName'] && services[counter]['command']) {
+            // execute commands instatntaneously once recieved then schedule the activities
+            process.nextTick(function () {
+                onExecuteTrigger(services[counter]);
+            });
+            
             console.log('starting service for ' + services[counter]['activityName']);
             
             interId[services[counter]['_id']] = setInterval(
@@ -62,11 +95,9 @@ function startAllActivities(activities) {
                 );
         }
     }
-    
-    var sendData = new SendData(sqliteObj);
-    sendData.sendStoredData();
 }
 
+// stops all activities running
 function stopAllActivities() {
     for(var counter in interId) {
         console.log('stopping service for ' + services[counter]['activityName']);
@@ -74,14 +105,17 @@ function stopAllActivities() {
     }
 }
 
-function startListeningSocketIO(cookieData) {
-    socketObj.createConnection(cookieData); 
+// activates socketIO client to start listening
+function startListeningSocketIO() {
+    socketObj.createConnection(); 
 }
 
+// closes socketIO connection
 function closeSocketIO() {
     socketObj.closeConnection();
 }
 
+// stops all activities, closes SQLite DB connection and SocketIO connection 
 function closeAll(){
     stopAllActivities();
     sqliteObj.closeDb();

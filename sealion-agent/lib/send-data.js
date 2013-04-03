@@ -1,3 +1,14 @@
+/* 
+This module is used to send data to server and handles corresponding errors
+This module is class representation for sending data
+*/
+
+/*********************************************
+
+Author: Shubhansh <shubhansh.varshney@webyog.com>
+
+*********************************************/
+
 var serverOption = require('../etc/config/server-config.json').serverDetails;
 var dataPath = require('../etc/config/paths-config.json').dataPath;
 var Sqlite3 = require('./sqlite-wrapper.js');
@@ -5,24 +16,32 @@ var global = require('./global.js');
 var updateConfig = require('./update-config.js');
 var authenticate = require('./authentication.js');
 
+// variable to check if SQLite DB should be checked for sending stored data to server
 var needCheckStoredData = true;
 
-
+/** @constructor */
 function SendData(sqliteObj) {
     this.dataToInsert = '';
     this.sqliteObj = sqliteObj;
     this.activityID = '';
 };
 
+/*
+function handles error by storing sending-failed data in SQLite DB
+*/
 SendData.prototype.handleError = function() {
+    // function to insert data
     this.sqliteObj.insertData(this.dataToInsert, this.activityID);
     needCheckStoredData = true;
 }
 
+// function to insert erroneous data into SQLite. this data wiull never be sent to server
 SendData.prototype.handleErroneousData = function(data, activityID) {
     this.sqliteObj.insertErroneousData(data, activityID);
 }
 
+// function to delete data with some particular activityID. 
+// Used in case activity is removed by user on UI so associated data needs to be removed as well
 SendData.prototype.deleteDataWithActivityID = function(activityID) {
     var tempSqliteObj = new Sqlite3();
     var tempDB = tempSqliteObj.getDb();
@@ -40,6 +59,8 @@ SendData.prototype.deleteDataWithActivityID = function(activityID) {
     tempSqliteObj.closeDb();
 }
 
+// function deletes data from SQLite with particular row_id
+// used to delete rows in case duplicates are found
 SendData.prototype.deleteData = function(self, rowId) {
     var tempSqliteObj = new Sqlite3();
     var tempDB = tempSqliteObj.getDb();
@@ -56,7 +77,7 @@ SendData.prototype.deleteData = function(self, rowId) {
     tempSqliteObj.closeDb();
 }
 
-
+// function to send stored data
 SendData.prototype.sendStoredData = function() {
     var sobj = new Sqlite3();
     var db = sobj.getDb();
@@ -157,6 +178,7 @@ SendData.prototype.sendStoredData = function() {
     }
 }
 
+// function to send command result
 SendData.prototype.dataSend = function (result) {
     var tempThis = this;
     

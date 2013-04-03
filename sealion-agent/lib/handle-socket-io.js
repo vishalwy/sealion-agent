@@ -1,37 +1,60 @@
+/* 
+This module handles socketIO
+*/
+
+/*********************************************
+
+Author: Shubhansh <shubhansh.varshney@webyog.com>
+
+*********************************************/
+
 var io = require('socket.io-client');
 var socketIoOptions = require('../etc/config/server-config.json').socketIODetails;
 
+
+/** @constructor */
 function HandleSocketIO( ) {
     this.attemptCount = 0;
     this.isReconnect = true;
 };
 
-HandleSocketIO.prototype.reconnect = function(cookieData, self) {
+// function to reconnect
+HandleSocketIO.prototype.reconnect = function(self) {
+    
     if(! self.socket) {
-        self.createConnection(cookieData);       
+        self.createConnection();       
     } else if( ! self.socket.socket.connected) {
+        var ssId = require('./global.js').sessionCookie;
         self.socket.socket.disconnect();
-        self.socket.socket.setCookie({'cookies':cookieData});
+        self.socket.socket.setCookie({'cookies':ssId});
         self.socket.socket.connect();
     }
 } 
 
-HandleSocketIO.prototype.attemptReconnect = function(cookieData, self) {
+// function to attempt reconnection in case multiple attempts failed
+/*
+Here we need to attempt reconnecting till program lasts.
+If max connection attempts are less than length of array supplied then use time interval of last index element
+otherwise use the index period for the same
+*/
+HandleSocketIO.prototype.attemptReconnect = function(self) {
     
     if(self.attemptCount >= socketIoOptions.reconnectInterval.length) {
         setTimeout(self.reconnect, 
             socketIoOptions.reconnectInterval[socketIoOptions.reconnectInterval.length - 1] * 1000, 
-            cookieData, self);
+            self);
     } else {
         setTimeout(self.reconnect, 
             socketIoOptions.reconnectInterval[self.attemptCount] * 1000, 
-            cookieData, self);
+            self);
         self.attemptCount++;
     }
 }
 
-HandleSocketIO.prototype.createConnection = function(cookieData) {
+// creates new socketIO connection
+HandleSocketIO.prototype.createConnection = function() {
     var tempThis = this;
+    var ssId = require('./global.js').sessionCookie;
     
     if(! this.socket) {
     
@@ -42,14 +65,14 @@ HandleSocketIO.prototype.createConnection = function(cookieData) {
         var onError = function(error) {
             console.log("Error in Socket.io connection " + error);
             if(tempThis.isReconnect) {
-                tempThis.attemptReconnect(cookieData, tempThis);
+                tempThis.attemptReconnect(tempThis);
             }
         }
     
         var onUnhandledException = function(error) {
             console.log('Socket.io Caught unhandled exception');
             if(tempThis.isReconnect) {
-                tempThis.attemptReconnect(cookieData, tempThis);
+                tempThis.attemptReconnect(tempThis);
             }
         }
     
@@ -60,11 +83,11 @@ HandleSocketIO.prototype.createConnection = function(cookieData) {
         var onDisconnect = function() {
             console.log("Socket.io Connection disconnected");
             if(tempThis.isReconnect) {
-                tempThis.attemptReconnect(cookieData, tempThis);
+                tempThis.attemptReconnect(tempThis);
             }
         } 
         
-        this.socket = io.connect(socketIoOptions.url, {'cookies':cookieData});
+        this.socket = io.connect(socketIoOptions.url, {'cookies':ssId});
         this.socket.on('connect', onConnect);
         this.socket.on('error', onError);
         this.socket.on('unhandledException', onUnhandledException);
@@ -74,7 +97,7 @@ HandleSocketIO.prototype.createConnection = function(cookieData) {
         if(this.socket.socket.connected) {
            this.socket.socket.disconnect();
         }
-        this.socket.socket.setCookie({'cookies':cookieData});
+        this.socket.socket.setCookie({'cookies':ssId});
         this.socket.socket.connect();
     }
     
@@ -82,6 +105,7 @@ HandleSocketIO.prototype.createConnection = function(cookieData) {
     this.attemptCount = 0;
 }
 
+// closes socketIO connection
 HandleSocketIO.prototype.closeConnection = function( ) {
     this.isReconnect = false;
     if(this.socket.socket.connected) {

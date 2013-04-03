@@ -1,3 +1,13 @@
+/* 
+Module updates changed activities at run time
+*/
+
+/*********************************************
+
+Author: Shubhansh <shubhansh.varshney@webyog.com>
+
+*********************************************/
+
 var globals = require('./global.js');
 var serverOptions = require('../etc/config/server-config.json').serverDetails;
 var removeActivity = require('./execute-services.js').removeActivity;
@@ -6,6 +16,7 @@ var configPath = require('../etc/config/paths-config.json').configPath;
 
 var allowUpdate = true;
 
+// transforms activity JSON recieved to an associative array of objects for internal use
 function transformBodyJSON(bodyJSON, services) { 
     for(var activity in bodyJSON) {
         var activityDetails = bodyJSON[activity];
@@ -20,6 +31,7 @@ function transformBodyJSON(bodyJSON, services) {
     }
 }
 
+// check if activity differs in command or interval
 function isActivityDiff(source, target) {
     if(source.command !== target.command) {
         return true;
@@ -32,6 +44,9 @@ function isActivityDiff(source, target) {
     return false;
 }
 
+/*
+function evaluate services for adding or removing
+*/
 function evaluateServices(services) {
     for(var activityId in services) {
         if(globals.services[activityId]) {
@@ -50,7 +65,7 @@ function evaluateServices(services) {
     }
 }
 
-
+// function to initiate update activity details
 function updateConfig( ) {
     var self = this;
     var url = serverOptions.sourceURL + configPath;
@@ -73,6 +88,7 @@ function updateConfig( ) {
     }
 }
 
+// callback function to handle response
 function handleResponse(response) {
     var bodyJSON = response.body;
     var services = { };

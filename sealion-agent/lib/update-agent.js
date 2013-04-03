@@ -1,3 +1,15 @@
+/* 
+module to initiate updating agent.
+It will initiate update script in /usr/local/sealion-agent/update.sh and exit
+
+*/
+
+/*********************************************
+
+Author: Shubhansh <shubhansh.varshney@webyog.com>
+
+*********************************************/
+
 var spawn = require('child_process').spawn;
 var fs = require('fs');
 
