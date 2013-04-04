@@ -15,7 +15,7 @@
 
 # Author: Shubhansh Varshney <shubhansh.varshney@webyog.com>
 
-LOCK_FILE=/tmp/sealion.pid
+LOCK_FILE=/usr/local/sealion-agent/var/sealion/sealion.pid
 
 cd /usr/local/sealion-agent/
 
@@ -24,11 +24,19 @@ cd /usr/local/sealion-agent/
 #
 do_start()
 {
-    if [ ! -f $LOCK_FILE ] 
+    if [ ! -s $LOCK_FILE ] 
 	then
-        ./bin/node index.js start
+        ./bin/sealion-node index.js start
         return 0
 	else
+	    running=`pgrep sealion-node | wc -w`
+	    if [ $running -eq 0 ] ; then
+	        rm -f $LOCK_FILE
+	        if [ $? -eq 0 ] ; then
+	            ./bin/sealion-node index.js start
+	            return 0    
+	        fi
+	    fi
 	    return 1
 	fi
 }
@@ -39,9 +47,9 @@ do_start()
 do_stop()
 {
 
-    if [ -f $LOCK_FILE ]
+    if [ -s $LOCK_FILE ]
 	then
-	    ./bin/node index.js stop
+	    ./bin/sealion-node index.js stop
 	    rm -f $LOCK_FILE
 	    return 0
 	else

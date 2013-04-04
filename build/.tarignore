@@ -3,5 +3,6 @@
 ../sealion-agent/bin/nodejs
 ../sealion-agent/var/dbs/*
 ../sealion-agent/var/log/*
+../sealion-agent/var/sealion/*
 .gitignore
 *~
