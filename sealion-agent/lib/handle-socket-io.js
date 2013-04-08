@@ -25,7 +25,7 @@ HandleSocketIO.prototype.reconnect = function(self) {
         self.createConnection();       
     } else if( ! self.socket.socket.connected) {
         var ssId = require('./global.js').sessionCookie;
-        self.socket.socket.disconnect();
+        self.socket.socket.disconnectSync();
         self.socket.socket.setCookie({'cookies':ssId});
         self.socket.socket.connect();
     }
@@ -59,6 +59,7 @@ HandleSocketIO.prototype.createConnection = function() {
     if(! this.socket) {
     
         var onConnect = function() {
+            tempThis.attemptCount = 0;
             logData("Socket IO connected");
         }
     
@@ -95,7 +96,7 @@ HandleSocketIO.prototype.createConnection = function() {
         this.socket.on('disconnect', onDisconnect);
     } else {
         if(this.socket.socket.connected) {
-           this.socket.socket.disconnect();
+           this.socket.socket.disconnectSync();
         }
         this.socket.socket.setCookie({'cookies':ssId});
         this.socket.socket.connect();
@@ -109,7 +110,7 @@ HandleSocketIO.prototype.createConnection = function() {
 HandleSocketIO.prototype.closeConnection = function( ) {
     this.isReconnect = false;
     if(this.socket.socket.connected) {
-        this.socket.socket.disconnect();
+        this.socket.socket.disconnectSync();
     }
 }
 

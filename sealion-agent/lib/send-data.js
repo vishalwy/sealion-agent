@@ -121,13 +121,13 @@ SendData.prototype.sendStoredData = function() {
                                 case 400 : {
                                         needCheckStoredData = true;
                                         switch(bodyJSON.code) {
-                                            case 230011 : {
+                                            case 200002 : {
                                                     logData('Sealion-Agent Error#440001: Payload Missing in stored data');
                                                     tempThis.handleErroneousData(rows[0].result, rows[0].activityID);        
                                                     tempThis.deleteData(tempThis, rows[0].row_id); 
                                                 }
                                                 break;
-                                            case 230014 : {
+                                            case 200003 : {
                                                     logData('Sealion-Agent Error#440002: improper ActivityID, deleting from repository');
                                                     tempThis.deleteDataWithActivityID(rows[0].activityID);
                                                 }
@@ -138,13 +138,13 @@ SendData.prototype.sendStoredData = function() {
                                 case 401 : {
                                         needCheckStoredData = true;
                                         switch(bodyJSON.code) {
-                                            case 230012 : {
+                                            case 200004 : {
                                                     logData('Sealion-Agent Error#440003: Agent not allowed to send data with ActivityID: ' + 
                                                             rows[0].activityID + ', deleting from repository');
                                                     tempThis.deleteDataWithActivityID(rows[0].activityID);
                                                 }
                                                 break;
-                                            case 220001 : {
+                                            case 200001 : {
                                                     logData('Sealion-Agent Error#440005: Authentication Failed, Needs reauthentication');
                                                     authenticate.reauthenticate(sessionId);
                                                 }
@@ -155,7 +155,7 @@ SendData.prototype.sendStoredData = function() {
                                 case 409 : {
                                         needCheckStoredData = true;
                                         switch(bodyJSON.code) {
-                                            case 230013 : {
+                                            case 204011 : {
                                                     logData('Sealion-Agent Error#440004: Duplicate data. Data deleted from repository');
                                                     tempThis.deleteData(tempThis, rows[0].row_id);
                                                 }
@@ -223,12 +223,12 @@ SendData.prototype.dataSend = function (result) {
                 case 400 : {
                         if(bodyJSON.code) {
                             switch(bodyJSON.code) {
-                                case 230011 : {
+                                case 200002 : {
                                         logData('Sealion-Agent Error#430001: Payload Missing');
                                         tempThis.handleErroneousData(tempThis.dataToInsert, tempThis.activityID);
                                     }
                                     break;
-                                case 230014 : {
+                                case 200003 : {
                                         logData('Sealion-Agent Error#430002: improper ActivityID, updating config-file');
                                         updateConfig();
                                     }
@@ -245,12 +245,12 @@ SendData.prototype.dataSend = function (result) {
                 case 401 : {
                         if(bodyJSON.code) {
                             switch(bodyJSON.code) {
-                                case 230012 : {
+                                case 200004 : {
                                         logData('Sealion-Agent Error#430003: Agent not allowed to send data with ActivityID: ' + result.activityDetails._id + ', updating config-file');
                                             updateConfig();
                                     }
                                     break;
-                                case 220001 : {
+                                case 200001 : {
                                         logData('Sealion-Agent Error#430005: Authentication Failed, Needs reauthentication');
                                         tempThis.handleError();
                                         authenticate.reauthenticate(sessionId);

@@ -1,3 +1,4 @@
+#! /bin/bash
 SYMLINK_PATHS=( K K S S S S K )
 
 clean_up()

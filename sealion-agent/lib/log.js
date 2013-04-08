@@ -10,7 +10,7 @@ Function to log data
 
 function logData(data) {
     var date = new Date();
-    console.log('[ ' + date + ' ]: ' + data);
+    console.log('[ ' + date.toJSON() + ' ]: ' + data);
 }
 
 module.exports = logData;

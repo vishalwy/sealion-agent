@@ -81,6 +81,7 @@ function sendAuthRequest() {
                 case 200: {
                         var cookie = response.headers['set-cookie'];
                         var temp = SealionGlobal.request.cookie(cookie[0]); 
+                        attemptNumber = 0;
                         SealionGlobal.sessionCookie = temp.name + "=" + temp.value;
                         services.startListeningSocketIO();
                             // code to update agent files will come here

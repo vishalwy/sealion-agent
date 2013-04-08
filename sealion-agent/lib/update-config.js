@@ -88,7 +88,7 @@ function updateConfig( ) {
     }
 }
 
-// callback function to handle response
+// function to handle response
 function handleResponse(response) {
     var bodyJSON = response.body;
     var services = { };
