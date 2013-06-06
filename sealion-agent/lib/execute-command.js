@@ -37,7 +37,7 @@ ExecuteCommand.prototype.processCommandResult = function (error, stdout, stderr)
 
     if(error) {
         this.result.code = error.code;
-        this.result.output = stderr;
+        this.result.output = stderr !== '' ? stderr : stdout;
     } else {
         this.result.output = stdout !== '' ? stdout : stderr;
     }

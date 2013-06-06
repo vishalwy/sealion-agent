@@ -1,3 +1,2 @@
+# Ignore all files ending in ~ (temp files)
 *~
-build/tmp/
-Release/*

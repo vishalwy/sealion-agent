@@ -10,7 +10,6 @@ Author: Shubhansh <shubhansh.varshney@webyog.com>
 var ExecuteCommand = require('./execute-command.js');
 var Sqlite3 = require('./sqlite-wrapper.js');
 var SocketIo = require('./handle-socket-io.js');
-var SendData = require('./send-data.js');
 var services = require('./global.js').services;
 var interId = require('./global.js').interId;
 var logData = require('./log.js');
@@ -45,8 +44,8 @@ function transformServiceJSON(servicesJSON) {
     for(var activity in servicesJSON) {
         var activityDetails = servicesJSON[activity];
         var obj = { };
-        obj.serviceName = activityDetails.serviceName;
-        obj.activityName = activityDetails.activityName;
+        obj.serviceName = activityDetails.service;
+        obj.activityName = activityDetails.name;
         obj._id = activityDetails._id;
         obj.command = activityDetails.command;
         obj.interval = activityDetails.interval;
@@ -57,9 +56,10 @@ function transformServiceJSON(servicesJSON) {
 
 // Function adds activity for executing commands. Used when new activities are to be added or altered
 function addActivity(activity) {
-    logData("adding activity" + activity['_id']);
+
     removeActivity(activity);
-        
+
+    logData("adding activity " + activity['_id']);
     interId[activity['_id']] = setInterval(
         onExecuteTrigger,
         activity['interval'] ? activity['interval'] * 1000 : DEFAULT_INTERVAL, 
@@ -67,14 +67,12 @@ function addActivity(activity) {
     );
     services[activity['_id']] = activity;
     
-    process.nextTick(function () {
-        onExecuteTrigger(activity);
-    });
+    onExecuteTrigger(activity);
 }
 
 // Removes activity from executing repeatedly. Used when activities are altered or removed
 function removeActivity(activity) {
-    logData("removing activity" + activity['_id']);
+    logData("removing activity " + activity['_id']);
     if(interId[activity['_id']]) {
         clearInterval(interId[activity['_id']]);
         delete(services[activity['_id']])
@@ -96,9 +94,8 @@ function startAllActivities(activities) {
                 );
             
             // execute command instatntaneously once recieved after scheduling the activity
-            process.nextTick(function () {
-                onExecuteTrigger(services[counter]);
-            });
+            onExecuteTrigger(services[counter]);
+            
         }
     }
 }

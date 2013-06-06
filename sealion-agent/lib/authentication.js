@@ -15,8 +15,8 @@ var services = require('./execute-services.js');
 var SealionGlobal = require('./global.js');
 var authPath = require('../etc/config/paths-config.json').agentAuth;
 var lockFile = require('../etc/config/lockfile.json').lockFile;
-var updateAgent = require('./update-agent.js');
 var logData = require('./log.js');
+var updateAgent = require('./update-agent.js');
 
 SealionGlobal.request = require('request');
 
@@ -82,9 +82,22 @@ function sendAuthRequest() {
                         var cookie = response.headers['set-cookie'];
                         var temp = SealionGlobal.request.cookie(cookie[0]); 
                         attemptNumber = 0;
+
                         SealionGlobal.sessionCookie = temp.name + "=" + temp.value;
+                        SealionGlobal.agentId = bodyJSON._id;
+                        SealionGlobal.orgId = bodyJSON.org;
+                        SealionGlobal.categoryId = bodyJSON.category;
+                        
+                        var agentVersion = require('../etc/config/agent-config.json').agentVersion;
+                        
+                        if(agentVersion != bodyJSON.agentVersion) {
+                            logData('updating to agent-version on startup: ' + bodyJSON.agentVersion)
+                            services.shutDown();
+                            updateAgent(bodyJSON.agentVersion);
+                            process.exit(0);
+                        }
+ 
                         services.startListeningSocketIO();
-                            // code to update agent files will come here
                         
                         services.startServices(bodyJSON.activities);
                     }

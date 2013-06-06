@@ -1,17 +1,20 @@
 #!/bin/bash
 
 # variable initialization
+
 VERSION="-v"`cat version`
-COMPRESSED_FILE_NAME=tmp/sealion-agent.tar.gz
-COMPRESSED_FILE_FOLDER=tmp/
-FOLDER_PATH=../sealion-agent/
-OUTPUT_FILE=../release/sealion-agent$VERSION.sh
-INSTALLER_FILE=sealion-install.sh.in
-IGNORE_FILE=.tarignore
+COMPRESSED_FILE_NAME=../build/tmp/sealion-agent.tar.gz
+COMPRESSED_FILE_FOLDER=../build/tmp/
+FOLDER_PATH=*
+OUTPUT_FILE=../release/sealion.sh
+INSTALLER_FILE=../build/sealion.sh.in
+IGNORE_FILE=../build/.tarignore
 TAG_NAME="SEALION_TARFILE:"
 
 # make tmp directory
 mkdir -p tmp
+
+cd ../sealion-agent
 
 # compress file
 echo "Sealion Packager: Compressing file..."
@@ -25,6 +28,6 @@ echo "Sealion Packager: Generating installer..."
 echo "Sealion Packager: Installer generated"
 
 echo "Sealion Packager: Deleting temperory files..."
-    rm -r $COMPRESSED_FILE_FOLDER
+    rm -rf $COMPRESSED_FILE_FOLDER
     echo "Sealion Packager: Temprory files deleted"
 echo "Sealion Packager: Done!!!"

@@ -1,6 +1,6 @@
 #! /bin/bash
 SYMLINK_PATHS=( K K S S S S K )
-
+sleep 5
 clean_up()
 {
     for (( i = 0 ; i < $1 ; i++ )) 

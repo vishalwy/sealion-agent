@@ -19,6 +19,8 @@ LOCK_FILE=/usr/local/sealion-agent/var/sealion/sealion.pid
 
 cd /usr/local/sealion-agent/
 
+. /etc/environment
+
 #
 # Function that starts the sealion agent's service
 #
@@ -41,6 +43,21 @@ do_start()
 	fi
 }
 
+
+#
+# Function that returns Sealion agent's status
+#
+get_status()
+{
+    running=`pgrep sealion-node | wc -w`
+
+    if [ $running -gt 0 ] ; then
+        return 1
+    fi
+
+    return 0
+}
+
 #
 # Function that stops the sealion agent's service
 #
@@ -49,7 +66,12 @@ do_stop()
 
     if [ -s $LOCK_FILE ]
 	then
-	    ./bin/sealion-node index.js stop
+	    running=`pgrep sealion-node | wc -w`
+
+    	if [ $running -gt 0 ] ; then
+    	    ./bin/sealion-node index.js stop
+    	fi
+
 	    rm -f $LOCK_FILE
 	    return 0
 	else
@@ -83,21 +105,25 @@ case "$1" in
 	;;
   restart|force-reload)
 	do_stop
+	do_start
 	case "$?" in
-	  0)
-		do_start
-		case "$?" in
-			0) 
-			    echo "Sealion service restarted successfully"
-			;;
-			1) 
-			    echo "Old service is still running"
-			;;
-		esac
+		0)
+		    echo "Sealion service restarted successfully"
 		;;
-	  *)
-	      echo "Failed to stop Sealion Service"	
-	  ;;
+		*)
+	      echo "Failed to restart Sealion Service"
+	    ;;
 	esac
+    ;;
+  status)
+    get_status
+    case "$?" in
+      0)
+        echo "Sealion service is not running"
+      ;;
+      1)
+        echo "Sealion service is running"
+      ;;
+    esac
     ;;
 esac

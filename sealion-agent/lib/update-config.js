@@ -10,8 +10,7 @@ Author: Shubhansh <shubhansh.varshney@webyog.com>
 
 var globals = require('./global.js');
 var serverOptions = require('../etc/config/server-config.json').serverDetails;
-var removeActivity = require('./execute-services.js').removeActivity;
-var addActivity = require('./execute-services.js').addActivity;
+var executeServices = require('./execute-services.js');
 var configPath = require('../etc/config/paths-config.json').configPath;
 var logData = require('./log.js');
 var allowUpdate = true;
@@ -21,13 +20,13 @@ function transformBodyJSON(bodyJSON, services) {
     for(var activity in bodyJSON) {
         var activityDetails = bodyJSON[activity];
         var obj = new Object();
-        obj.serviceName = activityDetails.serviceName;
-        obj.activityName = activityDetails.activityName;
-        obj._id = activity;
+        obj.serviceName = activityDetails.service;
+        obj.activityName = activityDetails.name;
+        obj._id = activityDetails._id;
         obj.command = activityDetails.command;
         obj.interval = activityDetails.interval;
 
-        services[activity] = obj;
+        services[activityDetails._id] = obj;
     }
 }
 
@@ -51,16 +50,16 @@ function evaluateServices(services) {
     for(var activityId in services) {
         if(globals.services[activityId]) {
             if(isActivityDiff(globals.services[activityId], services[activityId])) {
-               addActivity(services[activityId]);
+               executeServices.addActivity(services[activityId]);
             }   
         } else {
-            addActivity(services[activityId]);
+            executeServices.addActivity(services[activityId]);
         }
     }
     
     for(var activityId in globals.services) {
         if(! services[activityId]) {
-            removeActivity(globals.services[activityId]);
+            executeServices.removeActivity(globals.services[activityId]);
         }
     }
 }
@@ -80,7 +79,7 @@ function updateConfig( ) {
         globals.request.get(options, function(err, response, data){
             allowUpdate = true;
             if(err) {
-                logData('Error in retreving config file');
+                logData('Error in retreving config data');
             } else {
                 handleResponse(response);     
             }
@@ -94,6 +93,7 @@ function handleResponse(response) {
     var services = { };
     switch(response.statusCode) {
         case 200: {
+                logData('Fetched activity details');
                 transformBodyJSON(bodyJSON.activities, services);
                 evaluateServices(services);
             }

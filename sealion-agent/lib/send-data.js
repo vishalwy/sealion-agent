@@ -16,6 +16,8 @@ var global = require('./global.js');
 var updateConfig = require('./update-config.js');
 var authenticate = require('./authentication.js');
 var logData = require('./log.js');
+var shutDown = require('./execute-services.js').shutDown;
+var uninstallSelf = require('./uninstall-self.js');
 
 // variable to check if SQLite DB should be checked for sending stored data to server
 var needCheckStoredData = true;
@@ -152,10 +154,19 @@ SendData.prototype.sendStoredData = function() {
                                         }
                                     }
                                     break;
+                                case 404 : {
+                                        switch(bodyJSON.code) {
+                                            case 204011:
+                                                shutDown();
+                                                process.nextTick(uninstallSelf);
+                                                break;
+                                        }
+                                    }
+                                    break;
                                 case 409 : {
                                         needCheckStoredData = true;
                                         switch(bodyJSON.code) {
-                                            case 204011 : {
+                                            case 204012 : {
                                                     logData('Sealion-Agent Error#440004: Duplicate data. Data deleted from repository');
                                                     tempThis.deleteData(tempThis, rows[0].row_id);
                                                 }
@@ -263,6 +274,15 @@ SendData.prototype.dataSend = function (result) {
                             }    
                         } else {
                             tempThis.handleError();
+                        }
+                    }
+                    break;
+                case 404 : {
+                        switch(bodyJSON.code) {
+                          case 204011:
+                                shutDown();
+                                process.nextTick(uninstallSelf);
+                            break;
                         }
                     }
                     break;

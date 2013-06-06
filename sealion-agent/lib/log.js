@@ -8,9 +8,10 @@ Author: Shubhansh <shubhansh.varshney@webyog.com>
 Function to log data
 */
 
+var util = require('util');
+
 function logData(data) {
-    var date = new Date();
-    console.log('[ ' + date.toJSON() + ' ]: ' + data);
+    util.log(data);
 }
 
 module.exports = logData;

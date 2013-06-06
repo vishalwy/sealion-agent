@@ -12,8 +12,9 @@ Author: Shubhansh <shubhansh.varshney@webyog.com>
 
 var spawn = require('child_process').spawn;
 var fs = require('fs');
+var agentDetails = require('../etc/config/agent-config.json');
 
-var updateAgent = function() {
+var updateAgent = function(version) {
     var out = fs.openSync('/tmp/sealion_update.log', 'a');
     var err = fs.openSync('/tmp/sealion_update.err', 'a');
     var options ={
@@ -23,7 +24,9 @@ var updateAgent = function() {
         , stdio:['ignore', out, err]
     };
 
-    var child = spawn('/usr/local/sealion-agent/etc/update.sh', [], options);
+    var child = spawn('/usr/local/sealion-agent/etc/update.sh', 
+        ['-a', agentDetails.agentToken, '-v', version],
+        options);
     child.unref();
 }
 
