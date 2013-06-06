@@ -1,2 +1,3 @@
 # Ignore all files ending in ~ (temp files)
 *~
+sealion-agent/.idea
