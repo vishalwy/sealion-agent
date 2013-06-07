@@ -18,9 +18,10 @@ clean_up()
 {
     for (( i = 0 ; i < $1 ; i++ )) 
     do
-        sudo rm -f /etc/rc$i.d/${SYMLINK_PATHS[$i]}20sealion
+        rm -f /etc/rc$i.d/${SYMLINK_PATHS[$i]}60sealion
     done
-    sudo rm -rf $TEMP_PATH        
+    
+    rm -rf $TEMP_PATH        
 }
 
 
@@ -211,54 +212,18 @@ if [ $is_root -eq 1 ] ; then
     chown $USERNAME:$USERNAME $INIT_FILE
 
     echo "Sealion Agent: Creating start/stop links for /etc/init.d/sealion" >&1
-    ln -sf $INIT_FILE $SYMLINK0
-    if [ $? -ne 0 ] ; then
-        echo "Sealion-Agent: Unable to update init.d files. Quiting" >&2
-        exit 1
-    fi
-            
-    ln -sf $INIT_FILE $SYMLINK1
-    if [ $? -ne 0 ] ; then
-        echo "Sealion-Agent: Unable to update init.d files. Quiting" >&2
-        clean_up 1
-        exit 1
-    fi
-                
-    ln -sf $INIT_FILE $SYMLINK2
-    if [ $? -ne 0 ] ; then
-        echo "Sealion-Agent: Unable to update init.d files. Quiting" >&2
-        clean_up 2
-        exit 1
-    fi
-                
-    ln -sf $INIT_FILE $SYMLINK3
-    if [ $? -ne 0 ] ; then
-        echo "Sealion-Agent: Unable to update init.d files. Quiting" >&2
-        clean_up 3
-        exit 1
-    fi
-                
-    ln -sf $INIT_FILE $SYMLINK4
-    if [ $? -ne 0 ] ; then
-        echo "Sealion-Agent: Unable to update init.d files. Quiting" >&2
-        clean_up 4
-        exit 1
-    fi
-
-    ln -sf $INIT_FILE $SYMLINK5
-    if [ $? -ne 0 ] ; then
-        echo "Sealion-Agent: Unable to update init.d files. Quiting" >&2
-        clean_up 5
-        exit 1
-    fi
-
-    ln -sf $INIT_FILE $SYMLINK6
-    if [ $? -ne 0 ] ; then
-        echo "Sealion-Agent: Unable to update init.d files. Quiting" >&2
-        clean_up 6
-        exit 1
-    fi
-
+    
+    for (( i = 0 ; i < 7 ; i++ )) 
+    do
+        echo "creating link "$i
+        
+        ln -sf $INIT_FILE /etc/rc$i.d/${SYMLINK_PATHS[$i]}60sealion   
+        if [ $? -ne 0 ] ; then
+            echo "Sealion-Agent: Unable to update init.d files. Quiting" >&2
+            clean_up $i
+            exit 1
+        fi
+    done
 else
 
     cat etc/sealion > $INIT_FILE
