@@ -18,10 +18,9 @@ clean_up()
 {
     for (( i = 0 ; i < $1 ; i++ )) 
     do
-        rm -f /etc/rc$i.d/${SYMLINK_PATHS[$i]}60sealion
+        sudo rm -f /etc/rc$i.d/${SYMLINK_PATHS[$i]}20sealion
     done
-    
-    rm -rf $TEMP_PATH        
+    sudo rm -rf $TEMP_PATH        
 }
 
 
@@ -45,7 +44,7 @@ if [ $running -gt 0 ] ; then
     $INIT_FILE stop
 fi
 
-while getopts a:o:t:v:hH: OPT ; do
+while getopts a:o:c:v:hH: OPT ; do
     case "$OPT" in
         v)
             version=$OPTARG
@@ -68,7 +67,7 @@ while getopts a:o:t:v:hH: OPT ; do
             exit 127
         fi
         ;;
-        t)
+        c)
             tags=$OPTARG
         ;;
         \?)
@@ -102,7 +101,7 @@ if [ -z $agent_token ] ; then
     
     if [ -z $tags ] ; then
         return_code=`curl -k -s -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"orgToken\":\"$org_token\", \"name\":\"$host\"}" https://ec2-54-234-225-69.compute-1.amazonaws.com/agents -o $TMP_DATA_NAME`
-        if [ $? -ne 0 -a $return_code -ne 200 ] ; then
+        if [ $? -ne 0 -o $return_code -ne 200 ] ; then
             echo "Sealion-Agent Error: Download/Installation failed" >&2
             exit 123
         fi     
@@ -110,7 +109,7 @@ if [ -z $agent_token ] ; then
         tags=\"$tags\"
         tags=${tags//,/\",\"}
         return_code=`curl -k -s -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"orgToken\":\"$org_token\", \"name\":\"$host\", \"category\":[$tags]}" https://ec2-54-234-225-69.compute-1.amazonaws.com/agents -o $TMP_DATA_NAME`
-        if [ $? -ne 0 -a $return_code -ne 200 ] ; then
+        if [ $? -ne 0 -o $return_code -ne 200 ] ; then
             echo "Sealion-Agent Error: Download/Installation failed"
             exit 123
         fi
@@ -215,15 +214,14 @@ if [ $is_root -eq 1 ] ; then
     
     for (( i = 0 ; i < 7 ; i++ )) 
     do
-        echo "creating link "$i
-        
-        ln -sf $INIT_FILE /etc/rc$i.d/${SYMLINK_PATHS[$i]}60sealion   
+        ln -sf $INIT_FILE /etc/rc$i.d/${SYMLINK_PATHS[$i]}20sealion   
         if [ $? -ne 0 ] ; then
             echo "Sealion-Agent: Unable to update init.d files. Quiting" >&2
             clean_up $i
             exit 1
         fi
     done
+
 else
 
     cat etc/sealion > $INIT_FILE
