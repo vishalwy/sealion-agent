@@ -72,10 +72,12 @@ function addActivity(activity) {
 
 // Removes activity from executing repeatedly. Used when activities are altered or removed
 function removeActivity(activity) {
-    logData("removing activity " + activity['_id']);
+
     if(interId[activity['_id']]) {
+        logData("removing activity " + activity['_id']);
         clearInterval(interId[activity['_id']]);
-        delete(services[activity['_id']])
+        delete(interId[activity['_id']]);
+        delete(services[activity['_id']]);
     }
 }
 
@@ -103,8 +105,12 @@ function startAllActivities(activities) {
 // stops all activities running
 function stopAllActivities() {
     for(var counter in interId) {
-        logData('stopping service for ' + services[counter]['activityName']);
-        clearInterval(interId[counter]);
+        if(interId[counter] && services[counter]) {
+            logData('stopping service for ' + services[counter]['activityName']);
+            clearInterval(interId[counter]);
+            delete(interId[counter]);
+            delete(services[counter]);
+        }
     }
 }
 

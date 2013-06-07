@@ -37,14 +37,12 @@ function HandleSocketIO( ) {
 HandleSocketIO.prototype.createConnection = function() {
     var tempThis = this;
 
-
-
-
     if(! this.socket) {
 
         this.socket = io.connect(socketIoOptions.url);
         this.socket.on('connect', this.onConnect);
         this.socket.on('joined', this.onJoined);
+        this.socket.on('left', this.onLeft);
         this.socket.on('agent_removed', this.onAgentRemoved);
         this.socket.on('server_category_changed', this.onServerCategoryChanged);
         this.socket.on('activitylist_in_category_updated', this.onActivityListUpdated);
@@ -93,6 +91,11 @@ HandleSocketIO.prototype.onJoined = function (data) {
         logData('Joined organization room');
     }
 };
+
+
+HandleSocketIO.prototype.onLeft = function (data) {
+    logData('SocketIO: Left category room');
+}
 
 HandleSocketIO.prototype.onAgentRemoved = function (data) {
     logData('SocketIO: Remove agent');
