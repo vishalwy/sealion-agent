@@ -26,15 +26,15 @@ clean_up()
 
 get_JSON_value()
 {
-    if [ -z $1 -a -z $2 ] ; then
+    if [ $# -eq 0 ] ; then
         return 1
-    fi
+    fi 
     
-    JSON="'$1'"
-    key="'$2'"
-
-    value=`python -c "import json;obj=json.loads($JSON);print obj[$key]"` 
+    JSON="'$@'"
     
+    version=`python -c "import json;obj=json.loads($JSON);print obj[\"agentVersion\"]"` 
+    agent_token=`python -c "import json;obj=json.loads($JSON);print obj[\"agentToken\"]"`
+    already_registered=`python -c "import json;obj=json.loads($JSON);print obj[\"alreadyRegistered\"]"`
     return 0
 }
 
@@ -117,28 +117,26 @@ if [ -z $agent_token ] ; then
     
     dataJSON=`cat $TMP_DATA_NAME`
     
-    get_JSON_value $dataJSON "agentToken"
+    
+    get_JSON_value $dataJSON
     if [ $? -ne 0 ] ; then
-        echo "Sealion-Agent Error: 'agent-token' not present in response. Please report the issue"    
-        exit 120
-    else
-        agent_token=$value
+        echo "Sealion-Agent Error: Response parse error"    
+        exit 121
     fi
     
-    get_JSON_value $dataJSON "agentVersion"
-    if [ $? -ne 0 ] ; then
-        echo "Sealion-Agent Error: 'agent-version' not present in response. Please report the issue"    
+    if [ -z $version ] ; then
+        echo "Sealion-Agent Error: 'agent-version' not present in response. Please report the issue"
         exit 119
-    else
-        version=$value
+    fi    
+    
+    if [ -z $agent_token ] ; then
+        echo "Sealion-Agent Error: 'agent-token' not present in response. Please report the issue"
+        exit 120
     fi
     
-    get_JSON_value $dataJSON "alreadyRegistered"
-    if [ $? -ne 0 ] ; then
-        echo "Sealion-Agent Error: 'already-registered' not present in response. Please report the issue"    
+    if [ -z $already_registered ] ; then
+        echo "Sealion-Agent Error: 'already-registered' not present in response. Please report the issue"
     else
-        already_registered=$value
-        
         if [ $already_registered -eq 1 ]; then
             echo "Sealion-Agent Warning: Agent may be already registered" >&1
         fi
