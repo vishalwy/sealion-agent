@@ -5,16 +5,16 @@ clean_up()
 {
     for (( i = 0 ; i < $1 ; i++ )) 
     do
-        sudo rm -f /etc/rc$i.d/${SYMLINK_PATHS[$i]}20sealion
+        rm -f /etc/rc$i.d/${SYMLINK_PATHS[$i]}20sealion
     done
 }
 
-sudo service sealion stop 2> /dev/null
+service sealion stop 2> /dev/null
 
 echo "Sealion Agent: Removing initialization files"
     clean_up 7
     
-    sudo rm -f /etc/init.d/sealion
+    rm -f /etc/init.d/sealion
     if [ $? -ne 0 ] ; then
         echo "Sealion Agent: Failed to remove initialization file"
     else
@@ -22,7 +22,7 @@ echo "Sealion Agent: Removing initialization files"
     fi
 
 echo "Sealion Agent: Removing files"
-    sudo rm -rf /usr/local/sealion-agent
+    rm -rf /usr/local/sealion-agent
     if [ $? -ne 0 ] ; then
         echo "Sealion Agent: Unable to remove files"
     else

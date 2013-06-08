@@ -212,12 +212,13 @@ if [ $is_root -eq 1 ] ; then
     
     for (( i = 0 ; i < 7 ; i++ )) 
     do
-        ln -sf $INIT_FILE /etc/rc$i.d/${SYMLINK_PATHS[$i]}20sealion   
+        ln -sf $INIT_FILE /etc/rc$i.d/${SYMLINK_PATHS[$i]}20sealion
         if [ $? -ne 0 ] ; then
             echo "Sealion-Agent: Unable to update init.d files. Quiting" >&2
             clean_up $i
             exit 1
         fi
+        chown -h $USERNAME:$USERNAME /etc/rc$i.d/${SYMLINK_PATHS[$i]}20sealion
     done
 
 else

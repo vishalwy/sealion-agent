@@ -87,5 +87,19 @@ process.on('SIGINT', function() {
     process.exit(0);
 });
 
+logData('Sealion-Agent: service started');
+
+fs.chmod('/usr/local/sealion-agent/var/log/sealion.log', 644, function(err){
+    if(err){
+        logData('Unable to change ownership of sealion.log');
+    }
+});
+
+fs.chmod('/usr/local/sealion-agent/var/log/sealion.err', 644, function(err){
+    if(err){
+        logData('Unable to change ownership of sealion.err');
+    }
+
+});
 // After initial file setups and starting daemon check for authentication
 authenticate();

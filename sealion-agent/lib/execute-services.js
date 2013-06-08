@@ -59,7 +59,7 @@ function addActivity(activity) {
 
     removeActivity(activity);
 
-    logData("adding activity " + activity['_id']);
+    logData("adding activity " + activity['activityName']);
     interId[activity['_id']] = setInterval(
         onExecuteTrigger,
         activity['interval'] ? activity['interval'] * 1000 : DEFAULT_INTERVAL, 
@@ -74,10 +74,10 @@ function addActivity(activity) {
 function removeActivity(activity) {
 
     if(interId[activity['_id']]) {
-        logData("removing activity " + activity['_id']);
+        logData("removing activity " + activity['activityName']);
         clearInterval(interId[activity['_id']]);
-        delete(interId[activity['_id']]);
-        delete(services[activity['_id']]);
+        interId[activity['_id']] = null;
+        services[activity['_id']] = null;
     }
 }
 
@@ -108,8 +108,8 @@ function stopAllActivities() {
         if(interId[counter] && services[counter]) {
             logData('stopping service for ' + services[counter]['activityName']);
             clearInterval(interId[counter]);
-            delete(interId[counter]);
-            delete(services[counter]);
+            interId[counter] = null;
+            services[counter] = null;
         }
     }
 }
