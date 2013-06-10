@@ -1,5 +1,10 @@
 # Ignore all files ending in ~ (temp files)
-*~
-sealion-agent/.idea
+
 release/sealion.sh
 
+## Ignore folders ##
+
+agent/tmp/
+agent/etc/dbs/
+agent/etc/config/
+agent/etc/certificates/
