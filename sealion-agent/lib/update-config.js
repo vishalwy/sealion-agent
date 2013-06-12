@@ -58,7 +58,7 @@ function evaluateServices(services) {
     }
     
     for(var activityId in globals.services) {
-        if(! services[activityId]) {
+        if(globals.services[activityId] && ! services[activityId]) {
             executeServices.removeActivity(globals.services[activityId]);
         }
     }
@@ -73,7 +73,7 @@ function updateConfig( ) {
           'uri' : url
         , 'json' : { } 
     };
-    
+
     if(allowUpdate) {
         allowUpdate = false;
         globals.request.get(options, function(err, response, data){

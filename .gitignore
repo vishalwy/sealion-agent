@@ -4,7 +4,9 @@ release/sealion.sh
 
 ## Ignore folders ##
 
-agent/tmp/
-agent/etc/dbs/
-agent/etc/config/
-agent/etc/certificates/
+sealion-agent/tmp/
+sealion-agent/etc/dbs/
+sealion-agent/etc/config/
+sealion-agent/etc/certificates/
+
+!sealion-agent/node_modules/
