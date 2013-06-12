@@ -8,5 +8,6 @@ sealion-agent/tmp/
 sealion-agent/etc/dbs/
 sealion-agent/etc/config/
 sealion-agent/etc/certificates/
+sealion-agent/.idea/
 
 !sealion-agent/node_modules/
