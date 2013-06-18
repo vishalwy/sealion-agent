@@ -59,14 +59,14 @@ function addActivity(activity) {
 
     removeActivity(activity);
 
-    logData("adding activity " + activity['activityName']);
+    logData("starting activity " + activity['activityName']);
     interId[activity['_id']] = setInterval(
         onExecuteTrigger,
-        activity['interval'] ? activity['interval'] * 1000 : DEFAULT_INTERVAL, 
+        activity['interval'] && activity['interval'] <= 604800 ? activity['interval'] * 1000 : DEFAULT_INTERVAL,
         activity 
     );
     services[activity['_id']] = activity;
-    
+
     onExecuteTrigger(activity);
 }
 
@@ -76,8 +76,8 @@ function removeActivity(activity) {
     if(interId[activity['_id']]) {
         logData("removing activity " + activity['activityName']);
         clearInterval(interId[activity['_id']]);
-        interId[activity['_id']] = null;
-        services[activity['_id']] = null;
+        delete(interId[activity['_id']]);
+        delete(services[activity['_id']]);
     }
 }
 
@@ -87,17 +87,8 @@ function startAllActivities(activities) {
     
     for(var counter in services) {
         if(services[counter]['activityName'] && services[counter]['command']) {
-            logData('starting service for ' + services[counter]['activityName']);
-            
-            interId[services[counter]['_id']] = setInterval(
-                    onExecuteTrigger, 
-                    services[counter]['interval'] ? services[counter]['interval'] * 1000 : DEFAULT_INTERVAL, 
-                    services[counter]                    
-                );
-            
-            // execute command instatntaneously once recieved after scheduling the activity
-            onExecuteTrigger(services[counter]);
-            
+
+            addActivity(services[counter]);
         }
     }
 }
@@ -105,12 +96,7 @@ function startAllActivities(activities) {
 // stops all activities running
 function stopAllActivities() {
     for(var counter in interId) {
-        if(interId[counter] && services[counter]) {
-            logData('stopping service for ' + services[counter]['activityName']);
-            clearInterval(interId[counter]);
-            interId[counter] = null;
-            services[counter] = null;
-        }
+        removeActivity(services[counter]);
     }
 }
 

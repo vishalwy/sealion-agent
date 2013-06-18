@@ -1,9 +1,7 @@
 VERSION="-v"`cat ../build/version`
 SERVER="192.168.1.70"
-INSTALLER_HELPER_PATH=/var/www/sealion/webclient/overViewUI/downloads/
-INSTALLER_PATH=/var/www/sealion/webclient/overViewUI/downloads/
-UPDATE_PATH=/var/www/sealion/webclient/overViewUI/downloads/
-UPDATE_HELPER_PATH=/var/www/sealion/webclient/overViewUI/downloads/
+INSTALLER_HELPER_PATH=/var/www/sealion.com/downloads/
+INSTALLER_PATH=/var/www/sealion.com/downloads/
 USER="vishal"
 PWD="cameo15jay"
 

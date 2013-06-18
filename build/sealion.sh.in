@@ -100,7 +100,7 @@ if [ -z $agent_token ] ; then
     fi
     
     if [ -z $tags ] ; then
-        return_code=`curl -k -s -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"orgToken\":\"$org_token\", \"name\":\"$host\"}" https://ec2-54-234-225-69.compute-1.amazonaws.com/agents -o $TMP_DATA_NAME`
+        return_code=`curl -k -s -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"orgToken\":\"$org_token\", \"name\":\"$host\"}" https://api.sealion.com/agents -o $TMP_DATA_NAME`
         if [ $? -ne 0 -o $return_code -ne 200 ] ; then
             echo "Sealion-Agent Error: Download/Installation failed" >&2
             exit 123
@@ -108,7 +108,7 @@ if [ -z $agent_token ] ; then
     else
         tags=\"$tags\"
         tags=${tags//,/\",\"}
-        return_code=`curl -k -s -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"orgToken\":\"$org_token\", \"name\":\"$host\", \"category\":[$tags]}" https://ec2-54-234-225-69.compute-1.amazonaws.com/agents -o $TMP_DATA_NAME`
+        return_code=`curl -k -s -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"orgToken\":\"$org_token\", \"name\":\"$host\", \"category\":[$tags]}" https://api.sealion.com/agents -o $TMP_DATA_NAME`
         if [ $? -ne 0 -o $return_code -ne 200 ] ; then
             echo "Sealion-Agent Error: Download/Installation failed"
             exit 123

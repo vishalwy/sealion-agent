@@ -32,6 +32,11 @@ function transformBodyJSON(bodyJSON, services) {
 
 // check if activity differs in command or interval
 function isActivityDiff(source, target) {
+
+    if(source.activityName !== target.activityName) {
+        source.activityName = target.activityName;
+    }
+
     if(source.command !== target.command) {
         return true;
     }
