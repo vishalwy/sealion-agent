@@ -116,7 +116,7 @@ SendData.prototype.sendStoredData = function() {
                         } else {
                             var bodyJSON = response.body;
                             switch(response.statusCode) {
-                                case 200 : {
+                                case 204 : {
                                         tempThis.deleteData(tempThis, rows[0].row_id);
                                     }
                                     break;
@@ -224,7 +224,7 @@ SendData.prototype.dataSend = function (result) {
             var bodyJSON = response.body;
 
             switch(response.statusCode) {
-                case 200 : {
+                case 204 : {
                         if(needCheckStoredData) {
                             needCheckStoredData = false;
                             tempThis.sendStoredData();
