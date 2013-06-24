@@ -1,6 +1,6 @@
 #! /bin/bash
 
-USAGE="Usage: curl -k https://192.168.1.70/downloads/sealion.sh | bash /dev/stdin \n\t-o <Organisation Token> \n\t[-H <Hostname>] \n\t[-t <comma seperated list of tags without spaces>] \n\t [-h for help]"
+USAGE="Usage: curl -k https://agent.sealion.com | bash /dev/stdin \n\t-o <Organisation Token> \n\t[-H <Hostname>] \n\t[-c <comma seperated list of tags without spaces>] \n\t [-h for help]"
 OPTERR=0
 LOCK_FILE=/usr/local/sealion-agent/var/sealion/sealion.pid
 INIT_FILE=/etc/init.d/sealion
