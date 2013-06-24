@@ -1,6 +1,6 @@
 #! /bin/bash
 
-USAGE="Usage: curl -k https://192.168.1.70/downloads/sealion.sh | bash /dev/stdin \n\t-o <Organisation Token> \n\t[-H <Hostname>] \n\t[-t <comma seperated list of tags without spaces>] \n\t [-h for help]"
+USAGE="Usage: curl -k https://agent.sealion.com | bash /dev/stdin \n\t-o <Organisation Token> \n\t[-H <Hostname>] \n\t[-c <comma seperated list of tags without spaces>] \n\t [-h for help]"
 OPTERR=0
 LOCK_FILE=/usr/local/sealion-agent/var/sealion/sealion.pid
 INIT_FILE=/etc/init.d/sealion
@@ -100,7 +100,7 @@ if [ -z $agent_token ] ; then
     fi
     
     if [ -z $tags ] ; then
-        return_code=`curl -k -s -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"orgToken\":\"$org_token\", \"name\":\"$host\"}" https://api.sealion.com/agents -o $TMP_DATA_NAME`
+        return_code=`curl -s -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"orgToken\":\"$org_token\", \"name\":\"$host\"}" https://api.sealion.com/agents -o $TMP_DATA_NAME`
         if [ $? -ne 0 -o $return_code -ne 200 ] ; then
             echo "Sealion-Agent Error: Download/Installation failed" >&2
             exit 123
@@ -108,7 +108,7 @@ if [ -z $agent_token ] ; then
     else
         tags=\"$tags\"
         tags=${tags//,/\",\"}
-        return_code=`curl -k -s -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"orgToken\":\"$org_token\", \"name\":\"$host\", \"category\":[$tags]}" https://api.sealion.com/agents -o $TMP_DATA_NAME`
+        return_code=`curl -s -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"orgToken\":\"$org_token\", \"name\":\"$host\", \"category\":[$tags]}" https://api.sealion.com/agents -o $TMP_DATA_NAME`
         if [ $? -ne 0 -o $return_code -ne 200 ] ; then
             echo "Sealion-Agent Error: Download/Installation failed"
             exit 123
