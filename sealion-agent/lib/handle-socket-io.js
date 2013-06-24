@@ -37,9 +37,26 @@ function HandleSocketIO( ) {
 HandleSocketIO.prototype.createConnection = function() {
     var tempThis = this;
 
-    if(! this.socket) {
+    if(this.socket && this.socket.socket.connected) {
+        this.socket.socket.disconnectSync();
+    }
 
-        this.socket = io.connect(socketIoOptions.url);
+    this.socket = io.connect(socketIoOptions.url);
+    if(this.socket){
+        this.socket.removeListener('connect', this.onConnect);
+        this.socket.removeListener('joined', this.onJoined);
+        this.socket.removeListener('left', this.onLeft);
+        this.socket.removeListener('agent_removed', this.onAgentRemoved);
+        this.socket.removeListener('server-category_changed', this.onServerCategoryChanged);
+        this.socket.removeListener('activitylist_in_category_updated', this.onActivityListUpdated);
+        this.socket.removeListener('activity_updated',this.onActivityUpdated);
+        this.socket.removeListener('upgrade_agent', this.onUpgradeAgent);
+        this.socket.removeListener('message', this.onMsg);
+        this.socket.removeListener('error', this.onError);
+        this.socket.removeListener('unhandledException', this.onUnhandledException);
+        this.socket.removeListener('disconnect', this.onDisconnect);
+
+
         this.socket.on('connect', this.onConnect);
         this.socket.on('joined', this.onJoined);
         this.socket.on('left', this.onLeft);
@@ -52,11 +69,7 @@ HandleSocketIO.prototype.createConnection = function() {
         this.socket.on('error', this.onError);
         this.socket.on('unhandledException', this.onUnhandledException);
         this.socket.on('disconnect', this.onDisconnect);
-    } else {
-        if(this.socket.socket.connected) {
-            this.socket.socket.disconnectSync();
-        }
-        this.socket.socket.connect();
+
     }
 }
 
