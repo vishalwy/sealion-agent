@@ -172,7 +172,7 @@ else
 
 fi    
 
-echo "SeaLion Agent: Extracting Files..." >&1
+echo "SeaLion-Agent: Extracting Files..." >&1
     
     MATCH=$( grep --text --line-number '^SEALION_TARFILE:$' $0 | cut -d ':' -f 1 )
     TAR_FILE_START=$(( MATCH + 1 ))
@@ -192,7 +192,7 @@ echo "SeaLion Agent: Extracting Files..." >&1
         exit 1
     fi
 
-echo "SeaLion Agent: Files Extracted Successfully" >&1
+echo "SeaLion-Agent: Files Extracted Successfully" >&1
 
 cd $INSTALLATION_DIRECTORY
 
@@ -238,7 +238,7 @@ if [ $? -ne 0 ] ; then
     echo "SeaLion-Agent: Service can't be started due to errors" >&2
     exit 1
 else
-    echo "SeaLion Agent: Service successfully started, exiting installer" >&1
+    echo "SeaLion-Agent: Service successfully started, exiting installer" >&1
     exit 0
 fi
 exit 0
