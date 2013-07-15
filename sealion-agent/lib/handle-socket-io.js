@@ -85,7 +85,7 @@ HandleSocketIO.prototype.closeConnection = function( ) {
 
 HandleSocketIO.prototype.onConnect = function () {
 
-    logData("Socket IO connected");
+    logData("SocketIO: Connected");
 
     if(self) {
         self.socket.emit('join', { org : SealionGlobal.orgId });
@@ -99,9 +99,9 @@ HandleSocketIO.prototype.onConnect = function () {
 
 HandleSocketIO.prototype.onJoined = function (data) {
     if( data.category ) {
-        logData('Joined category room');
+        logData('SocketIO: Joined category room');
     } else {
-        logData('Joined organization room');
+        logData('SocketIO: Joined organization room');
     }
 };
 
@@ -153,7 +153,7 @@ HandleSocketIO.prototype.onActivityUpdated = function (data) {
 }
 
 HandleSocketIO.prototype.onUpgradeAgent = function (data) {
-    logData('SocketIO: updating to agent-version ' + data.agentVersion)
+    logData('SocketIO: Updating to agent-version ' + data.agentVersion)
 
     if(data.agentVersion != agentDetails.agentVersion) {
         executeServices.shutDown();
@@ -166,11 +166,11 @@ HandleSocketIO.prototype.onUpgradeAgent = function (data) {
 
 
 HandleSocketIO.prototype.onError = function(error) {
-    logData("Error in Socket.io connection " + error);
+    logData("SOcketIO: Error in Socket.io connection " + error);
 }
 
 HandleSocketIO.prototype.onUnhandledException = function(error) {
-    logData('Socket.io Caught unhandled exception');
+    logData('SocketIO: Caught unhandled exception');
 }
 
 HandleSocketIO.prototype.onMsg = function(msg) {
@@ -178,7 +178,7 @@ HandleSocketIO.prototype.onMsg = function(msg) {
 }
 
 HandleSocketIO.prototype.onDisconnect = function() {
-    logData("Socket.io Connection disconnected");
+    logData("SocketIO: Connection disconnected");
 
     if(self.reconnect) {
         self.createConnection();

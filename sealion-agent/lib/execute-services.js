@@ -59,7 +59,7 @@ function addActivity(activity) {
 
     removeActivity(activity);
 
-    logData("starting activity " + activity['activityName']);
+    logData("Starting activity " + activity['activityName']);
     interId[activity['_id']] = setInterval(
         onExecuteTrigger,
         activity['interval'] && activity['interval'] <= 604800 ? activity['interval'] * 1000 : DEFAULT_INTERVAL,
@@ -74,7 +74,7 @@ function addActivity(activity) {
 function removeActivity(activity) {
 
     if(interId[activity['_id']]) {
-        logData("removing activity " + activity['activityName']);
+        logData("Removing activity " + activity['activityName']);
         clearInterval(interId[activity['_id']]);
         delete(interId[activity['_id']]);
         delete(services[activity['_id']]);

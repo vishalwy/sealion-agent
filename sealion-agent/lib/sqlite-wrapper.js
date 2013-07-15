@@ -42,7 +42,7 @@ function StoreDataInDb() {
     var tempThis = this;
     this.db = new sqlite3.Database(dbPath, function(error) {
         if(error) {
-            logData("error in opening db");
+            logData("Error in opening db");
         } else {
             tempThis.db.run('PRAGMA journal_mode = WAL');
             tempThis.db.run('PRAGMA busy_timeout = 3000000');
@@ -62,11 +62,11 @@ function StoreDataInDb() {
     });
     
     this.db.on('error', function(error) { 
-        logData("found error in database operation " + error);
+        logData("Found error in database operation " + error);
     });
     
     this.db.on('unhandledException', function(error) {
-        logData("found unhandled exception in database operation");
+        logData("Found unhandled exception in database operation");
     });    
 };
 
@@ -83,16 +83,16 @@ StoreDataInDb.prototype.insertErroneousData = function(data, activityID) {
     this.db.serialize( function () {
     var stmt = tempThis.db.prepare(insertErroneousDataStmt);
         stmt.on('error', function(error) {
-            logData("sqlite prepared statement runtime error while deleting from DB");
+            logData("Sqlite prepared statement runtime error while deleting from DB");
         });
         
         stmt.on('unhandledException', function(error) {
-           logData("sqlite prepared statement unhandled exception");  
+           logData("Sqlite prepared statement unhandled exception");  
         });
                 
         stmt.run(new Date().toJSON(), activityID, data, function(error) {
             if(error) {
-                logData("sqlite prepared statement stmt.run runtime error while inserting in DB");
+                logData("Sqlite prepared statement stmt.run runtime error while inserting in DB");
             }
         });
         stmt.finalize();
@@ -105,16 +105,16 @@ StoreDataInDb.prototype.insertData = function (data, activityID) {
     this.db.serialize( function () {
         var stmt = tempThis.db.prepare(insertDataStmt);
         stmt.on('error', function(error) {
-            logData("sqlite prepared statement runtime error while deleting from DB");
+            logData("Sqlite prepared statement runtime error while deleting from DB");
         });
         
         stmt.on('unhandledException', function(error) {
-           logData("sqlite prepared statement unhandled exception");  
+           logData("Sqlite prepared statement unhandled exception");  
         });
                 
         stmt.run(new Date().toJSON(), activityID, data, function(error) {
             if(error) {
-                logData("sqlite prepared statement stmt.run runtime error while inserting in DB");
+                logData("Sqlite prepared statement stmt.run runtime error while inserting in DB");
             }
         });
         stmt.finalize();

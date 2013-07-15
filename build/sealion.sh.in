@@ -40,7 +40,7 @@ get_JSON_value()
 
 running=`pgrep sealion-node | wc -w`
 if [ $running -gt 0 ] ; then
-    echo "Sealion service already running. Stopping the service"
+    echo "SeaLion-Agent: Sealion service already running. Stopping the service"
     $INIT_FILE stop
 fi
 
@@ -63,7 +63,7 @@ while getopts a:o:c:v:hH: OPT ; do
         if [ -z $org_token ] ; then
             org_token=$OPTARG
         else
-            echo "Sealion-Agent Error: Organization token option is repeated. Quiting" >&2
+            echo "SeaLion-Agent Error: Organization token option is repeated. Quiting" >&2
             exit 127
         fi
         ;;
@@ -71,12 +71,12 @@ while getopts a:o:c:v:hH: OPT ; do
             tags=$OPTARG
         ;;
         \?)
-            echo "Invalid argument -$OPTARG" >&2
+            echo "SeaLion-Agent Error: Invalid argument -$OPTARG" >&2
             printf "$USAGE \n" >&2
             exit 126
         ;;
         :)
-            echo "Option -$OPTARG requires an argument." >&2
+            echo "SeaLion-Agent Error: Option -$OPTARG requires an argument." >&2
             exit 125
         ;;
     esac
@@ -85,7 +85,7 @@ done
 if [ -z $agent_token ] ; then
 
     if [ -z $org_token ] ; then
-        echo "Sealion-Agent Error: No Organization token is supplied. Quiting" >&2
+        echo "SeaLion-Agent Error: No Organization token is supplied. Quiting" >&2
         exit 124
     fi
 
@@ -95,14 +95,14 @@ if [ -z $agent_token ] ; then
 
     mkdir -p $TMP_FILE_PATH
     if [ $? -ne 0 ] ; then
-        echo "Sealion-Agent Error#400001: Can't create temporary directory" >&2
+        echo "SeaLion-Agent Error: Can't create temporary directory" >&2
         exit 1
     fi
     
     if [ -z $tags ] ; then
         return_code=`curl -s -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"orgToken\":\"$org_token\", \"name\":\"$host\"}" https://api.sealion.com/agents -o $TMP_DATA_NAME`
         if [ $? -ne 0 -o $return_code -ne 200 ] ; then
-            echo "Sealion-Agent Error: Download/Installation failed" >&2
+            echo "SeaLion-Agent Error: Download/Installation failed" >&2
             exit 123
         fi     
     else
@@ -110,7 +110,7 @@ if [ -z $agent_token ] ; then
         tags=${tags//,/\",\"}
         return_code=`curl -s -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"orgToken\":\"$org_token\", \"name\":\"$host\", \"category\":[$tags]}" https://api.sealion.com/agents -o $TMP_DATA_NAME`
         if [ $? -ne 0 -o $return_code -ne 200 ] ; then
-            echo "Sealion-Agent Error: Download/Installation failed"
+            echo "SeaLion-Agent Error: Download/Installation failed"
             exit 123
         fi
     fi
@@ -120,25 +120,25 @@ if [ -z $agent_token ] ; then
     
     get_JSON_value $dataJSON
     if [ $? -ne 0 ] ; then
-        echo "Sealion-Agent Error: Response parse error"    
+        echo "SeaLion-Agent Error: Response parse error"    
         exit 121
     fi
     
     if [ -z $version ] ; then
-        echo "Sealion-Agent Error: 'agent-version' not present in response. Please report the issue"
+        echo "SeaLion-Agent Error: 'agent-version' not present in response. Please report the issue"
         exit 119
     fi    
     
     if [ -z $agent_token ] ; then
-        echo "Sealion-Agent Error: 'agent-token' not present in response. Please report the issue"
+        echo "SeaLion-Agent Error: 'agent-token' not present in response. Please report the issue"
         exit 120
     fi
     
     if [ -z $already_registered ] ; then
-        echo "Sealion-Agent Error: 'already-registered' not present in response. Please report the issue"
+        echo "SeaLion-Agent Error: 'already-registered' not present in response. Please report the issue"
     else
         if [ $already_registered -eq 1 ]; then
-            echo "Sealion-Agent Warning: Agent may be already registered" >&1
+            echo "SeaLion-Agent Warning: Agent may be already registered" >&1
         fi
     fi
     
@@ -146,33 +146,33 @@ if [ -z $agent_token ] ; then
         
     mkdir -p $INSTALLATION_DIRECTORY
     if [ $? -ne 0 ] ; then
-        echo "Sealion-Agent Error#400005: Can't create directory!!!" >&2
+        echo "SeaLion-Agent Error: Can't create directory!!!" >&2
     fi
 
-    echo "Sealion Agent: Creating Sealion Agent's User..." >&1
+    echo "SeaLion-Agent: Creating SeaLion Agent's User..." >&1
     useradd -r -d $INSTALLATION_DIRECTORY $USERNAME 2> /dev/null
     tempVar=$?
     if [ $tempVar -ne 0 ] ; then
         if [ $tempVar -eq 9 ] ; then
-            echo "Sealion-Agent Warning: Username 'sealion' already exists, using same user" >&1
+            echo "SeaLion-Agent Warning: Username 'sealion' already exists, using same user" >&1
         else
-            echo "Sealion-Agent Error#400005: Can't create user!!!" >&2
+            echo "SeaLion-Agent Error: Can't create user!!!" >&2
             rm -r $INSTALLATION_DIRECTORY
             exit 1
         fi
     fi
-    echo "Sealion Agent: Sealion Agent's User creation successful" >&1
+    echo "SeaLion-Agent: SeaLion Agent's User creation successful" >&1
 
 else
 
     if [ -z $version ] ; then 
-        echo "Sealion-Agent Error: Agent-version not found"
+        echo "SeaLion-Agent Error: Agent-version not found"
         exit 121
     fi
 
 fi    
 
-echo "Sealion Agent: Extracting Files..." >&1
+echo "SeaLion Agent: Extracting Files..." >&1
     
     MATCH=$( grep --text --line-number '^SEALION_TARFILE:$' $0 | cut -d ':' -f 1 )
     TAR_FILE_START=$(( MATCH + 1 ))
@@ -180,19 +180,19 @@ echo "Sealion Agent: Extracting Files..." >&1
     tail -n +$TAR_FILE_START $0 | tar -xzf - -C $INSTALLATION_DIRECTORY --overwrite
     
     if [ $? -ne 0 ] ; then
-        echo "Sealion-Agent Error#400002: Installation failed" >&2
+        echo "SeaLion-Agent Error: Installation failed" >&2
         if [ $is_root -eq 1 ] ; then
             userdel sealion
             rm -rf $INSTALLATION_DIRECTORY
             rm -rf $TMP_FILE_PATH
             if [ $? -ne 0 ] ; then
-                echo "Sealion-Agent Error#400006: Error in deleting temporary files" >&2
+                echo "SeaLion-Agent Error: Error in deleting temporary files" >&2
             fi
         fi
         exit 1
     fi
 
-echo "Sealion Agent: Files Extracted Successfully" >&1
+echo "SeaLion Agent: Files Extracted Successfully" >&1
 
 cd $INSTALLATION_DIRECTORY
 
@@ -202,19 +202,19 @@ echo "{ \"agentToken\":\"$agent_token\" , \"agentVersion\":\"$version\" }" > etc
 if [ $is_root -eq 1 ] ; then
     chown -R $USERNAME:$USERNAME $INSTALLATION_DIRECTORY
 
-    echo "Sealion Agent: Creating /etc/init.d/sealion" >&1
+    echo "SeaLion-Agent: Creating /etc/init.d/sealion" >&1
     cp -u /usr/local/sealion-agent/etc/sealion $INIT_FILE
     chmod +x $INIT_FILE
 
     chown $USERNAME:$USERNAME $INIT_FILE
 
-    echo "Sealion Agent: Creating start/stop links for /etc/init.d/sealion" >&1
+    echo "SeaLion-Agent: Creating start/stop links for /etc/init.d/sealion" >&1
     
     for (( i = 0 ; i < 7 ; i++ )) 
     do
         ln -sf $INIT_FILE /etc/rc$i.d/${SYMLINK_PATHS[$i]}20sealion
         if [ $? -ne 0 ] ; then
-            echo "Sealion-Agent: Unable to update init.d files. Quiting" >&2
+            echo "SeaLion-Agent Error: Unable to update init.d files. Quiting" >&2
             clean_up $i
             exit 1
         fi
@@ -229,16 +229,16 @@ fi
 
 rm -rf $TMP_FILE_PATH
 if [ $? -ne 0 ] ; then
-    echo "Sealion-Agent Error#400006: Error in deleting temporary files" >&2
+    echo "SeaLion-Agent Error: Error in deleting temporary files" >&2
 fi
 
-echo "Sealion Agent: Starting Agent..." >&1
+echo "SeaLion-Agent: Starting Agent..." >&1
 $INIT_FILE start
 if [ $? -ne 0 ] ; then
-    echo "Sealion-Agent: Service can't be started due to errors" >&2
+    echo "SeaLion-Agent: Service can't be started due to errors" >&2
     exit 1
 else
-    echo "Sealion Agent: Service is running, exiting installer" >&1
+    echo "SeaLion Agent: Service successfully started, exiting installer" >&1
     exit 0
 fi
 exit 0
