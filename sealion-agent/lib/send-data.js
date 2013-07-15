@@ -52,7 +52,7 @@ SendData.prototype.deleteDataWithActivityID = function(activityID) {
     
     tempDB.run('DELETE FROM repository WHERE activityID = ?', activityID, function(error){
         if(error) {
-            logData("error in deleting activity data from DB");
+            logData("Error in deleting activity data from DB");
         } else {
             process.nextTick(function () {
                 self.sendStoredData();
@@ -70,7 +70,7 @@ SendData.prototype.deleteData = function(self, rowId) {
     var self =  this;
     tempDB.run('DELETE FROM repository WHERE row_id = ?', rowId, function(error){
         if(error) {
-            logData("error in deleting data from DB");
+            logData("Error in deleting data from DB");
         } else {
             process.nextTick(function () {
                 self.sendStoredData();
@@ -91,7 +91,7 @@ SendData.prototype.sendStoredData = function() {
             
             if(error) {
                 needCheckStoredData = true;
-                logData("error in retreiving data");
+                logData("Error in retreiving data");
             } else {
                 if(rows.length > 0) {
                     
@@ -124,13 +124,13 @@ SendData.prototype.sendStoredData = function() {
                                         needCheckStoredData = true;
                                         switch(bodyJSON.code) {
                                             case 200002 : {
-                                                    logData('Sealion-Agent Error#440001: Payload Missing in stored data');
+                                                    logData('SeaLion-Agent Error#440001: Payload Missing in stored data');
                                                     tempThis.handleErroneousData(rows[0].result, rows[0].activityID);        
                                                     tempThis.deleteData(tempThis, rows[0].row_id); 
                                                 }
                                                 break;
                                             case 200003 : {
-                                                    logData('Sealion-Agent Error#440002: improper ActivityID, deleting from repository');
+                                                    logData('SeaLion-Agent Error#440002: improper ActivityID, deleting from repository');
                                                     tempThis.deleteDataWithActivityID(rows[0].activityID);
                                                 }
                                                 break;
@@ -141,13 +141,13 @@ SendData.prototype.sendStoredData = function() {
                                         needCheckStoredData = true;
                                         switch(bodyJSON.code) {
                                             case 200004 : {
-                                                    logData('Sealion-Agent Error#440003: Agent not allowed to send data with ActivityID: ' + 
+                                                    logData('SeaLion-Agent Error#440003: Agent not allowed to send data with ActivityID: ' + 
                                                             rows[0].activityID + ', deleting from repository');
                                                     tempThis.deleteDataWithActivityID(rows[0].activityID);
                                                 }
                                                 break;
                                             case 200001 : {
-                                                    logData('Sealion-Agent Error#440005: Authentication Failed, Needs reauthentication');
+                                                    logData('SeaLion-Agent Error#440005: Authentication Failed, Needs reauthentication');
                                                     authenticate.reauthenticate(sessionId);
                                                 }
                                                 break;
@@ -167,7 +167,7 @@ SendData.prototype.sendStoredData = function() {
                                         needCheckStoredData = true;
                                         switch(bodyJSON.code) {
                                             case 204012 : {
-                                                    logData('Sealion-Agent Error#440004: Duplicate data. Data deleted from repository');
+                                                    logData('SeaLion-Agent Error#440004: Duplicate data. Data deleted from repository');
                                                     tempThis.deleteData(tempThis, rows[0].row_id);
                                                 }
                                                 break;
@@ -235,12 +235,12 @@ SendData.prototype.dataSend = function (result) {
                         if(bodyJSON.code) {
                             switch(bodyJSON.code) {
                                 case 200002 : {
-                                        logData('Sealion-Agent Error#430001: Payload Missing');
+                                        logData('SeaLion-Agent Error#430001: Payload Missing');
                                         tempThis.handleErroneousData(tempThis.dataToInsert, tempThis.activityID);
                                     }
                                     break;
                                 case 200003 : {
-                                        logData('Sealion-Agent Error#430002: improper ActivityID, updating config-file');
+                                        logData('SeaLion-Agent Error#430002: Improper ActivityID, updating config-file');
                                         updateConfig();
                                     }
                                     break;
@@ -257,12 +257,12 @@ SendData.prototype.dataSend = function (result) {
                         if(bodyJSON.code) {
                             switch(bodyJSON.code) {
                                 case 200004 : {
-                                        logData('Sealion-Agent Error#430003: Agent not allowed to send data with ActivityID: ' + result.activityDetails._id + ', updating config-file');
+                                        logData('SeaLion-Agent Error#430003: Agent not allowed to send data with ActivityID: ' + result.activityDetails._id + ', updating config-file');
                                             updateConfig();
                                     }
                                     break;
                                 case 200001 : {
-                                        logData('Sealion-Agent Error#430005: Authentication Failed, Needs reauthentication');
+                                        logData('SeaLion-Agent Error#430005: Authentication Failed, Needs reauthentication');
                                         tempThis.handleError();
                                         authenticate.reauthenticate(sessionId);
                                     }
@@ -287,7 +287,7 @@ SendData.prototype.dataSend = function (result) {
                     }
                     break;
                 case 409 : {
-                        logData('Sealion-Agent Error#430004: Duplicate data. Data dropped');                   
+                        logData('SeaLion-Agent Error#430004: Duplicate data. Data dropped');                   
                     }
                     break;
                 default: {

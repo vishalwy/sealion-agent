@@ -9,6 +9,6 @@ if [ $? -ne 0 ] ; then
     exit 1
 fi
 
-echo "Downloading the binary..."
-curl https://agent.sealion.com/sealion.sh -o $TMP_FILE_NAME
+echo "Downloading agent..."
+curl -# https://agent.sealion.com/sealion.sh -o $TMP_FILE_NAME
 bash $TMP_FILE_NAME $args
