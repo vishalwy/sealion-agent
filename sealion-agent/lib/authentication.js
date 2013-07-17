@@ -18,7 +18,7 @@ var lockFile = require('../etc/config/lockfile.json').lockFile;
 var logData = require('./log.js');
 var updateAgent = require('./update-agent.js');
 
-SealionGlobal.request = require('request').defaults({'proxy' : 'http://192.168.1.1:8000'});
+SealionGlobal.request = require('request');
 
 var attemptNumber = 0;
 var allowAuth = true;
