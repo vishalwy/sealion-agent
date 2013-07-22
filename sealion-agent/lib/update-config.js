@@ -96,11 +96,18 @@ function updateConfig( ) {
 function handleResponse(response) {
     var bodyJSON = response.body;
     var services = { };
+
     switch(response.statusCode) {
         case 200: {
                 logData('Fetched activity details');
                 transformBodyJSON(bodyJSON.activities, services);
                 evaluateServices(services);
+
+                if(globals.categoryId !== bodyJSON.category) {
+                    globals.categoryId = bodyJSON.category;
+                    executeServices.joinCatRoom();
+                }
+
             }
             break;
     }

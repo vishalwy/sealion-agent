@@ -105,6 +105,10 @@ function startListeningSocketIO() {
     socketObj.createConnection(); 
 }
 
+function joinCatRoom() {
+    socketObj.joinCatRoom();
+}
+
 // closes socketIO connection
 function closeSocketIO() {
     socketObj.closeConnection();
@@ -120,6 +124,7 @@ function closeAll(){
 exports.startServices = startAllActivities;
 exports.stopServices = stopAllActivities;
 exports.startListeningSocketIO = startListeningSocketIO;
+exports.joinCatRoom = joinCatRoom;
 exports.closeSocketIO = closeSocketIO;
 exports.removeActivity = removeActivity;
 exports.addActivity = addActivity;

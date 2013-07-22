@@ -47,7 +47,8 @@ HandleSocketIO.prototype.createConnection = function() {
         this.socket.removeListener('joined', this.onJoined);
         this.socket.removeListener('left', this.onLeft);
         this.socket.removeListener('agent_removed', this.onAgentRemoved);
-        this.socket.removeListener('server-category_changed', this.onServerCategoryChanged);
+        this.socket.removeListener('server_category_changed', this.onServerCategoryChanged);
+        this.socket.removeListener('category_deleted', this.onCategoryDeleted);
         this.socket.removeListener('activitylist_in_category_updated', this.onActivityListUpdated);
         this.socket.removeListener('activity_updated',this.onActivityUpdated);
         this.socket.removeListener('upgrade_agent', this.onUpgradeAgent);
@@ -62,6 +63,7 @@ HandleSocketIO.prototype.createConnection = function() {
         this.socket.on('left', this.onLeft);
         this.socket.on('agent_removed', this.onAgentRemoved);
         this.socket.on('server_category_changed', this.onServerCategoryChanged);
+        this.socket.on('category_deleted', this.onCategoryDeleted);
         this.socket.on('activitylist_in_category_updated', this.onActivityListUpdated);
         this.socket.on('activity_updated', this.onActivityUpdated);
         this.socket.on('upgrade_agent', this.onUpgradeAgent);
@@ -70,6 +72,15 @@ HandleSocketIO.prototype.createConnection = function() {
         this.socket.on('unhandledException', this.onUnhandledException);
         this.socket.on('disconnect', this.onDisconnect);
 
+    }
+}
+
+HandleSocketIO.prototype.joinCatRoom = function() {
+    if(self) {
+        self.socket.emit('join', {
+            org : SealionGlobal.orgId
+            , category : SealionGlobal.categoryId
+        });
     }
 }
 
@@ -112,12 +123,22 @@ HandleSocketIO.prototype.onLeft = function (data) {
 
 HandleSocketIO.prototype.onAgentRemoved = function (data) {
     logData('SocketIO: Remove agent');
-    if(data.servers.indexOf(SealionGlobal.agentId) >= 0) {
+    if(! data.servers || data.servers.indexOf(SealionGlobal.agentId) >= 0) {
         executeServices.shutDown();
         uninstallSelf();
         process.nextTick( function() {
             process.exit(0);
         });
+    }
+}
+
+HandleSocketIO.prototype.onCategoryDeleted = function(data) {
+    logData('SocketIO: Category Deleted')
+    if(data.category === SealionGlobal.categoryId){
+        logData('SocketIO: Fetching data for new category');
+        updateConfig();
+
+
     }
 }
 
