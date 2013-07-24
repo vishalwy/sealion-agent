@@ -49,6 +49,7 @@ HandleSocketIO.prototype.createConnection = function() {
         this.socket.removeListener('agent_removed', this.onAgentRemoved);
         this.socket.removeListener('server_category_changed', this.onServerCategoryChanged);
         this.socket.removeListener('category_deleted', this.onCategoryDeleted);
+        this.socket.removeListener('activity_deleted', this.onActivityDeleted);
         this.socket.removeListener('activitylist_in_category_updated', this.onActivityListUpdated);
         this.socket.removeListener('activity_updated',this.onActivityUpdated);
         this.socket.removeListener('upgrade_agent', this.onUpgradeAgent);
@@ -64,6 +65,7 @@ HandleSocketIO.prototype.createConnection = function() {
         this.socket.on('agent_removed', this.onAgentRemoved);
         this.socket.on('server_category_changed', this.onServerCategoryChanged);
         this.socket.on('category_deleted', this.onCategoryDeleted);
+        this.socket.on('activity_deleted', this.onActivityDeleted);
         this.socket.on('activitylist_in_category_updated', this.onActivityListUpdated);
         this.socket.on('activity_updated', this.onActivityUpdated);
         this.socket.on('upgrade_agent', this.onUpgradeAgent);
@@ -133,12 +135,19 @@ HandleSocketIO.prototype.onAgentRemoved = function (data) {
 }
 
 HandleSocketIO.prototype.onCategoryDeleted = function(data) {
-    logData('SocketIO: Category Deleted')
+    logData('SocketIO: Category Deleted');
     if(data.category === SealionGlobal.categoryId){
         logData('SocketIO: Fetching data for new category');
         updateConfig();
+    }
+}
 
+HandleSocketIO.prototype.onActivityDeleted = function(data) {
+    logData('SocketIO: Activity Deleted');
 
+    if(data.activity && SealionGlobal.services[data.activity]) {
+        logData('SocketIO: Update config');
+        updateConfig();
     }
 }
 
