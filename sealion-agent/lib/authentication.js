@@ -33,19 +33,20 @@ function sendAuthRequest() {
     
     var agentDetails= { };
     var msg ='';
-    
+    var agentId;
     // check if agent-token is present or not
     // if not then close the program with error message 
     try{
-        agentDetails.agentToken = require('../etc/config/agent-config.json').agentToken;
+        agentDetails.orgToken = require('../etc/config/org-config.json').orgToken;
+        agentId = require('../etc/config/agent-config').agentId;
     } catch (err) {
-        logData('SeaLion-Agent Error#410001: Agent-token missing or can not be read');
+        logData('SeaLion-Agent Error#410001: Authentication details missing or can not be read');
         logData('Bye!!! Terminating service');
         cleanUp();
         process.exit(1);
     }
 
-    var url = options.sourceURL + authPath;
+    var url = options.sourceURL + authPath.replace('<agent-id>', agentId);
     var sendOptions = {
           'uri' : url
         , 'json' : agentDetails
@@ -103,14 +104,23 @@ function sendAuthRequest() {
                     }
                     break;
                 case 400: {
-                        logData('SeaLion-Agent Error#410003: Bad request, agent-token missing in request');
+                        logData('SeaLion-Agent Error#410003: Bad request, agent-id missing in request');
                         logData('Bye!!! Terminating service');
                         cleanUp();
                         process.exit(1);
                     }
                     break;
-                case 401: {
-                        logData('SeaLion-Agent Error#410002: Invalid Agent-token');
+                case 401:
+                    {
+                        logData('SeaLion-Agent Error#410002: Invalid organization-token');
+                        logData('Bye!!! Terminating service');
+                        cleanUp();
+                        process.exit(1);
+                    }
+                    break;
+                case 404:
+                    {
+                        logData('SeaLion-Agent Error#410002: Agent not found');
                         logData('Bye!!! Terminating service');
                         cleanUp();
                         process.exit(1);

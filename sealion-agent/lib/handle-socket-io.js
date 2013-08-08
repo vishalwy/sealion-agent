@@ -111,7 +111,7 @@ HandleSocketIO.prototype.onConnect = function () {
 };
 
 HandleSocketIO.prototype.onJoined = function (data) {
-    if( data.category ) {
+    if( data && data.category ) {
         logData('SocketIO: Joined category room');
     } else {
         logData('SocketIO: Joined organization room');
@@ -136,7 +136,7 @@ HandleSocketIO.prototype.onAgentRemoved = function (data) {
 
 HandleSocketIO.prototype.onCategoryDeleted = function(data) {
     logData('SocketIO: Category Deleted');
-    if(data.category === SealionGlobal.categoryId){
+    if(data && data.category && data.category === SealionGlobal.categoryId){
         logData('SocketIO: Fetching data for new category');
         updateConfig();
     }
@@ -145,7 +145,7 @@ HandleSocketIO.prototype.onCategoryDeleted = function(data) {
 HandleSocketIO.prototype.onActivityDeleted = function(data) {
     logData('SocketIO: Activity Deleted');
 
-    if(data.activity && SealionGlobal.services[data.activity]) {
+    if(data && data.activity && SealionGlobal.services[data.activity]) {
         logData('SocketIO: Update config');
         updateConfig();
     }
@@ -153,7 +153,7 @@ HandleSocketIO.prototype.onActivityDeleted = function(data) {
 
 HandleSocketIO.prototype.onServerCategoryChanged = function (data) {
     logData('SocketIO: Category change');
-    if( self && data.servers.indexOf(SealionGlobal.agentId) >= 0 ) {
+    if( self && data && data.servers && data.servers.indexOf(SealionGlobal.agentId) >= 0 ) {
         logData('SocketIO: Changing category');
 
         self.socket.emit('leave', {

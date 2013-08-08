@@ -1,8 +1,6 @@
 #! /bin/bash
 
-USAGE="Usage: curl -k https://agent.sealion.com | bash /dev/stdin \n\t-o <Organisation Token> \n\t[-H <Hostname>] \n\t[-c <category name>] \n\t [-h for help]"
 OPTERR=0
-LOCK_FILE=/usr/local/sealion-agent/var/sealion/sealion.pid
 INIT_FILE=/etc/init.d/sealion
 TMP_FILE_PATH=/tmp/sealion-agent
 
@@ -18,9 +16,10 @@ clean_up()
 {
     for (( i = 0 ; i < $1 ; i++ )) 
     do
-        sudo rm -f /etc/rc$i.d/${SYMLINK_PATHS[$i]}20sealion
+        rm -f /etc/rc$i.d/${SYMLINK_PATHS[$i]}20sealion
     done
-    sudo rm -rf $TEMP_PATH        
+    rm -rf $TMP_FILE_PATH
+    rm -rf $INSTALLATION_DIRECTORY
 }
 
 
@@ -33,26 +32,22 @@ get_JSON_value()
     JSON="'$@'"
     
     version=`python -c "import json;obj=json.loads($JSON);print obj[\"agentVersion\"]"` 
-    agent_token=`python -c "import json;obj=json.loads($JSON);print obj[\"agentToken\"]"`
+    agent_id=`python -c "import json;obj=json.loads($JSON);print obj[\"_id\"]"`
     already_registered=`python -c "import json;obj=json.loads($JSON);print obj[\"alreadyRegistered\"]"`
     return 0
 }
 
 
-while getopts a:o:c:v:hH: OPT ; do
+while getopts a:o:c:v:H: OPT ; do
     case "$OPT" in
         v)
             version=$OPTARG
         ;;
         a)
-            agent_token=$OPTARG
+            agent_id=$OPTARG
         ;;
         H)
             host=$OPTARG
-        ;;
-        h)
-            printf "$USAGE \n" >&1
-            exit 0
         ;;
         o)
         if [ -z $org_token ] ; then
@@ -62,16 +57,6 @@ while getopts a:o:c:v:hH: OPT ; do
         c)
             tags=$OPTARG
         ;;
-        \?)
-            echo "Invalid argument -$OPTARG" >&2
-            printf "$USAGE \n" >&2
-            exit 126
-        ;;
-        :)
-            echo "Option -$OPTARG requires an argument." >&2
-            printf "$USAGE \n" >&2
-            exit 125
-        ;;
     esac
 done
 
@@ -79,9 +64,10 @@ running=`pgrep sealion-node | wc -w`
 if [ $running -gt 0 ] ; then
     echo "Trying to stop SeaLion service"
     $INIT_FILE stop
+    sleep 2
 fi
 
-if [ -z $agent_token ] ; then
+if [ -z $agent_id ] ; then
 
     if [ -z $org_token ] ; then
         echo "Error: No organization token found. Aborting" >&2
@@ -97,46 +83,7 @@ if [ -z $agent_token ] ; then
         echo "Error: Temporary directory creation failed. Aborting" >&2
         exit 1
     fi
-    
-    if [ -z $tags ] ; then
-        return_code=`curl -s -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"orgToken\":\"$org_token\", \"name\":\"$host\"}" https://api.sealion.com/agents -o $TMP_DATA_NAME`
-        if [ $? -ne 0 -o $return_code -ne 200 ] ; then
-            echo "Error: Installation failed. Aborting" >&2
-            exit 123
-        fi     
-    else
-        tags=\"$tags\"
-        tags=${tags//,/\",\"}
-        return_code=`curl -s -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"orgToken\":\"$org_token\", \"name\":\"$host\", \"category\":[$tags]}" https://api.sealion.com/agents -o $TMP_DATA_NAME`
-        if [ $? -ne 0 -o $return_code -ne 200 ] ; then
-            echo "Error: Installation failed. Aborting" >&2
-            exit 123
-        fi
-    fi
-    
-    dataJSON=`cat $TMP_DATA_NAME`
-    
-    
-    get_JSON_value $dataJSON
-    if [ $? -ne 0 ] ; then
-        echo "Error: Failed to parse response. Aborting" >&2   
-        exit 121
-    fi
-    
-    if [ -z $version ] ; then
-        echo "Error: 'agent-version' not present in response. Aborting" >&2
-        exit 119
-    fi    
-    
-    if [ -z $agent_token ] ; then
-        echo "Error: 'agent-token' not present in response. Aborting" >&2
-        exit 120
-    fi
-    
-    if [ -z $already_registered ] ; then
-        echo "Error: 'already-registered' not present in response" >&2
-    fi
-    
+
     is_root=1    
         
     mkdir -p $INSTALLATION_DIRECTORY
@@ -145,12 +92,11 @@ if [ -z $agent_token ] ; then
         exit 118
     fi
 
-    echo "Creating 'sealion' user..." >&1
     useradd -r -d $INSTALLATION_DIRECTORY $USERNAME 2> /dev/null
     tempVar=$?
     if [ $tempVar -ne 0 ] ; then
         if [ $tempVar -ne 9 ] ; then
-            echo "Error: User creation failed!" >&2
+            echo "Error: User 'sealion' creation failed!" >&2
             rm -r $INSTALLATION_DIRECTORY
             exit 1
         fi
@@ -190,20 +136,15 @@ echo "Files extracted successfully" >&1
 
 cd $INSTALLATION_DIRECTORY
 
-echo "{ \"agentToken\":\"$agent_token\" , \"agentVersion\":\"$version\" }" > etc/config/agent-config.json
-
-
 if [ $is_root -eq 1 ] ; then
     chown -R $USERNAME:$USERNAME $INSTALLATION_DIRECTORY
 
-    echo "Creating /etc/init.d/sealion" >&1
+    
     cp -u /usr/local/sealion-agent/etc/sealion $INIT_FILE
     chmod +x $INIT_FILE
 
     chown $USERNAME:$USERNAME $INIT_FILE
 
-    echo "Creating start/stop links for /etc/init.d/sealion" >&1
-    
     for (( i = 0 ; i < 7 ; i++ )) 
     do
         ln -sf $INIT_FILE /etc/rc$i.d/${SYMLINK_PATHS[$i]}20sealion
@@ -214,12 +155,65 @@ if [ $is_root -eq 1 ] ; then
         fi
         chown -h $USERNAME:$USERNAME /etc/rc$i.d/${SYMLINK_PATHS[$i]}20sealion
     done
-
+    
+    echo "Installed SeaLion as a service" >&1
+    
 else
 
     cat etc/sealion > $INIT_FILE
 
 fi
+
+
+if [ -z $agent_id ] ; then
+
+    if [ -z $tags ] ; then
+
+        return_code=`curl -s -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"orgToken\":\"$org_token\", \"name\":\"$host\"}" https://api.sealion.com/agents -o $TMP_DATA_NAME`
+        if [ $? -ne 0 -o $return_code -ne 201 ] ; then
+            clean_up 6
+            echo "Error: Registration failed. Aborting" >&2
+            exit 123
+        fi     
+    else
+        tags=\"$tags\"
+        tags=${tags//,/\",\"}
+        return_code=`curl -s -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"orgToken\":\"$org_token\", \"name\":\"$host\", \"category\":$tags}" https://api.sealion.com/agents -o $TMP_DATA_NAME`
+        if [ $? -ne 0 -o $return_code -ne 201 ] ; then
+            clean_up 6
+            echo "Error: Registration failed. Aborting" >&2
+            exit 123
+        fi
+    fi
+    
+    dataJSON=`cat $TMP_DATA_NAME`
+    
+    get_JSON_value $dataJSON
+    if [ $? -ne 0 ] ; then
+        clean_up 6
+        echo "Error: Failed to parse response. Aborting" >&2   
+        exit 121
+    fi
+    
+    if [ -z $version ] ; then
+        clean_up 6
+        echo "Error: 'agent-version' not present in response. Aborting" >&2
+        exit 119
+    fi    
+    
+    if [ -z $agent_id ] ; then
+        clean_up 6
+        echo "Error: 'agent-id' not present in response. Aborting" >&2
+        exit 120
+    fi
+    
+    if [ -z $already_registered ] ; then
+        echo "Error: 'already-registered' not present in response" >&2
+    fi
+fi
+
+echo "{ \"agentId\":\"$agent_id\" , \"agentVersion\":\"$version\" }" > etc/config/agent-config.json
+echo "{\"orgToken\":\"$org_token\"}" > etc/config/org-config.json
 
 rm -rf $TMP_FILE_PATH
 if [ $? -ne 0 ] ; then
