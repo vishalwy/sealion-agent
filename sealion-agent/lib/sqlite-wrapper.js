@@ -35,6 +35,12 @@ var insertDataStmt =
 var insertErroneousDataStmt = 
         'INSERT INTO erroneousRepository(date_time, activityID, result) VALUES(?,?,?)';
 
+var deleteDataStmt =
+        'DELETE FROM repository WHERE row_id = ?';
+
+var deleteDataWithActivityIdStmt =
+    'DELETE FROM repository WHERE activityID = ?';
+
 var dbPath = path.resolve(__dirname, '../var/dbs/RepositoryDB.db');
 
 /** @constructor */
@@ -81,13 +87,13 @@ StoreDataInDb.prototype.closeDb = function( ) {
 StoreDataInDb.prototype.insertErroneousData = function(data, activityID) {
     var tempThis = this;
     this.db.serialize( function () {
-    var stmt = tempThis.db.prepare(insertErroneousDataStmt);
+        var stmt = tempThis.db.prepare(insertErroneousDataStmt);
         stmt.on('error', function(error) {
-            logData("Sqlite prepared statement runtime error while deleting from DB");
+            logData("SQLite prepared statement runtime error while inserting erroneous data in DB");
         });
         
         stmt.on('unhandledException', function(error) {
-           logData("Sqlite prepared statement unhandled exception");  
+           logData("SQLite prepared statement unhandled exception");
         });
                 
         stmt.run(new Date().toJSON(), activityID, data, function(error) {
@@ -99,13 +105,62 @@ StoreDataInDb.prototype.insertErroneousData = function(data, activityID) {
     });
 }
 
+StoreDataInDb.prototype.deleteData = function(rowId, contextObj, callback) {
+    var tempThis = this;
+    this.db.serialize( function() {
+        var stmt = tempThis.db.prepare(deleteDataStmt);
+        stmt.on('error', function(error){
+            logData("SQLite prepared statement runtime error while deleting data from DB");
+        });
+
+        stmt.on('unhandledException', function(error) {
+            logData("SQLite prepared statement unhandled exception");
+        });
+
+        stmt.run(rowId, function(error){
+            if(error) {
+                logData("Sqlite prepared statement stmt.run runtime error while deleting from DB");
+            } else if( contextObj && callback && typeof callback === 'function') {
+                process.nextTick(function () {
+                    callback.apply(contextObj);
+                });
+            }
+        });
+        stmt.finalize();
+    });
+}
+
+StoreDataInDb.prototype.deleteDataWithActivityId = function(activityId, contextObj, callback) {
+    var tempThis = this;
+    this.db.serialize( function() {
+        var stmt = tempThis.db.prepare(deleteDataWithActivityIdStmt);
+        stmt.on('error', function(error){
+            logData("SQLite prepared statement runtime error while deleting data with activityID from DB");
+        });
+
+        stmt.on('unhandledException', function(error) {
+            logData("SQLite prepared statement unhandled exception");
+        });
+
+        stmt.run(activityId, function(error){
+            if(error) {
+                logData("Sqlite prepared statement stmt.run runtime error while deleting data with activityID from DB");
+            } if( contextObj && callback && typeof callback === 'function') {
+                process.nextTick(function () {
+                    callback.apply(contextObj);
+                });
+            }
+        });
+        stmt.finalize();
+    });
+}
 
 StoreDataInDb.prototype.insertData = function (data, activityID) {
     var tempThis = this;
     this.db.serialize( function () {
         var stmt = tempThis.db.prepare(insertDataStmt);
         stmt.on('error', function(error) {
-            logData("Sqlite prepared statement runtime error while deleting from DB");
+            logData("Sqlite prepared statement runtime error while inserting data in DB");
         });
         
         stmt.on('unhandledException', function(error) {

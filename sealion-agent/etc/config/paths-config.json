@@ -1,5 +1,5 @@
 {
-      "agentAuth" : "/agents/1/sessions"
+      "agentAuth" : "/agents/<agent-id>/sessions"
     , "dataPath" : "/agents/1/data/activities/"
     , "configPath" : "/agents/1"
 }

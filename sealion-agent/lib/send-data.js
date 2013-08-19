@@ -43,55 +43,18 @@ SendData.prototype.handleErroneousData = function(data, activityID) {
     this.sqliteObj.insertErroneousData(data, activityID);
 }
 
-// function to delete data with some particular activityID. 
-// Used in case activity is removed by user on UI so associated data needs to be removed as well
-SendData.prototype.deleteDataWithActivityID = function(activityID) {
-    var tempSqliteObj = new Sqlite3();
-    var tempDB = tempSqliteObj.getDb();
-    var self = this;
-    
-    tempDB.run('DELETE FROM repository WHERE activityID = ?', activityID, function(error){
-        if(error) {
-            logData("Error in deleting activity data from DB");
-        } else {
-            process.nextTick(function () {
-                self.sendStoredData();
-            });
-        }
-    });
-    tempSqliteObj.closeDb();
-}
-
-// function deletes data from SQLite with particular row_id
-// used to delete rows in case duplicates are found
-SendData.prototype.deleteData = function(self, rowId) {
-    var tempSqliteObj = new Sqlite3();
-    var tempDB = tempSqliteObj.getDb();
-    var self =  this;
-    tempDB.run('DELETE FROM repository WHERE row_id = ?', rowId, function(error){
-        if(error) {
-            logData("Error in deleting data from DB");
-        } else {
-            process.nextTick(function () {
-                self.sendStoredData();
-            });
-        }
-    });
-    tempSqliteObj.closeDb();
-}
-
 // function to send stored data
 SendData.prototype.sendStoredData = function() {
     var sobj = new Sqlite3();
     var db = sobj.getDb();
     var tempThis = this;
-    
+
     if(db) {
         db.all('SELECT row_id, activityID, date_time, result FROM repository LIMIT 0,1', function(error, rows) {
             
             if(error) {
                 needCheckStoredData = true;
-                logData("Error in retreiving data");
+                logData("Error in retrieving data");
             } else {
                 if(rows.length > 0) {
                     
@@ -117,38 +80,45 @@ SendData.prototype.sendStoredData = function() {
                             var bodyJSON = response.body;
                             switch(response.statusCode) {
                                 case 204 : {
-                                        tempThis.deleteData(tempThis, rows[0].row_id);
+                                        tempThis.sqliteObj.deleteData(rows[0].row_id, tempThis, tempThis.sendStoredData);
                                     }
                                     break;
                                 case 400 : {
-                                        needCheckStoredData = true;
                                         switch(bodyJSON.code) {
                                             case 200002 : {
                                                     logData('SeaLion-Agent Error#440001: Payload Missing in stored data');
                                                     tempThis.handleErroneousData(rows[0].result, rows[0].activityID);        
-                                                    tempThis.deleteData(tempThis, rows[0].row_id); 
+                                                    tempThis.sqliteObj.deleteData(rows[0].row_id, tempThis, tempThis.sendStoredData);
                                                 }
                                                 break;
                                             case 200003 : {
                                                     logData('SeaLion-Agent Error#440002: improper ActivityID, deleting from repository');
-                                                    tempThis.deleteDataWithActivityID(rows[0].activityID);
+                                                    tempThis.sqliteObj.deleteDataWithActivityId(rows[0].activityID, tempThis, tempThis.sendStoredData);
+                                                }
+                                                break;
+                                            default : {
+                                                    needCheckStoredData = true;
                                                 }
                                                 break;
                                         }
                                     }
                                     break;
                                 case 401 : {
-                                        needCheckStoredData = true;
                                         switch(bodyJSON.code) {
                                             case 200004 : {
                                                     logData('SeaLion-Agent Error#440003: Agent not allowed to send data with ActivityID: ' + 
                                                             rows[0].activityID + ', deleting from repository');
-                                                    tempThis.deleteDataWithActivityID(rows[0].activityID);
+                                                    tempThis.sqliteObj.deleteDataWithActivityId(rows[0].activityID, tempThis, tempThis.sendStoredData);
                                                 }
                                                 break;
                                             case 200001 : {
+                                                    needCheckStoredData = true;
                                                     logData('SeaLion-Agent Error#440005: Authentication Failed, Needs reauthentication');
                                                     authenticate.reauthenticate(sessionId);
+                                                }
+                                                break;
+                                            default : {
+                                                    needCheckStoredData = true;
                                                 }
                                                 break;
                                         }
@@ -156,26 +126,34 @@ SendData.prototype.sendStoredData = function() {
                                     break;
                                 case 404 : {
                                         switch(bodyJSON.code) {
-                                            case 204011:
+                                            case 200006:
                                                 shutDown();
                                                 process.nextTick(uninstallSelf);
+                                                break;
+                                            default : {
+                                                    needCheckStoredData = true;
+                                                }
                                                 break;
                                         }
                                     }
                                     break;
                                 case 409 : {
-                                        needCheckStoredData = true;
+
                                         switch(bodyJSON.code) {
-                                            case 204012 : {
+                                            case 204011 : {
                                                     logData('SeaLion-Agent Error#440004: Duplicate data. Data deleted from repository');
-                                                    tempThis.deleteData(tempThis, rows[0].row_id);
+                                                    tempThis.sqliteObj.deleteData(rows[0].row_id, tempThis, tempThis.sendStoredData);
+                                                }
+                                                break;
+                                            default : {
+                                                    needCheckStoredData = true;
                                                 }
                                                 break;
                                         }
                                     }
                                     break;
                                 default : {
-                                    needCheckStoredData = true;
+                                        needCheckStoredData = true;
                                     }
                                     break;
                             }
@@ -228,6 +206,7 @@ SendData.prototype.dataSend = function (result) {
                         if(needCheckStoredData) {
                             needCheckStoredData = false;
                             tempThis.sendStoredData();
+                            updateConfig();
                         }    
                     }
                     break;
@@ -279,7 +258,7 @@ SendData.prototype.dataSend = function (result) {
                     break;
                 case 404 : {
                         switch(bodyJSON.code) {
-                          case 204011:
+                          case 200006:
                                 shutDown();
                                 process.nextTick(uninstallSelf);
                             break;
