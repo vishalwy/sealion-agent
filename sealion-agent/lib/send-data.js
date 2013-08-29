@@ -9,8 +9,9 @@ Author: Shubhansh <shubhansh.varshney@webyog.com>
 
 *********************************************/
 
-var serverOption = require('../etc/config/server-config.json').serverDetails;
-var dataPath = require('../etc/config/paths-config.json').dataPath;
+var config = require('../etc/config/sealion-config.json');
+var serverOption = config.serverDetails;
+var dataPath = config.dataPath;
 var Sqlite3 = require('./sqlite-wrapper.js');
 var global = require('./global.js');
 var updateConfig = require('./update-config.js');

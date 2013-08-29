@@ -10,11 +10,12 @@ Author: Shubhansh <shubhansh.varshney@webyog.com>
 *********************************************/
 
 var fs = require('fs');
-var options = require('../etc/config/server-config.json').serverDetails;
+var config = require('../etc/config/sealion-config.json');
+var options = config.serverDetails;
 var services = require('./execute-services.js');
 var SealionGlobal = require('./global.js');
-var authPath = require('../etc/config/paths-config.json').agentAuth;
-var lockFile = require('../etc/config/lockfile.json').lockFile;
+var authPath = config.agentAuth;
+var lockFile = config.lockFile;
 var logData = require('./log.js');
 var updateAgent = require('./update-agent.js');
 
@@ -34,11 +35,13 @@ function sendAuthRequest() {
     var agentDetails= { };
     var msg ='';
     var agentId;
+    var agentConfig;
     // check if agent-token is present or not
     // if not then close the program with error message 
     try{
-        agentDetails.orgToken = require('../etc/config/org-config.json').orgToken;
-        agentId = require('../etc/config/agent-config').agentId;
+        agentConfig = require('../etc/config/agent-config.json');
+        agentDetails.orgToken = agentConfig.orgToken;
+        agentId = agentConfig.agentId;
     } catch (err) {
         logData('SeaLion-Agent Error#410001: Authentication details missing or can not be read');
         logData('Bye!!! Terminating service');
@@ -81,7 +84,8 @@ function sendAuthRequest() {
             switch(response.statusCode) {
                 case 200: {
                         var cookie = response.headers['set-cookie'];
-                        var temp = SealionGlobal.request.cookie(cookie[0]); 
+                        var temp = SealionGlobal.request.cookie(cookie[0]);
+
                         attemptNumber = 0;
 
                         SealionGlobal.sessionCookie = temp.name + "=" + temp.value;
@@ -89,7 +93,7 @@ function sendAuthRequest() {
                         SealionGlobal.orgId = bodyJSON.org;
                         SealionGlobal.categoryId = bodyJSON.category;
                         
-                        var agentVersion = require('../etc/config/agent-config.json').agentVersion;
+                        var agentVersion = agentConfig.agentVersion;
                         
                         if(agentVersion != bodyJSON.agentVersion) {
                             logData('SeaLion Agent is updating to agent-version on startup: ' + bodyJSON.agentVersion)
@@ -99,7 +103,6 @@ function sendAuthRequest() {
                         }
  
                         services.startListeningSocketIO();
-                        
                         services.startServices(bodyJSON.activities);
                     }
                     break;
@@ -166,6 +169,7 @@ function reauthenticate(ssId) {
         allowAuth = false;
         SealionGlobal.sessionCookie='';
         services.stopServices();
+        services.closeSocketIO();
         process.nextTick( function() {
             authenticate();
         });

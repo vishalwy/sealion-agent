@@ -7,8 +7,6 @@ Module is class representation of oject used to execute commands
 Author: Shubhansh
 
 *********************************************/
-
-
 var Result = require('./result.js');
 var exec = require ('child_process').exec;
 var SendData = require('./send-data.js');
@@ -23,10 +21,8 @@ var ExecuteCommand = function(activityDetails, sqliteObj) {
 
 // handles command execution output and initiates sending process
 ExecuteCommand.prototype.handleCommandOutput = function () {
-    var tempThis = this;
     // create object to send data for this command
     var sendData = new SendData(this.sqliteObj);
-    
     sendData.dataSend(this.result);
 };
 
@@ -54,7 +50,7 @@ ExecuteCommand.prototype.executeCommand = function(options) {
     
     this.result.options = options;
     this.result.timeStamp = new Date().getTime();
-    
+
     var child = exec(this.result.activityDetails.command, { }, function(error, stdout, stderr){
         tempThis.processCommandResult(error, stdout, stderr);
     });

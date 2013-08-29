@@ -5,7 +5,7 @@ VERSION="-v"`cat version`
 COMPRESSED_FILE_NAME=../build/tmp/sealion-agent.tar.gz
 COMPRESSED_FILE_FOLDER=../build/tmp/
 FOLDER_PATH=*
-OUTPUT_FILE=../release/sealion.com/sealion.sh
+OUTPUT_FILE=../release/test.sealion.com/sealion.sh
 INSTALLER_FILE=../build/sealion.sh.in
 IGNORE_FILE=../build/.tarignore
 TAG_NAME="SEALION_TARFILE:"
@@ -16,12 +16,12 @@ mkdir -p tmp
 
 cd ../sealion-agent
 
-#URL changes for sealion.com
-API_URL='https:\/\/api.sealion.com'
-AGENT_URL='https:\/\/agent.sealion.com'
-REGISTRATION_URL='https:\/\/api.sealion.com\/agents'
+#URL changes for test.sealion.com
+API_URL='https:\/\/api-test.sealion.com'
+AGENT_URL='https:\/\/agent-test.sealion.com'
+REGISTRATION_URL='https:\/\/api-test.sealion.com\/agents'
 
-sed 's/<base-agent-url>/'$AGENT_URL'/' ../release/installer.sh > ../release/sealion.com/installer.sh
+sed 's/<base-agent-url>/'$AGENT_URL'/' ../release/installer.sh > ../release/test.sealion.com/installer.sh
 sed -i 's/<registration-url>/'$REGISTRATION_URL'/' $INSTALLER_FILE
 sed -i '6 s/<api-url>/'$API_URL'/;12 s/<socket-io-url>/'$API_URL'/' ./etc/config/sealion-config.json
 
