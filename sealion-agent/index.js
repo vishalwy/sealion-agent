@@ -9,7 +9,7 @@ Application starts with this page
 */
 
 var daemon = require('daemon');
-var lockFile = require('./etc/config/lockfile.json').lockFile;
+var lockFile = require('./etc/config/sealion-config.json').lockFile;
 var authenticate = require('./lib/authentication.js').authenticate;
 var shutDown = require('./lib/execute-services.js').shutDown;
 var fs = require('fs');

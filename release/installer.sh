@@ -1,8 +1,15 @@
 #!/bin/bash
+
 args=$@
+URL_HOST="<base-agent-url>"
+INSTALLER_URL=$URL_HOST"/sealion.sh"
+DOWNLOADER_URL=$URL_HOST
+
 TMP_FILE_PATH=/tmp/sealion-agent
 TMP_FILE_NAME=$TMP_FILE_PATH"/sealion-agent.tmp"
-USAGE="Usage: curl -k https://agent.sealion.com | bash /dev/stdin \n\t-o <Organisation Token> \n\t[-H <Hostname>] \n\t[-c <category name>] \n\t [-h for help]"
+
+USAGE="Usage: curl -k "$DOWNLOADER_URL"| bash /dev/stdin \n\t-o <Organisation Token> \n\t[-H <Hostname>] \n\t[-c <category name>] \n\t [-h for help]"
+
 
 mkdir -p $TMP_FILE_PATH
 if [ $? -ne 0 ] ; then
@@ -49,9 +56,9 @@ done
 echo "Downloading agent..."
 
 if [ -z $agent_id ] ; then
-    curl -# https://agent.sealion.com/sealion.sh -o $TMP_FILE_NAME
+    curl -# $INSTALLER_URL -o $TMP_FILE_NAME
 else
-    curl https://agent.sealion.com/sealion.sh -o $TMP_FILE_NAME
+    curl $INSTALLER_URL -o $TMP_FILE_NAME
 fi
 
 bash $TMP_FILE_NAME $args

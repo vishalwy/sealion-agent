@@ -9,9 +9,10 @@ Author: Shubhansh <shubhansh.varshney@webyog.com>
 *********************************************/
 
 var globals = require('./global.js');
-var serverOptions = require('../etc/config/server-config.json').serverDetails;
+var config = require('../etc/config/sealion-config.json');
+var serverOptions = config.serverDetails;
 var executeServices = require('./execute-services.js');
-var configPath = require('../etc/config/paths-config.json').configPath;
+var configPath = config.configPath;
 var logData = require('./log.js');
 var allowUpdate = true;
 

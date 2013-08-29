@@ -1,12 +1,14 @@
 # Ignore all files ending in ~ (temp files)
-
+*~
 release/sealion.sh
+release/test.sealion.com/*
+release/sealion.com/*
+
 
 ## Ignore folders ##
 
 sealion-agent/tmp/
 sealion-agent/etc/dbs/
-sealion-agent/etc/config/
 sealion-agent/etc/certificates/
 sealion-agent/.idea/
 

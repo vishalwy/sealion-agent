@@ -66,7 +66,6 @@ function addActivity(activity) {
         activity 
     );
     services[activity['_id']] = activity;
-
     onExecuteTrigger(activity);
 }
 
@@ -87,7 +86,6 @@ function startAllActivities(activities) {
     
     for(var counter in services) {
         if(services[counter]['activityName'] && services[counter]['command']) {
-
             addActivity(services[counter]);
         }
     }
