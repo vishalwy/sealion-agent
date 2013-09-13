@@ -7,8 +7,8 @@ INIT_FILE=/etc/init.d/sealion
 TMP_FILE_PATH=/tmp/sealion-agent
 
 TMP_DATA_NAME=$TMP_FILE_PATH"/sealion-data.tmp"
-
 INSTALLATION_DIRECTORY=/usr/local/sealion-agent/
+PROXY_FILE_PATH=/usr/local/sealion-agent/etc/config/proxy.json
 
 USERNAME="sealion"
 SYMLINK_PATHS=(K K S S S S K)
@@ -218,6 +218,19 @@ if [ $? -ne 0 ] ; then
     echo "Error: Failed to delete temporary files" >&2
 fi
 
+if [ -n $http_proxy ] ; then
+    HTTPPROXY=$http_proxy
+else
+    if [ -n $HTTP_PROXY ] ;then
+        HTTPPROXY=$HTTP_PROXY                
+    fi
+fi
+
+if [ -n $HTTPPROXY ] ; then
+    sed -i -e 's@<Proxy-URL>@'"$HTTPPROXY"'@' $PROXY_FILE_PATH    
+fi
+
+    
 echo "Starting agent..." >&1
 $INIT_FILE start
 if [ $? -ne 0 ] ; then

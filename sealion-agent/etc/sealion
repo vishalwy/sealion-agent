@@ -19,8 +19,6 @@ LOCK_FILE=/usr/local/sealion-agent/var/sealion/sealion.pid
 
 cd /usr/local/sealion-agent/
 
-. /etc/environment
-
 #
 # Function that starts the sealion agent's service
 #

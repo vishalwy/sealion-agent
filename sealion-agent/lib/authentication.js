@@ -9,17 +9,29 @@ Author: Shubhansh <shubhansh.varshney@webyog.com>
 
 *********************************************/
 
+var SealionGlobal = require('./global.js');
+var url = require('url');
+var proxy = require('../etc/config/proxy.json');
+var proxyUrl = url.parse(proxy.http_proxy);
+
+if(proxyUrl.hostname && proxyUrl.protocol) {
+    SealionGlobal.http_proxy=proxy.http_proxy;
+}
+
 var fs = require('fs');
 var config = require('../etc/config/sealion-config.json');
 var options = config.serverDetails;
 var services = require('./execute-services.js');
-var SealionGlobal = require('./global.js');
 var authPath = config.agentAuth;
 var lockFile = config.lockFile;
 var logData = require('./log.js');
 var updateAgent = require('./update-agent.js');
 
-SealionGlobal.request = require('request');
+if(SealionGlobal.http_proxy && SealionGlobal.http_proxy.length) {
+    SealionGlobal.request = require('request').defaults({proxy : SealionGlobal.http_proxy});
+} else {
+    SealionGlobal.request = require('request');
+}
 
 var attemptNumber = 0;
 var allowAuth = true;
@@ -169,7 +181,7 @@ function reauthenticate(ssId) {
         allowAuth = false;
         SealionGlobal.sessionCookie='';
         services.stopServices();
-        services.closeSocketIO();
+        //services.closeSocketIO();
         process.nextTick( function() {
             authenticate();
         });
