@@ -16,6 +16,7 @@ var SealionGlobal = {
     , agentId : '' //agent ID is to be stored required for joining rooms for Socket.IO
     , orgId : '' // org ID is to be stored required for joining rooms for Socket.IO
     , categoryId : '' //category ID is to be stored required for joining category rooms for Socket.IO
+    , http_proxy : ''
 };
 
 module.exports = SealionGlobal;

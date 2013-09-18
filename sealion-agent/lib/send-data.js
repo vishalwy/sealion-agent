@@ -17,7 +17,7 @@ var global = require('./global.js');
 var updateConfig = require('./update-config.js');
 var authenticate = require('./authentication.js');
 var logData = require('./log.js');
-var shutDown = require('./execute-services.js').shutDown;
+var services = require('./execute-services.js');
 var uninstallSelf = require('./uninstall-self.js');
 
 // variable to check if SQLite DB should be checked for sending stored data to server
@@ -57,6 +57,7 @@ SendData.prototype.sendStoredData = function() {
                 needCheckStoredData = true;
                 logData("Error in retrieving data");
             } else {
+
                 if(rows.length > 0) {
                     
                     var path = dataPath + rows[0].activityID;
@@ -128,7 +129,7 @@ SendData.prototype.sendStoredData = function() {
                                 case 404 : {
                                         switch(bodyJSON.code) {
                                             case 200006:
-                                                shutDown();
+                                                services.shutDown();
                                                 process.nextTick(uninstallSelf);
                                                 break;
                                             default : {
@@ -208,6 +209,7 @@ SendData.prototype.dataSend = function (result) {
                             needCheckStoredData = false;
                             tempThis.sendStoredData();
                             updateConfig();
+                            services.startListeningSocketIO();
                         }    
                     }
                     break;
@@ -260,7 +262,7 @@ SendData.prototype.dataSend = function (result) {
                 case 404 : {
                         switch(bodyJSON.code) {
                           case 200006:
-                                shutDown();
+                                services.shutDown();
                                 process.nextTick(uninstallSelf);
                             break;
                         }

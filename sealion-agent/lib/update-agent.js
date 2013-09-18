@@ -25,7 +25,7 @@ var updateAgent = function(version) {
     };
 
     var child = spawn('/usr/local/sealion-agent/etc/update.sh', 
-        ['-a', agentDetails.agentToken, '-v', version],
+        ['-a', agentDetails.agentId, '-v', version, '-o', agentDetails.orgToken],
         options);
     child.unref();
 }

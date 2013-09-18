@@ -37,47 +37,47 @@ function HandleSocketIO( ) {
 HandleSocketIO.prototype.createConnection = function() {
     var tempThis = this;
 
-    if(this.socket) {
-        if(this.socket.socket.connected) {
-            this.socket.socket.disconnectSync();
-        }
+    if(this.socket && this.socket.socket && (this.socket.socket.connected || this.socket.socket.connecting)) {
+        return;
+    }
 
-        this.socket.socket.reconnect();
-        this.reconnect = true;
+    if(SealionGlobal.http_proxy){
+        this.socket = io.connect(socketIoOptions.url, {transports : ['xhr-polling']});
     } else {
         this.socket = io.connect(socketIoOptions.url);
-        if(this.socket) {
-            this.reconnect = true;
-            this.socket.removeListener('connect', this.onConnect);
-            this.socket.removeListener('joined', this.onJoined);
-            this.socket.removeListener('left', this.onLeft);
-            this.socket.removeListener('agent_removed', this.onAgentRemoved);
-            this.socket.removeListener('server_category_changed', this.onServerCategoryChanged);
-            this.socket.removeListener('category_deleted', this.onCategoryDeleted);
-            this.socket.removeListener('activity_deleted', this.onActivityDeleted);
-            this.socket.removeListener('activitylist_in_category_updated', this.onActivityListUpdated);
-            this.socket.removeListener('activity_updated',this.onActivityUpdated);
-            this.socket.removeListener('upgrade_agent', this.onUpgradeAgent);
-            this.socket.removeListener('message', this.onMsg);
-            this.socket.removeListener('error', this.onError);
-            this.socket.removeListener('unhandledException', this.onUnhandledException);
-            this.socket.removeListener('disconnect', this.onDisconnect);
+    }
 
-            this.socket.on('connect', this.onConnect);
-            this.socket.on('joined', this.onJoined);
-            this.socket.on('left', this.onLeft);
-            this.socket.on('agent_removed', this.onAgentRemoved);
-            this.socket.on('server_category_changed', this.onServerCategoryChanged);
-            this.socket.on('category_deleted', this.onCategoryDeleted);
-            this.socket.on('activity_deleted', this.onActivityDeleted);
-            this.socket.on('activitylist_in_category_updated', this.onActivityListUpdated);
-            this.socket.on('activity_updated', this.onActivityUpdated);
-            this.socket.on('upgrade_agent', this.onUpgradeAgent);
-            this.socket.on('message', this.onMsg);
-            this.socket.on('error', this.onError);
-            this.socket.on('unhandledException', this.onUnhandledException);
-            this.socket.on('disconnect', this.onDisconnect);
-        }
+    if(this.socket) {
+        this.reconnect = true;
+        this.socket.removeListener('connect', this.onConnect);
+        this.socket.removeListener('joined', this.onJoined);
+        this.socket.removeListener('left', this.onLeft);
+        this.socket.removeListener('agent_removed', this.onAgentRemoved);
+        this.socket.removeListener('server_category_changed', this.onServerCategoryChanged);
+        this.socket.removeListener('category_deleted', this.onCategoryDeleted);
+        this.socket.removeListener('activity_deleted', this.onActivityDeleted);
+        this.socket.removeListener('activitylist_in_category_updated', this.onActivityListUpdated);
+        this.socket.removeListener('activity_updated',this.onActivityUpdated);
+        this.socket.removeListener('upgrade_agent', this.onUpgradeAgent);
+        this.socket.removeListener('message', this.onMsg);
+        this.socket.removeListener('error', this.onError);
+        this.socket.removeListener('unhandledException', this.onUnhandledException);
+        this.socket.removeListener('disconnect', this.onDisconnect);
+
+        this.socket.on('connect', this.onConnect);
+        this.socket.on('joined', this.onJoined);
+        this.socket.on('left', this.onLeft);
+        this.socket.on('agent_removed', this.onAgentRemoved);
+        this.socket.on('server_category_changed', this.onServerCategoryChanged);
+        this.socket.on('category_deleted', this.onCategoryDeleted);
+        this.socket.on('activity_deleted', this.onActivityDeleted);
+        this.socket.on('activitylist_in_category_updated', this.onActivityListUpdated);
+        this.socket.on('activity_updated', this.onActivityUpdated);
+        this.socket.on('upgrade_agent', this.onUpgradeAgent);
+        this.socket.on('message', this.onMsg);
+        this.socket.on('error', this.onError);
+        this.socket.on('unhandledException', this.onUnhandledException);
+        this.socket.on('disconnect', this.onDisconnect);
     }
 }
 
@@ -96,7 +96,7 @@ HandleSocketIO.prototype.closeConnection = function( ) {
     this.reconnect = false;
 
     if(this.socket && this.socket.socket.connected) {
-        this.socket.socket.disconnectSync();
+        this.socket.socket.disconnect();
     }
 }
 
@@ -199,7 +199,7 @@ HandleSocketIO.prototype.onUpgradeAgent = function (data) {
 }
 
 HandleSocketIO.prototype.onError = function(error) {
-    logData("SOcketIO: Error in Socket.io connection " + error);
+    logData("SocketIO: Error in Socket.io connection " + error);
 }
 
 HandleSocketIO.prototype.onUnhandledException = function(error) {

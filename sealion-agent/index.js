@@ -15,6 +15,8 @@ var shutDown = require('./lib/execute-services.js').shutDown;
 var fs = require('fs');
 var logData = require('./lib/log.js');
 
+
+
 var args = process.argv;
 var dPID;
 
@@ -101,5 +103,6 @@ fs.chmod('/usr/local/sealion-agent/var/log/sealion.err', 644, function(err){
     }
 
 });
+
 // After initial file setups and starting daemon check for authentication
 authenticate();

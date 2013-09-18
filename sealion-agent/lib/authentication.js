@@ -9,17 +9,35 @@ Author: Shubhansh <shubhansh.varshney@webyog.com>
 
 *********************************************/
 
+function testURL(str) {
+    return typeof str === 'string' && str.length < 2083 && str.match(/^(?!mailto:)(?:(?:https?|ftp):\/\/)?(?:\S+(?::\S*)?@)?(?:(?:(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.(?:[0-9]\d?|1\d\d|2[0-4]\d|25[0-4]))|(?:(?:[a-z\u00a1-\uffff0-9]+-?)*[a-z\u00a1-\uffff0-9]+)(?:\.(?:[a-z\u00a1-\uffff0-9]+-?)*[a-z\u00a1-\uffff0-9]+)*(?:\.(?:[a-z\u00a1-\uffff]{2,})))|localhost)(?::\d{2,5})?(?:\/[^\s]*)?$/i);
+}
+
+
+var SealionGlobal = require('./global.js');
+var url = require('url');
+var proxy = require('../etc/config/proxy.json');
+
+if( proxy.http_proxy && proxy.http_proxy.length && testURL(proxy.http_proxy)) {
+    SealionGlobal.http_proxy= proxy.http_proxy.substring(0,4) === 'http' ? proxy.http_proxy : 'http://' + proxy.http_proxy;
+}
+
 var fs = require('fs');
 var config = require('../etc/config/sealion-config.json');
 var options = config.serverDetails;
 var services = require('./execute-services.js');
-var SealionGlobal = require('./global.js');
 var authPath = config.agentAuth;
 var lockFile = config.lockFile;
 var logData = require('./log.js');
 var updateAgent = require('./update-agent.js');
 
-SealionGlobal.request = require('request');
+if(SealionGlobal.http_proxy && SealionGlobal.http_proxy.length) {
+    SealionGlobal.request = require('request').defaults({proxy : SealionGlobal.http_proxy});
+} else {
+    SealionGlobal.request = require('request');
+}
+
+
 
 var attemptNumber = 0;
 var allowAuth = true;
@@ -169,7 +187,7 @@ function reauthenticate(ssId) {
         allowAuth = false;
         SealionGlobal.sessionCookie='';
         services.stopServices();
-        services.closeSocketIO();
+        //services.closeSocketIO();
         process.nextTick( function() {
             authenticate();
         });
