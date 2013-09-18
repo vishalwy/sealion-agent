@@ -24,6 +24,7 @@ REGISTRATION_URL='https:\/\/api.sealion.com\/agents'
 sed 's/<base-agent-url>/'$AGENT_URL'/' ../release/installer.sh > ../release/sealion.com/installer.sh
 sed -i 's/<registration-url>/'$REGISTRATION_URL'/' $INSTALLER_FILE
 sed -i '6 s/<api-url>/'$API_URL'/;12 s/<socket-io-url>/'$API_URL'/' ./etc/config/sealion-config.json
+sed -i 's/<base-agent-url>/'$AGENT_URL'/' ./etc/update.sh
 
 # compress file
 echo "Sealion Packager: Compressing file..."
@@ -43,3 +44,4 @@ echo "Sealion Packager: Done!!!"
 
 sed -i 's/'$REGISTRATION_URL'/<registration-url>/' $INSTALLER_FILE
 sed -i '6 s/'$API_URL'/<api-url>/;12 s/'$API_URL'/<socket-io-url>/' ./etc/config/sealion-config.json
+sed -i 's/'$AGENT_URL'/<base-agent-url>/' ./etc/update.sh

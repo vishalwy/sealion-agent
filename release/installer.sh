@@ -58,7 +58,7 @@ echo "Downloading agent..."
 if [ -z $agent_id ] ; then
     curl -# $INSTALLER_URL -o $TMP_FILE_NAME
 else
-    curl $INSTALLER_URL -o $TMP_FILE_NAME
+    curl -s $INSTALLER_URL -o $TMP_FILE_NAME
 fi
 
 bash $TMP_FILE_NAME $args

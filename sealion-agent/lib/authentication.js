@@ -9,13 +9,17 @@ Author: Shubhansh <shubhansh.varshney@webyog.com>
 
 *********************************************/
 
+function testURL(str) {
+    return typeof str === 'string' && str.length < 2083 && str.match(/^(?!mailto:)(?:(?:https?|ftp):\/\/)?(?:\S+(?::\S*)?@)?(?:(?:(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.(?:[0-9]\d?|1\d\d|2[0-4]\d|25[0-4]))|(?:(?:[a-z\u00a1-\uffff0-9]+-?)*[a-z\u00a1-\uffff0-9]+)(?:\.(?:[a-z\u00a1-\uffff0-9]+-?)*[a-z\u00a1-\uffff0-9]+)*(?:\.(?:[a-z\u00a1-\uffff]{2,})))|localhost)(?::\d{2,5})?(?:\/[^\s]*)?$/i);
+}
+
+
 var SealionGlobal = require('./global.js');
 var url = require('url');
 var proxy = require('../etc/config/proxy.json');
-var proxyUrl = url.parse(proxy.http_proxy);
 
-if(proxyUrl.hostname && proxyUrl.protocol) {
-    SealionGlobal.http_proxy=proxy.http_proxy;
+if( proxy.http_proxy && proxy.http_proxy.length && testURL(proxy.http_proxy)) {
+    SealionGlobal.http_proxy= proxy.http_proxy.substring(0,4) === 'http' ? proxy.http_proxy : 'http://' + proxy.http_proxy;
 }
 
 var fs = require('fs');
@@ -32,6 +36,8 @@ if(SealionGlobal.http_proxy && SealionGlobal.http_proxy.length) {
 } else {
     SealionGlobal.request = require('request');
 }
+
+
 
 var attemptNumber = 0;
 var allowAuth = true;

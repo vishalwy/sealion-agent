@@ -3,7 +3,8 @@
 REGISTRATION_URL="<registration-url>"
 
 OPTERR=0
-INIT_FILE=/etc/init.d/sealion
+#INIT_FILE=/etc/init.d/sealion
+INIT_FILE=/usr/local/sealion-agent/etc/sealion
 TMP_FILE_PATH=/tmp/sealion-agent
 
 TMP_DATA_NAME=$TMP_FILE_PATH"/sealion-data.tmp"
@@ -16,7 +17,7 @@ is_root=0
 
 clean_up()
 {
-    for (( i = 0 ; i < $1 ; i++ )) 
+    for (( i = 1 ; i < $1 ; i++ )) 
     do
         rm -f /etc/rc$i.d/${SYMLINK_PATHS[$i]}20sealion
     done
@@ -141,13 +142,11 @@ cd $INSTALLATION_DIRECTORY
 if [ $is_root -eq 1 ] ; then
     chown -R $USERNAME:$USERNAME $INSTALLATION_DIRECTORY
 
-    
-    cp -u /usr/local/sealion-agent/etc/sealion $INIT_FILE
+    ln -sf $INIT_FILE /etc/init.d/sealion
     chmod +x $INIT_FILE
+    chown -h $USERNAME:$USERNAME /etc/init.d/sealion
 
-    chown $USERNAME:$USERNAME $INIT_FILE
-
-    for (( i = 0 ; i < 7 ; i++ )) 
+    for (( i = 1 ; i < 7 ; i++ )) 
     do
         ln -sf $INIT_FILE /etc/rc$i.d/${SYMLINK_PATHS[$i]}20sealion
         if [ $? -ne 0 ] ; then
@@ -159,11 +158,6 @@ if [ $is_root -eq 1 ] ; then
     done
     
     echo "Installed SeaLion as a service" >&1
-    
-else
-
-    cat etc/sealion > $INIT_FILE
-
 fi
 
 if [ -z $agent_id ] ; then
@@ -211,8 +205,6 @@ fi
 
 echo "{ \"agentId\":\"$agent_id\" , \"agentVersion\":\"$version\" , \"orgToken\":\"$org_token\"}" > etc/config/agent-config.json
 
-
-
 rm -rf $TMP_FILE_PATH
 if [ $? -ne 0 ] ; then
     echo "Error: Failed to delete temporary files" >&2
@@ -227,8 +219,12 @@ else
 fi
 
 if [ -n $HTTPPROXY ] ; then
-    sed -i -e 's@<Proxy-URL>@'"$HTTPPROXY"'@' $PROXY_FILE_PATH    
+    sed -i -e 's|<Proxy-URL>|'"$HTTPPROXY"'|' $PROXY_FILE_PATH    
 fi
+
+if [ $is_root -eq 1 ] ; then
+    chown -R $USERNAME:$USERNAME etc/config
+fi 
 
     
 echo "Starting agent..." >&1
