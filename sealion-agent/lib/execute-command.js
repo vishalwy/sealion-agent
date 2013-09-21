@@ -32,8 +32,8 @@ ExecuteCommand.prototype.processCommandResult = function (error, stdout, stderr)
     var tempThis = this;
 
     if(error) {
-        this.result.code = error.code;
-        this.result.output = stderr !== '' ? stderr : stdout;
+        this.result.code = error.code ? error.code : -1;
+        this.result.output = stderr !== '' ? stderr : (stdout !== ''? stdout : JSON.stringify(error));
     } else {
         this.result.output = stdout !== '' ? stdout : stderr;
     }

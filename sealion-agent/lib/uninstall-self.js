@@ -23,7 +23,7 @@ var uninstallAgent = function() {
         , stdio:['ignore', out, err]
     };
 
-    var child = spawn('/usr/local/sealion-agent/uninstall.sh', [], options);
+    var child = spawn('/usr/local/sealion-agent/uninstall.sh', ['-u'], options);
     child.unref();
 }
 

@@ -21,10 +21,11 @@ API_URL='https:\/\/api-test.sealion.com'
 AGENT_URL='https:\/\/agent-test.sealion.com'
 REGISTRATION_URL='https:\/\/api-test.sealion.com\/agents'
 
-sed 's/<base-agent-url>/'$AGENT_URL'/' ../release/installer.sh > ../release/test.sealion.com/installer.sh
+sed 's/<base-agent-url>/'$AGENT_URL'/' ../build/installer.sh > ../release/test.sealion.com/installer.sh
 sed -i 's/<registration-url>/'$REGISTRATION_URL'/' $INSTALLER_FILE
 sed -i '6 s/<api-url>/'$API_URL'/;12 s/<socket-io-url>/'$API_URL'/' ./etc/config/sealion-config.json
 sed -i 's/<base-agent-url>/'$AGENT_URL'/' ./etc/update.sh
+sed -i 's/<api-url>/'$API_URL'/' ./uninstall.sh
 
 # compress file
 echo "Sealion Packager: Compressing file..."
@@ -45,3 +46,4 @@ echo "Sealion Packager: Done!!!"
 sed -i 's/'$REGISTRATION_URL'/<registration-url>/' $INSTALLER_FILE
 sed -i '6 s/'$API_URL'/<api-url>/;12 s/'$API_URL'/<socket-io-url>/' ./etc/config/sealion-config.json
 sed -i 's/'$AGENT_URL'/<base-agent-url>/' ./etc/update.sh
+sed -i 's/'$API_URL'/<api-url>/' ./uninstall.sh

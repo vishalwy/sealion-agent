@@ -1,8 +1,6 @@
 # Ignore all files ending in ~ (temp files)
 *~
 release/sealion.sh
-release/test.sealion.com/*
-release/sealion.com/*
 
 
 ## Ignore folders ##

@@ -233,7 +233,7 @@ if [ $? -ne 0 ] ; then
     echo "Error: Service can not be started" >&2
     exit 1
 else
-    echo "Installation successfull. Please continue on https://sealion.com" >&1
+    echo "Installation successful. Please continue on https://sealion.com" >&1
     exit 0
 fi
 exit 0
