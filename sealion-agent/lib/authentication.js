@@ -6,6 +6,7 @@ Module also handles reauthentication
 /*********************************************
 
 Author: Shubhansh <shubhansh.varshney@webyog.com>
+ (c) Webyog Inc.
 
 *********************************************/
 
@@ -16,13 +17,21 @@ function testURL(str) {
 
 var SealionGlobal = require('./global.js');
 var url = require('url');
-var proxy = require('../etc/config/proxy.json');
+var fs = require('fs');
+var proxy;
 
-if( proxy.http_proxy && proxy.http_proxy.length && testURL(proxy.http_proxy)) {
-    SealionGlobal.http_proxy= proxy.http_proxy.substring(0,4) === 'http' ? proxy.http_proxy : 'http://' + proxy.http_proxy;
+if(fs.existsSync('/usr/local/sealion-agent/etc/config/proxy.json')) {
+    proxy = require('../etc/config/proxy.json');
+
+    if( proxy.http_proxy && proxy.http_proxy.length && testURL(proxy.http_proxy)) {
+        SealionGlobal.http_proxy= proxy.http_proxy.substring(0,4) === 'http' ? proxy.http_proxy : 'http://' + proxy.http_proxy;
+        var curlrcPath = '/usr/local/sealion-agent/.curlrc';
+        if(! fs.existsSync(curlrcPath)) {
+            fs.writeFileSync(curlrcPath, 'proxy = ' + proxy.http_proxy);
+        }
+    }
 }
 
-var fs = require('fs');
 var config = require('../etc/config/sealion-config.json');
 var options = config.serverDetails;
 var services = require('./execute-services.js');

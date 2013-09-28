@@ -5,6 +5,7 @@ Module is class representation of oject used to execute commands
 /*********************************************
 
 Author: Shubhansh
+(c) Webyog Inc.
 
 *********************************************/
 var Result = require('./result.js');
@@ -21,7 +22,6 @@ var ExecuteCommand = function(activityDetails, sqliteObj) {
 
 // handles command execution output and initiates sending process
 ExecuteCommand.prototype.handleCommandOutput = function () {
-    // create object to send data for this command
     var sendData = new SendData(this.sqliteObj);
     sendData.dataSend(this.result);
 };

@@ -1,11 +1,11 @@
 {
     "name" : "sealion-agent"
     , "description" : "Sealion is a web based system debugging solution. This is agent code"
-    , "version" : "0.0.1"
+    , "version" : "0.1"
     , "homepage" : "https://www.sealion.com"
     , "author" : "Shubhansh Varshney <shubhansh.varshney@webyog.com>"
     , "keywords" : [
-        "monitor"
+          "monitor"
         , "debugger"
         , "linux"
         , "server"
@@ -17,10 +17,12 @@
     , "dependencies" : {
           "socket.io-client" : "0.9.11"
         , "sqlite3" : "2.1.x"
+        , "request" : "2.12.0"
+        , "daemon" : "0.5.1"
     }
     , "bin" : {
         "sealionagent" : "./index.js"
     }
-    , "_id" : "sealionagent@0.0.1"
+    , "_id" : "sealionagent@0.1"
     
 }

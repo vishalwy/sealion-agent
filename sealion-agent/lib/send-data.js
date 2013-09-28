@@ -6,6 +6,7 @@ This module is class representation for sending data
 /*********************************************
 
 Author: Shubhansh <shubhansh.varshney@webyog.com>
+ (c) Webyog Inc.
 
 *********************************************/
 
