@@ -1,7 +1,6 @@
 /*********************************************
 
-Author: Shubhansh <shubhansh.varshney@webyog.com>
- (c) Webyog Inc.
+ (c) Webyog, Inc.
 
 *********************************************/
 

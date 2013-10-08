@@ -11,9 +11,9 @@ IGNORE_FILE=../build/.tarignore
 cd ../sealion-agent
 
 #URL changes for test.sealion.com
-API_URL='https:\/\/api-rituparna.sealion.com'
-AGENT_DOWNLOAD_URL='https:\/\/agent-rituparna.sealion.com\/sealion-agent.tar.gz'
-AGENT_URL='https:\/\/agent-rituparna.sealion.com'
+API_URL='https:\/\/api-test.sealion.com'
+AGENT_DOWNLOAD_URL='https:\/\/agent-test.sealion.com\/sealion-agent.tar.gz'
+AGENT_URL='https:\/\/agent-test.sealion.com'
 REGISTRATION_URL=$API_URL'\/agents'
 
 sed 's/<base-agent-url>/'$AGENT_URL'/; s/<registration-url>/'$REGISTRATION_URL'/; s/<tar-file-url>/'$AGENT_DOWNLOAD_URL'/' ../build/installer.sh > ../release/test.sealion.com/installer.sh
@@ -27,6 +27,6 @@ echo "Sealion Packager: Compressing file..."
 echo "Sealion Packager: File successfully compressed"
 
 sed -i '6 s/'$API_URL'/<api-url>/;12 s/'$API_URL'/<socket-io-url>/' ./etc/config/sealion-config.json
-sed -i 's/'$AGENT_DOWNLOAD_URL'/<download-agent-url>/' ./etc/update.sh
+sed -i 's/'$AGENT_URL'/<download-agent-url>/' ./etc/update.sh
 sed -i 's/'$API_URL'/<api-url>/' ./uninstall.sh
 echo "Sealion Packager: Done!!!"

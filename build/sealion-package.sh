@@ -27,6 +27,6 @@ echo "Sealion Packager: Compressing file..."
 echo "Sealion Packager: File successfully compressed"
 
 sed -i '6 s/'$API_URL'/<api-url>/;12 s/'$API_URL'/<socket-io-url>/' ./etc/config/sealion-config.json
-sed -i 's/'$AGENT_DOWNLOAD_URL'/<download-agent-url>/' ./etc/update.sh
+sed -i 's/'$AGENT_URL'/<download-agent-url>/' ./etc/update.sh
 sed -i 's/'$API_URL'/<api-url>/' ./uninstall.sh
 echo "Sealion Packager: Done!!!"

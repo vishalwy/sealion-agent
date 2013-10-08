@@ -1,7 +1,6 @@
 /*********************************************
 
-Author: Shubhansh <shubhansh.varshney@webyog.com>
-(c) Webyog Inc.
+(c) Webyog, Inc.
 
 *********************************************/
 
@@ -94,13 +93,13 @@ logData('Sealion-Agent: service started');
 
 fs.chmod('/usr/local/sealion-agent/var/log/sealion.log', 644, function(err){
     if(err){
-        logData('Unable to change ownership of sealion.log');
+        logData('Unable to change permission of sealion.log');
     }
 });
 
 fs.chmod('/usr/local/sealion-agent/var/log/sealion.err', 644, function(err){
     if(err){
-        logData('Unable to change ownership of sealion.err');
+        logData('Unable to change permission of sealion.err');
     }
 
 });

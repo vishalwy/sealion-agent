@@ -3,7 +3,7 @@
     , "description" : "Sealion is a web based system debugging solution. This is agent code"
     , "version" : "0.1"
     , "homepage" : "https://www.sealion.com"
-    , "author" : "Shubhansh Varshney <shubhansh.varshney@webyog.com>"
+    , "author" : "<shubhansh.varshney@webyog.com>"
     , "keywords" : [
           "monitor"
         , "debugger"

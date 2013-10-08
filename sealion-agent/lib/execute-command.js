@@ -4,8 +4,7 @@ Module is class representation of oject used to execute commands
 
 /*********************************************
 
-Author: Shubhansh
-(c) Webyog Inc.
+(c) Webyog, Inc.
 
 *********************************************/
 var Result = require('./result.js');
@@ -49,7 +48,7 @@ ExecuteCommand.prototype.executeCommand = function(options) {
     var tempThis = this;
     
     this.result.options = options;
-    this.result.timeStamp = new Date().getTime();
+    this.result.timeStamp = Date.now();
 
     var child = exec(this.result.activityDetails.command, { }, function(error, stdout, stderr){
         tempThis.processCommandResult(error, stdout, stderr);

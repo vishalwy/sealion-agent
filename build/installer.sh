@@ -2,7 +2,8 @@
 
 DOWNLOAD_URL="<base-agent-url>"
 REGISTRATION_URL="<registration-url>"
-TAR_FILE_URL="<tar-file-url>"
+PLATFORM=`uname -m`
+TAR_FILE_URL="<tar-file-url>"$PLATFORM".tar.gz"
 
 USAGE="Usage: curl -k "$DOWNLOAD_URL"| bash /dev/stdin \n\t-o <Organisation Token> \n\t[-H <Hostname>] \n\t[-c <category name>] \n\t [-h for help]"
 
@@ -20,6 +21,17 @@ PROXY_FILE_PATH=/usr/local/sealion-agent/etc/config/proxy.json
 USERNAME="sealion"
 SYMLINK_PATHS=(K K S S S S K)
 is_root=0
+
+
+if [ "`uname -s`" != "Linux" ]; then
+    echo "SeaLion agent requires Linux to run." >&2
+    exit 1
+fi
+
+if [[ "$PLATFORM" != "x86_64" && "$PLATFORM" != "i686" ]]; then
+    echo "Platform not supported" >&2
+    exit 1
+fi
 
 clean_up()
 {
@@ -98,8 +110,16 @@ echo "Downloading agent..."
 
 if [ -z $agent_id ] ; then
     curl -# $TAR_FILE_URL -o $TMP_FILE_NAME
+    if [ $? -ne 0 ] ; then
+        echo "Error: Downloading source file failed" >&2
+        exit 111
+    fi
 else
     curl -s $TAR_FILE_URL -o $TMP_FILE_NAME
+    if [ $? -ne 0 ] ; then
+        echo "Error: Downloading source file failed" >&2
+        exit 111
+    fi
 fi
 
 running=`pgrep sealion-node | wc -w`
@@ -185,6 +205,8 @@ if [ -z $agent_id ] ; then
     if [ -z "$category" ] ; then
         return_code=`curl -s -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"orgToken\":\"$org_token\", \"name\":\"$host\"}"  $REGISTRATION_URL -o $TMP_DATA_NAME`
         if [[ $? -ne 0 || $return_code -ne 201 ]] ; then
+            echo $return_code
+            cat $TMP_DATA_NAME
             clean_up 6
             echo "Error: Registration failed. Aborting" >&2
             exit 123
