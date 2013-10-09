@@ -8,31 +8,32 @@
 Application starts with this page
 */
 
-var daemon = require('daemon');
 var lockFile = require('./etc/config/sealion-config.json').lockFile;
+/*
+ Check if setuid function is present. Check is done so that process can be owned
+ by user 'sealion'. This enables all functions be performed by user 'sealion'.
+ In case of failure leave exit the program with error message
+ */
+if (process.setuid) {
+    try {
+        process.setuid('sealion');
+    } catch (err) {
+        logData('Failed to set uid ' + err);
+        process.exit(1);
+    }
+}
+
+var daemon = require('daemon');
 var authenticate = require('./lib/authentication.js').authenticate;
 var shutDown = require('./lib/execute-services.js').shutDown;
 var fs = require('fs');
 var logData = require('./lib/log.js');
 
-
-
 var args = process.argv;
 var dPID;
 
-/*
-Check if setuid function is present. Check is done so that process can be owned
-by user 'sealion'. This enables all functions be performed by user 'sealion'.
-In case of failure leave exit the program with error message
-*/
-if (process.setuid) {
-  try {
-    process.setuid('sealion');
-  } catch (err) {
-    logData('Failed to set uid. ' + err);
-    process.exit(1);
-  }
-}
+var stdOut = fs.openSync('/usr/local/sealion-agent/var/log/sealion.log', 'a');
+var stdErr = fs.openSync('/usr/local/sealion-agent/var/log/sealion.err', 'a');
 
 switch(args[2]) {
     case "stop":
@@ -59,13 +60,12 @@ switch(args[2]) {
     
         try {
             // start the daemon
-            dPID = daemon.start('var/log/sealion.log', 'var/log/sealion.err');
-            daemon.lock(lockFile);
+            dPID = daemon({stdout : stdOut, stderr : stdErr});
             fs.writeFileSync(lockFile, dPID.toString(), 'utf8');
         } catch(err) {
             logData('Failed to start service. ' + err);
             process.exit(1);
-        }    
+        }
     break;
 
     default:
