@@ -47,7 +47,6 @@ echo "Sealion Packager: File successfully compressed"
 cd ../../
 rm -r tmp_build
 
-
 echo "Sealion Packager 32-bit: Done!!!"
 
 

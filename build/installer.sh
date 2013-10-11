@@ -8,7 +8,7 @@ TAR_FILE_URL="<tar-file-url>"$PLATFORM".tar.gz"
 USAGE="Usage: curl -k "$DOWNLOAD_URL"| bash /dev/stdin \n\t-o <Organisation Token> \n\t[-H <Hostname>] \n\t[-c <category name>] \n\t [-h for help]"
 
 
-TMP_FILE_PATH=/tmp/sealion-agent
+TMP_FILE_PATH=`mktemp -d /tmp/sealion-agent.XXXX` || exit 1
 TMP_FILE_NAME=$TMP_FILE_PATH"/sealion-agent.tar.gz"
 TMP_DATA_NAME=$TMP_FILE_PATH"/sealion-data.tmp"
 
@@ -100,25 +100,19 @@ if [ -z $org_token ] ; then
     exit 124
 fi
 
-mkdir -p $TMP_FILE_PATH
-if [ $? -ne 0 ] ; then
-    echo "Sealion-Agent Error: Can't create temporary directory"
-    exit 1
-fi
-
 echo "Downloading agent..."
 
 if [ -z $agent_id ] ; then
     curl -# $TAR_FILE_URL -o $TMP_FILE_NAME
     if [ $? -ne 0 ] ; then
         echo "Error: Downloading source file failed" >&2
-        exit 111
+        exit 117
     fi
 else
     curl -s $TAR_FILE_URL -o $TMP_FILE_NAME
     if [ $? -ne 0 ] ; then
         echo "Error: Downloading source file failed" >&2
-        exit 111
+        exit 117
     fi
 fi
 
@@ -154,7 +148,6 @@ if [ -z $agent_id ] ; then
     fi
     echo "Created 'sealion' user successfully" >&1
 else
-
     if [ -z $version ] ; then 
         echo "Error: Agent-version not found"
         exit 121

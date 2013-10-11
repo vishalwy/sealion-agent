@@ -22,7 +22,7 @@ if (process.setuid) {
         process.exit(1);
     }
 }
-
+var lockFile = require('./etc/config/sealion-config.json').lockFile;
 var daemon = require('daemon');
 var authenticate = require('./lib/authentication.js').authenticate;
 var shutDown = require('./lib/execute-services.js').shutDown;
@@ -60,7 +60,8 @@ switch(args[2]) {
     
         try {
             // start the daemon
-            dPID = daemon({stdout : stdOut, stderr : stdErr});
+            dPID = daemon.start('var/log/sealion.log', 'var/log/sealion.err');
+            daemon.lock(lockFile);
             fs.writeFileSync(lockFile, dPID.toString(), 'utf8');
         } catch(err) {
             logData('Failed to start service. ' + err);
@@ -74,6 +75,7 @@ switch(args[2]) {
     break;
 }
 
+process.title = 'sealion-node';
 
 // Handle message SIGTERM
 process.on('SIGTERM', function() {
