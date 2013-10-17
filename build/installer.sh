@@ -5,7 +5,7 @@ REGISTRATION_URL="<registration-url>"
 PLATFORM=`uname -m`
 TAR_FILE_URL="<tar-file-url>"$PLATFORM".tar.gz"
 
-USAGE="Usage: curl -k "$DOWNLOAD_URL"| bash /dev/stdin \n\t-o <Organisation Token> \n\t[-H <Hostname>] \n\t[-c <category name>] \n\t [-h for help]"
+USAGE="Usage:\n curl -k "$DOWNLOAD_URL"| bash /dev/stdin -o <Organisation Token> \n\t [-H <Hostname>] \n\t [-c <category name>] \n\t [-h for help]"
 
 
 TMP_FILE_PATH=`mktemp -d /tmp/sealion-agent.XXXX` || exit 1
@@ -24,7 +24,7 @@ is_root=0
 
 
 if [ "`uname -s`" != "Linux" ]; then
-    echo "SeaLion agent requires Linux to run." >&2
+    echo "SeaLion agent works on Linux only" >&2
     exit 1
 fi
 
@@ -96,7 +96,7 @@ done
 
 if [ -z $org_token ] ; then
     echo "Error: No organization token found. Aborting" >&2
-    echo $USAGE
+    printf "$USAGE \n" >&2
     exit 124
 fi
 

@@ -72,6 +72,8 @@ SendData.prototype.sendStoredData = function() {
                     
                     if(sessionId == '') {
                         needCheckStoredData = true;
+                        sendOptions = null;
+                        toSend = null;
                         return;
                     }
                     
@@ -95,7 +97,7 @@ SendData.prototype.sendStoredData = function() {
                                                 }
                                                 break;
                                             case 200003 : {
-                                                    logData('SeaLion-Agent Error#440002: improper ActivityID, deleting from repository');
+                                                    logData('SeaLion-Agent Error#440002: Improper ActivityID, deleting from repository');
                                                     tempThis.sqliteObj.deleteDataWithActivityId(rows[0].activityID, tempThis, tempThis.sendStoredData);
                                                 }
                                                 break;
@@ -162,6 +164,8 @@ SendData.prototype.sendStoredData = function() {
                             }
                         }
                     });
+                    sendOptions = null;
+                    toSend = null;
                 } else {
                     needCheckStoredData = false;
                 }
@@ -193,6 +197,9 @@ SendData.prototype.dataSend = function (result) {
     
     if(sessionId == '') {
         tempThis.handleError(toSend);
+        toSend = null;
+        result = null;
+        sendOptions = null;
         return;
     }
     
@@ -278,6 +285,9 @@ SendData.prototype.dataSend = function (result) {
                     break;
             }
         }
+        result = null;
+        toSend = null;
+        sendOptions = null;
     });
 }
 
