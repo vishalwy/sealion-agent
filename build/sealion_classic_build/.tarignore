@@ -1,0 +1,12 @@
+sealion-agent-package/sealion-agent/tmp
+sealion-agent-package/sealion-agent/etc/certificates
+sealion-agent-package/sealion-agent/etc/config/agent-config.json
+sealion-agent-package/sealion-agent/bin/nodejs
+sealion-agent-package/sealion-agent/var/dbs/*
+sealion-agent-package/sealion-agent/var/log/*
+sealion-agent-package/sealion-agent/var/sealion/*
+sealion-agent-package/sealion-agent/.gitignore
+sealion-agent-package/sealion-agent/.idea
+*~
+.gitignore
+.idea

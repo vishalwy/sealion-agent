@@ -1,0 +1,86 @@
+#!/bin/bash
+PLATFORM=`uname -m`
+BINARY_PLATFORM="x86_64"
+USAGE="Usage: ./configure \n\t-o <Organisation Token> \n\t[-H <Hostname>] \n\t[-c <category name>] \n\t [-h for help]"
+
+if [ "`uname -s`" != "Linux" ]; then
+    echo "SeaLion agent works on Linux only" >&2
+    exit 1
+fi
+
+if [[ "$PLATFORM" != "x86_64" && "$PLATFORM" != "i686" ]]; then
+    echo "Platform not supported" >&2
+    exit 1
+fi
+
+if [[ "$PLATFORM" != "$BINARY_PLATFORM" ]]; then
+    if [[ "$PLATFORM" == "i686" ]] ; then
+        echo "OOPS! You have downloaded 64-bit agent for 32-bit machine. Download 32-bit agent from https://s3.amazonaws.com/sealion.com/sealion-agent-package_i686.tar.gz" >&2
+    fi
+    
+    if [[ "$PLATFORM" == "x86_64" ]] ; then
+        echo "OOPS! You have downloaded 32-bit agent for 64-bit machine. Download 64-bit agent from https://s3.amazonaws.com/sealion.com/sealion-agent-package_x86_64.tar.gz" >&2
+    fi
+    
+    exit 1
+fi
+
+while getopts a:o:c:v:hH: OPT ; do
+    case "$OPT" in
+        v)
+            version=$OPTARG
+        ;;
+        a)
+            agent_id=$OPTARG
+        ;;
+        H)
+            host=$OPTARG
+        ;;
+        h)
+            printf "$USAGE \n" >&1
+            exit 0
+        ;;
+        o)
+        if [ -z $org_token ] ; then
+            org_token=$OPTARG
+        fi
+        ;;
+        c)
+            category=$OPTARG
+        ;;
+        \?)
+            echo "Invalid argument -$OPTARG" >&2
+            printf "$USAGE \n" >&2
+            exit 126
+        ;;
+        :)
+            echo "Option -$OPTARG requires an argument." >&2
+            printf "$USAGE \n" >&2
+            exit 125
+        ;;
+    esac
+done
+
+if [ -z $org_token ] ; then
+    echo "Error: No organization token found. Aborting" >&2
+    printf $USAGE
+    exit 124
+fi
+
+echo "Generating installer script..."
+
+sed '0,/version=/{s/version=/version=\"'"$version"'\"/}; 0,/agent_id=/{s/agent_id=/agent_id=\"'"$agent_id"'\"/}; 0,/host=/{s/host=/host=\"'"$host"'\"/}; 0,/org_token=/{s/org_token=/org_token=\"'"$org_token"'\"/}; 0,/category=/{s/category=/category=\"'"$category"'\"/};' installer.in > installer.out
+
+chmod +x installer.out
+
+echo "Successfully generated installer"
+
+echo "Generating Makefile..."
+echo "
+all:
+	 echo 'Execute: \"make install\" to install SeaLion agent'
+install: installer.out
+	./installer.out
+" > Makefile
+
+echo "Successfully generated Makefile"

@@ -1,47 +1,48 @@
 #!/bin/bash
 
 # variable initialization
-VERSION="-v"`cat version`
-COMPRESSED_FILE_NAME=../build/tmp/sealion-agent.tar.gz
-COMPRESSED_FILE_FOLDER=../build/tmp/
+COMPRESSED_FILE_NAME_i686=../../../release/sealion.com/sealion-agent_i686.tar.gz
+COMPRESSED_FILE_NAME_x86_64=../../../release/sealion.com/sealion-agent_x86_64.tar.gz
 FOLDER_PATH=*
-OUTPUT_FILE=../release/sealion.com/sealion.sh
-INSTALLER_FILE=../build/sealion.sh.in
-IGNORE_FILE=../build/.tarignore
-TAG_NAME="SEALION_TARFILE:"
+IGNORE_FILE=../../.tarignore
 
+# build 64-bit version first
+mkdir -p tmp_build
+cp -R ../sealion-agent tmp_build
 
 # make tmp directory
-mkdir -p tmp
-
-cd ../sealion-agent
+cd tmp_build/sealion-agent
 
 #URL changes for sealion.com
 API_URL='https:\/\/api.sealion.com'
+AGENT_DOWNLOAD_URL='https:\/\/s3.amazonaws.com\/sealion.com\/sealion-agent_'
 AGENT_URL='https:\/\/agent.sealion.com'
-REGISTRATION_URL='https:\/\/api.sealion.com\/agents'
+REGISTRATION_URL=$API_URL'\/agents'
 
-sed 's/<base-agent-url>/'$AGENT_URL'/' ../release/installer.sh > ../release/sealion.com/installer.sh
-sed -i 's/<registration-url>/'$REGISTRATION_URL'/' $INSTALLER_FILE
+sed 's/<base-agent-url>/'$AGENT_URL'/; s/<registration-url>/'$REGISTRATION_URL'/; s/<tar-file-url>/'$AGENT_DOWNLOAD_URL'/' ../../installer.sh > ../../../release/sealion.com/installer.sh
 sed -i '6 s/<api-url>/'$API_URL'/;12 s/<socket-io-url>/'$API_URL'/' ./etc/config/sealion-config.json
-sed -i 's/<base-agent-url>/'$AGENT_URL'/' ./etc/update.sh
+sed -i 's/<download-agent-url>/'$AGENT_URL'/' ./etc/update.sh
+sed -i 's/<api-url>/'$API_URL'/' ./uninstall.sh
 
 # compress file
 echo "Sealion Packager: Compressing file..."
-    tar -czf $COMPRESSED_FILE_NAME $FOLDER_PATH -X $IGNORE_FILE --exclude-vcs --exclude-backups
+    tar -czf $COMPRESSED_FILE_NAME_x86_64 $FOLDER_PATH -X $IGNORE_FILE --exclude-vcs --exclude-backups
 echo "Sealion Packager: File successfully compressed"
 
-echo "Sealion Packager: Generating installer..."
-    cat $INSTALLER_FILE >$OUTPUT_FILE
-    echo $TAG_NAME >>$OUTPUT_FILE
-    cat $COMPRESSED_FILE_NAME >>$OUTPUT_FILE
-echo "Sealion Packager: Installer generated"
+echo "Sealion Packager 64-bit: Done!!!"
 
-echo "Sealion Packager: Deleting temperory files..."
-    rm -rf $COMPRESSED_FILE_FOLDER
-    echo "Sealion Packager: Temprory files deleted"
-echo "Sealion Packager: Done!!!"
+# build 64-bit version first
+cd ../../
 
-sed -i 's/'$REGISTRATION_URL'/<registration-url>/' $INSTALLER_FILE
-sed -i '6 s/'$API_URL'/<api-url>/;12 s/'$API_URL'/<socket-io-url>/' ./etc/config/sealion-config.json
-sed -i 's/'$AGENT_URL'/<base-agent-url>/' ./etc/update.sh
+cp -R ../sealion-agent-ia32/* tmp_build/sealion-agent/
+
+cd tmp_build/sealion-agent
+# compress file
+echo "Sealion Packager: Compressing file..."
+    tar -czf $COMPRESSED_FILE_NAME_i686 $FOLDER_PATH -X $IGNORE_FILE --exclude-vcs --exclude-backups
+echo "Sealion Packager: File successfully compressed"
+
+cd ../../
+rm -r tmp_build
+
+echo "Sealion Packager 32-bit: Done!!!"

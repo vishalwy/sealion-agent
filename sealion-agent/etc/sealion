@@ -13,11 +13,13 @@
 # 
 ### END INIT INFO
 
-# Author: Shubhansh Varshney <shubhansh.varshney@webyog.com>
-
 LOCK_FILE=/usr/local/sealion-agent/var/sealion/sealion.pid
 
 cd /usr/local/sealion-agent/
+if [ $? -ne 0 ] ; then
+    exit 1
+fi
+
 
 #
 # Function that starts the sealion agent's service
@@ -27,14 +29,16 @@ do_start()
     if [ ! -s $LOCK_FILE ] 
 	then
         ./bin/sealion-node index.js start
-        return 0
+        RETURN_VALUE=$?
+        return $RETURN_VALUE
 	else
 	    running=`pgrep sealion-node | wc -w`
 	    if [ $running -eq 0 ] ; then
 	        rm -f $LOCK_FILE
 	        if [ $? -eq 0 ] ; then
 	            ./bin/sealion-node index.js start
-	            return 0    
+	            RETURN_VALUE=$?
+                return $RETURN_VALUE
 	        fi
 	    fi
 	    return 1
@@ -48,7 +52,6 @@ do_start()
 get_status()
 {
     running=`pgrep sealion-node | wc -w`
-
     if [ $running -gt 0 ] ; then
         return 1
     fi
@@ -68,8 +71,11 @@ do_stop()
 
     	if [ $running -gt 0 ] ; then
     	    ./bin/sealion-node index.js stop
+    	    RETURN_VALUE=$?
+    	    rm -f $LOCK_FILE
+	        return $RETURN_VALUE
     	fi
-
+    	
 	    rm -f $LOCK_FILE
 	    return 0
 	else

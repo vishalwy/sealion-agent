@@ -4,7 +4,7 @@ Module is class representation of oject used to execute commands
 
 /*********************************************
 
-Author: Shubhansh
+(c) Webyog, Inc.
 
 *********************************************/
 var Result = require('./result.js');
@@ -21,7 +21,6 @@ var ExecuteCommand = function(activityDetails, sqliteObj) {
 
 // handles command execution output and initiates sending process
 ExecuteCommand.prototype.handleCommandOutput = function () {
-    // create object to send data for this command
     var sendData = new SendData(this.sqliteObj);
     sendData.dataSend(this.result);
 };
@@ -32,8 +31,8 @@ ExecuteCommand.prototype.processCommandResult = function (error, stdout, stderr)
     var tempThis = this;
 
     if(error) {
-        this.result.code = error.code;
-        this.result.output = stderr !== '' ? stderr : stdout;
+        this.result.code = error.code ? error.code : -1;
+        this.result.output = stderr !== '' ? stderr : (stdout !== ''? stdout : JSON.stringify(error));
     } else {
         this.result.output = stdout !== '' ? stdout : stderr;
     }
@@ -49,7 +48,7 @@ ExecuteCommand.prototype.executeCommand = function(options) {
     var tempThis = this;
     
     this.result.options = options;
-    this.result.timeStamp = new Date().getTime();
+    this.result.timeStamp = Date.now();
 
     var child = exec(this.result.activityDetails.command, { }, function(error, stdout, stderr){
         tempThis.processCommandResult(error, stdout, stderr);

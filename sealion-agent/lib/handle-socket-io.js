@@ -4,7 +4,7 @@ This module handles socketIO
 
 /*********************************************
 
-Author: Shubhansh <shubhansh.varshney@webyog.com>
+ (c) Webyog, Inc.
 
 *********************************************/
 
@@ -59,6 +59,7 @@ HandleSocketIO.prototype.createConnection = function() {
         this.socket.removeListener('activitylist_in_category_updated', this.onActivityListUpdated);
         this.socket.removeListener('activity_updated',this.onActivityUpdated);
         this.socket.removeListener('upgrade_agent', this.onUpgradeAgent);
+        this.socket.removeListener('org_token_resetted', this.onOrgTokenResetted);
         this.socket.removeListener('message', this.onMsg);
         this.socket.removeListener('error', this.onError);
         this.socket.removeListener('unhandledException', this.onUnhandledException);
@@ -74,6 +75,7 @@ HandleSocketIO.prototype.createConnection = function() {
         this.socket.on('activitylist_in_category_updated', this.onActivityListUpdated);
         this.socket.on('activity_updated', this.onActivityUpdated);
         this.socket.on('upgrade_agent', this.onUpgradeAgent);
+        this.socket.on('org_token_resetted', this.onOrgTokenResetted);
         this.socket.on('message', this.onMsg);
         this.socket.on('error', this.onError);
         this.socket.on('unhandledException', this.onUnhandledException);
@@ -88,7 +90,7 @@ HandleSocketIO.prototype.joinCatRoom = function() {
             , category : SealionGlobal.categoryId
         });
     }
-}
+};
 
 // closes socketIO connection
 HandleSocketIO.prototype.closeConnection = function( ) {
@@ -98,7 +100,7 @@ HandleSocketIO.prototype.closeConnection = function( ) {
     if(this.socket && this.socket.socket.connected) {
         this.socket.socket.disconnect();
     }
-}
+};
 
 HandleSocketIO.prototype.onConnect = function () {
 
@@ -111,7 +113,6 @@ HandleSocketIO.prototype.onConnect = function () {
             , category : SealionGlobal.categoryId
         });
     }
-
 };
 
 HandleSocketIO.prototype.onJoined = function (data) {
@@ -125,7 +126,7 @@ HandleSocketIO.prototype.onJoined = function (data) {
 
 HandleSocketIO.prototype.onLeft = function (data) {
     logData('SocketIO: Left category room');
-}
+};
 
 HandleSocketIO.prototype.onAgentRemoved = function (data) {
     logData('SocketIO: Remove agent');
@@ -136,7 +137,7 @@ HandleSocketIO.prototype.onAgentRemoved = function (data) {
             process.exit(0);
         });
     }
-}
+};
 
 HandleSocketIO.prototype.onCategoryDeleted = function(data) {
     logData('SocketIO: Category Deleted');
@@ -144,7 +145,7 @@ HandleSocketIO.prototype.onCategoryDeleted = function(data) {
         logData('SocketIO: Fetching data for new category');
         updateConfig();
     }
-}
+};
 
 HandleSocketIO.prototype.onActivityDeleted = function(data) {
     logData('SocketIO: Activity Deleted');
@@ -153,7 +154,7 @@ HandleSocketIO.prototype.onActivityDeleted = function(data) {
         logData('SocketIO: Update config');
         updateConfig();
     }
-}
+};
 
 HandleSocketIO.prototype.onServerCategoryChanged = function (data) {
     logData('SocketIO: Category change');
@@ -174,17 +175,25 @@ HandleSocketIO.prototype.onServerCategoryChanged = function (data) {
 
         updateConfig();
     }
-}
+};
 
 HandleSocketIO.prototype.onActivityListUpdated = function (data) {
     logData('SocketIO: Update config');
     updateConfig();
-}
+};
 
 HandleSocketIO.prototype.onActivityUpdated = function (data) {
     logData('SocketIO: Update config');
     updateConfig();
-}
+};
+
+HandleSocketIO.prototype.onOrgTokenResetted = function(data) {
+    logData('SocketIO: Organization token resetted');
+    executeServices.shutDown();
+    process.nextTick( function() {
+        process.exit(0);
+    });
+};
 
 HandleSocketIO.prototype.onUpgradeAgent = function (data) {
     logData('SocketIO: Updating to agent-version ' + data.agentVersion)

@@ -5,7 +5,7 @@ This module is class representation for sending data
 
 /*********************************************
 
-Author: Shubhansh <shubhansh.varshney@webyog.com>
+ (c) Webyog, Inc.
 
 *********************************************/
 
@@ -25,7 +25,6 @@ var needCheckStoredData = true;
 
 /** @constructor */
 function SendData(sqliteObj) {
-    this.dataToInsert = '';
     this.sqliteObj = sqliteObj;
     this.activityID = '';
 };
@@ -33,14 +32,16 @@ function SendData(sqliteObj) {
 /*
 function handles error by storing sending-failed data in SQLite DB
 */
-SendData.prototype.handleError = function() {
+SendData.prototype.handleError = function(toSend) {
     // function to insert data
-    this.sqliteObj.insertData(this.dataToInsert, this.activityID);
+    var dataToInsert = JSON.stringify(toSend);
+    this.sqliteObj.insertData(dataToInsert, this.activityID);
     needCheckStoredData = true;
 }
 
 // function to insert erroneous data into SQLite. this data wiull never be sent to server
-SendData.prototype.handleErroneousData = function(data, activityID) {
+SendData.prototype.handleErroneousData = function(toSend, activityID) {
+    var data = JSON.stringify(toSend);
     this.sqliteObj.insertErroneousData(data, activityID);
 }
 
@@ -71,6 +72,8 @@ SendData.prototype.sendStoredData = function() {
                     
                     if(sessionId == '') {
                         needCheckStoredData = true;
+                        sendOptions = null;
+                        toSend = null;
                         return;
                     }
                     
@@ -94,7 +97,7 @@ SendData.prototype.sendStoredData = function() {
                                                 }
                                                 break;
                                             case 200003 : {
-                                                    logData('SeaLion-Agent Error#440002: improper ActivityID, deleting from repository');
+                                                    logData('SeaLion-Agent Error#440002: Improper ActivityID, deleting from repository');
                                                     tempThis.sqliteObj.deleteDataWithActivityId(rows[0].activityID, tempThis, tempThis.sendStoredData);
                                                 }
                                                 break;
@@ -161,6 +164,8 @@ SendData.prototype.sendStoredData = function() {
                             }
                         }
                     });
+                    sendOptions = null;
+                    toSend = null;
                 } else {
                     needCheckStoredData = false;
                 }
@@ -177,9 +182,9 @@ SendData.prototype.dataSend = function (result) {
     var toSend = {
                   'returnCode' : result.code
                 , 'timestamp' : result.timeStamp
-                , 'data' : result.output };
-                
-    this.dataToInsert = JSON.stringify(toSend);
+                , 'data' : result.output
+    };
+
     this.activityID = result.activityDetails._id;
     
     var path = dataPath + result.activityDetails._id;
@@ -191,15 +196,17 @@ SendData.prototype.dataSend = function (result) {
     };
     
     if(sessionId == '') {
-        tempThis.handleError();
+        tempThis.handleError(toSend);
+        toSend = null;
+        result = null;
+        sendOptions = null;
         return;
     }
-    
     
     global.request.post(sendOptions, function(err, response, data) {
         
         if(err) {
-            tempThis.handleError();
+            tempThis.handleError(toSend);
         } else {
             var bodyJSON = response.body;
 
@@ -218,7 +225,7 @@ SendData.prototype.dataSend = function (result) {
                             switch(bodyJSON.code) {
                                 case 200002 : {
                                         logData('SeaLion-Agent Error#430001: Payload Missing');
-                                        tempThis.handleErroneousData(tempThis.dataToInsert, tempThis.activityID);
+                                        tempThis.handleErroneousData(toSend, tempThis.activityID);
                                     }
                                     break;
                                 case 200003 : {
@@ -227,11 +234,11 @@ SendData.prototype.dataSend = function (result) {
                                     }
                                     break;
                                 default : {
-                                        tempThis.handleError();    
+                                        tempThis.handleError(toSend);
                                     }
                             }
                         } else {
-                            tempThis.handleError();
+                            tempThis.handleError(toSend);
                         }
                     }
                     break;
@@ -240,22 +247,22 @@ SendData.prototype.dataSend = function (result) {
                             switch(bodyJSON.code) {
                                 case 200004 : {
                                         logData('SeaLion-Agent Error#430003: Agent not allowed to send data with ActivityID: ' + result.activityDetails._id + ', updating config-file');
-                                            updateConfig();
+                                        updateConfig();
                                     }
                                     break;
                                 case 200001 : {
                                         logData('SeaLion-Agent Error#430005: Authentication Failed, Needs reauthentication');
-                                        tempThis.handleError();
+                                        tempThis.handleError(toSend);
                                         authenticate.reauthenticate(sessionId);
                                     }
                                     break;
                                 default : {
-                                        tempThis.handleError();
+                                        tempThis.handleError(toSend);
                                     }
                                     break;
                             }    
                         } else {
-                            tempThis.handleError();
+                            tempThis.handleError(toSend);
                         }
                     }
                     break;
@@ -273,11 +280,14 @@ SendData.prototype.dataSend = function (result) {
                     }
                     break;
                 default: {
-                        tempThis.handleError();    
+                        tempThis.handleError(toSend);
                     }
                     break;
             }
         }
+        result = null;
+        toSend = null;
+        sendOptions = null;
     });
 }
 
