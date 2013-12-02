@@ -1,12 +1,48 @@
 #!/bin/bash
 
+# check platform compatibility
+# check if linux
+if [ "`uname -s`" != "Linux" ]; then
+    echo "Error: SeaLion agent works on Linux only" >&2
+    exit 1
+fi
+
+PLATFORM=`uname -m`
+# check for platform architecture
+if [[ "$PLATFORM" != "x86_64" && "$PLATFORM" != "i686" ]]; then
+    echo "Error: Platform not supported" >&2
+    exit 1
+fi
+
+# check for kernel version (min 2.6)
+eval $(uname -r | awk -F'.' '{printf("KERNEL_VERSION=%s KERNEL_MAJOR=%s\n", $1, $2)}')
+if [ $KERNEL_VERSION -le 2 ] ; then
+    if [[ $KERNEL_VERSION -eq 1 || $KERNEL_MAJOR -lt 6 ]]; then
+        echo "Error: SeaLion agent requires kernel 2.6 or above. Exiting" >&2
+        exit 1
+    fi
+fi
+
+# check for glibc version (min 2.4)
+LIBCPATH="`find /lib* | grep libc.so.6 | head -1`"
+if [ -z "$LIBCPATH" ]; then
+    echo "Error: GLIBC_2.4 not found. Exiting"
+    exit 1
+else
+    LIBC24="`strings $LIBCPATH | grep 'GLIBC_2.4'`"
+    if [ -z "$LIBC24" ]; then
+        echo "Error: SeaLion agent requires GLIBC_2.4 or above. Exiting"
+        exit 1
+    fi
+fi
+
 DOWNLOAD_URL="<base-agent-url>"
 REGISTRATION_URL="<registration-url>"
-PLATFORM=`uname -m`
+
 TAR_FILE_URL="<tar-file-url>"$PLATFORM".tar.gz"
+PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
 
-USAGE="Usage:\n curl -k "$DOWNLOAD_URL"| bash /dev/stdin -o <Organisation Token> \n\t [-H <Hostname>] \n\t [-c <category name>] \n\t [-h for help]"
-
+USAGE="Usage:\n curl -s "$DOWNLOAD_URL" | sudo bash /dev/stdin -o <Organisation Token> \n\t[-H <Hostname>] \n\t[-c <Category name>] \n\t[-x <Proxy address>] \n\t[-h for help]"
 
 TMP_FILE_PATH=`mktemp -d /tmp/sealion-agent.XXXX` || exit 1
 TMP_FILE_NAME=$TMP_FILE_PATH"/sealion-agent.tar.gz"
@@ -22,23 +58,17 @@ USERNAME="sealion"
 SYMLINK_PATHS=(K K S S S S K)
 is_root=0
 
-
-if [ "`uname -s`" != "Linux" ]; then
-    echo "SeaLion agent works on Linux only" >&2
-    exit 1
-fi
-
-if [[ "$PLATFORM" != "x86_64" && "$PLATFORM" != "i686" ]]; then
-    echo "Platform not supported" >&2
-    exit 1
-fi
+CURL_COMMAND_PROXY=
 
 clean_up()
 {
     for (( i = 1 ; i < $1 ; i++ )) 
     do
-        rm -f /etc/rc$i.d/${SYMLINK_PATHS[$i]}20sealion
+        VAR_NAME="RC"$i"_PATH"/${SYMLINK_PATHS[$i]}99sealion
+        rm -f $VAR_NAME
     done
+    
+    rm -f $INIT_D_PATH/sealion
     rm -rf $TMP_FILE_PATH
     rm -rf $INSTALLATION_DIRECTORY
 }
@@ -58,10 +88,14 @@ get_JSON_value()
     return 0
 }
 
-while getopts a:o:c:v:hH: OPT ; do
+while getopts a:o:x:c:v:hH: OPT ; do
     case "$OPT" in
         v)
             version=$OPTARG
+        ;;
+        x)
+            HTTPPROXY=$OPTARG
+            CURL_COMMAND_PROXY="-x $HTTPPROXY"
         ;;
         a)
             agent_id=$OPTARG
@@ -100,16 +134,23 @@ if [ -z $org_token ] ; then
     exit 124
 fi
 
+if [[ $EUID != 0 && -z $agent_id ]] ; then
+    echo "SeaLion agent installation requires super privilege" >&2
+    echo -e "Usage:\n curl -s "$DOWNLOAD_URL" | sudo bash /dev/stdin -o $org_token \n\t[-H <Hostname>] \n\t[-c <Category name>] \n\t[-x <Proxy address>] \n\t[-h for help]"
+    exit 116
+fi
+
 echo "Downloading agent..."
 
+
 if [ -z $agent_id ] ; then
-    curl -# $TAR_FILE_URL -o $TMP_FILE_NAME
+    curl -# $CURL_COMMAND_PROXY $TAR_FILE_URL -o $TMP_FILE_NAME
     if [ $? -ne 0 ] ; then
         echo "Error: Downloading source file failed" >&2
         exit 117
     fi
 else
-    curl -s $TAR_FILE_URL -o $TMP_FILE_NAME
+    curl -s $CURL_COMMAND_PROXY $TAR_FILE_URL -o $TMP_FILE_NAME
     if [ $? -ne 0 ] ; then
         echo "Error: Downloading source file failed" >&2
         exit 117
@@ -136,8 +177,19 @@ if [ -z $agent_id ] ; then
         echo "Error: Directory creation failed!!!" >&2
         exit 118
     fi
-
-    useradd -r -d $INSTALLATION_DIRECTORY $USERNAME 2> /dev/null
+    
+    groupadd -r $USERNAME 2> /dev/null
+    tempVar=$?
+    if [ $tempVar -ne 0 ] ; then
+        if [ $tempVar -ne 9 ] ; then
+            echo "Error: Group 'sealion' creation failed!" >&2
+            rm -r $INSTALLATION_DIRECTORY
+            exit 1
+        fi
+    fi
+    echo "Created 'sealion' group successfully" >&1
+    
+    useradd -r -d $INSTALLATION_DIRECTORY -g $USERNAME $USERNAME 2> /dev/null
     tempVar=$?
     if [ $tempVar -ne 0 ] ; then
         if [ $tempVar -ne 9 ] ; then
@@ -161,6 +213,7 @@ echo "Extracting files to /usr/local/sealion-agent..." >&1
         echo "Error: Installation failed" >&2
         if [ $is_root -eq 1 ] ; then
             userdel sealion
+            groupdel sealion
             rm -rf $INSTALLATION_DIRECTORY
             rm -rf $TMP_FILE_PATH
             if [ $? -ne 0 ] ; then
@@ -174,21 +227,40 @@ echo "Files extracted successfully" >&1
 cd $INSTALLATION_DIRECTORY
 
 if [ $is_root -eq 1 ] ; then
+    RC1_PATH=`find /etc/ -type d -name rc1.d`
+    RC2_PATH=`find /etc/ -type d -name rc2.d`
+    RC3_PATH=`find /etc/ -type d -name rc3.d`
+    RC4_PATH=`find /etc/ -type d -name rc4.d`
+    RC5_PATH=`find /etc/ -type d -name rc5.d`
+    RC6_PATH=`find /etc/ -type d -name rc6.d`
+    INIT_D_PATH=`find /etc/ -type d -name init.d`
+
+    if [[ -z $RC1_PATH || -z $RC2_PATH || -z $RC3_PATH || -z $RC4_PATH || -z $RC5_PATH || -z $RC6_PATH || -z $INIT_D_PATH ]] ; then
+        echo "Error: Could not locate init.d/rc folders" >&2
+        userdel sealion
+        groupdel sealion
+        rm -rf $INSTALLATION_DIRECTORY
+        rm -rf $TMP_FILE_PATH
+        if [ $? -ne 0 ] ; then
+            echo "Error: Failed to delete temporary files" >&2
+        fi
+        exit 115
+    fi
+
     chown -R $USERNAME:$USERNAME $INSTALLATION_DIRECTORY
-
-    ln -sf $INIT_FILE /etc/init.d/sealion
+    
+    ln -sf $INIT_FILE $INIT_D_PATH/sealion
     chmod +x $INIT_FILE
-    chown -h $USERNAME:$USERNAME /etc/init.d/sealion
-
+    
     for (( i = 1 ; i < 7 ; i++ )) 
     do
-        ln -sf $INIT_FILE /etc/rc$i.d/${SYMLINK_PATHS[$i]}20sealion
+        VAR_NAME="RC"$i"_PATH"
+        ln -sf $INIT_FILE ${!VAR_NAME}/${SYMLINK_PATHS[$i]}99sealion
         if [ $? -ne 0 ] ; then
             echo "Error: Unable to update init.d files. Aborting" >&2
             clean_up $i
             exit 1
         fi
-        chown -h $USERNAME:$USERNAME /etc/rc$i.d/${SYMLINK_PATHS[$i]}20sealion
     done
     
     echo "Installed SeaLion as a service" >&1
@@ -196,14 +268,14 @@ fi
 
 if [ -z $agent_id ] ; then
     if [ -z "$category" ] ; then
-        return_code=`curl -s -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"orgToken\":\"$org_token\", \"name\":\"$host\", \"ref\":\"curl\"}"  $REGISTRATION_URL -o $TMP_DATA_NAME`
+        return_code=`curl -s $CURL_COMMAND_PROXY -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"orgToken\":\"$org_token\", \"name\":\"$host\", \"ref\":\"curl\"}"  $REGISTRATION_URL -o $TMP_DATA_NAME`
         if [[ $? -ne 0 || $return_code -ne 201 ]] ; then
             clean_up 6
             echo "Error: Registration failed. Aborting" >&2
             exit 123
         fi
     else
-        return_code=`curl -s -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"orgToken\":\"$org_token\", \"name\":\"$host\", \"category\":\"$category\", \"ref\":\"curl\"}"  $REGISTRATION_URL -o $TMP_DATA_NAME`
+        return_code=`curl -s $CURL_COMMAND_PROXY -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"orgToken\":\"$org_token\", \"name\":\"$host\", \"category\":\"$category\", \"ref\":\"curl\"}"  $REGISTRATION_URL -o $TMP_DATA_NAME`
         if [[ $? -ne 0 || $return_code -ne 201 ]] ; then
             clean_up 6
             echo "Error: Registration failed. Aborting" >&2
@@ -240,12 +312,16 @@ if [ $? -ne 0 ] ; then
     echo "Error: Failed to delete temporary files" >&2
 fi
 
-if [ -n $http_proxy ] ; then
-    HTTPPROXY=$http_proxy
-else
-    if [ -n $HTTP_PROXY ] ;then
-        HTTPPROXY=$HTTP_PROXY                
+if [ -z $HTTPPROXY ] ; then
+
+    if [ -n $http_proxy ] ; then
+        HTTPPROXY=$http_proxy
+    else
+        if [ -n $HTTP_PROXY ] ;then
+            HTTPPROXY=$HTTP_PROXY                
+        fi
     fi
+    
 fi
 
 if [[ -n $HTTPPROXY && ! -f $PROXY_FILE_PATH ]] ; then
@@ -260,7 +336,7 @@ fi
 echo "Starting agent..." >&1
 $INIT_FILE start
 if [ $? -ne 0 ] ; then
-    echo "Error: Service can not be started" >&2
+    echo "Error: Service cannot be started" >&2
     exit 1
 else
     echo "Installation successful. Please continue on https://sealion.com" >&1

@@ -108,7 +108,6 @@ function handleResponse(response) {
                     globals.categoryId = bodyJSON.category;
                     executeServices.joinCatRoom();
                 }
-
             }
             break;
     }

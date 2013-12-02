@@ -1,16 +1,42 @@
 #!/bin/bash
 PLATFORM=`uname -m`
 BINARY_PLATFORM="x86_64"
-USAGE="Usage: ./configure \n\t-o <Organisation Token> \n\t[-H <Hostname>] \n\t[-c <category name>] \n\t [-h for help]"
+USAGE="Usage: ./configure \n\t-o <Organisation Token> \n\t[-H <Hostname>] \n\t[-c <Category name>] \n\t[-x <Proxy address>] \n\t[-h for help]"
 
+# check platform compatibility
+# check if linux
 if [ "`uname -s`" != "Linux" ]; then
-    echo "SeaLion agent works on Linux only" >&2
+    echo "Error: SeaLion agent works on Linux only" >&2
     exit 1
 fi
 
+PLATFORM=`uname -m`
+# check for platform architecture
 if [[ "$PLATFORM" != "x86_64" && "$PLATFORM" != "i686" ]]; then
-    echo "Platform not supported" >&2
+    echo "Error: Platform not supported" >&2
     exit 1
+fi
+
+# check for kernel version (min 2.6)
+eval $(uname -r | awk -F'.' '{printf("KERNEL_VERSION=%s KERNEL_MAJOR=%s\n", $1, $2)}')
+if [ $KERNEL_VERSION -le 2 ] ; then
+    if [[ $KERNEL_VERSION -eq 1 || $KERNEL_MAJOR -lt 6 ]]; then
+        echo "Error: SeaLion agent requires kernel 2.6 or above. Exiting" >&2
+        exit 1
+    fi
+fi
+
+# check for glibc version (min 2.4)
+LIBCPATH="`find /lib* | grep libc.so.6 | head -1`"
+if [ -z "$LIBCPATH" ]; then
+    echo "Error: GLIBC_2.4 not found. Exiting"
+    exit 1
+else
+    LIBC24="`strings $LIBCPATH | grep 'GLIBC_2.4'`"
+    if [ -z "$LIBC24" ]; then
+        echo "Error: SeaLion agent requires GLIBC_2.4 or above. Exiting"
+        exit 1
+    fi
 fi
 
 if [[ "$PLATFORM" != "$BINARY_PLATFORM" ]]; then
@@ -25,7 +51,9 @@ if [[ "$PLATFORM" != "$BINARY_PLATFORM" ]]; then
     exit 1
 fi
 
-while getopts a:o:c:v:hH: OPT ; do
+HTTPPROXY=
+
+while getopts a:o:x:c:v:hH: OPT ; do
     case "$OPT" in
         v)
             version=$OPTARG
@@ -39,6 +67,9 @@ while getopts a:o:c:v:hH: OPT ; do
         h)
             printf "$USAGE \n" >&1
             exit 0
+        ;;
+        x)
+            HTTPPROXY=$OPTARG
         ;;
         o)
         if [ -z $org_token ] ; then
@@ -69,7 +100,11 @@ fi
 
 echo "Generating installer script..."
 
-sed '0,/version=/{s/version=/version=\"'"$version"'\"/}; 0,/agent_id=/{s/agent_id=/agent_id=\"'"$agent_id"'\"/}; 0,/host=/{s/host=/host=\"'"$host"'\"/}; 0,/org_token=/{s/org_token=/org_token=\"'"$org_token"'\"/}; 0,/category=/{s/category=/category=\"'"$category"'\"/};' installer.in > installer.out
+sed '0,/version=/{s/version=/version=\"'"$version"'\"/}; 0,/agent_id=/{s/agent_id=/agent_id=\"'"$agent_id"'\"/}; 0,/host=/{s/host=/host=\"'"$host"'\"/}; 0,/org_token=/{s/org_token=/org_token=\"'"$org_token"'\"/}; 0,/category=/{s/category=/category=\"'"$category"'\"/}; 0,/HTTPPROXY=/{s$HTTPPROXY=$HTTPPROXY=\"'"$HTTPPROXY"'\"$};' installer.in > installer.out
+if [ $? -ne 0 ] ; then
+    echo "Error: Failed to generate installer.out. Aborting"
+    exit 1
+fi
 
 chmod +x installer.out
 

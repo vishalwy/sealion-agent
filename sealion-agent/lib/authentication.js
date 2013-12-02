@@ -23,10 +23,6 @@ if(fs.existsSync('/usr/local/sealion-agent/etc/config/proxy.json')) {
 
     if( proxy.http_proxy && proxy.http_proxy.length && testURL(proxy.http_proxy)) {
         SealionGlobal.http_proxy= proxy.http_proxy.substring(0,4) === 'http' ? proxy.http_proxy : 'http://' + proxy.http_proxy;
-        var curlrcPath = '/usr/local/sealion-agent/.curlrc';
-        if(! fs.existsSync(curlrcPath)) {
-            fs.writeFileSync(curlrcPath, 'proxy = ' + proxy.http_proxy);
-        }
     }
 }
 
@@ -154,12 +150,28 @@ function sendAuthRequest() {
                     }
                     break;    
                 default: {
-                        msg = "Status code: " + response.statusCode + 
+
+                        if(response.statusCode >= 500 && response.statusCode < 600){
+                            msg = "SeaLion Error -> Status code: " + response.statusCode;
+                            logData(msg + '. Trying to reconnect...');
+
+                            if(options.maxConnectAttempts < 0) {
+                                setTimeout(authenticate, 300000);
+                            } else if(attemptNumber >= (options.reconnectInterval.length - 1)) {
+                                setTimeout(authenticate,
+                                    options.reconnectInterval[options.reconnectInterval.length - 1] * 1000);
+                            } else {
+                                setTimeout(authenticate,
+                                    options.reconnectInterval[attemptNumber] * 1000);
+                            }
+                        } else {
+                            msg = "Status code: " + response.statusCode +
                                 " SeaLion Agent Error #" + bodyJSON.code + " : " + bodyJSON.message;
-                        logData(msg);
-                        logData('Bye!!! Terminating service');
-                        cleanUp();
-                        process.exit(1);
+                            logData(msg);
+                            logData('Bye!!! Terminating service');
+                            cleanUp();
+                            process.exit(1);
+                        }
                     }
                     break;
             }
@@ -193,7 +205,6 @@ function reauthenticate(ssId) {
         allowAuth = false;
         SealionGlobal.sessionCookie='';
         services.stopServices();
-        //services.closeSocketIO();
         process.nextTick( function() {
             authenticate();
         });

@@ -50,9 +50,13 @@ ExecuteCommand.prototype.executeCommand = function(options) {
     this.result.options = options;
     this.result.timeStamp = Date.now();
 
-    var child = exec(this.result.activityDetails.command, { }, function(error, stdout, stderr){
-        tempThis.processCommandResult(error, stdout, stderr);
-    });
+    try {
+        var child = exec(this.result.activityDetails.command, { }, function(error, stdout, stderr){
+            tempThis.processCommandResult(error, stdout, stderr);
+        });
+    } catch (err) {
+        tempThis.processCommandResult(err, null, null);
+    }
 };
 
 module.exports = ExecuteCommand;

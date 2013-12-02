@@ -13,6 +13,7 @@ It will initiate update script in /usr/local/sealion-agent/update.sh and exit
 var spawn = require('child_process').spawn;
 var fs = require('fs');
 var agentDetails = require('../etc/config/agent-config.json');
+var SealionGlobal = require('./global.js');
 
 var updateAgent = function(version) {
     var out = fs.openSync('/tmp/sealion_update.log', 'a');
@@ -23,9 +24,14 @@ var updateAgent = function(version) {
         , detached: true
         , stdio:['ignore', out, err]
     };
+    var argumentsArray = ['-a', agentDetails.agentId, '-v', version, '-o', agentDetails.orgToken];
+
+    if(SealionGlobal.http_proxy && SealionGlobal.http_proxy.length) {
+        argumentsArray.push('-x', SealionGlobal.http_proxy);
+    }
 
     var child = spawn('/usr/local/sealion-agent/etc/update.sh', 
-        ['-a', agentDetails.agentId, '-v', version, '-o', agentDetails.orgToken],
+        argumentsArray,
         options);
     child.unref();
 }

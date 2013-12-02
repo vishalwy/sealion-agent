@@ -17,16 +17,16 @@ var logData = require('./lib/log.js');
  */
 if (process.setuid) {
     try {
+        process.setgid('sealion');
         process.setuid('sealion');
     } catch (err) {
         logData('Failed to set uid ' + err);
         process.exit(1);
     }
 }
+
 var lockFile = require('./etc/config/sealion-config.json').lockFile;
 var daemon = require('daemon');
-var authenticate = require('./lib/authentication.js').authenticate;
-var shutDown = require('./lib/execute-services.js').shutDown;
 var fs = require('fs');
 
 
@@ -75,6 +75,9 @@ switch(args[2]) {
         process.exit(0);
     break;
 }
+
+var authenticate = require('./lib/authentication.js').authenticate;
+var shutDown = require('./lib/execute-services.js').shutDown;
 
 process.title = 'sealion-node';
 

@@ -1,5 +1,5 @@
 (c) Webyog
-
+======================================================================================================================
 To make SeaLion Agent work behind proxy. Follow following steps
 1. Login as root
 2. Enter into /usr/local/sealion-agent/etc/config directory
@@ -9,5 +9,11 @@ To make SeaLion Agent work behind proxy. Follow following steps
     "http_proxy" : "<proxy-url>"
 }
 
+======================================================================================================================
+
+To uninstall agent, execute /usr/local/sealion-agent/uninstall
+Note: uninstalling agent requires super privilege
+
+======================================================================================================================
 
 SeaLion uses node.js v0.8.18. Source code of which is available at http://nodejs.org/dist/v0.8.18/node-v0.8.18.tar.gz

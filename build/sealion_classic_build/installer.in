@@ -5,7 +5,14 @@ agent_id=
 host=
 org_token=
 category=
+HTTPPROXY=
+CURL_COMMAND_PROXY=
+if [[ ! -z $HTTPPROXY ]] ; then
+    CURL_COMMAND_PROXY="-x $HTTPPROXY"
+fi
+
 REGISTRATION_URL="<registration-url>"
+PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
 
 TMP_FILE_PATH=`mktemp -d /tmp/sealion-agent.XXXX` || exit 1
 TMP_DATA_NAME=$TMP_FILE_PATH"/sealion-data.tmp"
@@ -27,12 +34,14 @@ fi
 
 clean_up()
 {
-
     echo "Removing files generated for installation..."
         for (( i = 1 ; i < $1 ; i++ )) 
         do
-            rm -f /etc/rc$i.d/${SYMLINK_PATHS[$i]}20sealion
+            VAR_NAME="RC"$i"_PATH"/${SYMLINK_PATHS[$i]}99sealion
+            rm -f $VAR_NAME
         done
+        
+        rm -f $INIT_D_PATH/sealion
         rm -rf $TMP_FILE_PATH
         rm -rf $INSTALLATION_DIRECTORY
     echo "Successfully removed files"
@@ -52,6 +61,12 @@ get_JSON_value()
     
     return 0
 }
+
+if [[ $EUID != 0 && -z $agent_id ]] ; then
+    echo "SeaLion agent installation requires super privilege" >&2
+    echo -e "Usage:\n sudo make install"
+    exit 116
+fi
 
 running=`pgrep sealion-node | wc -w`
 if [ $running -gt 0 ] ; then
@@ -74,7 +89,18 @@ if [ -z $agent_id ] ; then
         exit 118
     fi
 
-    useradd -r -d $INSTALLATION_DIRECTORY $USERNAME 2> /dev/null
+    groupadd -r $USERNAME 2> /dev/null
+    tempVar=$?
+    if [ $tempVar -ne 0 ] ; then
+        if [ $tempVar -ne 9 ] ; then
+            echo "Error: Group 'sealion' creation failed!" >&2
+            rm -r $INSTALLATION_DIRECTORY
+            exit 1
+        fi
+    fi
+    echo "Created 'sealion' group successfully" >&1
+    
+    useradd -r -d $INSTALLATION_DIRECTORY -g $USERNAME $USERNAME 2> /dev/null
     tempVar=$?
     if [ $tempVar -ne 0 ] ; then
         if [ $tempVar -ne 9 ] ; then
@@ -97,6 +123,7 @@ echo "Copying files to /usr/local/sealion-agent..." >&1
         echo "Error: Installation failed" >&2
         if [ $is_root -eq 1 ] ; then
             userdel sealion
+            groupdel sealion
             rm -rf $INSTALLATION_DIRECTORY
             rm -rf $TMP_FILE_PATH
             if [ $? -ne 0 ] ; then
@@ -110,36 +137,58 @@ echo "Files copied successfully" >&1
 cd $INSTALLATION_DIRECTORY
 
 if [ $is_root -eq 1 ] ; then
+
+    RC1_PATH=`find /etc/ -type d -name rc1.d`
+    RC2_PATH=`find /etc/ -type d -name rc2.d`
+    RC3_PATH=`find /etc/ -type d -name rc3.d`
+    RC4_PATH=`find /etc/ -type d -name rc4.d`
+    RC5_PATH=`find /etc/ -type d -name rc5.d`
+    RC6_PATH=`find /etc/ -type d -name rc6.d`
+    INIT_D_PATH=`find /etc/ -type d -name init.d`
+
+    if [[ -z $RC1_PATH || -z $RC2_PATH || -z $RC3_PATH || -z $RC4_PATH || -z $RC5_PATH || -z $RC6_PATH || -z $INIT_D_PATH ]] ; then
+        echo "Error: Could not locate init.d/rc folders" >&2
+        userdel sealion
+        groupdel sealion
+        rm -rf $INSTALLATION_DIRECTORY
+        rm -rf $TMP_FILE_PATH
+        if [ $? -ne 0 ] ; then
+            echo "Error: Failed to delete temporary files" >&2
+        fi
+        exit 115
+    fi
+
     chown -R $USERNAME:$USERNAME $INSTALLATION_DIRECTORY
 
-    ln -sf $INIT_FILE /etc/init.d/sealion
+    ln -sf $INIT_FILE $INIT_D_PATH/sealion
     chmod +x $INIT_FILE
-    chown -h $USERNAME:$USERNAME /etc/init.d/sealion
-
+    
     for (( i = 1 ; i < 7 ; i++ )) 
     do
-        ln -sf $INIT_FILE /etc/rc$i.d/${SYMLINK_PATHS[$i]}20sealion
+        VAR_NAME="RC"$i"_PATH"
+        ln -sf $INIT_FILE ${!VAR_NAME}/${SYMLINK_PATHS[$i]}99sealion
         if [ $? -ne 0 ] ; then
             echo "Error: Unable to update init.d files. Aborting" >&2
             clean_up $i
             exit 1
         fi
-        chown -h $USERNAME:$USERNAME /etc/rc$i.d/${SYMLINK_PATHS[$i]}20sealion
     done
     
     echo "Installed SeaLion as a service" >&1
 fi
 
 if [ -z $agent_id ] ; then
+
+
     if [ -z "$category" ] ; then
-        return_code=`curl -s -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"orgToken\":\"$org_token\", \"name\":\"$host\", \"ref\":\"tarball\"}"  $REGISTRATION_URL -o $TMP_DATA_NAME`
+        return_code=`curl -s $CURL_COMMAND_PROXY -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"orgToken\":\"$org_token\", \"name\":\"$host\", \"ref\":\"curl\"}"  $REGISTRATION_URL -o $TMP_DATA_NAME`
         if [[ $? -ne 0 || $return_code -ne 201 ]] ; then
             clean_up 6
             echo "Error: Registration failed. Aborting" >&2
             exit 123
         fi
     else
-        return_code=`curl -s -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"orgToken\":\"$org_token\", \"name\":\"$host\", \"category\":\"$category\", \"ref\":\"tarball\"}"  $REGISTRATION_URL -o $TMP_DATA_NAME`
+        return_code=`curl -s $CURL_COMMAND_PROXY -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"orgToken\":\"$org_token\", \"name\":\"$host\", \"category\":\"$category\", \"ref\":\"curl\"}"  $REGISTRATION_URL -o $TMP_DATA_NAME`
         if [[ $? -ne 0 || $return_code -ne 201 ]] ; then
             clean_up 6
             echo "Error: Registration failed. Aborting" >&2
@@ -176,12 +225,16 @@ if [ $? -ne 0 ] ; then
     echo "Error: Failed to delete temporary files" >&2
 fi
 
-if [ -n $http_proxy ] ; then
-    HTTPPROXY=$http_proxy
-else
-    if [ -n $HTTP_PROXY ] ;then
-        HTTPPROXY=$HTTP_PROXY                
+if [ -z $HTTPPROXY ] ; then
+
+    if [ -n $http_proxy ] ; then
+        HTTPPROXY=$http_proxy
+    else
+        if [ -n $HTTP_PROXY ] ;then
+            HTTPPROXY=$HTTP_PROXY                
+        fi
     fi
+    
 fi
 
 if [[ -n $HTTPPROXY && ! -f $PROXY_FILE_PATH ]] ; then
@@ -191,7 +244,6 @@ fi
 if [ $is_root -eq 1 ] ; then
     chown -R $USERNAME:$USERNAME etc/config
 fi 
-
     
 echo "Starting agent..." >&1
 $INIT_FILE start
