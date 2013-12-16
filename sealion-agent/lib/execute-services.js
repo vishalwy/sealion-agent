@@ -146,6 +146,26 @@ function closeAll(){
     closeSocketIO();
 }
 
+function sendCrashData() {
+    var SendData = require('./send-data.js');
+    var sendDataObj = new SendData(sqliteObj);
+
+    sendDataObj.sendCrashData();
+}
+
+function saveCrashData(data, cb) {
+    var fs = require('fs');
+    logData('Agent crashed. Saving crash dump');
+    var dumpFilePath = '/usr/local/sealion-agent/var/log/sealion-dump-' + Date.now() + '.err';
+    fs.writeFileSync(dumpFilePath, JSON.stringify(data), 'utf8');
+    if(cb && typeof cb === 'function') {
+        cb();
+    }
+}
+
+
+exports.saveCrashData = saveCrashData;
+exports.sendCrashData = sendCrashData;
 exports.startServices = startAllActivities;
 exports.stopServices = stopAllActivities;
 exports.startListeningSocketIO = startListeningSocketIO;

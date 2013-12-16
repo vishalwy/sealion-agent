@@ -51,6 +51,7 @@ HandleSocketIO.prototype.createConnection = function() {
         this.reconnect = true;
         this.socket.removeListener('connect', this.onConnect);
         this.socket.removeListener('joined', this.onJoined);
+        this.socket.removeListener('logout', this.onLogout);
         this.socket.removeListener('left', this.onLeft);
         this.socket.removeListener('agent_removed', this.onAgentRemoved);
         this.socket.removeListener('server_category_changed', this.onServerCategoryChanged);
@@ -68,6 +69,7 @@ HandleSocketIO.prototype.createConnection = function() {
         this.socket.on('connect', this.onConnect);
         this.socket.on('joined', this.onJoined);
         this.socket.on('left', this.onLeft);
+        this.socket.on('logout', this.onLogout);
         this.socket.on('agent_removed', this.onAgentRemoved);
         this.socket.on('server_category_changed', this.onServerCategoryChanged);
         this.socket.on('category_deleted', this.onCategoryDeleted);
@@ -82,6 +84,15 @@ HandleSocketIO.prototype.createConnection = function() {
         this.socket.on('disconnect', this.onDisconnect);
     }
 }
+
+HandleSocketIO.prototype.onLogout = function() {
+    logData('SocketIO: Logout agent. Duplicate host name found. Please install agent with different host name');
+
+    executeServices.shutDown();
+    process.nextTick( function() {
+        process.exit(0);
+    });
+};
 
 HandleSocketIO.prototype.joinCatRoom = function() {
     if(self) {

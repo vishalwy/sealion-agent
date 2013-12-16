@@ -51,6 +51,12 @@ if [[ "$PLATFORM" != "$BINARY_PLATFORM" ]]; then
     exit 1
 fi
 
+# check if curl command is installed for registration and upgrade
+if [ "`which curl`" == "" ]; then
+    echo "Curl command not found. Please install curl..."
+    exit 1
+fi
+
 HTTPPROXY=
 
 while getopts a:o:x:c:v:hH: OPT ; do

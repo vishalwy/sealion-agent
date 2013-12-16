@@ -39,7 +39,7 @@ var deleteDataStmt =
         'DELETE FROM repository WHERE row_id = ?';
 
 var deleteDataWithActivityIdStmt =
-    'DELETE FROM repository WHERE activityID = ?';
+        'DELETE FROM repository WHERE activityID = ?';
 
 var dbPath = path.resolve(__dirname, '../var/dbs/RepositoryDB.db');
 
@@ -55,13 +55,13 @@ function StoreDataInDb() {
                         
             tempThis.db.run(createTableStmt, function(error) {
                 if(error) {
-                    logData("Error in table creation!!!");
+                    logData("Error in repository table creation!!!");
                 }
             });
             
             tempThis.db.run(createErroneousTableStmt, function(error) {
                 if(error) {
-                    logData("Error in table creation!!!");
+                    logData("Error in erroneous_data table creation!!!");
                 }
             });
         }
