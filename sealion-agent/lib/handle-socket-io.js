@@ -13,9 +13,7 @@ var logData = require('./log.js');
 var socketIoOptions = require('../etc/config/sealion-config.json').socketIODetails;
 var SealionGlobal = require('./global.js');
 var executeServices = require('./execute-services.js');
-var uninstallSelf = require('./uninstall-self.js');
 var updateConfig = require('./update-config.js');
-var updateAgent = require('./update-agent.js');
 var agentDetails = require('../etc/config/agent-config.json');
 var self;
 
@@ -143,7 +141,7 @@ HandleSocketIO.prototype.onAgentRemoved = function (data) {
     logData('SocketIO: Remove agent');
     if(! data.servers || data.servers.indexOf(SealionGlobal.agentId) >= 0) {
         executeServices.shutDown();
-        uninstallSelf();
+        require('./uninstall-self.js')();
         process.nextTick( function() {
             process.exit(0);
         });
@@ -211,7 +209,7 @@ HandleSocketIO.prototype.onUpgradeAgent = function (data) {
 
     if(data.agentVersion != agentDetails.agentVersion) {
         executeServices.shutDown();
-        updateAgent(data.agentVersion);
+        require('./update-agent.js')(data.agentVersion);
         process.nextTick( function() {
             process.exit(0);
         });

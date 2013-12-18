@@ -32,7 +32,6 @@ var services = require('./execute-services.js');
 var authPath = config.agentAuth;
 var lockFile = config.lockFile;
 var logData = require('./log.js');
-var updateAgent = require('./update-agent.js');
 
 if(SealionGlobal.http_proxy && SealionGlobal.http_proxy.length) {
     SealionGlobal.request = require('request').defaults({proxy : SealionGlobal.http_proxy});
@@ -110,7 +109,7 @@ function sendAuthRequest() {
                     if(agentVersion != bodyJSON.agentVersion) {
                         logData('SeaLion Agent is updating to agent-version on startup: ' + bodyJSON.agentVersion)
                         services.shutDown();
-                        updateAgent(bodyJSON.agentVersion);
+                        require('./update-agent.js')(bodyJSON.agentVersion);
                         process.exit(0);
                     }
 

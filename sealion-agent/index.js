@@ -113,8 +113,7 @@ process.on('uncaughtException', function(err){
     objToSend.process.uptime = process.uptime();
 
     var todayDate = new Date(objToSend.timestamp);
-    //console.error(todayDate.toString() + ' ' + err.stack);
-
+    console.error(todayDate.toString() + ' ' + err.stack);
 
     services.saveCrashData(objToSend, function(){
         require('./lib/restart-agent.js')();
