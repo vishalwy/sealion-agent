@@ -5,6 +5,7 @@ Module contains global objects that are to be shared amongst modules
 /*********************************************
 
  (c) Webyog, Inc.
+ Author: Shubhansh Varshney <shubhansh.varshney@webyog.com>
 
 *********************************************/
 

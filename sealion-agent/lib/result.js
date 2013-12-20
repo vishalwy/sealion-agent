@@ -5,6 +5,7 @@ this module represents results class as an object
 /*********************************************
 
  (c) Webyog, Inc.
+ Author: Shubhansh Varshney <shubhansh.varshney@webyog.com>
 
 *********************************************/
 

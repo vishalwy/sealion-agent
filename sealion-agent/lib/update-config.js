@@ -5,6 +5,7 @@ Module updates changed activities at run time
 /*********************************************
 
 (c) Webyog, Inc.
+ Author: Shubhansh Varshney <shubhansh.varshney@webyog.com>
 
 *********************************************/
 

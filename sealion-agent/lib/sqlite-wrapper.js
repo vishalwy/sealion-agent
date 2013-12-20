@@ -5,6 +5,7 @@ module to handle basic SQLite operations
 /*********************************************
 
  (c) Webyog, Inc.
+ Author: Shubhansh Varshney <shubhansh.varshney@webyog.com>
 
 *********************************************/
 
