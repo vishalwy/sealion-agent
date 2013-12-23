@@ -24,12 +24,17 @@ if [ $KERNEL_VERSION -le 2 ] ; then
 fi
 
 # check for glibc version (min 2.4)
-LIBCPATH="`find /lib* | grep libc.so.6 | head -1`"
+LIBCPATH="`find /lib*/ | grep libc.so.6 | head -1`"
 if [ -z "$LIBCPATH" ]; then
     echo "Error: GLIBC_2.4 not found. Exiting"
     exit 1
 else
-    LIBC24="`strings $LIBCPATH | grep 'GLIBC_2.4'`"
+    STRINGS="`which strings`"
+    if [ -z "$STRINGS" ]; then
+        echo "Error: strings command not available. Try installing binutils package."
+        exit 1  
+    fi
+    LIBC24="`$STRINGS $LIBCPATH | grep 'GLIBC_2.4'`"
     if [ -z "$LIBC24" ]; then
         echo "Error: SeaLion agent requires GLIBC_2.4 or above. Exiting"
         exit 1
