@@ -31,7 +31,7 @@ if [ -z "$LIBCPATH" ]; then
 else
     STRINGS="`which strings`"
     if [ -z "$STRINGS" ]; then
-        echo "Error: strings command not available. Try installing binutils package."
+        echo "Error: strings command not available. Please install binutils package."
         exit 1  
     fi
     LIBC24="`$STRINGS $LIBCPATH | grep 'GLIBC_2.4'`"
