@@ -1,59 +1,22 @@
 #!/bin/bash
 
-# check platform compatibility
-# check if linux
-if [ "`uname -s`" != "Linux" ]; then
-    echo "Error: SeaLion agent works on Linux only" >&2
-    exit 1
+version=
+agent_id=
+host=
+org_token=
+category=
+HTTPPROXY=
+CURL_COMMAND_PROXY=
+if [[ ! -z $HTTPPROXY ]] ; then
+    CURL_COMMAND_PROXY="-x $HTTPPROXY"
 fi
 
-PLATFORM=`uname -m`
-# check for platform architecture
-if [[ "$PLATFORM" != "x86_64" && "$PLATFORM" != "i686" ]]; then
-    echo "Error: Platform not supported" >&2
-    exit 1
-fi
-
-# check for kernel version (min 2.6)
-eval $(uname -r | awk -F'.' '{printf("KERNEL_VERSION=%s KERNEL_MAJOR=%s\n", $1, $2)}')
-if [ $KERNEL_VERSION -le 2 ] ; then
-    if [[ $KERNEL_VERSION -eq 1 || $KERNEL_MAJOR -lt 6 ]]; then
-        echo "Error: SeaLion agent requires kernel 2.6 or above. Exiting" >&2
-        exit 1
-    fi
-fi
-
-# check for glibc version (min 2.4)
-LIBCPATH="`find /lib*/ | grep libc.so.6 | head -1`"
-if [ -z "$LIBCPATH" ]; then
-    echo "Error: GLIBC_2.4 not found. Exiting"
-    exit 1
-else
-    STRINGS="`which strings`"
-    if [ -z "$STRINGS" ]; then
-        echo "Error: strings command not available. Please install binutils package."
-        exit 1  
-    fi
-    LIBC24="`$STRINGS $LIBCPATH | grep 'GLIBC_2.4'`"
-    if [ -z "$LIBC24" ]; then
-        echo "Error: SeaLion agent requires GLIBC_2.4 or above. Exiting"
-        exit 1
-    fi
-fi
-
-DOWNLOAD_URL="<base-agent-url>"
 REGISTRATION_URL="<registration-url>"
-
-TAR_FILE_URL="<tar-file-url>"$PLATFORM".tar.gz"
 PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
 
-USAGE="Usage:\n curl -s "$DOWNLOAD_URL" | sudo bash /dev/stdin -o <Organisation Token> \n\t[-H <Hostname>] \n\t[-c <Category name>] \n\t[-x <Proxy address>] \n\t[-h for help]"
-
 TMP_FILE_PATH=`mktemp -d /tmp/sealion-agent.XXXX` || exit 1
-TMP_FILE_NAME=$TMP_FILE_PATH"/sealion-agent.tar.gz"
 TMP_DATA_NAME=$TMP_FILE_PATH"/sealion-data.tmp"
-
-OPTERR=0
+TMP_FILE_NAME=./sealion-agent/*
 
 INIT_FILE=/usr/local/sealion-agent/etc/sealion
 INSTALLATION_DIRECTORY=/usr/local/sealion-agent/
@@ -63,19 +26,25 @@ USERNAME="sealion"
 SYMLINK_PATHS=(K K S S S S K)
 is_root=0
 
-CURL_COMMAND_PROXY=
+if [ -z $org_token ] ; then
+    echo "Error: No organization token found. Aborting" >&2
+    printf $USAGE
+    exit 124
+fi
 
 clean_up()
 {
-    for (( i = 1 ; i < $1 ; i++ )) 
-    do
-        VAR_NAME="RC"$i"_PATH"/${SYMLINK_PATHS[$i]}99sealion
-        rm -f $VAR_NAME
-    done
-    
-    rm -f $INIT_D_PATH/sealion
-    rm -rf $TMP_FILE_PATH
-    rm -rf $INSTALLATION_DIRECTORY
+    echo "Removing files generated for installation..."
+        for (( i = 1 ; i < $1 ; i++ )) 
+        do
+            VAR_NAME="RC"$i"_PATH"/${SYMLINK_PATHS[$i]}99sealion
+            rm -f $VAR_NAME
+        done
+        
+        rm -f $INIT_D_PATH/sealion
+        rm -rf $TMP_FILE_PATH
+        rm -rf $INSTALLATION_DIRECTORY
+    echo "Successfully removed files"
 }
 
 get_JSON_value()
@@ -93,73 +62,10 @@ get_JSON_value()
     return 0
 }
 
-while getopts a:o:x:c:v:hH: OPT ; do
-    case "$OPT" in
-        v)
-            version=$OPTARG
-        ;;
-        x)
-            HTTPPROXY=$OPTARG
-            CURL_COMMAND_PROXY="-x $HTTPPROXY"
-        ;;
-        a)
-            agent_id=$OPTARG
-        ;;
-        H)
-            host=$OPTARG
-        ;;
-        h)
-            printf "$USAGE \n" >&1
-            exit 0
-        ;;
-        o)
-        if [ -z $org_token ] ; then
-            org_token=$OPTARG
-        fi
-        ;;
-        c)
-            category=$OPTARG
-        ;;
-        \?)
-            echo "Invalid argument -$OPTARG" >&2
-            printf "$USAGE \n" >&2
-            exit 126
-        ;;
-        :)
-            echo "Option -$OPTARG requires an argument." >&2
-            printf "$USAGE \n" >&2
-            exit 125
-        ;;
-    esac
-done
-
-if [ -z $org_token ] ; then
-    echo "Error: No organization token found. Aborting" >&2
-    printf "$USAGE \n" >&2
-    exit 124
-fi
-
 if [[ $EUID != 0 && -z $agent_id ]] ; then
     echo "SeaLion agent installation requires super privilege" >&2
-    echo -e "Usage:\n curl -s "$DOWNLOAD_URL" | sudo bash /dev/stdin -o $org_token \n\t[-H <Hostname>] \n\t[-c <Category name>] \n\t[-x <Proxy address>] \n\t[-h for help]"
+    echo -e "Usage:\n sudo make install"
     exit 116
-fi
-
-echo "Downloading agent..."
-
-
-if [ -z $agent_id ] ; then
-    curl -# $CURL_COMMAND_PROXY $TAR_FILE_URL -o $TMP_FILE_NAME
-    if [ $? -ne 0 ] ; then
-        echo "Error: Downloading source file failed" >&2
-        exit 117
-    fi
-else
-    curl -s $CURL_COMMAND_PROXY $TAR_FILE_URL -o $TMP_FILE_NAME
-    if [ $? -ne 0 ] ; then
-        echo "Error: Downloading source file failed" >&2
-        exit 117
-    fi
 fi
 
 running=`pgrep sealion-node | wc -w`
@@ -182,7 +88,7 @@ if [ -z $agent_id ] ; then
         echo "Error: Directory creation failed!!!" >&2
         exit 118
     fi
-    
+
     groupadd -r $USERNAME 2> /dev/null
     tempVar=$?
     if [ $tempVar -ne 0 ] ; then
@@ -211,9 +117,8 @@ else
     fi
 fi    
 
-echo "Extracting files to /usr/local/sealion-agent..." >&1
-    
-    tar -xzf $TMP_FILE_NAME -C $INSTALLATION_DIRECTORY --overwrite
+echo "Copying files to /usr/local/sealion-agent..." >&1
+    cp -R $TMP_FILE_NAME $INSTALLATION_DIRECTORY
     if [ $? -ne 0 ] ; then
         echo "Error: Installation failed" >&2
         if [ $is_root -eq 1 ] ; then
@@ -227,11 +132,12 @@ echo "Extracting files to /usr/local/sealion-agent..." >&1
         fi
         exit 1
     fi
+echo "Files copied successfully" >&1
 
-echo "Files extracted successfully" >&1
 cd $INSTALLATION_DIRECTORY
 
 if [ $is_root -eq 1 ] ; then
+
     RC1_PATH=`find /etc/ -type d -name rc1.d`
     RC2_PATH=`find /etc/ -type d -name rc2.d`
     RC3_PATH=`find /etc/ -type d -name rc3.d`
@@ -253,7 +159,7 @@ if [ $is_root -eq 1 ] ; then
     fi
 
     chown -R $USERNAME:$USERNAME $INSTALLATION_DIRECTORY
-    
+
     ln -sf $INIT_FILE $INIT_D_PATH/sealion
     chmod +x $INIT_FILE
     
@@ -272,6 +178,8 @@ if [ $is_root -eq 1 ] ; then
 fi
 
 if [ -z $agent_id ] ; then
+
+
     if [ -z "$category" ] ; then
         return_code=`curl -s $CURL_COMMAND_PROXY -w "%{http_code}" -H "Content-Type: application/json" -X POST -d "{\"orgToken\":\"$org_token\", \"name\":\"$host\", \"ref\":\"curl\"}"  $REGISTRATION_URL -o $TMP_DATA_NAME`
         if [[ $? -ne 0 || $return_code -ne 201 ]] ; then
@@ -336,12 +244,11 @@ fi
 if [ $is_root -eq 1 ] ; then
     chown -R $USERNAME:$USERNAME etc/config
 fi 
-
     
 echo "Starting agent..." >&1
 $INIT_FILE start
 if [ $? -ne 0 ] ; then
-    echo "Error: Service cannot be started" >&2
+    echo "Error: Service can not be started" >&2
     exit 1
 else
     echo "Installation successful. Please continue on https://sealion.com" >&1

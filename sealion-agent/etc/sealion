@@ -2,125 +2,185 @@
 
 ### BEGIN INIT INFO
 # Provides:          sealion
-# Required-Start:    
+# Required-Start:       
 # Required-Stop:     
 # Should-Start:      
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
-# Short-Description: Sealion agent for 
-# Description:       Sealion is cloud based server debugging tool.
-#                    This is Sealion's Agent to send monitoring data to Sealion server
+# Short-Description: SeaLion agent
+# Description:       SeaLion is cloud based server debugging tool.
+#                    This is SeaLion's Agent to send monitoring data to SeaLion server
 # 
 ### END INIT INFO
 
-# Author: Shubhansh Varshney <shubhansh.varshney@webyog.com>
 
+SUSE=0
 LOCK_FILE=/usr/local/sealion-agent/var/sealion/sealion.pid
+FUNCTION_RETURN_VALUE=0
 
 cd /usr/local/sealion-agent/
+if [ $? -ne 0 ] ; then      
+    exit 1                  
+fi                          
+
+if [ $((`grep SUSE /etc/issue -c`)) -gt 0 ]; then
+        SUSE=1;                                  
+fi                                               
+
+if [ $SUSE -eq 1 ]; then
+        . /lib/lsb/init-functions   
+        . /etc/rc.status            
+        rc_reset                    
+fi                                  
 
 #
-# Function that starts the sealion agent's service
-#
-do_start()
+# Function that starts the SeaLion agent's service
+#                                                 
+do_start()                                        
 {
-    if [ ! -s $LOCK_FILE ] 
-	then
+    FUNCTION_RETURN_VALUE=0
+    if [ ! -s $LOCK_FILE ]                        
+    then
         ./bin/sealion-node index.js start
-        return 0
-	else
-	    running=`pgrep sealion-node | wc -w`
-	    if [ $running -eq 0 ] ; then
-	        rm -f $LOCK_FILE
-	        if [ $? -eq 0 ] ; then
-	            ./bin/sealion-node index.js start
-	            return 0    
-	        fi
-	    fi
-	    return 1
-	fi
-}
-
-
-#
-# Function that returns Sealion agent's status
-#
-get_status()
-{
-    running=`pgrep sealion-node | wc -w`
-
-    if [ $running -gt 0 ] ; then
+        RETURN_VALUE=$?
+        if [ $SUSE -eq 1  ] ; then
+                rc_status
+                sleep 1
+        fi
+        return $RETURN_VALUE
+    else
+        running=`pgrep sealion-node | wc -w`
+        if [ $running -eq 0 ] ; then
+            rm -f $LOCK_FILE
+            if [ $? -eq 0 ] ; then
+                ./bin/sealion-node index.js start
+                RETURN_VALUE=$?
+                if [ $SUSE -eq 1 ] ; then
+                    rc_status
+                    sleep 1
+                fi
+                return $RETURN_VALUE
+            else
+                echo "Failed to remove lock file to start service."
+                return 1
+            fi
+        fi
+        FUNCTION_RETURN_VALUE=-1
         return 1
     fi
+}                                                    
+
+
+#
+# Function that returns SeaLion agent's status
+#                                             
+get_status()                                  
+{                                             
+    running=`pgrep sealion-node | wc -w`      
+    if [ $running -gt 0 ] ; then              
+        return 1                              
+    fi                                        
 
     return 0
-}
+}           
 
 #
-# Function that stops the sealion agent's service
-#
-do_stop()
+# Function that stops the SeaLion agent's service
+#                                                
+do_stop()                                        
 {
+    FUNCTION_RETURN_VALUE=0
+    running=`pgrep sealion-node | wc -w`
+    if [ $running -gt 0 ] ; then
+        ./bin/sealion-node index.js stop
+        RETURN_VALUE=$?
+        if [ $SUSE -eq 1 ] ; then
+            rc_status
+        fi
+
+        if [ -s $LOCK_FILE ]
+        then
+            rm -f $LOCK_FILE
+        fi
+        return $RETURN_VALUE
+    fi
 
     if [ -s $LOCK_FILE ]
-	then
-	    running=`pgrep sealion-node | wc -w`
-
-    	if [ $running -gt 0 ] ; then
-    	    ./bin/sealion-node index.js stop
-    	fi
-
-	    rm -f $LOCK_FILE
-	    return 0
-	else
-	    return 1
-	fi
-}
+    then
+        rm -f $LOCK_FILE
+    fi
+    FUNCTION_RETURN_VALUE=-1
+    return 1
+}                                           
 
 
 case "$1" in
-  start)
-	do_start
-	case "$?" in
-		0) 
-		    echo "Sealion service started successfully" 
-		;;
-		1) 
-		    echo "Sealion service already running" 
-		;;
-	esac
-	;;
-  stop)
-	do_stop
-	case "$?" in
-		0) 
-		    echo "Sealion service stopped successfully" 
-		;;
-		1) 
-		    echo "Sealion service not running" 
-		;;
-	esac
-	;;
+  start)    
+        do_start
+        case "$?" in
+                0)
+                    echo "sealion service started successfully"
+                ;;
+                1)
+                    if [ $FUNCTION_RETURN_VALUE -eq -1 ] ;then
+                        echo "sealion service already running"
+                    else
+                        echo "Failed to start sealion service"
+                    fi
+                ;;
+                *)
+                    echo "Failed to start sealion service"
+                ;;                                              
+        esac                                                    
+        ;;                                                      
+  stop)                                                         
+        do_stop                                                 
+        case "$?" in                                            
+                1)
+                    if [ $FUNCTION_RETURN_VALUE -eq -1 ] ; then
+                        echo "sealion service not running"
+                    else
+                        echo "Failed to stop sealion service"
+                    fi
+                ;;
+                0)
+                    echo "sealion service stopped successfully"
+                ;;                                              
+                *)
+                    echo "Failed to stop sealion service"
+                ;;
+        esac
+        ;;
   restart|force-reload)
-	do_stop
-	do_start
-	case "$?" in
-		0)
-		    echo "Sealion service restarted successfully"
-		;;
-		*)
-	      echo "Failed to restart Sealion Service"
-	    ;;
-	esac
+        do_stop
+        do_start
+        case "$?" in
+            1)
+                if [ $FUNCTION_RETURN_VALUE -eq -1 ]; then
+                    echo "sealion service already running"
+                else
+                    echo "Failed to restart sealion service"
+                fi
+            ;;
+            0)
+                echo "sealion service restarted successfully"
+            ;;
+            *)
+                echo "Failed to restart sealion Service"
+            ;;
+        esac
+        if [ $SUSE -eq 1 ] ; then
+                rc_status
+        fi
     ;;
   status)
     get_status
     case "$?" in
       0)
-        echo "Sealion service is not running"
+        echo "sealion service is not running"
       ;;
       1)
-        echo "Sealion service is running"
+        echo "sealion service is running"
       ;;
     esac
     ;;

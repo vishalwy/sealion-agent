@@ -1,4 +1,6 @@
+# Ignore everything in this directory
 *
-
-! sealion.com
-! test.sealion.com
+# Except this file
+!test.sealion.com/
+!sealion.com/
+!.gitignore

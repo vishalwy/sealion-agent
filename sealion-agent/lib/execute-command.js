@@ -5,12 +5,14 @@ Module is class representation of oject used to execute commands
 /*********************************************
 
 (c) Webyog, Inc.
+ Author: Shubhansh Varshney <shubhansh.varshney@webyog.com>
 
 *********************************************/
 var Result = require('./result.js');
 var exec = require ('child_process').exec;
 var SendData = require('./send-data.js');
 var global = require('./global.js');
+
 
 /** @constructor to execute command class*/
 var ExecuteCommand = function(activityDetails, sqliteObj) {
@@ -31,10 +33,11 @@ ExecuteCommand.prototype.processCommandResult = function (error, stdout, stderr)
     var tempThis = this;
 
     if(error) {
-        this.result.code = error.code ? error.code : -1;
-        this.result.output = stderr !== '' ? stderr : (stdout !== ''? stdout : JSON.stringify(error));
+        var errorCodes = require('./error-code.js');
+        this.result.code = error.code ? (typeof error.code === 'string' ?  (errorCodes[error.code] ? errorCodes[error.code] : -1) : error.code) : -1;
+        this.result.output = stderr && stderr !== '' ? stderr : (stdout && stdout !== ''? stdout : JSON.stringify(error));
     } else {
-        this.result.output = stdout !== '' ? stdout : stderr;
+        this.result.output = stdout && stdout !== '' ? stdout : (stderr && stderr !== '' ? stderr : 'No output to show.');
     }
 
     process.nextTick( function () {
@@ -50,9 +53,13 @@ ExecuteCommand.prototype.executeCommand = function(options) {
     this.result.options = options;
     this.result.timeStamp = Date.now();
 
-    var child = exec(this.result.activityDetails.command, { }, function(error, stdout, stderr){
-        tempThis.processCommandResult(error, stdout, stderr);
-    });
+    try {
+        var child = exec(this.result.activityDetails.command, { }, function(error, stdout, stderr){
+            tempThis.processCommandResult(error, stdout, stderr);
+        });
+    } catch (err) {
+        tempThis.processCommandResult(err, null, null);
+    }
 };
 
 module.exports = ExecuteCommand;

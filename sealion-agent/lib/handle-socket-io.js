@@ -5,6 +5,7 @@ This module handles socketIO
 /*********************************************
 
  (c) Webyog, Inc.
+ Author: Shubhansh Varshney <shubhansh.varshney@webyog.com>
 
 *********************************************/
 
@@ -13,9 +14,7 @@ var logData = require('./log.js');
 var socketIoOptions = require('../etc/config/sealion-config.json').socketIODetails;
 var SealionGlobal = require('./global.js');
 var executeServices = require('./execute-services.js');
-var uninstallSelf = require('./uninstall-self.js');
 var updateConfig = require('./update-config.js');
-var updateAgent = require('./update-agent.js');
 var agentDetails = require('../etc/config/agent-config.json');
 var self;
 
@@ -51,6 +50,7 @@ HandleSocketIO.prototype.createConnection = function() {
         this.reconnect = true;
         this.socket.removeListener('connect', this.onConnect);
         this.socket.removeListener('joined', this.onJoined);
+        this.socket.removeListener('logout', this.onLogout);
         this.socket.removeListener('left', this.onLeft);
         this.socket.removeListener('agent_removed', this.onAgentRemoved);
         this.socket.removeListener('server_category_changed', this.onServerCategoryChanged);
@@ -68,6 +68,7 @@ HandleSocketIO.prototype.createConnection = function() {
         this.socket.on('connect', this.onConnect);
         this.socket.on('joined', this.onJoined);
         this.socket.on('left', this.onLeft);
+        this.socket.on('logout', this.onLogout);
         this.socket.on('agent_removed', this.onAgentRemoved);
         this.socket.on('server_category_changed', this.onServerCategoryChanged);
         this.socket.on('category_deleted', this.onCategoryDeleted);
@@ -82,6 +83,15 @@ HandleSocketIO.prototype.createConnection = function() {
         this.socket.on('disconnect', this.onDisconnect);
     }
 }
+
+HandleSocketIO.prototype.onLogout = function() {
+    logData('SocketIO: Logout agent. Duplicate host name found. Please install agent with different host name');
+
+    executeServices.shutDown();
+    process.nextTick( function() {
+        process.exit(0);
+    });
+};
 
 HandleSocketIO.prototype.joinCatRoom = function() {
     if(self) {
@@ -132,7 +142,7 @@ HandleSocketIO.prototype.onAgentRemoved = function (data) {
     logData('SocketIO: Remove agent');
     if(! data.servers || data.servers.indexOf(SealionGlobal.agentId) >= 0) {
         executeServices.shutDown();
-        uninstallSelf();
+        require('./uninstall-self.js')();
         process.nextTick( function() {
             process.exit(0);
         });
@@ -200,7 +210,7 @@ HandleSocketIO.prototype.onUpgradeAgent = function (data) {
 
     if(data.agentVersion != agentDetails.agentVersion) {
         executeServices.shutDown();
-        updateAgent(data.agentVersion);
+        require('./update-agent.js')(data.agentVersion);
         process.nextTick( function() {
             process.exit(0);
         });

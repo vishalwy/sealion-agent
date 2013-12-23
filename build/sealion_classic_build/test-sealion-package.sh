@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # variable initialization
-COMPRESSED_FILE_NAME_i686=../../../release/sealion.com/sealion-agent-package_i686.tar.gz
-COMPRESSED_FILE_NAME_x86_64=../../../release/sealion.com/sealion-agent-package_x86_64.tar.gz
+COMPRESSED_FILE_NAME_i686=../../../release/test.sealion.com/sealion-agent-package_i686.tar.gz
+COMPRESSED_FILE_NAME_x86_64=../../../release/test.sealion.com/sealion-agent-package_x86_64.tar.gz
 FOLDER_PATH=*
 IGNORE_FILE=../.tarignore
 PACKAGE_FOLDER=sealion-agent-package
@@ -14,8 +14,8 @@ cp -R ../../sealion-agent $TAR_BUILD_PATH
 cp ./configure $TAR_BUILD_PATH
 
 #URL changes for sealion.com
-API_URL='https:\/\/api.sealion.com'
-AGENT_URL='https:\/\/agent.sealion.com'
+API_URL='https:\/\/api-test.sealion.com'
+AGENT_URL='https:\/\/agent-test.sealion.com'
 REGISTRATION_URL=$API_URL'\/agents'
 
 sed 's/<registration-url>/'$REGISTRATION_URL'/' ./installer.in > $TAR_BUILD_PATH/installer.in

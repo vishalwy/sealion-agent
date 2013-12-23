@@ -6,12 +6,15 @@ This module is class representation for sending data
 /*********************************************
 
  (c) Webyog, Inc.
+ Author: Shubhansh Varshney <shubhansh.varshney@webyog.com>
 
 *********************************************/
 
 var config = require('../etc/config/sealion-config.json');
+var agentConfig = require('../etc/config/agent-config.json');
 var serverOption = config.serverDetails;
 var dataPath = config.dataPath;
+var crashPath = config.crashPath;
 var Sqlite3 = require('./sqlite-wrapper.js');
 var global = require('./global.js');
 var updateConfig = require('./update-config.js');
@@ -37,13 +40,68 @@ SendData.prototype.handleError = function(toSend) {
     var dataToInsert = JSON.stringify(toSend);
     this.sqliteObj.insertData(dataToInsert, this.activityID);
     needCheckStoredData = true;
-}
+};
 
 // function to insert erroneous data into SQLite. this data wiull never be sent to server
 SendData.prototype.handleErroneousData = function(toSend, activityID) {
     var data = JSON.stringify(toSend);
     this.sqliteObj.insertErroneousData(data, activityID);
-}
+};
+
+SendData.prototype.sendCrashData = function() {
+    var tempThis = this;
+
+    var fs = require('fs');
+    var dirPath = '/usr/local/sealion-agent/var/log/';
+    var orgToken = agentConfig.orgToken;
+    var agentId = agentConfig.agentId;
+
+    var url = serverOption.sourceURL + crashPath.replace('<agent-id>', agentId).replace('<org-token>', orgToken);
+
+    fs.readdir(dirPath, function(err, files){
+        var fileArray = [];
+        var pattern = /sealion-dump-[0-9]+\.err/;
+
+        for(var index in files) {
+            if(pattern.test(files[index]) === true){
+                fileArray.push(files[index]);
+            }
+        }
+
+        var helperFunction = function (index) {
+            var filePath = dirPath + fileArray[index];
+            var dataToSend;
+
+            try {
+                dataToSend = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+            } catch(err) {
+                fs.unlink(filePath);
+                return;
+            }
+
+            var sendOptions = {
+                'uri' : url
+                , 'json' : dataToSend
+            }
+
+            global.request.post(sendOptions, function(err, response, data) {
+                if(err) {
+                    logData("Error in Sending crash data");
+                } else {
+                    var bodyJSON = response.body;
+
+                    if((response.statusCode >=200 && response.statusCode < 300) || (response.statusCode == 401 && bodyJSON.code && bodyJSON.code == 200004)){
+                        fs.unlinkSync(filePath);
+                    }
+                }
+            });
+        };
+
+        for(var index in fileArray) {
+            helperFunction(index);
+        }
+    });
+};
 
 // function to send stored data
 SendData.prototype.sendStoredData = function() {
@@ -212,11 +270,11 @@ SendData.prototype.dataSend = function (result) {
 
             switch(response.statusCode) {
                 case 204 : {
+                        services.startListeningSocketIO();
                         if(needCheckStoredData) {
                             needCheckStoredData = false;
                             tempThis.sendStoredData();
                             updateConfig();
-                            services.startListeningSocketIO();
                         }    
                     }
                     break;

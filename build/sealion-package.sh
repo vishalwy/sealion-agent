@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # variable initialization
-VERSION="-v"`cat version`
 COMPRESSED_FILE_NAME_i686=../../../release/sealion.com/sealion-agent_i686.tar.gz
 COMPRESSED_FILE_NAME_x86_64=../../../release/sealion.com/sealion-agent_x86_64.tar.gz
 FOLDER_PATH=*
