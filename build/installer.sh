@@ -26,17 +26,17 @@ fi
 # check for glibc version (min 2.4)
 LIBCPATH="`find /lib*/ | grep libc.so.6 | head -1`"
 if [ -z "$LIBCPATH" ]; then
-    echo "Error: GLIBC_2.4 not found. Exiting"
+    echo "Error: GLIBC_2.5 not found. Exiting"
     exit 1
 else
     STRINGS="`which strings`"
     if [ -z "$STRINGS" ]; then
-        echo "Error: strings command not available. Please install binutils package."
+        echo "Error: strings command not available. Please install binutils package and try again."
         exit 1  
     fi
-    LIBC24="`$STRINGS $LIBCPATH | grep 'GLIBC_2.4'`"
-    if [ -z "$LIBC24" ]; then
-        echo "Error: SeaLion agent requires GLIBC_2.4 or above. Exiting"
+    LIBC25="`$STRINGS $LIBCPATH | grep 'GLIBC_2.5'`"
+    if [ -z "$LIBC25" ]; then
+        echo "Error: SeaLion agent requires GLIBC_2.5 or above. Exiting"
         exit 1
     fi
 fi
