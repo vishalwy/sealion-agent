@@ -121,6 +121,12 @@ chmod +x installer.out
 
 echo "Successfully generated installer"
 
+MAKE="`which make`"
+if [ -z "$MAKE" ]; then
+    echo "Error: make command not found. Please install make and try again."
+    exit 1  
+fi
+
 echo "Generating Makefile..."
 echo "
 all:
