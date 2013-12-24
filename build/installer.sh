@@ -86,7 +86,7 @@ get_JSON_value()
     
     JSON=$@
     
-    version=`echo $JSON | sed 's/.*"agentVersion"\s*:\s*\([0-9\.]*\)[,}].*/\1/'` 
+    version=`echo $JSON | sed 's/.*"agentVersion"\s*:\s*"\?\([0-9\.]*\)"\?[,}].*/\1/'` 
     agent_id=`echo $JSON | sed 's/.*"_id"\s*:\s*"\([0-9a-z]*\)"[,}].*/\1/'`
     already_registered=`echo $JSON | sed 's/.*"alreadyRegistered"\s*:\s*\(0\|1\)[,}].*/\1/'`
     
