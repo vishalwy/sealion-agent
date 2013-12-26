@@ -5,7 +5,6 @@ This module handles socketIO
 /*********************************************
 
  (c) Webyog, Inc.
- Author: Shubhansh Varshney <shubhansh.varshney@webyog.com>
 
 *********************************************/
 

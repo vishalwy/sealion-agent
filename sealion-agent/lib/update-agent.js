@@ -7,7 +7,6 @@ It will initiate update script in /usr/local/sealion-agent/update.sh and exit
 /*********************************************
 
  (c) Webyog, Inc.
- Author: Shubhansh Varshney <shubhansh.varshney@webyog.com>
 
 *********************************************/
 
