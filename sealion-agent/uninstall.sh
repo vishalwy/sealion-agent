@@ -78,6 +78,7 @@ if [ "$FROM_AGENT" != "-u" ] ; then
         fi
 
     echo "SeaLion Agent: Removing sealion group and user"
+        pkill -KILL -u sealion
         userdel sealion
         groupdel sealion
 else
