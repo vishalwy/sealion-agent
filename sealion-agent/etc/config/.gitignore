@@ -1,4 +1,5 @@
 # Just leave the directory emplty except .gitignore
 *
 
+!./sealion-config.json
 !.gitignore
