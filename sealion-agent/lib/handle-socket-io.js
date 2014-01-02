@@ -35,8 +35,10 @@ function HandleSocketIO( ) {
 HandleSocketIO.prototype.createConnection = function() {
     var tempThis = this;
 
-    if(this.socket && this.socket.socket && (this.socket.socket.connected || this.socket.socket.connecting)) {
+    if (this.socket && this.socket.socket && (this.socket.socket.connected || this.socket.socket.connecting)) {
         return;
+    } else if (this.socket && this.socket.socket && !this.socket.socket.connected && !this.socket.socket.connecting)) {
+        return this.socket.socket.connect();
     }
 
     if(SealionGlobal.http_proxy){

@@ -12,17 +12,17 @@
         , "sealion"
     ]
     , "engines" : {
-        "node" : ">= 0.8.0"
+        "node" : ">= 0.10.23"
     }
     , "dependencies" : {
           "socket.io-client" : "0.9.11"
         , "sqlite3" : "2.1.x"
         , "request" : "2.12.0"
-        , "daemon" : "0.5.1"
+        , "daemon" : "1.1.0"
     }
     , "bin" : {
         "sealionagent" : "./index.js"
     }
-    , "_id" : "sealionagent@0.1"
+    , "_id" : "sealionagent@2.0.0"
     
 }
