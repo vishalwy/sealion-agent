@@ -1,5 +1,6 @@
 # Ignore all files ending in ~ (temp files)
 *~
+*.pyc
 release/sealion.sh
 release/test.sealion.com/*
 release/sealion.com/*
