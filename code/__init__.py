@@ -7,6 +7,9 @@ import json
 from lib import requests
 from lib.socketio_client import SocketIO, BaseNamespace
 
+def is_success(response):
+    return True if (response.status_code == 304 or (response.status_code >= 200 and response.status_code < 300)) else False
+
 def get_complete_url(url, is_socket_io = False):
     base_url = 'https://api-rituparna.sealion.com' + ('' if is_socket_io else '/agents')
     base_url = base_url if url[0] == '/' else (base_url + '/')
@@ -73,9 +76,14 @@ class SocketIOThread(threading.Thread):
 
 session = requests.Session()
 data = {'orgToken': 'def111c8-f6a5-404c-9e57-8bac3bb8b416', 'agentVersion': '2.0.0'}
-response = session.post(get_complete_url('/52d7f59852a35d8c56000004/sessions'), data=data)
-res = json.loads(response.text)
-activities = res['activities']
+is_response_success = False
+response = None
+
+while is_response_success is False:
+    response = session.post(get_complete_url('/52d7f59852a35d8c56000004/sessions'), data=data)
+    is_response_success = is_success(response)
+    
+activities = response.json()['activities']
 ActivityThread.session = session
 SocketIOThread.session = session
 SocketIOThread().start()
