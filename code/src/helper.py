@@ -162,25 +162,14 @@ def init_globals():
     if globals['agent_config'].has_key('id') == False:
         pass
     
-class Singleton:    
-    def __init__(self):
-        if hasattr(self.__class__, '__instance') == False:
-            setattr(self.__class__, '__instance', self)
-        elif self.__class__ is getattr(getattr(self.__class__, '__instance'), '__class__'):
-            raise RuntimeError, 'Instance already exists; use class.inst method'
-        else:
-            setattr(self.__class__, '__instance', self)
-    
-    @classmethod
-    def inst(cls):
-        temp = None
-        
-        try:
-            temp = cls()
-        except:
-            temp = getattr(cls, '__instance')
+class SingletonType(type):
+    def __call__(cls, *args, **kwargs):
+        if hasattr(cls, '__instance') == False:
+            setattr(cls, '__instance', super(SingletonType, cls).__call__(*args, **kwargs))
+        elif cls is not getattr(getattr(cls, '__instance'), '__class__'):
+            setattr(cls, '__instance', super(SingletonType, cls).__call__(*args, **kwargs))
             
-        return temp
+        return getattr(cls, '__instance')
     
 class Namespace:    
     def __init__(self):
