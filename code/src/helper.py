@@ -7,7 +7,7 @@ def is_success(response):
     return True if (response.status_code == 304 or (response.status_code >= 200 and response.status_code < 300)) else False
 
 def get_complete_url(url, is_socket_io = False):
-    base_url = 'https://api-rituparna.sealion.com' + ('' if is_socket_io else '/agents')
+    base_url = globals['agent_config'] + ('' if is_socket_io else '/agents')
     base_url = base_url if url[0] == '/' else (base_url + '/')
     base_url = base_url + ('' if is_socket_io else url)
     return base_url
@@ -50,7 +50,7 @@ def sanitize_dict(d, schema, is_delete_extra = True):
                     
             if sanitize_type(d[key], schema[key]['type'], is_delete_extra) == False:
                 del d[key]
-                ret = 0 if is_optional == False else ret
+                ret = 0 if is_optional == False else ret                
     
     for j in range(0, len(depends_check_keys)):
         depends = schema[depends_check_keys[j]]['depends']
@@ -138,6 +138,12 @@ agent_config = get_agent_config(globals['agent_config_file'])
 if agent_config == None:
     print globals['agent_config_file'] + ' is either missing or currupted'
     exit()
+    
+agent_config['host'] = agent_config['host'].strip()
+length = len(agent_config['host'])
+
+if length and agent_config['host'][length - 1] == '/':
+    agent_config['host'] = agent_config['host'][:-1]
     
 globals['agent_config'] = agent_config
 sealion_config = get_sealion_config(globals['sealion_config_file'])
