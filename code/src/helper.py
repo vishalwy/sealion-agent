@@ -127,29 +127,64 @@ def get_sealion_config(file, is_data = False):
         
     return config
 
-globals = {}
-exe_path = os.path.dirname(os.path.abspath(sys.modules['__main__'].__file__))
-globals['exe_path'] = exe_path if (exe_path[len(exe_path) - 1] == '/') else (exe_path + '/')
-globals['lock_file'] = get_safe_path(globals['exe_path'] + 'var/run/sealion.pid')
-globals['agent_config_file'] = get_safe_path(globals['exe_path'] + 'etc/config/agent_config.json')
-globals['sealion_config_file'] = get_safe_path(globals['exe_path'] + 'etc/config/sealion_config.json')
-agent_config = get_agent_config(globals['agent_config_file'])
-
-if agent_config == None:
-    print globals['agent_config_file'] + ' is either missing or currupted'
-    exit()
+def init_globals():
+    global globals
     
-agent_config['host'] = agent_config['host'].strip()
-length = len(agent_config['host'])
-
-if length and agent_config['host'][length - 1] == '/':
-    agent_config['host'] = agent_config['host'][:-1]
+    if globals != None:
+        return
     
-globals['agent_config'] = agent_config
-sealion_config = get_sealion_config(globals['sealion_config_file'])
+    exe_path = os.path.dirname(os.path.abspath(sys.modules['__main__'].__file__))
+    globals['exe_path'] = exe_path if (exe_path[len(exe_path) - 1] == '/') else (exe_path + '/')
+    globals['lock_file'] = get_safe_path(globals['exe_path'] + 'var/run/sealion.pid')
+    globals['agent_config_file'] = get_safe_path(globals['exe_path'] + 'etc/config/agent_config.json')
+    globals['sealion_config_file'] = get_safe_path(globals['exe_path'] + 'etc/config/sealion_config.json')
+    agent_config = get_agent_config(globals['agent_config_file'])
 
-if sealion_config == None:
-    print globals['sealion_config_file'] + ' is either missing or currupted'
-    exit()
+    if agent_config == None:
+        print globals['agent_config_file'] + ' is either missing or currupted'
+        exit()
+
+    agent_config['host'] = agent_config['host'].strip()
+    length = len(agent_config['host'])
+
+    if length and agent_config['host'][length - 1] == '/':
+        agent_config['host'] = agent_config['host'][:-1]
+
+    globals['agent_config'] = agent_config
+    sealion_config = get_sealion_config(globals['sealion_config_file'])
+
+    if sealion_config == None:
+        print globals['sealion_config_file'] + ' is either missing or currupted'
+        exit()
+
+    globals['sealion_config'] = sealion_config
     
-globals['sealion_config'] = sealion_config
+    if globals['agent_config'].has_key('id') == False:
+        pass
+    
+class Singleton:    
+    def __init__(self):
+        if hasattr(self.__class__, '__instance') == False:
+            setattr(self.__class__, '__instance', self)
+        elif self.__class__ is getattr(getattr(self.__class__, '__instance'), '__class__'):
+            raise RuntimeError, 'Instance already exists; use class.inst method'
+        else:
+            setattr(self.__class__, '__instance', self)
+    
+    @classmethod
+    def inst(cls):
+        temp = None
+        
+        try:
+            temp = cls()
+        except:
+            temp = getattr(cls, '__instance')
+            
+        return temp
+    
+class Namespace:    
+    def __init__(self):
+        raise RuntimeError, 'Cannot instantiate class'
+
+globals = None
+init_globals()

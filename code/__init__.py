@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
-exit()
-
+import pdb
 import threading
 import subprocess
 import time
