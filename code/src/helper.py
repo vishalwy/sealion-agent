@@ -1,51 +1,38 @@
+import pdb
 import os
 import sys
 import json
 import re
-from lib import requests
-import pdb
-
-class EmptyClass:
-    pass
-
-class SingletonType(type):
-    def __call__(cls, *args, **kwargs):
-        if hasattr(cls, '__instance') == False:
-            setattr(cls, '__instance', super(SingletonType, cls).__call__(*args, **kwargs))
-        elif cls is not getattr(getattr(cls, '__instance'), '__class__'):
-            setattr(cls, '__instance', super(SingletonType, cls).__call__(*args, **kwargs))
-            
-        return getattr(cls, '__instance')
-    
-class Namespace:    
-    def __init__(self):
-        raise RuntimeError, 'Cannot instantiate class'
-    
+import api
+from constructs import *
+   
 class Utils(Namespace):
     @staticmethod
-    def is_success(response):
-        return True if (response.status_code == 304 or (response.status_code >= 200 and response.status_code < 300)) else False
-
-    @staticmethod
-    def sanitize_type(d, schema, is_delete_extra = True):
+    def sanitize_type(d, schema, is_delete_extra = True, regex = None):
         type_name = type(d).__name__
 
         if type_name == 'dict' and type(schema) is dict:
             return Utils.sanitize_dict(d, schema, is_delete_extra)
         elif type_name == 'list' and type(schema) is list:
             for i in range(0, len(d)):
-                if Utils.sanitize_type(d[i], schema[0], is_delete_extra) == False:
+                if Utils.sanitize_type(d[i], schema[0], is_delete_extra, regex) == False:
                     return False
+                
+            return True
         else:
             types = schema.split(',')
+            flag = False
             
             for i in range(0, len(types)):
                 if type_name == types[i]:
-                    return True
+                    flag = True
+                    break
+                    
+            if flag == True and (type_name == 'str' or type_name == 'unicode') and regex != None:
+                if re.compile(regex).match(d) == None:
+                    return False
                 
-            return False
-
-        return True
+            return flag
 
     @staticmethod
     def sanitize_dict(d, schema, is_delete_extra = True):
@@ -70,7 +57,7 @@ class Utils(Namespace):
                 if schema[key].has_key('depends') == True:
                     depends_check_keys.append(key)
 
-                if Utils.sanitize_type(d[key], schema[key]['type'], is_delete_extra) == False:
+                if Utils.sanitize_type(d[key], schema[key]['type'], is_delete_extra, schema[key].get('regex')) == False:
                     del d[key]
                     ret = 0 if is_optional == False else ret                
 
@@ -102,7 +89,10 @@ class Config:
         self.data = {}
         
     def __getattr__(self, attr):
-        return self.data.get(attr)
+        return self.data[attr]
+        
+    def get_dict(self, keys = None, as_dict = True):
+        return DictEx(self.data).get_dict(keys, as_dict)
         
     @staticmethod
     def parse(file, is_data = False):
@@ -118,8 +108,8 @@ class Config:
                     f.close()
                     data = re.sub('#.*\n', '', data)
                     value = json.loads(data)
-                elif type(data) == 'dict':
-                    value = dict
+                elif type(data) is dict:
+                    value = data
                 else:
                     data = re.sub('#.*\n', '', data)
                     value = json.loads(data)
@@ -131,8 +121,7 @@ class Config:
     def save(self):
         if self.file != None:
             f = open(self.file, 'w')
-            json.dump(data, f)
-            data = f.read()
+            json.dump(self.data, f)
             f.close()
             
     def set(self, data = None):
@@ -179,24 +168,22 @@ class AgentConfig(Config):
         Config.__init__(self)
         self.file = file
         self.schema = {
-            'token': {'type': 'str,unicode'},
-            'id': {'type': 'str,unicode', 'depends': ['version'], 'optional': True},
-            'host': {'type': 'str,unicode'},
-            'version': {'type': 'str,unicode', 'depends': ['id'], 'optional': True},
+            'orgToken': {'type': 'str,unicode', 'depends': ['name'], 'regex': '^[a-zA-Z0-9\-]{36}$'},
+            '_id': {'type': 'str,unicode', 'depends': ['agentVersion'], 'regex': '^[a-zA-Z0-9]{24}$', 'optional': True},
+            'apiUrl': {'type': 'str,unicode', 'regex': '^https://[^\s:]+(:[0-9]+)?$' },
+            'name': {'type': 'str,unicode',  'regex': '^.+$'},
+            'category': {'type': 'str,unicode', 'regex': '^.+$', 'optional': True},
+            'agentVersion': {'type': 'str,unicode', 'depends': ['_id'], 'regex': '^[0-9\.]+$', 'optional': True},
             'activities': {
-                'type': [{'_id': {'type': 'str,unicode'}, 'name': {'type': 'str,unicode'}, 'command': {'type': 'str,unicode'}}],
-                'depends': ['id', 'version'],
+                'type': [{
+                    '_id': {'type': 'str,unicode', 'regex': '^[a-zA-Z0-9]{24}$'}, 
+                    'name': {'type': 'str,unicode', 'regex': '^.+$'}, 
+                    'command': {'type': 'str,unicode', 'regex': '^.+$'}
+                }],
+                'depends': ['_id', 'agentVersion'],
                 'optional': True
             }    
-        }
-    
-    def set(self, data = None):
-        Config.set(self, data)
-        self.data['host'] = self.data['host'].strip()
-        length = len(self.data['host'])
-
-        if length and self.data['host'][length - 1] == '/':
-            self.data['host'] = self.data['host'][:-1]
+        }        
     
 class Globals:
     __metaclass__ = SingletonType
@@ -212,17 +199,13 @@ class Globals:
         self.config.agent = AgentConfig(self.agent_config_file)
         self.config.sealion.set()
         self.config.agent.set()
+        self.api = api.API(self.config)
 
-        if hasattr(self.config.agent, 'id') == False:
-            print 'no id'
+        if hasattr(self.config.agent, '_id') == False:
+            self.api.register() and self.api.authenticate()
     
     def url(self, path = ''):
-        path.strip()
-        
-        if len(path):
-            path = path if path[0] == '/' else ('/' + path)
-                  
-        return self.config.agent.host + path
+        return self.api.get_url(path);
 
 try:
     Globals()
