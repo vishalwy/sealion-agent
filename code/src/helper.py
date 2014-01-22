@@ -2,6 +2,11 @@ import os
 import sys
 import json
 import re
+from lib import requests
+import pdb
+
+class EmptyClass:
+    pass
 
 class SingletonType(type):
     def __call__(cls, *args, **kwargs):
@@ -81,9 +86,18 @@ class Utils(Namespace):
             os.makedirs(dir)
 
         return path
-
+    
+class Config:
+    def __init__(self):
+        self.schema = {}
+        self.file = ''
+        self.data = {}
+        
+    def __getattr__(self, attr):
+        return self.data.get(attr)
+        
     @staticmethod
-    def get_config(file, is_data = False):
+    def parse(file, is_data = False):
         value = {}
 
         if is_data == True or os.path.isfile(file) == True:        
@@ -94,8 +108,7 @@ class Utils(Namespace):
                     f = open(file, 'r')
                     data = f.read()
                     f.close()
-
-                if type(data) == 'dict':
+                elif type(data) == 'dict':
                     value = dict
                 else:
                     data = re.sub('#.*\n', '', data)
@@ -104,11 +117,58 @@ class Utils(Namespace):
                 pass
 
         return value
-    
-    @staticmethod
-    def get_agent_config(file, is_data = False):
-        config = get_config(file, is_data)
-        schema = {
+        
+    def save(self):
+        if self.file != None:
+            f = open(self.file, 'w')
+            json.dump(data, f)
+            data = f.read()
+            f.close()
+            
+    def set(self, data = None):
+        is_data = True
+        
+        if data == None:
+            if self.file == None:
+                return
+            
+            data = self.file
+            is_data = False
+            
+        config = Config.parse(data, is_data)
+        
+        if Utils.sanitize_dict(config, self.schema) == False:
+            if is_data == False:
+                raise RuntimeError, self.file + ' is either missing or currupted' 
+            else:
+                raise RuntimeError, 'Invalid config' 
+
+        self.data = config
+        
+    def update(self, data):
+        config = {}
+        config.update(self.data)
+        config.update(Config.parse(data, True))
+        self.set(config)
+        
+class SealionConfig(Config):
+    def __init__(self, file):
+        Config.__init__(self)
+        self.file = file
+        self.schema = {
+            'proxy': {'type': {'https_proxy': {'type': 'str', 'optional': True}}, 'optional': True},
+            'whitelist': {'type': ['str'], 'optional': True},
+            'variables': {
+                'type': [{'name': {'type': 'str'}, 'value': {'type': 'str'}}],
+                'optional': True
+            }    
+        }
+        
+class AgentConfig(Config):
+    def __init__(self, file):
+        Config.__init__(self)
+        self.file = file
+        self.schema = {
             'token': {'type': 'str'},
             'id': {'type': 'str', 'depends': ['version'], 'optional': True},
             'host': {'type': 'str'},
@@ -119,28 +179,14 @@ class Utils(Namespace):
                 'optional': True
             }    
         }
+    
+    def set(self, data = None):
+        Config.set(self, data)
+        data['host'] = data['host'].strip()
+        length = len(data['host'])
 
-        if Utils.sanitize_dict(config, schema) == False:
-            return None
-
-        return config
-
-    @staticmethod
-    def get_sealion_config(file, is_data = False):
-        config = get_config(file, is_data)
-        schema = {
-            'proxy': {'type': {'https_proxy': {'type': 'str', 'optional': True}}, 'optional': True},
-            'whitelist': {'type': ['str'], 'optional': True},
-            'variables': {
-                'type': [{'name': {'type': 'str'}, 'value': {'type': 'str'}}],
-                'optional': True
-            }    
-        }
-
-        if Utils.sanitize_dict(config, schema) == False:
-            return None
-
-        return config
+        if length and data['host'][length - 1] == '/':
+            data['host'] = data['host'][:-1]
     
 class Globals:
     __metaclass__ = SingletonType
@@ -148,30 +194,17 @@ class Globals:
     def __init__(self):
         exe_path = os.path.dirname(os.path.abspath(sys.modules['__main__'].__file__))
         self.exe_path = exe_path if (exe_path[len(exe_path) - 1] == '/') else (exe_path + '/')
-        self.lock_file = get_safe_path(self.exe_path + 'var/run/sealion.pid')
-        self.agent_config_file = get_safe_path(self.exe_path + 'etc/config/agent_config.json')
-        self.sealion_config_file = get_safe_path(self.exe_path + 'etc/config/sealion_config.json')
-        sealion_config = get_sealion_config(self.sealion_config_file)
+        self.lock_file = Utils.get_safe_path(self.exe_path + 'var/run/sealion.pid')
+        self.agent_config_file = Utils.get_safe_path(self.exe_path + 'etc/config/agent_config.json')
+        self.sealion_config_file = Utils.get_safe_path(self.exe_path + 'etc/config/sealion_config.json')
+        self.config = EmptyClass()
+        self.config.sealion = SealionConfig(self.sealion_config_file)
+        self.config.agent = AgentConfig(self.agent_config_file)
+        self.config.sealion.set()
+        self.config.agent.set()
 
-        if sealion_config == None:
-            raise RuntimeError, self.sealion_config_file + ' is currupted'
-
-        self.sealion_config = sealion_config
-        agent_config = get_agent_config(self.agent_config_file)
-
-        if agent_config == None:
-            raise RuntimeError, self.agent_config_file + ' is either missing or currupted'
-
-        agent_config['host'] = agent_config['host'].strip()
-        length = len(agent_config['host'])
-
-        if length and agent_config['host'][length - 1] == '/':
-            agent_config['host'] = agent_config['host'][:-1]
-
-        self.agent_config = agent_config
-
-        if globals['agent_config'].has_key('id') == False:
-            pass
+        if hasattr(self.config.agent, 'id') == False:
+            print 'no id'
         
     def get_complete_url(self, url, is_socket_io = False):
         base_url = self.agent_config + ('' if is_socket_io else '/agents')
@@ -184,5 +217,4 @@ try:
 except RuntimeError, e:
     print e
     exit()
-
 
