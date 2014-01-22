@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import re
+import pdb
 
 def is_success(response):
     return True if (response.status_code == 304 or (response.status_code >= 200 and response.status_code < 300)) else False
@@ -65,7 +66,7 @@ def sanitize_dict(d, schema, is_delete_extra = True):
 def get_safe_path(path):
     dir = os.path.dirname(path)
     
-    if os.path.isdir(path) != True:
+    if os.path.isdir(dir) != True:
         os.makedirs(dir)
         
     return path
@@ -114,7 +115,7 @@ def get_agent_config(file, is_data = False):
 def get_sealion_config(file, is_data = False):
     config = get_config(file, is_data)
     schema = {
-        'proxy': {'type': {'https_proxy': {'type': 'str', 'optional': True}}},
+        'proxy': {'type': {'https_proxy': {'type': 'str', 'optional': True}}, 'optional': True},
         'whitelist': {'type': ['str'], 'optional': True},
         'variables': {
             'type': [{'name': {'type': 'str'}, 'value': {'type': 'str'}}],
@@ -126,41 +127,6 @@ def get_sealion_config(file, is_data = False):
         return None
         
     return config
-
-def init_globals():
-    global globals
-    
-    if globals != None:
-        return
-    
-    exe_path = os.path.dirname(os.path.abspath(sys.modules['__main__'].__file__))
-    globals['exe_path'] = exe_path if (exe_path[len(exe_path) - 1] == '/') else (exe_path + '/')
-    globals['lock_file'] = get_safe_path(globals['exe_path'] + 'var/run/sealion.pid')
-    globals['agent_config_file'] = get_safe_path(globals['exe_path'] + 'etc/config/agent_config.json')
-    globals['sealion_config_file'] = get_safe_path(globals['exe_path'] + 'etc/config/sealion_config.json')
-    agent_config = get_agent_config(globals['agent_config_file'])
-
-    if agent_config == None:
-        print globals['agent_config_file'] + ' is either missing or currupted'
-        exit()
-
-    agent_config['host'] = agent_config['host'].strip()
-    length = len(agent_config['host'])
-
-    if length and agent_config['host'][length - 1] == '/':
-        agent_config['host'] = agent_config['host'][:-1]
-
-    globals['agent_config'] = agent_config
-    sealion_config = get_sealion_config(globals['sealion_config_file'])
-
-    if sealion_config == None:
-        print globals['sealion_config_file'] + ' is either missing or currupted'
-        exit()
-
-    globals['sealion_config'] = sealion_config
-    
-    if globals['agent_config'].has_key('id') == False:
-        pass
     
 class SingletonType(type):
     def __call__(cls, *args, **kwargs):
@@ -174,6 +140,42 @@ class SingletonType(type):
 class Namespace:    
     def __init__(self):
         raise RuntimeError, 'Cannot instantiate class'
+    
+class Globals:
+    __metaclass__ = SingletonType
+    
+    def __init__(self):
+        exe_path = os.path.dirname(os.path.abspath(sys.modules['__main__'].__file__))
+        self.exe_path = exe_path if (exe_path[len(exe_path) - 1] == '/') else (exe_path + '/')
+        self.lock_file = get_safe_path(self.exe_path + 'var/run/sealion.pid')
+        self.agent_config_file = get_safe_path(self.exe_path + 'etc/config/agent_config.json')
+        self.sealion_config_file = get_safe_path(self.exe_path + 'etc/config/sealion_config.json')
+        sealion_config = get_sealion_config(self.sealion_config_file)
 
-globals = None
-init_globals()
+        if sealion_config == None:
+            raise RuntimeError, self.sealion_config_file + ' is currupted'
+
+        self.sealion_config = sealion_config
+        agent_config = get_agent_config(self.agent_config_file)
+
+        if agent_config == None:
+            raise RuntimeError, self.agent_config_file + ' is either missing or currupted'
+
+        agent_config['host'] = agent_config['host'].strip()
+        length = len(agent_config['host'])
+
+        if length and agent_config['host'][length - 1] == '/':
+            agent_config['host'] = agent_config['host'][:-1]
+
+        self.agent_config = agent_config
+
+        if globals['agent_config'].has_key('id') == False:
+            pass
+
+try:
+    Globals()
+except RuntimeError, e:
+    print e
+    exit()
+
+
