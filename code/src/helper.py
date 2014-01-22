@@ -36,7 +36,13 @@ class Utils(Namespace):
             for i in range(0, len(d)):
                 if Utils.sanitize_type(d[i], schema[0], is_delete_extra) == False:
                     return False
-        elif type_name != schema:
+        else:
+            types = schema.split(',')
+            
+            for i in range(0, len(types)):
+                if type_name == types[i]:
+                    return True
+                
             return False
 
         return True
@@ -73,7 +79,9 @@ class Utils(Namespace):
 
             for i in range(0, len(depends)):
                 if d.has_key(depends[i]) == False:
-                    del d[depends_check_keys[j]]
+                    if d.has_key(depends_check_keys[j]):
+                        del d[depends_check_keys[j]]
+                        
                     break
 
         return False if ret == 0 else True
@@ -108,11 +116,13 @@ class Config:
                     f = open(file, 'r')
                     data = f.read()
                     f.close()
+                    data = re.sub('#.*\n', '', data)
+                    value = json.loads(data)
                 elif type(data) == 'dict':
                     value = dict
                 else:
                     data = re.sub('#.*\n', '', data)
-                    value = json.load(data)
+                    value = json.loads(data)
             except:
                 pass
 
@@ -156,10 +166,10 @@ class SealionConfig(Config):
         Config.__init__(self)
         self.file = file
         self.schema = {
-            'proxy': {'type': {'https_proxy': {'type': 'str', 'optional': True}}, 'optional': True},
-            'whitelist': {'type': ['str'], 'optional': True},
+            'proxy': {'type': {'https_proxy': {'type': 'str,unicode', 'optional': True}}, 'optional': True},
+            'whitelist': {'type': ['str,unicode'], 'optional': True},
             'variables': {
-                'type': [{'name': {'type': 'str'}, 'value': {'type': 'str'}}],
+                'type': [{'name': {'type': 'str,unicode'}, 'value': {'type': 'str,unicode'}}],
                 'optional': True
             }    
         }
@@ -169,12 +179,12 @@ class AgentConfig(Config):
         Config.__init__(self)
         self.file = file
         self.schema = {
-            'token': {'type': 'str'},
-            'id': {'type': 'str', 'depends': ['version'], 'optional': True},
-            'host': {'type': 'str'},
-            'version': {'type': 'str', 'depends': ['id'], 'optional': True},
+            'token': {'type': 'str,unicode'},
+            'id': {'type': 'str,unicode', 'depends': ['version'], 'optional': True},
+            'host': {'type': 'str,unicode'},
+            'version': {'type': 'str,unicode', 'depends': ['id'], 'optional': True},
             'activities': {
-                'type': [{'_id': {'type': 'str'}, 'name': {'type': 'str'}, 'command': {'type': 'str'}}],
+                'type': [{'_id': {'type': 'str,unicode'}, 'name': {'type': 'str,unicode'}, 'command': {'type': 'str,unicode'}}],
                 'depends': ['id', 'version'],
                 'optional': True
             }    
@@ -182,11 +192,11 @@ class AgentConfig(Config):
     
     def set(self, data = None):
         Config.set(self, data)
-        data['host'] = data['host'].strip()
-        length = len(data['host'])
+        self.data['host'] = self.data['host'].strip()
+        length = len(self.data['host'])
 
-        if length and data['host'][length - 1] == '/':
-            data['host'] = data['host'][:-1]
+        if length and self.data['host'][length - 1] == '/':
+            self.data['host'] = self.data['host'][:-1]
     
 class Globals:
     __metaclass__ = SingletonType
@@ -205,12 +215,14 @@ class Globals:
 
         if hasattr(self.config.agent, 'id') == False:
             print 'no id'
+    
+    def url(self, path = ''):
+        path.strip()
         
-    def get_complete_url(self, url, is_socket_io = False):
-        base_url = self.agent_config + ('' if is_socket_io else '/agents')
-        base_url = base_url if url[0] == '/' else (base_url + '/')
-        base_url = base_url + ('' if is_socket_io else url)
-        return base_url
+        if len(path):
+            path = path if path[0] == '/' else ('/' + path)
+                  
+        return self.config.agent.host + path
 
 try:
     Globals()

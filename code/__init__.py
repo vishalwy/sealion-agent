@@ -1,6 +1,6 @@
 #!/usr/bin/python
 from src import helper
-
+exit()
 
 
 import pdb
