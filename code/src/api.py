@@ -3,9 +3,9 @@ import time
 from lib import requests
 from constructs import *
 
-class API(requests.Session):    
+class AppProgramInterface(requests.Session):    
     def __init__(self, config, *args, **kwargs):
-        super(API, self).__init__(*args, **kwargs)
+        super(AppProgramInterface, self).__init__(*args, **kwargs)
         self.config = config
         
         if hasattr(self.config.sealion, 'proxy'):
@@ -45,7 +45,7 @@ class API(requests.Session):
         
         if response == None:
             print 'Registration failed for ' + self.config.agent.orgToken + '; Network issue'
-        elif API.is_success(response):
+        elif AppProgramInterface.is_success(response):
             print 'Registration succesful for ' + self.config.agent.orgToken
             self.config.agent.update(response.json())
             self.config.agent.save()
@@ -80,9 +80,9 @@ class API(requests.Session):
         
         if response == None:
             print 'Authenitcation failed for agent ' + self.config.agent._id + '; Network issue'
-        elif API.is_success(response):
+        elif AppProgramInterface.is_success(response):
             print 'Authenitcation succesful for agent ' + self.config.agent._id
-            self.config.agent.update(response.json()['activities'])
+            self.config.agent.update({'activities': response.json()['activities']})
             self.config.agent.save()
             ret = True
         elif response.status_code == 404:

@@ -1,6 +1,14 @@
+import pdb
+from lib.socketio_client import SocketIO, BaseNamespace
+import threading
+from constructs import *
+
 class SocketIONamespace(BaseNamespace):
     def on_connect(self):
-        print '[Connected]'
+        print '[connected]'
+        
+    def on_disconnect(self):
+        print '[disconnected]'
 
     def on_activity_updated(self, *args):
         print '[activity_updated]'
@@ -19,3 +27,18 @@ class SocketIONamespace(BaseNamespace):
 
     def on_activity_deleted(self, *args):
         print '[activity_deleted]'
+        
+class RealTimeComm(threading.Thread):
+    __metaclass__ = SingletonType
+    
+    def __init__(self, api):
+        threading.Thread.__init__(self)
+        self.api = api
+
+    def run(self):
+        self.io = SocketIO(self.api.get_url(), Namespace=SocketIONamespace, cookies=self.api.cookies, proxies=self.api.proxies)
+        
+        while 1:
+            self.io.wait(5)
+
+#check for termination condition
