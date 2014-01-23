@@ -7,7 +7,9 @@ except RuntimeError, e:
     print e
     exit()
 
-globals.connect()
+if globals.connect() == False:
+    exit()
+    
 print 'Exiting Main Thread'
 
 #exit()

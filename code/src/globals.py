@@ -1,3 +1,5 @@
+import pdb
+import time
 import threading
 import sys
 import api
@@ -42,15 +44,27 @@ class AgentConfig(Config):
 class ConnectThread(threading.Thread):
     def run(self):
         globals = Globals()
-        globals.api.authenticate() and globals.rtc.connect().start()
+        ret = False
+        
+        if globals.api.authenticate() and globals.rtc.connect():
+            ret = True
+            globals.rtc.start()
+            
+        return ret           
         
     def connect(self):
         globals = Globals()
+        ret = True
+        
+        if hasattr(globals.config.agent, '_id') == False and globals.api.register() == False:
+            return False
         
         if hasattr(globals.config.agent, 'activities') == False:
-            self.run()
+            ret = self.run()
         else:   
             self.start()
+        
+        return ret
     
 class Globals:
     __metaclass__ = SingletonType
@@ -64,13 +78,18 @@ class Globals:
         self.config = EmptyClass()
         self.config.sealion = SealionConfig(self.sealion_config_file)
         self.config.agent = AgentConfig(self.agent_config_file)
-        self.config.sealion.set()
-        self.config.agent.set()
+        ret = self.config.sealion.set()
+        
+        if ret != True:
+            raise RuntimeError, ret
+        
+        ret = self.config.agent.set()
+        
+        if ret != True:
+            raise RuntimeError, ret
+        
         self.api = api.Interface(self.config)
-        self.rtc = rtc.Interface(self.api)
-
-        if hasattr(self.config.agent, '_id') == False and self.api.register() == False:
-            exit()            
+        self.rtc = rtc.Interface(self.api)            
     
     def url(self, path = ''):
         return self.api.get_url(path);

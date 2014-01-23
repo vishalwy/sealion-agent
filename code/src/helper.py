@@ -2,6 +2,7 @@ import pdb
 import os
 import json
 import re
+import threading
 from constructs import *
    
 class Utils(Namespace):
@@ -85,6 +86,7 @@ class Config:
         self.schema = {}
         self.file = ''
         self.data = {}
+        self.lock = threading.RLock()
         
     def __getattr__(self, attr):
         return self.data[attr]
@@ -117,18 +119,22 @@ class Config:
         return value
         
     def save(self):
-        if self.file != None:
+        self.lock.acquire()
+        
+        try:
             f = open(self.file, 'w')
             json.dump(self.data, f)
             f.close()
+            return True
+        except:
+            return False
+        finally:
+            self.lock.release()
             
     def set(self, data = None):
         is_data = True
         
-        if data == None:
-            if self.file == None:
-                return
-            
+        if data == None:            
             data = self.file
             is_data = False
             
@@ -136,14 +142,19 @@ class Config:
         
         if Utils.sanitize_dict(config, self.schema) == False:
             if is_data == False:
-                raise RuntimeError, self.file + ' is either missing or currupted' 
+                return self.file + ' is either missing or currupted'
             else:
-                raise RuntimeError, 'Invalid config' 
+                return 'Invalid config'
 
+        self.lock.acquire()
         self.data = config
+        self.lock.release()
+        return True
         
     def update(self, data):
         config = {}
+        self.lock.acquire()
         config.update(self.data)
+        self.lock.release()
         config.update(Config.parse(data, True))
-        self.set(config)
+        return self.set(config)
