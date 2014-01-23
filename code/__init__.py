@@ -1,6 +1,13 @@
 #!/usr/bin/python
-from src import helper
-helper.Globals().connect()
+from src.globals import Globals
+
+try:
+    globals = Globals()
+except RuntimeError, e:
+    print e
+    exit()
+
+globals.connect()
 print 'Exiting Main Thread'
 
 #exit()

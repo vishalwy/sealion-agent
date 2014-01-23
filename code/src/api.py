@@ -1,4 +1,3 @@
-import pdb
 import time
 from lib import requests
 from constructs import *
