@@ -1,7 +1,6 @@
-class ActivityThread(threading.Thread):
-    threadid = 0
-    session = None
 
+
+class ActivityThread(threading.Thread):
     def __init__(self, activity):
         threading.Thread.__init__(self)
         ActivityThread.threadid = ActivityThread.threadid + 1
