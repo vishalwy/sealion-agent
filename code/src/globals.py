@@ -95,17 +95,7 @@ class Globals:
     
     def connect(self):
         ConnectThread().connect()
-        
-    @staticmethod
-    def handle_conn_response(response):
-        if response == False:
-            print 'Failed to connect; exiting'
-            exit()
-        elif response and response != True:
-            if response.status_code == 404:
-                pass #uninstall agent
 
-            print 'Failed to connect; exiting'
-            exit()
+    
 
 

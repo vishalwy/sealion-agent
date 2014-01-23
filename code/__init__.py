@@ -1,4 +1,5 @@
 #!/usr/bin/python
+from src import helper
 from src.globals import Globals
 
 try:
@@ -8,7 +9,7 @@ except RuntimeError, e:
     exit()
     
 response = globals.connect()
-Globals.handle_conn_response(response)
+helper.handle_conn_response(response)
 
 
 
