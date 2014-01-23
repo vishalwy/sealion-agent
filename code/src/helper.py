@@ -89,10 +89,20 @@ class Config:
         self.lock = threading.RLock()
         
     def __getattr__(self, attr):
-        return self.data[attr]
+        self.lock.acquire()
+        
+        try:
+            return self.data[attr]
+        finally:
+            self.lock.release()
         
     def get_dict(self, keys = None, as_dict = True):
-        return DictEx(self.data).get_dict(keys, as_dict)
+        self.lock.acquire()
+        
+        try:
+            return DictEx(self.data).get_dict(keys, as_dict)
+        finally:
+            self.lock.release()
         
     @staticmethod
     def parse(file, is_data = False):

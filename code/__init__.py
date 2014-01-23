@@ -6,11 +6,10 @@ try:
 except RuntimeError, e:
     print e
     exit()
-
-if globals.connect() == False:
-    exit()
     
-print 'Exiting Main Thread'
+response = globals.connect()
+Globals.handle_conn_response(response)
+
 
 #exit()
 #

@@ -33,11 +33,11 @@ class Interface(threading.Thread):
         self.api = api
         
     def connect(self):
-        self.io = SocketIO(self.api.get_url(), Namespace=SocketIONamespace, cookies=self.api.cookies, proxies=self.api.proxies)
+        self.sio = SocketIO(self.api.get_url(), Namespace = SocketIONamespace, cookies = self.api.cookies, proxies = self.api.proxies)
         return self
 
     def run(self):        
         while 1:
-            self.io.wait(5)
+            self.sio.wait(5)
 
 #check for termination condition

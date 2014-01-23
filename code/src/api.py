@@ -20,7 +20,6 @@ class Interface(requests.Session):
         temp = 'Network issue' if response == None else response.json()['message']
         temp = (message + '; ' + temp) if len(message) else temp
         print temp
-        
     
     def get_url(self, path = ''):
         path.strip()
@@ -61,7 +60,7 @@ class Interface(requests.Session):
         else:
             Interface.print_response('Registration failed in ' + self.config.agent.orgToken, response)
         
-        return ret
+        return True if ret else response
     
     def authenticate(self, retry_count = -1):
         data = self.config.agent.get_dict(['orgToken', 'agentVersion'])
@@ -77,7 +76,7 @@ class Interface(requests.Session):
         else:
             Interface.print_response('Authenitcation failed for agent ' + self.config.agent._id, response)
         
-        return ret
+        return True if ret else response
             
     def get_config(self, retry_count = -1):
         print 'Getting config for ' + self.config.agent._id
@@ -97,7 +96,7 @@ class Interface(requests.Session):
         else:
             Interface.print_response('Get config failed for agent ' + self.config.agent._id, response)
             
-        return ret
+        return True if ret else response
             
     def post_data(self, activity_id, data, retry_count = 0):
         print 'Sending data ' + activity_id
@@ -110,7 +109,7 @@ class Interface(requests.Session):
         else:
             Interface.print_response('Send failed for data ' + activity_id, response)
             
-        return ret
+        return True if ret else response
     
     def logout(self):
         print 'Logging out agent ' + self.config.agent._id
@@ -123,4 +122,4 @@ class Interface(requests.Session):
         else:
             Interface.print_response('Logout failed for agent ' + self.config.agent._id, response)
             
-        return ret
+        return True if ret else response
