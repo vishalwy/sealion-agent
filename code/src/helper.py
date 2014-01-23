@@ -217,8 +217,8 @@ class Globals:
         self.api = api.Interface(self.config)
         self.rtc = rtc.Interface(self.api)
 
-        if hasattr(self.config.agent, '_id') == False:
-            self.api.register()
+        if hasattr(self.config.agent, '_id') == False and self.api.register() == False:
+            exit()            
     
     def url(self, path = ''):
         return self.api.get_url(path);

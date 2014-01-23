@@ -16,6 +16,13 @@ class Interface(requests.Session):
         status_code = response.status_code if response else 500
         return True if (status_code == 304 or (status_code >= 200 and status_code < 300)) else False
     
+    @staticmethod
+    def print_response(message, response):
+        temp = 'Network issue' if response == None else response.json()['message']
+        temp = (message + '; ' + temp) if len(message) else temp
+        print temp
+        
+    
     def get_url(self, path = ''):
         path.strip()
         
@@ -43,17 +50,14 @@ class Interface(requests.Session):
             
         ret = False
         
-        if response == None:
-            print 'Registration failed in ' + self.config.agent.orgToken + '; Network issue'
-        elif Interface.is_success(response):
+        if Interface.is_success(response):
             print 'Registration succesful in ' + self.config.agent.orgToken
             self.config.agent.update(response.json())
             self.config.agent.save()
             ret = True
-        elif response.status_code == 404:
-            print 'Registration failed in ' + self.config.agent.orgToken + '; Cannot find organization'
         else:
-            print 'Something went wrong while attempting to register in ' + self.config.agent.orgToken
+            Interface.print_response('Registration failed in ' + self.config.agent.orgToken, response)
+        
         
         return ret
     
@@ -92,6 +96,17 @@ class Interface(requests.Session):
             print 'Something went wrong while attempting to authenitcate agent ' + self.config.agent._id
         
         return ret
+    
+    def post_data(self, activity_id, data):
+        response = None
+        print 'Sending data ' + activity_id
+        
+        try:
+            response = self.post(self.get_url('agents/1/data/activities/' + activity_id), data = data)
+        except Exception, e:
+            print str(e)
+            
+        
             
         
             

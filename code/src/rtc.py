@@ -1,7 +1,6 @@
 import pdb
 from lib.socketio_client import SocketIO, BaseNamespace
 import threading
-from constructs import *
 
 class SocketIONamespace(BaseNamespace):
     def on_connect(self):
@@ -28,9 +27,7 @@ class SocketIONamespace(BaseNamespace):
     def on_activity_deleted(self, *args):
         print '[activity_deleted]'
         
-class Interface(threading.Thread):
-    __metaclass__ = SingletonType
-    
+class Interface(threading.Thread):    
     def __init__(self, api):
         threading.Thread.__init__(self)
         self.api = api
