@@ -31,14 +31,13 @@ class Interface(requests.Session):
                   
         return self.config.agent.apiUrl + path
     
-    def register(self):
-        data = self.config.agent.get_dict(['orgToken', 'name', 'category'])
+    def exec_method(self, method, retry_count = -1, *args, **kwargs):
+        method = getattr(self, method)
         response, i = None, 0
-        print 'Registering server in ' + self.config.agent.orgToken 
         
-        while i < 5:
+        while retry_count == -1 or i <= retry_count:
             try:
-                response = self.post(self.get_url('agents'), data = data)
+                response = method(*args, **kwargs)
             except Exception, e:
                 print str(e)
                 
@@ -46,8 +45,13 @@ class Interface(requests.Session):
                 break
                 
             time.sleep(5)
-            i += 1
-            
+        
+        return response
+    
+    def register(self, retry_count = -1):
+        data = self.config.agent.get_dict(['orgToken', 'name', 'category'])
+        print 'Registering server in ' + self.config.agent.orgToken 
+        response = self.exec_method('post', retry_count, self.get_url('agents'), data = data)    
         ret = False
         
         if Interface.is_success(response):
@@ -58,62 +62,66 @@ class Interface(requests.Session):
         else:
             Interface.print_response('Registration failed in ' + self.config.agent.orgToken, response)
         
-        
         return ret
     
-    def authenticate(self, is_retry_infinite = False):
+    def authenticate(self, retry_count = -1):
         data = self.config.agent.get_dict(['orgToken', 'agentVersion'])
-        
-        response, i = None, 0
         print 'Authenticating agent ' + self.config.agent._id
-        
-        while i < 5:
-            try:
-                response = self.post(self.get_url('agents/' + self.config.agent._id + '/sessions'), data = data)
-            except Exception, e:
-                print str(e)
-                
-            if response != None:
-                break
-                
-            time.sleep(5)
-            i += 0 if is_retry_infinite == True else 1
-            
+        response = self.exec_method('post', retry_count, self.get_url('agents/' + self.config.agent._id + '/sessions'), data = data)    
         ret = False
         
-        if response == None:
-            print 'Authenitcation failed for agent ' + self.config.agent._id + '; Network issue'
-        elif Interface.is_success(response):
+        if Interface.is_success(response):
             print 'Authenitcation succesful for agent ' + self.config.agent._id
             self.config.agent.update({'activities': response.json()['activities']})
             self.config.agent.save()
             ret = True
-        elif response.status_code == 404:
-            print 'Authenitcation failed for agent ' + self.config.agent._id + '; Cannot find agent'
-        elif response.status_code == 401:
-            print 'Authenitcation failed for agent ' + self.config.agent._id + '; Unautherized'
         else:
-            print 'Something went wrong while attempting to authenitcate agent ' + self.config.agent._id
+            Interface.print_response('Authenitcation failed for agent ' + self.config.agent._id, response)
         
         return ret
-    
-    def post_data(self, activity_id, data):
-        response = None
+            
+    def get_config(self, retry_count = -1):
+        print 'Getting config for ' + self.config.agent._id
+        response = self.exec_method('get', retry_count, self.get_url('agents/1'))
+        ret = False
+        
+        if Interface.is_success(response):
+            print 'Get config succesful for agent ' + self.config.agent._id
+            config = response.json();
+            
+            if config.has_key('category'):
+                del config['category']
+                
+            self.config.agent.update(config)
+            self.config.agent.save()
+            ret = True
+        else:
+            Interface.print_response('Get config failed for agent ' + self.config.agent._id, response)
+            
+        return ret
+            
+    def post_data(self, activity_id, data, retry_count = 0):
         print 'Sending data ' + activity_id
+        response = self.exec_method('post', retry_count, self.get_url('agents/1/data/activities/' + activity_id), data = data)
+        ret = False
         
-        try:
-            response = self.post(self.get_url('agents/1/data/activities/' + activity_id), data = data)
-        except Exception, e:
-            print str(e)
+        if Interface.is_success(response):
+            print 'Send succesful for data ' + activity_id
+            ret = True
+        else:
+            Interface.print_response('Send failed for data ' + activity_id, response)
             
+        return ret
+    
+    def logout(self):
+        print 'Logging out agent ' + self.config.agent._id
+        response = self.exec_method('delete', 0, self.get_url('agents/1/sessions/1'))
+        ret = False
         
+        if Interface.is_success(response):
+            print 'Logout succesful for agent ' + self.config.agent._id
+            ret = True
+        else:
+            Interface.print_response('Logout failed for agent ' + self.config.agent._id, response)
             
-        
-            
-        
-    
-    
-    
-    
-    
-    
+        return ret
