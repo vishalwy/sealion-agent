@@ -3,9 +3,9 @@ import time
 from lib import requests
 from constructs import *
 
-class AppProgramInterface(requests.Session):    
+class Interface(requests.Session):    
     def __init__(self, config, *args, **kwargs):
-        super(AppProgramInterface, self).__init__(*args, **kwargs)
+        super(Interface, self).__init__(*args, **kwargs)
         self.config = config
         
         if hasattr(self.config.sealion, 'proxy'):
@@ -27,7 +27,7 @@ class AppProgramInterface(requests.Session):
     def register(self):
         data = self.config.agent.get_dict(['orgToken', 'name', 'category'])
         response, i = None, 0
-        print 'Registering server for ' + self.config.agent.orgToken 
+        print 'Registering server in ' + self.config.agent.orgToken 
         
         while i < 5:
             try:
@@ -44,17 +44,17 @@ class AppProgramInterface(requests.Session):
         ret = False
         
         if response == None:
-            print 'Registration failed for ' + self.config.agent.orgToken + '; Network issue'
-        elif AppProgramInterface.is_success(response):
-            print 'Registration succesful for ' + self.config.agent.orgToken
+            print 'Registration failed in ' + self.config.agent.orgToken + '; Network issue'
+        elif Interface.is_success(response):
+            print 'Registration succesful in ' + self.config.agent.orgToken
             self.config.agent.update(response.json())
             self.config.agent.save()
             ret = True
         elif response.status_code == 404:
-            print 'Registration failed for ' + self.config.agent.orgToken + '; Cannot find organization'
+            print 'Registration failed in ' + self.config.agent.orgToken + '; Cannot find organization'
         else:
             print response.text
-            print 'Something went wrong while attempting to register for ' + self.config.agent.orgToken
+            print 'Something went wrong while attempting to register in ' + self.config.agent.orgToken
         
         return ret
     
@@ -80,7 +80,7 @@ class AppProgramInterface(requests.Session):
         
         if response == None:
             print 'Authenitcation failed for agent ' + self.config.agent._id + '; Network issue'
-        elif AppProgramInterface.is_success(response):
+        elif Interface.is_success(response):
             print 'Authenitcation succesful for agent ' + self.config.agent._id
             self.config.agent.update({'activities': response.json()['activities']})
             self.config.agent.save()

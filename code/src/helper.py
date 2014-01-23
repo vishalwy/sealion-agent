@@ -200,8 +200,8 @@ class Globals:
         self.config.agent = AgentConfig(self.agent_config_file)
         self.config.sealion.set()
         self.config.agent.set()
-        self.api = api.AppProgramInterface(self.config)
-        self.rtc = rtc.RealTimeComm(self.api)
+        self.api = api.Interface(self.config)
+        self.rtc = rtc.Interface(self.api)
 
         if hasattr(self.config.agent, '_id') == False:
             self.api.register() and self.api.authenticate() and self.rtc.start()

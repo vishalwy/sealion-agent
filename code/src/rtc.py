@@ -28,7 +28,7 @@ class SocketIONamespace(BaseNamespace):
     def on_activity_deleted(self, *args):
         print '[activity_deleted]'
         
-class RealTimeComm(threading.Thread):
+class Interface(threading.Thread):
     __metaclass__ = SingletonType
     
     def __init__(self, api):
