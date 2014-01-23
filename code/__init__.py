@@ -1,5 +1,8 @@
 #!/usr/bin/python
 from src import helper
+helper.Globals().connect()
+print 'Exiting Main Thread'
+
 #exit()
 #
 #

@@ -53,12 +53,11 @@ class Interface(requests.Session):
         elif response.status_code == 404:
             print 'Registration failed in ' + self.config.agent.orgToken + '; Cannot find organization'
         else:
-            print response.text
             print 'Something went wrong while attempting to register in ' + self.config.agent.orgToken
         
         return ret
     
-    def authenticate(self, is_retry_infinite = True):
+    def authenticate(self, is_retry_infinite = False):
         data = self.config.agent.get_dict(['orgToken', 'agentVersion'])
         
         response, i = None, 0

@@ -1,3 +1,4 @@
+import threading
 import pdb
 import os
 import sys
@@ -184,7 +185,20 @@ class AgentConfig(Config):
                 'depends': ['_id', 'agentVersion'],
                 'optional': True
             }    
-        }        
+        }
+        
+class ConnectThread(threading.Thread):
+    def run(self):
+        globals = Globals()
+        globals.api.authenticate() and globals.rtc.connect().start()
+        
+    def connect(self):
+        globals = Globals()
+        
+        if hasattr(globals.config.agent, 'activities') == False:
+            self.run()
+        else:   
+            self.start()
     
 class Globals:
     __metaclass__ = SingletonType
@@ -204,14 +218,16 @@ class Globals:
         self.rtc = rtc.Interface(self.api)
 
         if hasattr(self.config.agent, '_id') == False:
-            self.api.register() and self.api.authenticate() and self.rtc.start()
+            self.api.register()
     
     def url(self, path = ''):
         return self.api.get_url(path);
+    
+    def connect(self):
+        ConnectThread().connect()
 
 try:
     Globals()
 except RuntimeError, e:
     print e
     exit()
-
