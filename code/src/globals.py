@@ -61,6 +61,7 @@ class Globals:
         if ret != True:
             raise RuntimeError, ret
         
+        self.storage_path = Utils.get_safe_path(self.exe_path + 'var/dbs/' + self.config.agent.orgToken + '/')
         self.event = threading.Event()
         self.api = api.Interface(self.config, self.event)
         self.rtc = rtc.Interface(self.api, self.event)            

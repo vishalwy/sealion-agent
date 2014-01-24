@@ -6,7 +6,7 @@ class Interface(requests.Session):
     def __init__(self, config, event, *args, **kwargs):
         super(Interface, self).__init__(*args, **kwargs)
         self.config = config
-        self.event = event
+        self.sync_event = event
         
         if hasattr(self.config.sealion, 'proxy'):
             self.proxies = self.config.sealion.proxy
@@ -76,6 +76,7 @@ class Interface(requests.Session):
             ret = True
         else:
             Interface.print_response('Authenitcation failed for agent ' + self.config.agent._id, response)
+            self.sync_event.set()
         
         return True if ret else response
             
@@ -109,6 +110,7 @@ class Interface(requests.Session):
             ret = True
         else:
             Interface.print_response('Send failed for data ' + activity_id, response)
+            response and self.sync_event.set()
             
         return True if ret else response
     
