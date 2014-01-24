@@ -1,5 +1,5 @@
 import time
-from lib import requests
+import requests
 from constructs import *
 
 class Interface(requests.Session):    

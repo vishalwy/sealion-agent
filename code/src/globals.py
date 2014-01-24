@@ -1,6 +1,3 @@
-import pdb
-import time
-import threading
 import sys
 import api
 import rtc
@@ -41,30 +38,6 @@ class AgentConfig(Config):
             }    
         }
 
-class ConnectThread(threading.Thread):
-    def run(self):
-        self.attempt(-1)
-    
-    def attempt(self, max_try = 5):
-        globals = Globals()
-        res = globals.api.authenticate(max_try)
-        res == True and globals.rtc.connect().start()
-        return res            
-        
-    def connect(self):
-        globals = Globals()
-        
-        if hasattr(globals.config.agent, '_id') == False and globals.api.register() != True:
-            return False
-        
-        res = self.attempt()
-        
-        if res == None:
-            res = hasattr(globals.config.agent, 'activities')
-            res and self.start()            
-            
-        return res
-    
 class Globals:
     __metaclass__ = SingletonType
     
@@ -92,9 +65,7 @@ class Globals:
     
     def url(self, path = ''):
         return self.api.get_url(path);
-    
-    def connect(self):
-        ConnectThread().connect()
+        
 
     
 

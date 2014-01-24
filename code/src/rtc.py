@@ -1,5 +1,5 @@
 import pdb
-from lib.socketio_client import SocketIO, BaseNamespace
+from socketio_client import SocketIO, BaseNamespace
 import threading
 
 class SocketIONamespace(BaseNamespace):

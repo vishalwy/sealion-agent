@@ -1,15 +1,11 @@
 #!/usr/bin/python
-from src import helper
-from src.globals import Globals
+import sys
+sys.path.append('lib')
+sys.path.append('src')
+sys.path.append('lib/websocket_client') 
 
-try:
-    globals = Globals()
-except RuntimeError, e:
-    print e
-    exit()
-    
-response = globals.connect()
-helper.handle_conn_response(response)
+import services
+services.start()
 
 
 
