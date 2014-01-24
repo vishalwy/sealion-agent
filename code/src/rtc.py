@@ -28,9 +28,10 @@ class SocketIONamespace(BaseNamespace):
         print '[activity_deleted]'
         
 class Interface(threading.Thread):    
-    def __init__(self, api):
+    def __init__(self, api, event):
         threading.Thread.__init__(self)
         self.api = api
+        self.event = event
         
     def connect(self):
         self.sio = SocketIO(self.api.get_url(), Namespace = SocketIONamespace, cookies = self.api.cookies, proxies = self.api.proxies)
@@ -39,5 +40,9 @@ class Interface(threading.Thread):
     def run(self):        
         while 1:
             self.sio.wait(5)
+            
+            if self.event.is_set():
+                self.sio.disconnect()
+                break
 
 #check for termination condition

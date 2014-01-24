@@ -1,4 +1,5 @@
 import sys
+import threading
 import api
 import rtc
 from helper import *
@@ -60,8 +61,9 @@ class Globals:
         if ret != True:
             raise RuntimeError, ret
         
-        self.api = api.Interface(self.config)
-        self.rtc = rtc.Interface(self.api)            
+        self.event = threading.Event()
+        self.api = api.Interface(self.config, self.event)
+        self.rtc = rtc.Interface(self.api, self.event)            
     
     def url(self, path = ''):
         return self.api.get_url(path);

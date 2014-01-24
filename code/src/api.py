@@ -3,9 +3,10 @@ import requests
 from constructs import *
 
 class Interface(requests.Session):    
-    def __init__(self, config, *args, **kwargs):
+    def __init__(self, config, event, *args, **kwargs):
         super(Interface, self).__init__(*args, **kwargs)
         self.config = config
+        self.event = event
         
         if hasattr(self.config.sealion, 'proxy'):
             self.proxies = self.config.sealion.proxy
