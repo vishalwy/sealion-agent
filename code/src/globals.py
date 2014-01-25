@@ -3,6 +3,7 @@ import threading
 import api
 import rtc
 from helper import *
+from storage import OfflineStore
 
 class SealionConfig(Config):
     def __init__(self, file):
@@ -46,11 +47,9 @@ class Globals:
         exe_path = os.path.dirname(os.path.abspath(sys.modules['__main__'].__file__))
         self.exe_path = exe_path if (exe_path[len(exe_path) - 1] == '/') else (exe_path + '/')
         self.lock_file = Utils.get_safe_path(self.exe_path + 'var/run/sealion.pid')
-        self.agent_config_file = Utils.get_safe_path(self.exe_path + 'etc/config/agent_config.json')
-        self.sealion_config_file = Utils.get_safe_path(self.exe_path + 'etc/config/sealion_config.json')
         self.config = EmptyClass()
-        self.config.sealion = SealionConfig(self.sealion_config_file)
-        self.config.agent = AgentConfig(self.agent_config_file)
+        self.config.sealion = SealionConfig(Utils.get_safe_path(self.exe_path + 'etc/config/sealion_config.json'))
+        self.config.agent = AgentConfig(Utils.get_safe_path(self.exe_path + 'etc/config/agent_config.json'))
         ret = self.config.sealion.set()
         
         if ret != True:
@@ -61,10 +60,10 @@ class Globals:
         if ret != True:
             raise RuntimeError, ret
         
-        self.storage_path = Utils.get_safe_path(self.exe_path + 'var/dbs/' + self.config.agent.orgToken + '/')
-        self.event = threading.Event()
-        self.api = api.Interface(self.config, self.event)
-        self.rtc = rtc.Interface(self.api, self.event)            
+        self.sync_event = threading.Event()
+        self.api = api.Interface(self.config, self.sync_event)
+        self.rtc = rtc.Interface(self.api, self.sync_event)  
+        self.off_store = OfflineStore(Utils.get_safe_path(self.exe_path + 'var/dbs/' + self.config.agent.orgToken + '.db'), self.sync_event)
     
     def url(self, path = ''):
         return self.api.get_url(path);

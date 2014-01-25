@@ -67,6 +67,9 @@ def start():
         print e
         exit()
         
+    if globals.off_store.start() == False:
+        exit()
+        
     conn = Connection()
     handle_conn_response(conn.connect())
     activities = globals.config.agent.activities

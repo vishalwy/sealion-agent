@@ -1,45 +1,62 @@
-import os.path
-import json
-import os
+import threading
+import sqlite3 as sqlite
 from constructs import *
 
-class OfflineStore:
-    __metaclass__ = SingletonType
-    
-    def __init__(self, path):
+class OfflineStore(threading.Thread):    
+    def __init__(self, path = '', sync_event = None):
+        threading.Thread.__init__(self)
         self.path = path
-        self.files = []
-        pass
-    
-    def put(self, activity, data):
-        file_name = activity + '_' + data.timestamp + '.json'
-        file_name = self.path + file_name
+        self.conn = None
+        self.conn_event = threading.Event()
+        self.cursor = self.conn.cursor()
+        self.sync_event = sync_event or threading.Event
+        
+    def start(self):
+        threading.Thread.start(self)
+        return self.wait()
+        
+    def stop(self):
+        self.conn and self.conn.close()
+        
+    def wait(self):
+        if threading.current_thread().ident != self.ident:
+            self.conn_event.wait()
+            
+        return True if self.conn else False
+        
+    def run(self):
+        try:
+            self.conn = sqlite.connect(self.path)
+        except:
+            return
+        finally:
+            self.conn_event.set()
         
         try:
-            f = open(file_name, 'w')
-            json.dump(data, f)
-            f.close()
-            return True
+            self.db.cursor().execute('CREATE TABLE data(' + 
+                'activity VARCHAR(50) NOT NULL, ' + 
+                'timestamp INT NOT NULL, ' + 
+                'return_code INT NOT NULL, ' + 
+                'output BLOB NOT NULL, ' + 
+                'PRIMARY KEY(activity, timestamp))')
         except:
+            pass
+        
+        while 1:
+            if self.sync_event.is_set():
+                self.close()
+                break
+    
+    def put(self, activity, data):
+        try:
+            self.cursor.execute('INSERT INTO data VALUES(?, ?, ?, ?)', (activity, data['timestamp'], data['returnCode'], data['data']))
+            self.conn.commit()
+        except:        
             return False        
-            
-    def get_files(self): 
-        if len(self.files):
-            return self.files
         
-        files = os.listdir(self.path);
-        i = len(files) - 1
-        
-        while i >= 0:
-            if os.path.isfile(self.path + files[i]) == False:
-                files.pop(i)
-            
-            i -= 1
-            
-        self.files = sorted(files, key = lambda file: os.stat(file).st_ctime)
+        return True
     
     def get(self):
-        self.get_files()
-        return self.files.pop(0) if len(self.files) else None
+        return None
     
     
