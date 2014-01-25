@@ -1,3 +1,10 @@
+try:
+    import queue as t
+except ImportError:
+    import Queue as t
+    
+queue = t
+
 class EmptyClass:
     pass
 
