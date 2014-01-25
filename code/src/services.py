@@ -9,23 +9,28 @@ class Activity(threading.Thread):
         self.lock = threading.RLock()
         self.interval_event = threading.Event()
         self.stop_event = stop_event
+        self.is_stop = False
 
     def run(self):
         while 1:
-            if self.stop_event.is_set() or self.interval_event.is_set():
+            self.lock.acquire()
+            
+            if self.stop_event.is_set() or self.is_stop == True:
+                self.lock.release()
                 break
                 
-            self.lock.acquire()
             print 'Executing ' + self.activity['name']
             timestamp = int(round(time.time() * 1000))
-            ret = ActivityThread.execute(self.activity['command'])
             activity = self.activity['_id']
+            command = self.activity['command']
             self.lock.release()
+            ret = ActivityThread.execute(command)
             data = {'returnCode': ret['return_code'], 'timestamp': timestamp, 'data': ret['output']}
             t1 = int(time.time())
             Globals().api.post_data(activity, data = data)
             t2 = int(time.time())
             self.interval_event.wait(max(0, self.activity['interval'] - (t2 - t1)))
+            self.interval_event.clear()
 
     @staticmethod
     def execute(command):
@@ -40,8 +45,12 @@ class Activity(threading.Thread):
         self.lock.acquire()
         self.activity = activity
         self.lock.release()
+        self.interval_event.set()
         
     def stop(self):
+        self.lock.acquire()
+        self.is_stop = True
+        self.lock.release()
         self.interval_event.set()
     
 class Connection(threading.Thread):
@@ -104,8 +113,8 @@ def start():
         activities = globals.config.agent.activities
 
         for i in range(0, len(activities)):
-            globals.activities[activities[i]] = Activity(activities[i], globals.stop_event)
-            globals.activities[activities[i]].start()
+            globals.activities[activities[i]['_id']] = Activity(activities[i], globals.stop_event)
+            globals.activities[activities[i]['_id']].start()
 
         globals.stop_event.wait()
         stop()        

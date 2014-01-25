@@ -74,7 +74,7 @@ class Interface(requests.Session):
         
         if Interface.is_success(response):
             print 'Authenitcation succesful for agent ' + self.config.agent._id
-            self.config.agent.update({'activities': response.json()['activities']})
+            self.config.agent.update(response.json())
             self.config.agent.save()
             ret = True
         else:
@@ -90,12 +90,7 @@ class Interface(requests.Session):
         
         if Interface.is_success(response):
             print 'Get config succesful for agent ' + self.config.agent._id
-            config = response.json();
-            
-            if config.has_key('category'):
-                del config['category']
-                
-            self.config.agent.update(config)
+            self.config.agent.update(response.json())
             self.config.agent.save()
             ret = True
         else:

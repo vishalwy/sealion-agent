@@ -39,6 +39,49 @@ class AgentConfig(Config):
                 'optional': True
             }    
         }
+        
+    def get_changes(self, old_activities, new_activities):
+        old_set = set(tuple([tuple(activity.items()) for activity in old_activities]))
+        new_set = set(tuple([tuple(activity.items()) for activity in new_activities]))
+        
+        inserted = [dict(elem) for elem in new_set - old_set]
+        deleted = [dict(elem) for elem in old_set - new_set]
+        updated = []
+        i = len(inserted)
+        
+        while i >= 0:
+            if next((item for item in deleted if item['_id'] == inserted[i]['_id']), None):
+                updated.append(inserted[i])
+                inserted.pop(i)
+                deleted.pop(i)
+                
+        return {'inserted': inserted, 'updated': updated, 'deleted': deleted}
+        
+    def update(self, data):
+        if data.has_key('category'):
+            del data['category']
+            
+        self.lock.acquire()
+        self.get_changes()
+        old_activities = self.data['activities'] if self.data.has_key('activites') else []
+        ret = Config.update(self, data)
+        new_activities = self.data['activities'] if self.data.has_key('activites') else []
+        changes = get_changes(old_activities, new_activities)
+        self.lock.release()
+        globals = Globals()
+        
+        for activity in changes.deleted:
+            globals.activities[activity['_id']].stop()
+            del globals.activities[activity['_id']]
+            
+        for activity in changes.updated:
+            globals.activities[activity['_id']].set(activity)
+            
+        for activity in changes.inserted:
+            globals.activities[activity['_id']] = Activity(activity, globals.stop_event)
+            globals.activities[activity['_id']].start()
+        
+        return ret
 
 class Globals:
     __metaclass__ = SingletonType
@@ -70,5 +113,5 @@ class Globals:
         self.api = api.Interface(self.config, self.stop_event)
         self.rtc = rtc.Interface(self.api, self.stop_event)  
         self.off_store = OfflineStore(Utils.get_safe_path(self.exe_path + 'var/dbs/' + self.config.agent.orgToken + '.db'), self.stop_event)
-        self.activitys = {}
+        self.activities = {}
 
