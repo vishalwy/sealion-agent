@@ -8,7 +8,6 @@ class OfflineStore(threading.Thread):
         self.path = path
         self.conn = None
         self.conn_event = threading.Event()
-        self.cursor = self.conn.cursor()
         self.sync_event = sync_event or threading.Event
         
     def start(self):
@@ -31,9 +30,11 @@ class OfflineStore(threading.Thread):
             return
         finally:
             self.conn_event.set()
+            
+        self.cursor = self.conn.cursor()
         
         try:
-            self.db.cursor().execute('CREATE TABLE data(' + 
+            self.cursor.execute('CREATE TABLE data(' + 
                 'activity VARCHAR(50) NOT NULL, ' + 
                 'timestamp INT NOT NULL, ' + 
                 'return_code INT NOT NULL, ' + 
