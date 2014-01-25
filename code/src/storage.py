@@ -23,9 +23,7 @@ class OfflineStore(threading.Thread):
         self.conn and self.conn.close()
         
     def wait(self):
-        if threading.current_thread().ident != self.ident:
-            self.conn_event.wait()
-            
+        self.conn_event.wait()            
         return True if self.conn else False
         
     def run(self):

@@ -60,16 +60,15 @@ class Globals:
         if ret != True:
             raise RuntimeError, ret
         
+        self.reset()
+        
+    def url(self, path = ''):
+        return self.api.get_url(path);
+    
+    def reset(self):
         self.stop_event = threading.Event()
         self.api = api.Interface(self.config, self.stop_event)
         self.rtc = rtc.Interface(self.api, self.stop_event)  
         self.off_store = OfflineStore(Utils.get_safe_path(self.exe_path + 'var/dbs/' + self.config.agent.orgToken + '.db'), self.stop_event)
         self.activitys = {}
-    
-    def url(self, path = ''):
-        return self.api.get_url(path);
-        
-
-    
-
 

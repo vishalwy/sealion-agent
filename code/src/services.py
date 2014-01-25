@@ -66,22 +66,26 @@ class Connection(threading.Thread):
             
         return res  
     
-    def join(self):
-        globals = Globals()
-        self.is_alive() and threading.Thread.join(self)
-        globals.rtc.is_alive() and globals.rtc.join()
-    
 def handle_conn_response(response):
     if response == False:
         print 'Failed to connect; exiting'
+        stop()
         exit()
     elif response and response != True:
         if response.status_code == 404:
             print 'Uninstalling...'
         else:
             print 'Failed to connect; exiting'
-            
+        
+        stop()
         exit()
+        
+def stop():
+    globals.stop_event.set()
+    threads = threading.enumerate()
+    
+    for thread in threads:
+        thread.join()
     
 def start():
     try:
@@ -90,21 +94,18 @@ def start():
         print e
         exit()
         
-    if globals.off_store.start() == False:
-        exit()
-        
-    conn = Connection()
-    handle_conn_response(conn.connect())
-    activities = globals.config.agent.activities
-    
-    for i in range(0, len(activities)):
-        globals.activities[activities[i]] = Activity(activities[i], globals.stop_event).start()
-        
-    globals.stop_event.wait()
-    
-    for i in range(0, len(activities)):
-        globals.activities[activities[i]].join()
-        
-    conn.join()
-    globals.off_store.join()
+    while 1:
+        if globals.off_store.start() == False:
+            exit()
+
+        handle_conn_response(Connection().connect())
+        activities = globals.config.agent.activities
+
+        for i in range(0, len(activities)):
+            globals.activities[activities[i]] = Activity(activities[i], globals.stop_event)
+            globals.activities[activities[i]].start()
+
+        globals.stop_event.wait()
+        stop()        
+        globals.reset()
     
