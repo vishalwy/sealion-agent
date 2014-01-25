@@ -35,6 +35,9 @@ class Interface(requests.Session):
         response, i = None, 0
         
         while retry_count == -1 or i <= retry_count:
+            if self.stop_event.is_set():
+                break
+            
             try:
                 response = method(*args, **kwargs)
             except Exception, e:

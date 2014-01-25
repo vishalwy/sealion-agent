@@ -1,11 +1,8 @@
-from pxssh import sync_original_prompt
 import threading
 import sqlite3 as sqlite
 from constructs import *
 
-class OfflineStore(threading.Thread):
-    __metaclass__ = SingletonType
-    
+class OfflineStore(threading.Thread):    
     def __init__(self, path = '', stop_event = None):
         threading.Thread.__init__(self)
         self.path = path
@@ -100,9 +97,7 @@ class OfflineStore(threading.Thread):
         self.task_queue.put({'op': 'delete', 'kwargs': {'row_ids': row_ids}})
     
     
-class Sender(threading.Thread):
-    __metaclass__ = SingletonType
-    
+class Sender(threading.Thread):    
     def __init__(self, api = None, stop_event = None):
         threading.Thread.__init__(self)
         self.api = api

@@ -12,7 +12,7 @@ class Activity(threading.Thread):
 
     def run(self):
         while 1:
-            if self.stop_event.is_set():
+            if self.stop_event.is_set() or self.interval_event.is_set():
                 break
                 
             self.lock.acquire()
@@ -26,7 +26,6 @@ class Activity(threading.Thread):
             Globals().api.post_data(activity, data = data)
             t2 = int(time.time())
             self.interval_event.wait(max(0, self.activity['interval'] - (t2 - t1)))
-            self.interval_event.clear()
 
     @staticmethod
     def execute(command):
@@ -41,12 +40,15 @@ class Activity(threading.Thread):
         self.lock.acquire()
         self.activity = activity
         self.lock.release()
+        
+    def stop(self):
+        self.interval_event.set()
     
 class Connection(threading.Thread):
     def run(self):
-        self.attempt(-1)
+        self.attempt()
     
-    def attempt(self, max_try = 5):
+    def attempt(self, max_try = -1):
         globals = Globals()
         res = globals.api.authenticate(max_try)
         res == True and globals.rtc.connect().start()
@@ -58,9 +60,9 @@ class Connection(threading.Thread):
         if hasattr(globals.config.agent, '_id') == False and globals.api.register() != True:
             return False
         
-        res = self.attempt()
+        res = self.attempt(5)
         
-        if res == None:
+        if res == None or res.status_code >= 500:
             res = hasattr(globals.config.agent, 'activities')
             res and self.start()            
             
