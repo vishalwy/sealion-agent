@@ -107,4 +107,4 @@ class Sender(threading.Thread):
         self.api.post_event.wait()
         
         if self.stop_event.is_set():
-            break
+            pass

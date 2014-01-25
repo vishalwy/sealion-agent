@@ -1,4 +1,3 @@
-import pdb
 from socketio_client import SocketIO, BaseNamespace
 import threading
 

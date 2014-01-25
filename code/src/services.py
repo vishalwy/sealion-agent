@@ -1,5 +1,6 @@
 import threading
 import time
+import subprocess
 from globals import Globals
 
 class Activity(threading.Thread):
@@ -7,30 +8,29 @@ class Activity(threading.Thread):
         threading.Thread.__init__(self)
         self.activity = activity;
         self.lock = threading.RLock()
-        self.interval_event = threading.Event()
         self.stop_event = stop_event
         self.is_stop = False
 
     def run(self):
-        while 1:
-            self.lock.acquire()
-            
-            if self.stop_event.is_set() or self.is_stop == True:
-                self.lock.release()
+        globals = Globals()
+        
+        while 1:           
+            if self.stop_event.is_set() or self.stop() == True:
                 break
                 
-            print 'Executing ' + self.activity['name']
             timestamp = int(round(time.time() * 1000))
             activity = self.activity['_id']
             command = self.activity['command']
-            self.lock.release()
-            ret = ActivityThread.execute(command)
+            ret = Activity.execute(command)
             data = {'returnCode': ret['return_code'], 'timestamp': timestamp, 'data': ret['output']}
             t1 = int(time.time())
-            Globals().api.post_data(activity, data = data)
+            globals.api.post_data(activity, data)
             t2 = int(time.time())
-            self.interval_event.wait(max(0, self.activity['interval'] - (t2 - t1)))
-            self.interval_event.clear()
+            timeout = max(1, self.activity['interval'] - (t2 - t1))
+            
+            while timeout > 0:
+                time.sleep(min(5, timeout))
+                timeout -= 5
 
     @staticmethod
     def execute(command):
@@ -40,18 +40,17 @@ class Activity(threading.Thread):
         ret['output'] = output[0] if output[0] else output[1]
         ret['return_code'] = p.returncode;
         return ret
-    
-    def set(self, activity):
-        self.lock.acquire()
-        self.activity = activity
-        self.lock.release()
-        self.interval_event.set()
         
-    def stop(self):
+    def stop(self, is_stop = None):
         self.lock.acquire()
-        self.is_stop = True
+        
+        if is_stop != None:
+           self.is_stop = is_stop
+        else:
+            is_stop = self.is_stop
+        
         self.lock.release()
-        self.interval_event.set()
+        return is_stop
     
 class Connection(threading.Thread):
     def run(self):
@@ -71,7 +70,7 @@ class Connection(threading.Thread):
         
         res = self.attempt(5)
         
-        if res == None or res.status_code >= 500:
+        if res == None or (type(res) is not bool and res.status_code >= 500):
             res = hasattr(globals.config.agent, 'activities')
             res and self.start()            
             

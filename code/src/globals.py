@@ -33,7 +33,8 @@ class AgentConfig(Config):
                 'type': [{
                     '_id': {'type': 'str,unicode', 'regex': '^[a-zA-Z0-9]{24}$'}, 
                     'name': {'type': 'str,unicode', 'regex': '^.+$'}, 
-                    'command': {'type': 'str,unicode', 'regex': '^.+$'}
+                    'command': {'type': 'str,unicode', 'regex': '^.+$'},
+                    'interval': {'type': 'int'}
                 }],
                 'depends': ['_id', 'agentVersion'],
                 'optional': True
@@ -47,13 +48,15 @@ class AgentConfig(Config):
         inserted = [dict(elem) for elem in new_set - old_set]
         deleted = [dict(elem) for elem in old_set - new_set]
         updated = []
-        i = len(inserted)
+        i = len(inserted) - 1
         
         while i >= 0:
             if next((item for item in deleted if item['_id'] == inserted[i]['_id']), None):
                 updated.append(inserted[i])
                 inserted.pop(i)
                 deleted.pop(i)
+                
+            i -= 1
                 
         return {'inserted': inserted, 'updated': updated, 'deleted': deleted}
         
@@ -62,22 +65,22 @@ class AgentConfig(Config):
             del data['category']
             
         self.lock.acquire()
-        self.get_changes()
         old_activities = self.data['activities'] if self.data.has_key('activites') else []
         ret = Config.update(self, data)
         new_activities = self.data['activities'] if self.data.has_key('activites') else []
-        changes = get_changes(old_activities, new_activities)
+        changes = self.get_changes(old_activities, new_activities)
         self.lock.release()
         globals = Globals()
         
-        for activity in changes.deleted:
-            globals.activities[activity['_id']].stop()
+        for activity in changes['deleted']:
+            globals.activities[activity['_id']].stop(True)
             del globals.activities[activity['_id']]
             
-        for activity in changes.updated:
-            globals.activities[activity['_id']].set(activity)
+        for activity in changes['updated']:
+            globals.activities[activity['_id']].stop(True)
+            globals.activities[activity['_id']] = Activity(activity, globals.stop_event)
             
-        for activity in changes.inserted:
+        for activity in changes['inserted']:
             globals.activities[activity['_id']] = Activity(activity, globals.stop_event)
             globals.activities[activity['_id']].start()
         
