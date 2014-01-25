@@ -1,3 +1,4 @@
+from pxssh import sync_original_prompt
 import threading
 import sqlite3 as sqlite
 from constructs import *
@@ -5,12 +6,12 @@ from constructs import *
 class OfflineStore(threading.Thread):
     __metaclass__ = SingletonType
     
-    def __init__(self, path = '', sync_event = None):
+    def __init__(self, path = '', stop_event = None):
         threading.Thread.__init__(self)
         self.path = path
         self.conn = None
         self.conn_event = threading.Event()
-        self.sync_event = sync_event or threading.Event
+        self.stop_event = stop_event or threading.Event
         self.task_queue = queue.Queue()
         self.read_queue = queue.Queue()
         
@@ -54,7 +55,7 @@ class OfflineStore(threading.Thread):
             except:
                 pass
                 
-            if self.sync_event.is_set():
+            if self.stop_event.is_set():
                 self.close()
                 break
     
@@ -100,3 +101,18 @@ class OfflineStore(threading.Thread):
         self.task_queue.put({'op': 'delete', 'kwargs': {'activity': activity, 'timestamp': timestamp}})
     
     
+class Sender(threading.Thread):
+    __metaclass__ = SingletonType
+    
+    def __init__(self, api = None, stop_event = None):
+        threading.Thread.__init__(self)
+        self.api = api
+        self.stop_event = stop_event
+        
+    def run(self):
+        self.api.post_event.wait()
+        
+        if self.stop_event.is_set():
+            break
+            
+        

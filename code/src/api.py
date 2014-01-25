@@ -3,10 +3,10 @@ import requests
 from constructs import *
 
 class Interface(requests.Session):    
-    def __init__(self, config, sync_event, *args, **kwargs):
+    def __init__(self, config, stop_event, *args, **kwargs):
         super(Interface, self).__init__(*args, **kwargs)
         self.config = config
-        self.sync_event = sync_event
+        self.stop_event = stop_event
         
         if hasattr(self.config.sealion, 'proxy'):
             self.proxies = self.config.sealion.proxy
@@ -76,7 +76,7 @@ class Interface(requests.Session):
             ret = True
         else:
             Interface.print_response('Authenitcation failed for agent ' + self.config.agent._id, response)
-            self.sync_event.set()
+            self.stop_event.set()
         
         return True if ret else response
             
@@ -110,7 +110,7 @@ class Interface(requests.Session):
             ret = True
         else:
             Interface.print_response('Send failed for data ' + activity_id, response)
-            response and self.sync_event.set()
+            response and self.stop_event.set()
             
         return True if ret else response
     

@@ -3,18 +3,30 @@ import time
 from globals import Globals
 
 class Activity(threading.Thread):
-    def __init__(self, activity):
+    def __init__(self, activity, stop_event):
         threading.Thread.__init__(self)
         self.activity = activity;
+        self.lock = threading.RLock()
+        self.interval_event = threading.Event()
+        self.stop_event = stop_event
 
     def run(self):
         while 1:
+            if self.stop_event.is_set():
+                break
+                
+            self.lock.acquire()
             print 'Executing ' + self.activity['name']
             timestamp = int(round(time.time() * 1000))
             ret = ActivityThread.execute(self.activity['command'])
+            activity = self.activity['_id']
+            self.lock.release()
             data = {'returnCode': ret['return_code'], 'timestamp': timestamp, 'data': ret['output']}
-            Globals().post_data(self.activity['_id'], data = data)
-            time.sleep(self.activity['interval'])
+            t1 = int(time.time())
+            Globals().api.post_data(activity, data = data)
+            t2 = int(time.time())
+            self.interval_event.wait(max(0, self.activity['interval'] - (t2 - t1)))
+            self.interval_event.clear()
 
     @staticmethod
     def execute(command):
@@ -24,6 +36,11 @@ class Activity(threading.Thread):
         ret['output'] = output[0] if output[0] else output[1]
         ret['return_code'] = p.returncode;
         return ret
+    
+    def set(self, activity):
+        self.lock.acquire()
+        self.activity = activity
+        self.lock.release()
     
 class Connection(threading.Thread):
     def run(self):
@@ -48,6 +65,11 @@ class Connection(threading.Thread):
             res and self.start()            
             
         return res  
+    
+    def join(self):
+        globals = Globals()
+        self.is_alive() and threading.Thread.join(self)
+        globals.rtc.is_alive() and globals.rtc.join()
     
 def handle_conn_response(response):
     if response == False:
@@ -76,7 +98,13 @@ def start():
     activities = globals.config.agent.activities
     
     for i in range(0, len(activities)):
-        Activity(activities[i]).start()
+        globals.activities[activities[i]] = Activity(activities[i], globals.stop_event).start()
+        
+    globals.stop_event.wait()
     
-    
+    for i in range(0, len(activities)):
+        globals.activities[activities[i]].join()
+        
+    conn.join()
+    globals.off_store.join()
     

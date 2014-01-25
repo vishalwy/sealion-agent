@@ -60,10 +60,11 @@ class Globals:
         if ret != True:
             raise RuntimeError, ret
         
-        self.sync_event = threading.Event()
-        self.api = api.Interface(self.config, self.sync_event)
-        self.rtc = rtc.Interface(self.api, self.sync_event)  
-        self.off_store = OfflineStore(Utils.get_safe_path(self.exe_path + 'var/dbs/' + self.config.agent.orgToken + '.db'), self.sync_event)
+        self.stop_event = threading.Event()
+        self.api = api.Interface(self.config, self.stop_event)
+        self.rtc = rtc.Interface(self.api, self.stop_event)  
+        self.off_store = OfflineStore(Utils.get_safe_path(self.exe_path + 'var/dbs/' + self.config.agent.orgToken + '.db'), self.stop_event)
+        self.activitys = {}
     
     def url(self, path = ''):
         return self.api.get_url(path);
