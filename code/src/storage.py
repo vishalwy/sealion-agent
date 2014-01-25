@@ -30,6 +30,7 @@ class OfflineStore(threading.Thread):
         try:
             self.conn = sqlite.connect(self.path)
         except:
+            print 'Failed to create offline storage at ' + self.path
             return
         finally:
             self.conn_event.set()
@@ -67,22 +68,22 @@ class OfflineStore(threading.Thread):
         return True
     
     def select(self):
-        items = self.cursor.execute('SELECT * FROM data ORDER BY timestamp LIMIT 10')
+        rows = self.cursor.execute('SELECT ROWID, * FROM data ORDER BY timestamp LIMIT 10')
         
-        for item in items:
+        for row in rows:
             data = {
-                'timestamp': item[1],
-                'returnCode': item[2],
-                'data': item[3]
+                'timestamp': row[2],
+                'returnCode': row[3],
+                'data': row[4]
             }
             
-            self.read_queue.put({'activity': item[0], 'data': data})
+            self.read_queue.put({'row_id': row[0], 'activity': row[1], 'data': data})
             
         return True
             
-    def delete(self, activity, timestamp):
+    def delete(self, row_ids):
         try:
-            self.cursor.execute('DELETE FROM data WHERE activity = ? AND timestamp = ?', (activity, timestamp))
+            self.cursor.execute('DELETE FROM data WHERE ROWID IN (%s)' % ','.join('?' * len(row_ids)), row_ids)
             self.conn.commit()
         except:
             return False
@@ -95,8 +96,8 @@ class OfflineStore(threading.Thread):
     def get(self):
         self.task_queue.put({'op': 'select'})
         
-    def rem(self, activity, timestamp):
-        self.task_queue.put({'op': 'delete', 'kwargs': {'activity': activity, 'timestamp': timestamp}})
+    def rem(self, row_ids):
+        self.task_queue.put({'op': 'delete', 'kwargs': {'row_ids': row_ids}})
     
     
 class Sender(threading.Thread):
@@ -112,5 +113,3 @@ class Sender(threading.Thread):
         
         if self.stop_event.is_set():
             break
-            
-        
