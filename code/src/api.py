@@ -176,25 +176,25 @@ class Interface(requests.Session):
             return self.status.NO_SERVICE
         elif status == 400:
             self.stop_event.set()
-            self.post_event.clear()
+            self.post_event.set()
             return self.status.BAD_REQUEST
         elif status == 401:
             if code == 200004:
                 return self.status.MISMATCH
             else:
                 self.stop_event.set()
-                self.post_event.clear()
+                self.post_event.set()
                 return self.status.UNAUTHERIZED
         elif status == 404:
             self.stop_event.set()
-            self.post_event.clear()
+            self.post_event.set()
             return self.status.NOT_FOUND
         elif status == 409:
             if code == 204011:
                 return self.status.DATA_CONFLICT
             else:
                 self.stop_event.set()
-                self.post_event.clear()
+                self.post_event.set()
                 return self.status.SESSION_CONFLICT
         
         return self.status.UNKNOWN

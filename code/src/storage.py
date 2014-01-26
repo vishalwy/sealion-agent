@@ -142,6 +142,7 @@ class Sender(threading.Thread):
         self.off_store = off_store
         
     def wait(self):
+        _log.debug('Offline store sender waiting for post event')
         self.off_store.api.post_event.wait()
         _log.debug('Offline store sender received post event')
         
@@ -155,14 +156,14 @@ class Sender(threading.Thread):
         _log.debug('Offline store sender starting up')
         
         while 1:
-            rows = self.off_store.get()
             _log.debug('Offline store sender waiting for rows')
+            rows = self.off_store.get()
             row_count, i = len(rows), 0
+            _log.debug('Offline store sender got ' + str(row_count) + ' rows')
             
             if row_count == 0 or self.wait() == False:
                 break
                 
-            _log.debug('Offline store sender got ' + str(row_count) + ' rows')
             del_rows = []
             del_activities = []
             
