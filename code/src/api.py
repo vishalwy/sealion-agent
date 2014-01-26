@@ -6,19 +6,19 @@ from constructs import *
 
 _log = logging.getLogger(__name__)
 
+class Status(EmptyClass):
+    SUCCESS = 0
+    NOT_CONNECTED = 1
+    NO_SERVICE = 2
+    DATA_CONFLICT = 3
+    MISMATCH = 4
+    BAD_REQUEST = 5
+    NOT_FOUND = 6
+    UNAUTHERIZED = 7
+    SESSION_CONFLICT = 8
+    UNKNOWN = -1
+
 class Interface(requests.Session):    
-    class Status(EmptyClass):
-        SUCCESS = 0
-        NOT_CONNECTED = 1
-        NO_SERVICE = 2
-        DATA_CONFLICT = 3
-        MISMATCH = 4
-        BAD_REQUEST = 5
-        NOT_FOUND = 6
-        UNAUTHERIZED = 7
-        SESSION_CONFLICT = 8
-        UNKNOWN = -1
-    
     status = Status
     
     def __init__(self, config, stop_event, *args, **kwargs):

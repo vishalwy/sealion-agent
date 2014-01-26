@@ -67,17 +67,17 @@ class Connection(threading.Thread):
     def attempt(self, max_try = -1):
         globals = Globals()
         status = globals.api.authenticate(max_try)
-        status == globals.api.status.SUCCESS and globals.rtc.connect().start()
+        status == globals.APIStatus.SUCCESS and globals.rtc.connect().start()
         return status            
         
     def connect(self):
         globals = Globals()
-        status = globals.api.status.SUCCESS
+        status = globals.APIStatus.SUCCESS
         
         if hasattr(globals.config.agent, '_id') == False:
             status = globals.api.register()
             
-        if status != globals.api.status.SUCCESS:
+        if status != globals.APIStatus.SUCCESS:
             return status
         
         status = self.attempt(5)
@@ -86,23 +86,23 @@ class Connection(threading.Thread):
             if hasattr(globals.config.agent, 'activities'):
                 _log.info('Running commands in offline mode')
                 self.start()
-                status == globals.api.status.SUCCESS
+                status == globals.APIStatus.SUCCESS
             
         return status
     
 def handle_conn_response(status):
     globals = Globals()
 
-    if status == globals.api.status.SUCCESS:
+    if status == globals.APIStatus.SUCCESS:
         return
     
     stop()
     
     if globals.api.is_not_connected(status):
         _log.info('Failed to connect')
-    elif status == globals.api.status.NOT_FOUND:
+    elif status == globals.APIStatus.NOT_FOUND:
         _log.info('Uninstalling agent')
-    elif status == globals.api.status.UNAUTHERIZED or status == globals.api.status.BAD_REQUEST:
+    elif status == globals.APIStatus.UNAUTHERIZED or status == globals.APIStatus.BAD_REQUEST:
         _log.info('Unautherized or bad request')
         
     quit()
