@@ -1,10 +1,11 @@
-import pdb
 import time
 import requests
 import threading
 from constructs import *
 
 class Interface(requests.Session):    
+    status = enum(SUCCESS, NOT_CONNECTED, NO_SERVICE, BAD_REQUEST, NOT_FOUND, UNAUTHERIZED, MISMATCH, DATA_CONFLICT, SESSION_CONFLICT, UNKNOWN)
+    
     def __init__(self, config, stop_event, *args, **kwargs):
         super(Interface, self).__init__(*args, **kwargs)
         self.config = config
@@ -21,7 +22,14 @@ class Interface(requests.Session):
     
     @staticmethod
     def print_response(message, response):
-        temp = 'Network issue' if response == None else response.json()['message']
+        temp = 'Network issue'
+        
+        if response:
+            try:
+                temp = response.json()['message']
+            except:
+                temp = 'Error ' + str(response.status_code)
+        
         temp = (message + '; ' + temp) if len(message) else temp
         print temp
     
@@ -56,73 +64,102 @@ class Interface(requests.Session):
     def register(self, retry_count = -1):
         data = self.config.agent.get_dict(['orgToken', 'name', 'category'])
         response = self.exec_method('post', retry_count, self.get_url('agents'), data = data)    
-        ret = False
+        ret = self.status.SUCCESS
         
         if Interface.is_success(response):
             self.config.agent.update(response.json())
             self.config.agent.save()
-            ret = True
         else:
-            Interface.print_response('Registration failed in ' + self.config.agent.orgToken, response)
+            ret = self.error('Registration failed in ' + self.config.agent.orgToken, response)
         
-        return True if ret else response
+        return ret
     
     def authenticate(self, retry_count = -1):
         data = self.config.agent.get_dict(['orgToken', 'agentVersion'])
         response = self.exec_method('post', retry_count, self.get_url('agents/' + self.config.agent._id + '/sessions'), data = data)    
-        ret = False
+        ret = self.status.SUCCESS
         
         if Interface.is_success(response):
             self.config.agent.update(response.json())
             self.config.agent.save()
             self.post_event.set()
-            ret = True
         else:
-            Interface.print_response('Authenitcation failed for agent ' + self.config.agent._id, response)
-            self.set_event(response)
+            ret = self.error('Authenitcation failed for agent ' + self.config.agent._id, response)
         
-        return True if ret else response
+        return ret
             
     def get_config(self, retry_count = -1):
         response = self.exec_method('get', retry_count, self.get_url('agents/1'))
-        ret = False
+        ret = self.status.SUCCESS
         
         if Interface.is_success(response):
             self.config.agent.update(response.json())
             self.config.agent.save()
-            ret = True
         else:
-            Interface.print_response('Get config failed for agent ' + self.config.agent._id, response)
-            self.set_event(response)
+            ret = self.error('Get config failed for agent ' + self.config.agent._id, response)
             
-        return True if ret else response
+        return ret
             
     def post_data(self, activity_id, data, retry_count = 0):
         response = self.exec_method('post', retry_count, self.get_url('agents/1/data/activities/' + activity_id), data = data)
-        ret = False
+        ret = self.status.SUCCESS
         
         if Interface.is_success(response):
-            ret = True
             self.post_event.set()
         else:
-            Interface.print_response('Send failed for data ' + activity_id, response)
-            self.set_event(response)
+            ret = self.error('Send failed for data ' + activity_id, response)
             
-        return True if ret else response
+        return ret
     
     def logout(self):
         response = self.exec_method('delete', 0, self.get_url('agents/1/sessions/1'))
-        ret = False
+        ret = self.status.SUCCESS
         
-        if Interface.is_success(response):
-            ret = True
-        else:
-            Interface.print_response('Logout failed for agent ' + self.config.agent._id, response)
-            
-        return True if ret else response
+        if Interface.is_success(response) == False:
+            ret = self.error('Logout failed for agent ' + self.config.agent._id, response)
+
+        return ret
     
-    def set_event(self, response):
-        if response and response.status_code < 500:
+    def error(self, message, response):        
+        Interface.print_response(message, response)        
+        
+        if response == None:
             self.post_event.clear()
+            return self.status.NOT_CONNECTED
+        
+        status = response.status_code
+        
+        try:
+            code = response.json()['code']
+        except:
+            code = 0
+            
+        if status >= 500:
+            self.post_event.clear()
+            return self.status.NO_SERVICE
+        elif status == 400:
             self.stop_event.set()
+            self.post_event.clear()
+            return self.status.BAD_REQUEST
+        elif status == 401:
+            if code == 200004:
+                return self.status.MISMATCH
+            else:
+                self.stop_event.set()
+                self.post_event.clear()
+                return self.status.UNAUTHERIZED
+        elif status == 404:
+            self.stop_event.set()
+            self.post_event.clear()
+            self.status.NOT_FOUND
+        elif status == 409:
+            if code == 204011:
+                return self.status.DATA_CONFLICT
+            else:
+                self.stop_event.set()
+                self.post_event.clear()
+                return self.status.SESSION_CONFLICT
+        else:
+            return self.status.UNKNOWN
+
         

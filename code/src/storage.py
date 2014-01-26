@@ -11,6 +11,7 @@ class OfflineStore(threading.Thread):
         self.conn_event = threading.Event()
         self.api = api
         self.task_queue = queue.Queue()
+        self.sender = None
         
     def start(self):
         threading.Thread.start(self)
@@ -19,6 +20,11 @@ class OfflineStore(threading.Thread):
     def wait(self):
         self.conn_event.wait()            
         return True if self.conn else False
+    
+    def send(self):
+        if self.sender == None or self.sender.is_alive() == False:
+            self.sender = Sender(self)
+            self.sender.start()          
         
     def run(self):
         try:
@@ -39,10 +45,9 @@ class OfflineStore(threading.Thread):
                 'output BLOB NOT NULL, ' + 
                 'PRIMARY KEY(activity, timestamp))')
         except:
-            pass
+            pass        
         
-        sender = Sender(self)
-        sender.start()
+        self.send()
         
         while 1:
             try:
@@ -66,9 +71,8 @@ class OfflineStore(threading.Thread):
         try:
             self.cursor.execute('INSERT INTO data VALUES(?, ?, ?, ?)', (activity, data['timestamp'], data['returnCode'], data['data']))
             self.conn.commit()
-            print 'inserted'
+            self.send()
         except:        
-            print 'insert failed'
             return False        
         
         return True
@@ -135,10 +139,11 @@ class Sender(threading.Thread):
     def run(self):
         while 1:
             rows = self.off_store.get()
-            del_rows = []
             
-            if self.wait() == False:
+            if len(rows) == 0 or self.wait() == False:
                 break
+                
+            del_rows = []
             
             for i in range(0, len(rows)):
                 if self.wait() == False:
@@ -151,6 +156,3 @@ class Sender(threading.Thread):
             
             if len(del_rows):
                 self.off_store.rem(del_rows)
-                
-            time.sleep(10)
-                
