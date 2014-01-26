@@ -33,8 +33,8 @@ class Activity(threading.Thread):
     @staticmethod
     def send(activity, data):
         globals = Globals()
-        
-        if globals.api.post_data(activity, data) != True:
+                
+        if globals.api.is_not_connected(globals.api.post_data(activity, data)):
             globals.off_store.put(activity, data)
 
     @staticmethod
@@ -64,9 +64,9 @@ class Connection(threading.Thread):
     
     def attempt(self, max_try = -1):
         globals = Globals()
-        res = globals.api.authenticate(max_try)
-        res == True and globals.rtc.connect().start()
-        return res            
+        status = globals.api.authenticate(max_try)
+        status == globals.api.status.SUCCESS and globals.rtc.connect().start()
+        return status            
         
     def connect(self):
         globals = Globals()
@@ -74,27 +74,31 @@ class Connection(threading.Thread):
         if hasattr(globals.config.agent, '_id') == False and globals.api.register() != True:
             return False
         
-        res = self.attempt(5)
+        status = self.attempt(5)
         
-        if res == None or (type(res) is not bool and res.status_code >= 500):
-            res = hasattr(globals.config.agent, 'activities')
-            res and self.start()            
+        if globals.api.is_not_connected(status):
+            if hasattr(globals.config.agent, 'activities'):
+                self.start()
+                status == globals.api.status.SUCCESS
             
-        return res  
+        return status
     
-def handle_conn_response(response):
-    if response == False:
+def handle_conn_response(status):
+    globals = Globals()
+    
+    if status == globals.api.status.SUCCESS:
+        return
+    
+    stop()
+    
+    if globals.api.is_not_connected(status):
         print 'Failed to connect; exiting'
-        stop()
-        exit()
-    elif response and response != True:
-        if response.status_code == 404:
-            print 'Uninstalling...'
-        else:
-            print 'Failed to connect; exiting'
+    elif status == globals.api.status.NOT_FOUND:
+        print 'Uninstalling...'
+    elif status == globals.api.status.UNAUTHERIZED or status == globals.api.status.BAD_REQUEST:
+        print 'Unautherized or bad request; exiting'
         
-        stop()
-        exit()
+    exit()
         
 def stop():
     Globals().stop_event.set()

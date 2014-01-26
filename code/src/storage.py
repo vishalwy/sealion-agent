@@ -149,9 +149,13 @@ class Sender(threading.Thread):
                 if self.wait() == False:
                     return
                 
-                if self.off_store.api.post_data(rows[i]['activity'], rows[i]['data']) == True:
+                status = self.off_store.api.post_data(rows[i]['activity'], rows[i]['data'])
+                
+                if status == api.status.SUCCESS:
                     del_rows.append(rows[i]['row_id'])
-                else:
+                elif status == api.status.MISMATCH:
+                    pass
+                elif status == api.status.NOT_CONNECTED or status == api.status.NO_SERVICE:
                     break
             
             if len(del_rows):

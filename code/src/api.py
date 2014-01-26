@@ -4,7 +4,7 @@ import threading
 from constructs import *
 
 class Interface(requests.Session):    
-    status = enum(SUCCESS, NOT_CONNECTED, NO_SERVICE, BAD_REQUEST, NOT_FOUND, UNAUTHERIZED, MISMATCH, DATA_CONFLICT, SESSION_CONFLICT, UNKNOWN)
+    status = enum(SUCCESS, NOT_CONNECTED, NO_SERVICE, DATA_CONFLICT, MISMATCH, BAD_REQUEST, NOT_FOUND, UNAUTHERIZED, SESSION_CONFLICT, UNKNOWN)
     
     def __init__(self, config, stop_event, *args, **kwargs):
         super(Interface, self).__init__(*args, **kwargs)
@@ -32,6 +32,18 @@ class Interface(requests.Session):
         
         temp = (message + '; ' + temp) if len(message) else temp
         print temp
+        
+    def is_ok(self, status):
+        if status < self.status.BAD_REQUEST:
+            return True
+        
+        return False
+    
+    def is_not_connected(self, status):
+        if status == self.status.NOT_CONNECTED or status == self.status.NO_SERVICE:
+            return True
+        
+        return False
     
     def get_url(self, path = ''):
         path.strip()
