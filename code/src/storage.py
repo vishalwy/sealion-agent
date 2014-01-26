@@ -37,6 +37,7 @@ class OfflineStore(threading.Thread):
         finally:
             self.conn_event.set()
             
+        _log.debug('Offline store starting up')
         self.cursor = self.conn.cursor()
         
         try:
@@ -59,6 +60,7 @@ class OfflineStore(threading.Thread):
                 pass
                 
             if self.api.stop_event.is_set():
+                _log.debug('Offline store been asked to shutdown; cleaning up queue')
                 while 1:
                     try:
                         task = self.task_queue.get(False)
@@ -68,12 +70,14 @@ class OfflineStore(threading.Thread):
                 
                 self.conn.close()
                 break
+                
+        _log.debug('Offline store shutting down')
     
     def insert(self, activity, data):
         try:
             self.cursor.execute('INSERT INTO data VALUES(?, ?, ?, ?)', (activity, data['timestamp'], data['returnCode'], data['data']))
             self.conn.commit()
-            _log.debug('Inserted ' + activity + '_' + data['timestamp'])
+            _log.debug('Inserted ' + activity + '_' + str(data['timestamp']) + ' to offline store')
             self.send()
         except:        
             return False        
@@ -100,6 +104,7 @@ class OfflineStore(threading.Thread):
             format = (','.join('?' * len(row_ids)), ','.join('?' * len(activities)))
             self.cursor.execute('DELETE FROM data WHERE ROWID IN (%s) OR activity IN (%s)' % format, row_ids + activities)
             self.conn.commit()
+            _log.debug('Deleted ' + str(self.cursor.rowcount) + ' records from offline store')
         except:
             return False
         
@@ -109,6 +114,7 @@ class OfflineStore(threading.Thread):
         try:
             self.cursor.execute('DELETE FROM data')
             self.conn.commit()
+            _log.debug('Deleting all records from offline store')
         except:
             return False
         
@@ -137,22 +143,32 @@ class Sender(threading.Thread):
         
     def wait(self):
         self.off_store.api.post_event.wait()
-        return False if self.off_store.api.stop_event.is_set() else True
+        _log.debug('Offline store sender received post event')
+        
+        if self.off_store.api.stop_event.is_set():
+            _log.debug('Offline store sender been asked to shutdown')
+            return False
+        
+        return True
         
     def run(self):
+        _log.debug('Offline store sender starting up')
+        
         while 1:
-            _log.debug('Offline store sender started')
             rows = self.off_store.get()
+            _log.debug('Offline store sender waiting for rows')
             row_count, i = len(rows), 0
             
             if row_count == 0 or self.wait() == False:
                 break
                 
+            _log.debug('Offline store sender got ' + str(row_count) + ' rows')
             del_rows = []
             del_activities = []
             
             while i < row_count:
                 if self.wait() == False:
+                    _log.debug('Offline store sender shutting down')
                     return
                 
                 status = self.off_store.api.post_data(rows[i]['activity'], rows[i]['data'])
@@ -176,3 +192,4 @@ class Sender(threading.Thread):
                 i += 1
             
             self.off_store.rem(del_rows, del_activities)
+        _log.debug('Offline store sender shutting down')

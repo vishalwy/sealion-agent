@@ -138,7 +138,7 @@ class Interface(requests.Session):
         ret = self.status.SUCCESS
         
         if Interface.is_success(response):
-            _log.debug('Sent ' + activity_id + '_' + data['timestamp'])
+            _log.debug('Sent ' + activity_id + '_' + str(data['timestamp']))
             self.post_event.set()
         else:
             ret = self.error('Send failed for data ' + activity_id, response)
