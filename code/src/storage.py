@@ -92,9 +92,10 @@ class OfflineStore(threading.Thread):
         read_event and read_event.set()
         return arr
             
-    def delete(self, row_ids):
+    def delete(self, row_ids, activities):
         try:
-            self.cursor.execute('DELETE FROM data WHERE ROWID IN (%s)' % ','.join('?' * len(row_ids)), row_ids)
+            format = (','.join('?' * len(row_ids)), ','.join('?' * len(activities)))
+            self.cursor.execute('DELETE FROM data WHERE ROWID IN (%s) OR activity IN (%s)' % format, row_ids + activities)
             self.conn.commit()
         except:
             return False
@@ -121,8 +122,8 @@ class OfflineStore(threading.Thread):
         read_event.wait()
         return rows
         
-    def rem(self, row_ids):
-        self.task_queue.put({'op': 'delete', 'kwargs': {'row_ids': row_ids}})
+    def rem(self, row_ids, activities):
+        self.task_queue.put({'op': 'delete', 'kwargs': {'row_ids': row_ids, 'activities': activities}})
         
     def clr(self):
         self.task_queue.put({'op': 'truncate'})
@@ -139,13 +140,15 @@ class Sender(threading.Thread):
     def run(self):
         while 1:
             rows = self.off_store.get()
+            row_count, i = len(rows), 0
             
-            if len(rows) == 0 or self.wait() == False:
+            if row_count == 0 or self.wait() == False:
                 break
                 
             del_rows = []
+            del_activities = []
             
-            for i in range(0, len(rows)):
+            while i < row_count:
                 if self.wait() == False:
                     return
                 
@@ -154,9 +157,19 @@ class Sender(threading.Thread):
                 if status == api.status.SUCCESS:
                     del_rows.append(rows[i]['row_id'])
                 elif status == api.status.MISMATCH:
-                    pass
+                    del_activities.append(rows[i]['activity'])
+                    j = i + 1
+                    
+                    while j < row_count:
+                        if rows[i]['activity'] == rows[j]['activity']:
+                            rows.pop(j)
+                            row_count -= 1
+                        else:
+                            j += 1
+                    
                 elif status == api.status.NOT_CONNECTED or status == api.status.NO_SERVICE:
                     break
+                    
+                i += 1
             
-            if len(del_rows):
-                self.off_store.rem(del_rows)
+            self.off_store.rem(del_rows, del_activities)

@@ -53,24 +53,28 @@ class AgentConfig(Config):
         while i >= 0:
             if next((item for item in deleted if item['_id'] == inserted[i]['_id']), None):
                 updated.append(inserted[i])
+                deleted.remove(inserted[i])
                 inserted.pop(i)
-                deleted.pop(i)
                 
             i -= 1
                 
         return {'inserted': inserted, 'updated': updated, 'deleted': deleted}
         
-    def update(self, data):
+    def update(self, data):       
         if data.has_key('category'):
             del data['category']
             
         self.lock.acquire()
-        old_activities = self.data['activities'] if self.data.has_key('activites') else []
+        old_activities = self.data['activities'] if self.data.has_key('activities') else []
         ret = Config.update(self, data)
-        new_activities = self.data['activities'] if self.data.has_key('activites') else []
-        changes = self.get_changes(old_activities, new_activities)
+        new_activities = self.data['activities'] if self.data.has_key('activities') else []
         self.lock.release()
         globals = Globals()
+        
+        if globals.activities == None:
+            return ret
+        
+        changes = self.get_changes(old_activities, new_activities)
         
         for activity in changes['deleted']:
             globals.activities[activity['_id']].stop()
@@ -78,10 +82,10 @@ class AgentConfig(Config):
             
         for activity in changes['updated']:
             globals.activities[activity['_id']].stop()
-            globals.activities[activity['_id']] = Activity(activity, globals.stop_event)
+            globals.activities[activity['_id']] = globals.activity_type(activity, globals.stop_event)
             
         for activity in changes['inserted']:
-            globals.activities[activity['_id']] = Activity(activity, globals.stop_event)
+            globals.activities[activity['_id']] = globals.activity_type(activity, globals.stop_event)
             globals.activities[activity['_id']].start()
         
         return ret
@@ -116,5 +120,5 @@ class Globals:
         self.api = api.Interface(self.config, self.stop_event)
         self.rtc = rtc.Interface(self.api)          
         self.off_store = OfflineStore(Utils.get_safe_path(self.exe_path + 'var/dbs/' + self.config.agent.orgToken + '.db'), self.api)
-        self.activities = {}
+        self.activities = None
 

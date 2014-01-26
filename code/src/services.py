@@ -1,3 +1,4 @@
+import pdb
 import threading
 import time
 import subprocess
@@ -12,10 +13,7 @@ class Activity(threading.Thread):
         self.is_stop = False
 
     def run(self):        
-        while 1:           
-            if self.stop_event.is_set() or self.stop(True) == True:
-                break
-                
+        while 1:                
             timestamp = int(round(time.time() * 1000))
             activity = self.activity['_id']
             command = self.activity['command']
@@ -27,6 +25,8 @@ class Activity(threading.Thread):
             timeout = max(1, self.activity['interval'] - (t2 - t1))
             
             while timeout > 0:
+                if self.stop_event.is_set() or self.stop(True) == True:
+                    return
                 time.sleep(min(5, timeout))
                 timeout -= 5
           
@@ -70,9 +70,13 @@ class Connection(threading.Thread):
         
     def connect(self):
         globals = Globals()
+        status = globals.api.status.SUCCESS
         
-        if hasattr(globals.config.agent, '_id') == False and globals.api.register() != True:
-            return False
+        if hasattr(globals.config.agent, '_id') == False:
+            status = globals.api.register()
+            
+        if status != globals.api.status.SUCCESS:
+            return status
         
         status = self.attempt(5)
         
@@ -85,7 +89,7 @@ class Connection(threading.Thread):
     
 def handle_conn_response(status):
     globals = Globals()
-    
+
     if status == globals.api.status.SUCCESS:
         return
     
@@ -105,11 +109,16 @@ def stop():
     threads = threading.enumerate()
     
     for thread in threads:
-        thread.join()
+        try:
+            print 'joining' + str(thread)
+            thread.join()
+        except:
+            pass
     
 def start():
     try:
         globals = Globals()
+        globals.activity_type = Activity
     except RuntimeError, e:
         print e
         exit()
@@ -124,6 +133,8 @@ def start():
         
         if length == 0:
             globals.off_store.clr()
+            
+        globals.activities = {}
 
         for i in range(0, length):
             globals.activities[activities[i]['_id']] = Activity(activities[i], globals.stop_event)

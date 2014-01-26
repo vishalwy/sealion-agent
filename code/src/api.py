@@ -1,10 +1,23 @@
+import pdb
 import time
 import requests
 import threading
 from constructs import *
 
 class Interface(requests.Session):    
-    status = enum(SUCCESS, NOT_CONNECTED, NO_SERVICE, DATA_CONFLICT, MISMATCH, BAD_REQUEST, NOT_FOUND, UNAUTHERIZED, SESSION_CONFLICT, UNKNOWN)
+    class Status(EmptyClass):
+        SUCCESS = 0
+        NOT_CONNECTED = 1
+        NO_SERVICE = 2
+        DATA_CONFLICT = 3
+        MISMATCH = 4
+        BAD_REQUEST = 5
+        NOT_FOUND = 6
+        UNAUTHERIZED = 7
+        SESSION_CONFLICT = 8
+        UNKNOWN = -1
+    
+    status = Status
     
     def __init__(self, config, stop_event, *args, **kwargs):
         super(Interface, self).__init__(*args, **kwargs)
@@ -24,7 +37,7 @@ class Interface(requests.Session):
     def print_response(message, response):
         temp = 'Network issue'
         
-        if response:
+        if response != None:
             try:
                 temp = response.json()['message']
             except:
@@ -72,6 +85,9 @@ class Interface(requests.Session):
             i += 1
         
         return response
+    
+    def ping(self):
+        self.post_event.set()
     
     def register(self, retry_count = -1):
         data = self.config.agent.get_dict(['orgToken', 'name', 'category'])
@@ -133,7 +149,7 @@ class Interface(requests.Session):
         return ret
     
     def error(self, message, response):        
-        Interface.print_response(message, response)        
+        Interface.print_response(message, response)    
         
         if response == None:
             self.post_event.clear()
@@ -163,7 +179,7 @@ class Interface(requests.Session):
         elif status == 404:
             self.stop_event.set()
             self.post_event.clear()
-            self.status.NOT_FOUND
+            return self.status.NOT_FOUND
         elif status == 409:
             if code == 204011:
                 return self.status.DATA_CONFLICT
@@ -171,7 +187,7 @@ class Interface(requests.Session):
                 self.stop_event.set()
                 self.post_event.clear()
                 return self.status.SESSION_CONFLICT
-        else:
-            return self.status.UNKNOWN
+        
+        return self.status.UNKNOWN
 
         
