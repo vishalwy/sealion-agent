@@ -1,7 +1,9 @@
+import logging
 import threading
 import sqlite3 as sqlite
-import time
 from constructs import *
+
+_log = logging.getLogger(__name__)
 
 class OfflineStore(threading.Thread):    
     def __init__(self, path, api):
@@ -24,13 +26,13 @@ class OfflineStore(threading.Thread):
     def send(self):
         if self.sender == None or self.sender.is_alive() == False:
             self.sender = Sender(self)
-            self.sender.start()          
+            self.sender.start()   
         
     def run(self):
         try:
             self.conn = sqlite.connect(self.path)
         except:
-            print 'Failed to create offline storage at ' + self.path
+            _log.error('Failed to create offline storage at ' + self.path)
             return
         finally:
             self.conn_event.set()
@@ -71,6 +73,7 @@ class OfflineStore(threading.Thread):
         try:
             self.cursor.execute('INSERT INTO data VALUES(?, ?, ?, ?)', (activity, data['timestamp'], data['returnCode'], data['data']))
             self.conn.commit()
+            _log.debug('Inserted ' + activity + '_' + data['timestamp'])
             self.send()
         except:        
             return False        
@@ -92,7 +95,7 @@ class OfflineStore(threading.Thread):
         read_event and read_event.set()
         return arr
             
-    def delete(self, row_ids, activities):
+    def delete(self, row_ids = [], activities = []):
         try:
             format = (','.join('?' * len(row_ids)), ','.join('?' * len(activities)))
             self.cursor.execute('DELETE FROM data WHERE ROWID IN (%s) OR activity IN (%s)' % format, row_ids + activities)
@@ -112,7 +115,6 @@ class OfflineStore(threading.Thread):
         return True
         
     def put(self, activity, data):
-        print 'inserting'
         self.task_queue.put({'op': 'insert', 'kwargs': {'activity': activity, 'data': data}})
         
     def get(self):
@@ -139,6 +141,7 @@ class Sender(threading.Thread):
         
     def run(self):
         while 1:
+            _log.debug('Offline store sender started')
             rows = self.off_store.get()
             row_count, i = len(rows), 0
             

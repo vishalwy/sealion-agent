@@ -1,8 +1,10 @@
-import pdb
+import logging
 import time
 import requests
 import threading
 from constructs import *
+
+_log = logging.getLogger(__name__)
 
 class Interface(requests.Session):    
     class Status(EmptyClass):
@@ -34,7 +36,7 @@ class Interface(requests.Session):
         return True if (status_code == 304 or (status_code >= 200 and status_code < 300)) else False
     
     @staticmethod
-    def print_response(message, response):
+    def print_error(message, response):
         temp = 'Network issue'
         
         if response != None:
@@ -44,7 +46,7 @@ class Interface(requests.Session):
                 temp = 'Error ' + str(response.status_code)
         
         temp = (message + '; ' + temp) if len(message) else temp
-        print temp
+        _log.error(temp)
         
     def is_ok(self, status):
         if status < self.status.BAD_REQUEST:
@@ -77,7 +79,7 @@ class Interface(requests.Session):
             try:
                 response = method(*args, **kwargs)
             except Exception, e:
-                print str(e)
+                _log.error(str(e)) 
                 
             if response != None:
                 break
@@ -95,6 +97,7 @@ class Interface(requests.Session):
         ret = self.status.SUCCESS
         
         if Interface.is_success(response):
+            _log.info('Registration successful')
             self.config.agent.update(response.json())
             self.config.agent.save()
         else:
@@ -108,6 +111,7 @@ class Interface(requests.Session):
         ret = self.status.SUCCESS
         
         if Interface.is_success(response):
+            _log.info('Authentication successful')
             self.config.agent.update(response.json())
             self.config.agent.save()
             self.post_event.set()
@@ -121,6 +125,7 @@ class Interface(requests.Session):
         ret = self.status.SUCCESS
         
         if Interface.is_success(response):
+            _log.info('Config updation successful')
             self.config.agent.update(response.json())
             self.config.agent.save()
         else:
@@ -133,6 +138,7 @@ class Interface(requests.Session):
         ret = self.status.SUCCESS
         
         if Interface.is_success(response):
+            _log.debug('Sent ' + activity_id + '_' + data['timestamp'])
             self.post_event.set()
         else:
             ret = self.error('Send failed for data ' + activity_id, response)
@@ -149,7 +155,7 @@ class Interface(requests.Session):
         return ret
     
     def error(self, message, response):        
-        Interface.print_response(message, response)    
+        Interface.print_error(message, response)    
         
         if response == None:
             self.post_event.clear()

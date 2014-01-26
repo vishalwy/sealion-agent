@@ -1,37 +1,39 @@
-import pdb
+import logging
 from socketio_client import SocketIO, BaseNamespace
 import threading
 
+_log = logging.getLogger(__name__)
+
 class SocketIONamespace(BaseNamespace):
     def on_connect(self):
-        print '[connected]'
+        _log.debug('connected')
         self.api.ping()
         
     def on_disconnect(self):
-        print '[disconnected]'
+        _log.debug('disconnected')
 
     def on_activity_updated(self, *args):
-        print '[activity_updated]'
+        _log.debug('Heard activity_updated')
         self.api.get_config()
 
     def on_activitylist_in_category_updated(self, *args):
-        print '[activitylist_in_category_updated]'
+        _log.debug('Heard activitylist_in_category_updated')
         self.api.get_config()
 
     def on_agent_removed(self, *args):
-        print '[agent_removed]'
+        _log.debug('Heard agent_removed')
         self.api.stop_event.set()
 
     def on_org_token_resetted(self, *args):
-        print '[org_token_resetted]'
+        _log.debug('Heard org_token_resetted')
         self.api.stop_event.set()
 
     def on_server_category_changed(self, *args):
-        print '[server_category_changed]'
+        _log.debug('Heard server_category_changed')
         self.api.get_config()
 
     def on_activity_deleted(self, *args):
-        print '[activity_deleted]'
+        _log.debug('Heard activity_deleted')
         self.api.get_config()
         
 class Interface(threading.Thread):    
@@ -51,5 +53,3 @@ class Interface(threading.Thread):
             if self.api.stop_event.is_set():
                 self.sio.disconnect()
                 break
-
-#check for termination condition

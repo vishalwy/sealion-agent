@@ -1,8 +1,10 @@
-import pdb
+import logging
 import threading
 import time
 import subprocess
 from globals import Globals
+
+_log = logging.getLogger(__name__)
 
 class Activity(threading.Thread):
     def __init__(self, activity, stop_event):
@@ -82,6 +84,7 @@ class Connection(threading.Thread):
         
         if globals.api.is_not_connected(status):
             if hasattr(globals.config.agent, 'activities'):
+                _log.info('Running commands in offline mode')
                 self.start()
                 status == globals.api.status.SUCCESS
             
@@ -96,36 +99,40 @@ def handle_conn_response(status):
     stop()
     
     if globals.api.is_not_connected(status):
-        print 'Failed to connect; exiting'
+        _log.info('Failed to connect')
     elif status == globals.api.status.NOT_FOUND:
-        print 'Uninstalling...'
+        _log.info('Uninstalling agent')
     elif status == globals.api.status.UNAUTHERIZED or status == globals.api.status.BAD_REQUEST:
-        print 'Unautherized or bad request; exiting'
+        _log.info('Unautherized or bad request')
         
-    exit()
+    quit()
         
 def stop():
     Globals().stop_event.set()
     threads = threading.enumerate()
+    curr_thread = threading.current_thread()
+    _log.debug('Stopping all threads')
     
     for thread in threads:
-        try:
-            print 'joining' + str(thread)
+        if thread.ident != curr_thread.ident:
+            _log.debug('Waiting for ' + str(thread))
             thread.join()
-        except:
-            pass
+            
+def quit(status = 0):
+    _log.info('Shutting down with status code ' + str(status))
+    exit()
     
 def start():
     try:
         globals = Globals()
         globals.activity_type = Activity
     except RuntimeError, e:
-        print e
-        exit()
+        _log.error(e)
+        quit()
         
     while 1:
         if globals.off_store.start() == False:
-            exit()
+            quit()
 
         handle_conn_response(Connection().connect())
         activities = globals.config.agent.activities
