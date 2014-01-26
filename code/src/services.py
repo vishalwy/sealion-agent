@@ -1,3 +1,4 @@
+import pdb
 import logging
 import threading
 import time
@@ -86,7 +87,7 @@ class Connection(threading.Thread):
             if hasattr(globals.config.agent, 'activities'):
                 _log.info('Running commands in offline mode')
                 self.start()
-                status == globals.APIStatus.SUCCESS
+                status = globals.APIStatus.SUCCESS
             
         return status
     

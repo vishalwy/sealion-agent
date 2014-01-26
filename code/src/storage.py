@@ -172,10 +172,11 @@ class Sender(threading.Thread):
                     return
                 
                 status = self.off_store.api.post_data(rows[i]['activity'], rows[i]['data'])
+                api_status = self.off_store.api.status
                 
-                if status == api.status.SUCCESS:
+                if status == api_status.SUCCESS or status == api_status.DATA_CONFLICT:
                     del_rows.append(rows[i]['row_id'])
-                elif status == api.status.MISMATCH:
+                elif status == api_status.MISMATCH:
                     del_activities.append(rows[i]['activity'])
                     j = i + 1
                     
@@ -186,7 +187,7 @@ class Sender(threading.Thread):
                         else:
                             j += 1
                     
-                elif status == api.status.NOT_CONNECTED or status == api.status.NO_SERVICE:
+                elif status == api_status.NOT_CONNECTED or status == api_status.NO_SERVICE:
                     break
                     
                 i += 1

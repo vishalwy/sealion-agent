@@ -72,7 +72,10 @@ class Interface(requests.Session):
         method = getattr(self, method)
         response, i = None, 0
         
-        while retry_count == -1 or i <= retry_count:        
+        while retry_count == -1 or i <= retry_count:
+            if self.stop_event.is_set():
+                break
+                
             if i > 0:
                 time.sleep(5)
             

@@ -5,7 +5,7 @@ sys.path.append('src')
 sys.path.append('lib/websocket_client') 
 
 import logging
-logging.basicConfig(level = logging.INFO)
+logging.basicConfig(level = logging.DEBUG)
 
 import services
 services.start()
