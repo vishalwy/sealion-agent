@@ -15,7 +15,7 @@ class Activity(threading.Thread):
         globals = Globals()
         
         while 1:           
-            if self.stop_event.is_set() or self.stop() == True:
+            if self.stop_event.is_set() or self.stop(True) == True:
                 break
                 
             timestamp = int(round(time.time() * 1000))
@@ -41,14 +41,15 @@ class Activity(threading.Thread):
         ret['return_code'] = p.returncode;
         return ret
         
-    def stop(self, is_stop = None):
+    def stop(self, is_query = None):
+        is_stop = True
         self.lock.acquire()
         
-        if is_stop != None:
-           self.is_stop = is_stop
-        else:
+        if is_query == True:
             is_stop = self.is_stop
-        
+        else:
+            self.is_stop = is_stop
+            
         self.lock.release()
         return is_stop
     

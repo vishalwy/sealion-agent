@@ -73,11 +73,11 @@ class AgentConfig(Config):
         globals = Globals()
         
         for activity in changes['deleted']:
-            globals.activities[activity['_id']].stop(True)
+            globals.activities[activity['_id']].stop()
             del globals.activities[activity['_id']]
             
         for activity in changes['updated']:
-            globals.activities[activity['_id']].stop(True)
+            globals.activities[activity['_id']].stop()
             globals.activities[activity['_id']] = Activity(activity, globals.stop_event)
             
         for activity in changes['inserted']:
@@ -114,7 +114,7 @@ class Globals:
     def reset(self):
         self.stop_event = threading.Event()
         self.api = api.Interface(self.config, self.stop_event)
-        self.rtc = rtc.Interface(self.api, self.stop_event)  
-        self.off_store = OfflineStore(Utils.get_safe_path(self.exe_path + 'var/dbs/' + self.config.agent.orgToken + '.db'), self.stop_event)
+        self.rtc = rtc.Interface(self.api)  
+        self.off_store = OfflineStore(Utils.get_safe_path(self.exe_path + 'var/dbs/' + self.config.agent.orgToken + '.db'), self.api)
         self.activities = {}
 

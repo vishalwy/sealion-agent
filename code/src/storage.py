@@ -3,12 +3,12 @@ import sqlite3 as sqlite
 from constructs import *
 
 class OfflineStore(threading.Thread):    
-    def __init__(self, path = '', stop_event = None):
+    def __init__(self, path, api):
         threading.Thread.__init__(self)
         self.path = path
         self.conn = None
         self.conn_event = threading.Event()
-        self.stop_event = stop_event or threading.Event
+        self.api = api
         self.task_queue = queue.Queue()
         self.read_queue = queue.Queue()
         
@@ -51,7 +51,7 @@ class OfflineStore(threading.Thread):
             except:
                 pass
                 
-            if self.stop_event.is_set():
+            if self.api.stop_event.is_set():
                 self.close()
                 break
     
