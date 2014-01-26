@@ -1,5 +1,6 @@
 import threading
 import sqlite3 as sqlite
+import time
 from constructs import *
 
 class OfflineStore(threading.Thread):    
@@ -10,14 +11,10 @@ class OfflineStore(threading.Thread):
         self.conn_event = threading.Event()
         self.api = api
         self.task_queue = queue.Queue()
-        self.read_queue = queue.Queue()
         
     def start(self):
         threading.Thread.start(self)
         return self.wait()
-        
-    def stop(self):
-        self.conn and self.conn.close()
         
     def wait(self):
         self.conn_event.wait()            
@@ -44,6 +41,9 @@ class OfflineStore(threading.Thread):
         except:
             pass
         
+        sender = Sender(self)
+        sender.start()
+        
         while 1:
             try:
                 task = self.task_queue.get(True, 5)
@@ -52,19 +52,28 @@ class OfflineStore(threading.Thread):
                 pass
                 
             if self.api.stop_event.is_set():
-                self.close()
+                while 1:
+                    try:
+                        task = self.task_queue.get(False)
+                        getattr(self, task['op'])(**task['kwargs'])                        
+                    except:
+                        break
+                
+                self.conn.close()
                 break
     
     def insert(self, activity, data):
         try:
             self.cursor.execute('INSERT INTO data VALUES(?, ?, ?, ?)', (activity, data['timestamp'], data['returnCode'], data['data']))
             self.conn.commit()
+            print 'inserted'
         except:        
+            print 'insert failed'
             return False        
         
         return True
     
-    def select(self):
+    def select(self, arr = [], read_event = None):
         rows = self.cursor.execute('SELECT ROWID, * FROM data ORDER BY timestamp LIMIT 10')
         
         for row in rows:
@@ -74,9 +83,10 @@ class OfflineStore(threading.Thread):
                 'data': row[4]
             }
             
-            self.read_queue.put({'row_id': row[0], 'activity': row[1], 'data': data})
-            
-        return True
+            arr.append({'row_id': row[0], 'activity': row[1], 'data': data})
+         
+        read_event and read_event.set()
+        return arr
             
     def delete(self, row_ids):
         try:
@@ -87,24 +97,60 @@ class OfflineStore(threading.Thread):
         
         return True
     
+    def truncate(self):
+        try:
+            self.cursor.execute('DELETE FROM data')
+            self.conn.commit()
+        except:
+            return False
+        
+        return True
+        
     def put(self, activity, data):
+        print 'inserting'
         self.task_queue.put({'op': 'insert', 'kwargs': {'activity': activity, 'data': data}})
         
     def get(self):
-        self.task_queue.put({'op': 'select'})
+        read_event = threading.Event()
+        rows = []
+        self.task_queue.put({'op': 'select', 'kwargs': {'read_event': read_event, 'arr': rows}})
+        read_event.wait()
+        return rows
         
     def rem(self, row_ids):
         self.task_queue.put({'op': 'delete', 'kwargs': {'row_ids': row_ids}})
-    
+        
+    def clr(self):
+        self.task_queue.put({'op': 'truncate'})
     
 class Sender(threading.Thread):    
-    def __init__(self, api = None, stop_event = None):
+    def __init__(self, off_store):
         threading.Thread.__init__(self)
-        self.api = api
-        self.stop_event = stop_event
+        self.off_store = off_store
+        
+    def wait(self):
+        self.off_store.api.post_event.wait()
+        return False if self.off_store.api.stop_event.is_set() else True
         
     def run(self):
-        self.api.post_event.wait()
-        
-        if self.stop_event.is_set():
-            pass
+        while 1:
+            rows = self.off_store.get()
+            del_rows = []
+            
+            if self.wait() == False:
+                break
+            
+            for i in range(0, len(rows)):
+                if self.wait() == False:
+                    return
+                
+                if self.off_store.api.post_data(rows[i]['activity'], rows[i]['data']) == True:
+                    del_rows.append(rows[i]['row_id'])
+                else:
+                    break
+            
+            if len(del_rows):
+                self.off_store.rem(del_rows)
+                
+            time.sleep(10)
+                

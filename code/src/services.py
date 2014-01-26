@@ -11,9 +11,7 @@ class Activity(threading.Thread):
         self.stop_event = stop_event
         self.is_stop = False
 
-    def run(self):
-        globals = Globals()
-        
+    def run(self):        
         while 1:           
             if self.stop_event.is_set() or self.stop(True) == True:
                 break
@@ -24,13 +22,20 @@ class Activity(threading.Thread):
             ret = Activity.execute(command)
             data = {'returnCode': ret['return_code'], 'timestamp': timestamp, 'data': ret['output']}
             t1 = int(time.time())
-            globals.api.post_data(activity, data)
+            Activity.send(activity, data)
             t2 = int(time.time())
             timeout = max(1, self.activity['interval'] - (t2 - t1))
             
             while timeout > 0:
                 time.sleep(min(5, timeout))
                 timeout -= 5
+          
+    @staticmethod
+    def send(activity, data):
+        globals = Globals()
+        
+        if globals.api.post_data(activity, data) != True:
+            globals.off_store.put(activity, data)
 
     @staticmethod
     def execute(command):
@@ -92,7 +97,7 @@ def handle_conn_response(response):
         exit()
         
 def stop():
-    globals.stop_event.set()
+    Globals().stop_event.set()
     threads = threading.enumerate()
     
     for thread in threads:
@@ -111,8 +116,12 @@ def start():
 
         handle_conn_response(Connection().connect())
         activities = globals.config.agent.activities
+        length = len(activities)
+        
+        if length == 0:
+            globals.off_store.clr()
 
-        for i in range(0, len(activities)):
+        for i in range(0, length):
             globals.activities[activities[i]['_id']] = Activity(activities[i], globals.stop_event)
             globals.activities[activities[i]['_id']].start()
 

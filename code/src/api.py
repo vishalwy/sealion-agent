@@ -1,5 +1,7 @@
+import pdb
 import time
 import requests
+import threading
 from constructs import *
 
 class Interface(requests.Session):    
@@ -7,6 +9,7 @@ class Interface(requests.Session):
         super(Interface, self).__init__(*args, **kwargs)
         self.config = config
         self.stop_event = stop_event
+        self.post_event = threading.Event()
         
         if hasattr(self.config.sealion, 'proxy'):
             self.proxies = self.config.sealion.proxy
@@ -34,9 +37,9 @@ class Interface(requests.Session):
         method = getattr(self, method)
         response, i = None, 0
         
-        while retry_count == -1 or i <= retry_count:
-            if self.stop_event.is_set():
-                break
+        while retry_count == -1 or i <= retry_count:        
+            if i > 0:
+                time.sleep(5)
             
             try:
                 response = method(*args, **kwargs)
@@ -46,7 +49,7 @@ class Interface(requests.Session):
             if response != None:
                 break
                 
-            time.sleep(5)
+            i += 1
         
         return response
     
@@ -72,10 +75,11 @@ class Interface(requests.Session):
         if Interface.is_success(response):
             self.config.agent.update(response.json())
             self.config.agent.save()
+            self.post_event.set()
             ret = True
         else:
             Interface.print_response('Authenitcation failed for agent ' + self.config.agent._id, response)
-            self.stop_event.set()
+            self.set_event(response)
         
         return True if ret else response
             
@@ -89,6 +93,7 @@ class Interface(requests.Session):
             ret = True
         else:
             Interface.print_response('Get config failed for agent ' + self.config.agent._id, response)
+            self.set_event(response)
             
         return True if ret else response
             
@@ -98,9 +103,10 @@ class Interface(requests.Session):
         
         if Interface.is_success(response):
             ret = True
+            self.post_event.set()
         else:
             Interface.print_response('Send failed for data ' + activity_id, response)
-            response and self.stop_event.set()
+            self.set_event(response)
             
         return True if ret else response
     
@@ -114,3 +120,9 @@ class Interface(requests.Session):
             Interface.print_response('Logout failed for agent ' + self.config.agent._id, response)
             
         return True if ret else response
+    
+    def set_event(self, response):
+        if response and response.status_code < 500:
+            self.post_event.clear()
+            self.stop_event.set()
+        

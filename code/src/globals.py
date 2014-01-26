@@ -114,7 +114,7 @@ class Globals:
     def reset(self):
         self.stop_event = threading.Event()
         self.api = api.Interface(self.config, self.stop_event)
-        self.rtc = rtc.Interface(self.api)  
+        self.rtc = rtc.Interface(self.api)          
         self.off_store = OfflineStore(Utils.get_safe_path(self.exe_path + 'var/dbs/' + self.config.agent.orgToken + '.db'), self.api)
         self.activities = {}
 
