@@ -29,13 +29,13 @@ class OfflineStore(threading.Thread):
             self.sender.start()   
         
     def run(self):
-        _log.debug('Starting up offline store ' + str(self))
+        _log.debug('Starting up offline store')
         
         try:
             self.conn = sqlite.connect(self.path)
         except:
             _log.error('Failed to create offline store at ' + self.path)
-            _log.debug('Shutting down offline store ' + str(self))
+            _log.debug('Shutting down offline store')
             return
         finally:
             self.conn_event.set()
@@ -62,7 +62,7 @@ class OfflineStore(threading.Thread):
                 pass
                 
             if self.api.stop_event.is_set():
-                _log.debug('Offline store received stop event; cleaning up queue ' + str(self))
+                _log.debug('Offline store received stop event; cleaning up queue')
                 
                 while 1:
                     try:
@@ -74,7 +74,7 @@ class OfflineStore(threading.Thread):
                 self.conn.close()
                 break
                 
-        _log.debug('Shutting down offline store ' + str(self))
+        _log.debug('Shutting down offline store')
     
     def insert(self, activity, data):
         try:
@@ -145,24 +145,24 @@ class Sender(threading.Thread):
         self.off_store = off_store
         
     def wait(self):
-        _log.debug('Offline store sender waiting for post event ' + str(self))
+        _log.debug('Offline store sender waiting for post event')
         self.off_store.api.post_event.wait()
-        _log.debug('Offline store sender received post event ' + str(self))
+        _log.debug('Offline store sender received post event')
         
         if self.off_store.api.stop_event.is_set():
-            _log.debug('Offline store sender received stop event ' + str(self))
+            _log.debug('Offline store sender received stop event')
             return False
         
         return True
         
     def run(self):
-        _log.debug('Starting up offline store sender ' + str(self))
+        _log.debug('Starting up offline store sender')
         
         while 1:
-            _log.debug('Offline store sender waiting for rows ' + str(self))
+            _log.debug('Offline store sender waiting for rows')
             rows = self.off_store.get()
             row_count, i = len(rows), 0
-            _log.debug('Offline store sender got ' + str(row_count) + ' rows ' + str(self))
+            _log.debug('Offline store sender got ' + str(row_count) + ' rows')
             
             if row_count == 0 or self.wait() == False:
                 break
@@ -172,7 +172,7 @@ class Sender(threading.Thread):
             
             while i < row_count:
                 if self.wait() == False:
-                    _log.debug('Shutting down offline store sender ' + str(self))
+                    _log.debug('Shutting down offline store sender')
                     return
                 
                 status = self.off_store.api.post_data(rows[i]['activity'], rows[i]['data'])
@@ -198,4 +198,4 @@ class Sender(threading.Thread):
             
             self.off_store.rem(del_rows, del_activities)
             
-        _log.debug('Shutting down offline store sender ' + str(self))
+        _log.debug('Shutting down offline store sender')

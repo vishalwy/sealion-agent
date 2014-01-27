@@ -13,7 +13,7 @@ _log = logging.getLogger(__name__)
 
 logging_list = []
 logging_level = logging.INFO
-format = '%(asctime)-15s %(levelname)-8s %(module)-s[%(lineno)-d]: %(message)s'
+format = '%(asctime)-15s %(levelname)-6s %(thread)d - %(module)-s[%(lineno)-d]: %(message)s'
 exe_path = helper.Utils.get_exe_path()
 logging.basicConfig(level = logging_level, format = format)
 
@@ -23,11 +23,6 @@ except Exception, e:
     _log.error('Failed to open log file; ' + str(e))
     services.quit()
     
-formatter = logging.Formatter(format)
-logger = logging.getLogger()
-lf.setFormatter(formatter)
-logger.addHandler(lf)
-
 try:
     globals = Globals()
 except RuntimeError, e:
@@ -59,6 +54,10 @@ except:
     logging_list = []
     pass
 
+formatter = logging.Formatter(format if logging_level == logging.DEBUG else format.replace('%(thread)d - ', ''))
+logger = logging.getLogger()
+lf.setFormatter(formatter)
+logger.addHandler(lf)
 logger.setLevel(logging_level)
 
 if len(logging_list) != 1 or logging_list[0] != 'all':

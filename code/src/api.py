@@ -161,8 +161,9 @@ class Interface(requests.Session):
         return ret
     
     def stop(self):
-        _log.debug('Setting stop and post events')
+        _log.debug('Setting stop event')
         self.stop_event.set()
+        _log.debug('Setting post event')
         self.post_event.set()
     
     def error(self, message, response):        
