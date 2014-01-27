@@ -1,6 +1,7 @@
 import threading
 import api
 import rtc
+import os
 from helper import *
 from storage import OfflineStore
 
@@ -23,6 +24,15 @@ class SealionConfig(Config):
                 'optional': True
             }
         }
+        
+    def set(self, data = None):
+        ret = Config.set(self, data)
+        variables = self.data['variables'] if self.data.has_key('variables') else []
+        
+        for i in range(0, len(variables)):
+            os.environ[variables[i]['name']] = variables[i]['value']
+            
+        return ret        
         
 class AgentConfig(Config):
     def __init__(self, file):
@@ -48,6 +58,9 @@ class AgentConfig(Config):
         }
         
     def get_changes(self, old_activities, new_activities):
+        return {'inserted': new_activities, 'updated': [], 'deleted': old_activities}
+    
+        ##fix the code to get proper insert, update, delete
         old_set = set(tuple([tuple(activity.items()) for activity in old_activities]))
         new_set = set(tuple([tuple(activity.items()) for activity in new_activities]))
         
