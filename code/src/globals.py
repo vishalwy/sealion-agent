@@ -15,7 +15,14 @@ class SealionConfig(Config):
             'variables': {
                 'type': [{'name': {'type': 'str,unicode'}, 'value': {'type': 'str,unicode'}}],
                 'optional': True
-            }    
+            },
+            'logging': {
+                'type': {
+                    'level': {'type': 'str,unicode', 'regex': '^\s*(info|error|debug)\s*$', 'optional': True},
+                    'modules': {'type': ['str,unicode'], 'regex': '^.+$', 'optional': True}
+                },
+                'optional': True
+            }
         }
         
 class AgentConfig(Config):

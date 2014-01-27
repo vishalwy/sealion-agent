@@ -124,12 +124,8 @@ def quit(status = 0):
     exit()
     
 def start():
-    try:
-        globals = Globals()
-        globals.activity_type = Activity
-    except RuntimeError, e:
-        _log.error(e)
-        quit()
+    globals = Globals()
+    globals.activity_type = Activity
         
     while 1:
         if globals.off_store.start() == False:
