@@ -161,7 +161,7 @@ class Config:
                 return self.file + ' is either missing or currupted'
             else:
                 return 'Invalid config'
-
+            
         self.lock.acquire()
         self.data = config
         self.lock.release()

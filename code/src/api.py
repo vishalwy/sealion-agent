@@ -1,3 +1,4 @@
+import pdb
 import logging
 import time
 import requests
@@ -26,7 +27,7 @@ class Interface(requests.Session):
         self.config = config
         self.stop_event = stop_event
         self.post_event = threading.Event()
-        
+
         if hasattr(self.config.sealion, 'proxy'):
             self.proxies = self.config.sealion.proxy
             

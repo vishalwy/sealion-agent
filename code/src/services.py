@@ -1,4 +1,3 @@
-import pdb
 import logging
 import threading
 import time
@@ -81,7 +80,7 @@ class Connection(threading.Thread):
         if status != globals.APIStatus.SUCCESS:
             return status
         
-        status = self.attempt(5)
+        status = self.attempt(2)
         
         if globals.api.is_not_connected(status):
             if hasattr(globals.config.agent, 'activities'):
