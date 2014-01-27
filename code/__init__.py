@@ -24,6 +24,11 @@ class LoggingList(logging.Filter):
 
     def filter(self, record):
         return any(log.filter(record) for log in self.logs)
+    
+try:
+    logging_list = globals.config.sealion.logging['modules']
+except:
+    pass
 
 try:
     temp = globals.config.sealion.logging['level'].strip()
@@ -32,17 +37,16 @@ try:
         logging_level = logging.ERROR
     elif temp == 'debug':
         logging_level = logging.DEBUG
+    elif temp == 'none':
+        logging_list = []
 except:
-    pass
-
-try:
-    logging_list = globals.config.sealion.logging['modules']
-except:
+    logging_list = []
     pass
 
 logging.getLogger().setLevel(logging_level)
 
-for handler in logging.root.handlers:
-    handler.addFilter(LoggingList(*logging_list))
+if len(logging_list) != 1 or logging_list[0] != 'all':
+    for handler in logging.root.handlers:
+        handler.addFilter(LoggingList(*logging_list))
 
 services.start()

@@ -18,8 +18,8 @@ class SealionConfig(Config):
             },
             'logging': {
                 'type': {
-                    'level': {'type': 'str,unicode', 'regex': '^\s*(info|error|debug)\s*$', 'optional': True},
-                    'modules': {'type': ['str,unicode'], 'regex': '^.+$', 'optional': True}
+                    'level': {'type': 'str,unicode', 'regex': '^\s*(info|error|debug|none)\s*$', 'optional': True},
+                    'modules': {'type': ['str,unicode'], 'depends': ['level'], 'regex': '^.+$', 'optional': True}
                 },
                 'optional': True
             }
