@@ -14,7 +14,9 @@ class Activity(threading.Thread):
         self.stop_event = stop_event
         self.is_stop = False
 
-    def run(self):        
+    def run(self):
+        _log.debug('Starting up activity ' + str(self))
+        
         while 1:                
             timestamp = int(round(time.time() * 1000))
             activity = self.activity['_id']
@@ -28,9 +30,11 @@ class Activity(threading.Thread):
             
             while timeout > 0:
                 if self.stop_event.is_set() or self.stop(True) == True:
+                    _log.debug('Shutting down activity ' + str(self))
                     return
                 time.sleep(min(5, timeout))
                 timeout -= 5
+        _log.debug('Shutting down activity ' + str(self))
           
     @staticmethod
     def send(activity, data):
@@ -62,7 +66,9 @@ class Activity(threading.Thread):
     
 class Connection(threading.Thread):
     def run(self):
+        _log.debug('Starting up connection ' + str(self))
         self.attempt()
+        _log.debug('Shutting down connection ' + str(self))
     
     def attempt(self, max_try = -1):
         globals = Globals()
@@ -108,10 +114,10 @@ def handle_conn_response(status):
     quit()
         
 def stop():
-    Globals().stop_event.set()
+    _log.debug('Stopping all threads')
+    Globals().api.stop()
     threads = threading.enumerate()
     curr_thread = threading.current_thread()
-    _log.debug('Stopping all threads')
     
     for thread in threads:
         if thread.ident != curr_thread.ident:
@@ -143,7 +149,9 @@ def start():
             globals.activities[activities[i]['_id']] = Activity(activities[i], globals.stop_event)
             globals.activities[activities[i]['_id']].start()
 
+        _log.debug('Waiting for stop event in main thread')
         globals.stop_event.wait()
+        _log.debug('Received stop event in main thread')
         stop()        
         globals.reset()
     

@@ -1,4 +1,3 @@
-import pdb
 import logging
 import time
 import requests
@@ -93,6 +92,7 @@ class Interface(requests.Session):
         return response
     
     def ping(self):
+        _log.debug('Setting post event')
         self.post_event.set()
     
     def register(self, retry_count = -1):
@@ -105,7 +105,7 @@ class Interface(requests.Session):
             self.config.agent.update(response.json())
             self.config.agent.save()
         else:
-            ret = self.error('Registration failed in ' + self.config.agent.orgToken, response)
+            ret = self.error('Registration failed', response)
         
         return ret
     
@@ -118,9 +118,10 @@ class Interface(requests.Session):
             _log.info('Authentication successful')
             self.config.agent.update(response.json())
             self.config.agent.save()
+            _log.debug('Setting post event')
             self.post_event.set()
         else:
-            ret = self.error('Authenitcation failed for agent ' + self.config.agent._id, response)
+            ret = self.error('Authenitcation failed', response)
         
         return ret
             
@@ -133,7 +134,7 @@ class Interface(requests.Session):
             self.config.agent.update(response.json())
             self.config.agent.save()
         else:
-            ret = self.error('Get config failed for agent ' + self.config.agent._id, response)
+            ret = self.error('Get config failed', response)
             
         return ret
             
@@ -142,10 +143,11 @@ class Interface(requests.Session):
         ret = self.status.SUCCESS
         
         if Interface.is_success(response):
-            _log.debug('Sent ' + activity_id + '_' + str(data['timestamp']))
+            _log.debug('Sent ' + activity_id + ' @ ' + str(data['timestamp']))
+            _log.debug('Setting post event')
             self.post_event.set()
         else:
-            ret = self.error('Send failed for data ' + activity_id, response)
+            ret = self.error('Send failed for ' + activity_id + ' @ ' + str(data['timestamp']), response)
             
         return ret
     
@@ -158,10 +160,16 @@ class Interface(requests.Session):
 
         return ret
     
+    def stop(self):
+        _log.debug('Setting stop and post events')
+        self.stop_event.set()
+        self.post_event.set()
+    
     def error(self, message, response):        
         Interface.print_error(message, response)    
         
         if response == None:
+            _log.debug('Resetting post event')
             self.post_event.clear()
             return self.status.NOT_CONNECTED
         
@@ -173,29 +181,26 @@ class Interface(requests.Session):
             code = 0
             
         if status >= 500:
+            _log.debug('Resetting post event')
             self.post_event.clear()
             return self.status.NO_SERVICE
         elif status == 400:
-            self.stop_event.set()
-            self.post_event.set()
+            self.stop()
             return self.status.BAD_REQUEST
         elif status == 401:
             if code == 200004:
                 return self.status.MISMATCH
             else:
-                self.stop_event.set()
-                self.post_event.set()
+                self.stop()
                 return self.status.UNAUTHERIZED
         elif status == 404:
-            self.stop_event.set()
-            self.post_event.set()
+            self.stop()
             return self.status.NOT_FOUND
         elif status == 409:
             if code == 204011:
                 return self.status.DATA_CONFLICT
             else:
-                self.stop_event.set()
-                self.post_event.set()
+                self.stop()
                 return self.status.SESSION_CONFLICT
         
         return self.status.UNKNOWN
