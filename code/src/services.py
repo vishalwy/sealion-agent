@@ -2,6 +2,7 @@ import logging
 import threading
 import time
 import subprocess
+import re
 from globals import Globals
 
 _log = logging.getLogger(__name__)
@@ -21,7 +22,26 @@ class Activity(threading.Thread):
             timestamp = int(round(time.time() * 1000))
             activity = self.activity['_id']
             command = self.activity['command']
-            ret = Activity.execute(command)
+            globals = Globals()
+            whitelist = []
+            is_whitelisted = True
+            
+            if hasattr(globals.config.sealion, 'whitelist'):
+                whitelist = globals.config.sealion.whitelist
+
+            if len(whitelist):
+                is_whitelisted = False
+                
+                for i in range(0, len(whitelist)):
+                    if re.match(whitelist[i], command):
+                        is_whitelisted = True
+                        break
+                
+            ret = {'return_code': 0, 'output': 'Command blocked by whitelist.'}
+            
+            if is_whitelisted == True:
+                ret = Activity.execute(command)
+                
             data = {'returnCode': ret['return_code'], 'timestamp': timestamp, 'data': ret['output']}
             t1 = int(time.time())
             Activity.send(activity, data)

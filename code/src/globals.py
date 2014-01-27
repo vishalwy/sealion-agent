@@ -1,3 +1,4 @@
+import pdb
 import threading
 import api
 import rtc
@@ -12,7 +13,7 @@ class SealionConfig(Config):
         self.schema = {
             'proxy': {'type': {'https_proxy': {'type': 'str,unicode', 'optional': True}}, 'optional': True},
             'whitelist': {'type': ['str,unicode'], 'optional': True},
-            'variables': {
+            'env': {
                 'type': [{'name': {'type': 'str,unicode'}, 'value': {'type': 'str,unicode'}}],
                 'optional': True
             },
@@ -27,7 +28,7 @@ class SealionConfig(Config):
         
     def set(self, data = None):
         ret = Config.set(self, data)
-        variables = self.data['variables'] if self.data.has_key('variables') else []
+        variables = self.data['env'] if self.data.has_key('env') else []
         
         for i in range(0, len(variables)):
             os.environ[variables[i]['name']] = variables[i]['value']
