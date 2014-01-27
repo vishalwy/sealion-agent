@@ -18,27 +18,15 @@ exe_path = helper.Utils.get_exe_path()
 logging.basicConfig(level = logging_level, format = format)
 
 try:
-    error = logging.FileHandler(helper.Utils.get_safe_path(exe_path + 'var/log/error.log'))
-    info = logging.FileHandler(helper.Utils.get_safe_path(exe_path + 'var/log/info.log'))
-    debug = logging.FileHandler(helper.Utils.get_safe_path(exe_path + 'var/log/debug.log'))
+    lf = logging.FileHandler(helper.Utils.get_safe_path(exe_path + 'var/log/sealion.log'))
 except Exception, e:
     _log.error('Failed to open log file; ' + str(e))
     services.quit()
     
 formatter = logging.Formatter(format)
 logger = logging.getLogger()
-
-error.setLevel(logging.ERROR)
-error.setFormatter(formatter)
-logger.addHandler(error)
-
-info.setLevel(logging.INFO)
-info.setFormatter(formatter)
-logger.addHandler(info)
-
-debug.setLevel(logging.DEBUG)
-debug.setFormatter(formatter)
-logger.addHandler(debug)
+lf.setFormatter(formatter)
+logger.addHandler(lf)
 
 try:
     globals = Globals()
