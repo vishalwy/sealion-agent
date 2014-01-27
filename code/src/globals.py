@@ -1,4 +1,3 @@
-import sys
 import threading
 import api
 import rtc
@@ -101,8 +100,7 @@ class Globals:
     __metaclass__ = SingletonType
     
     def __init__(self):
-        exe_path = os.path.dirname(os.path.abspath(sys.modules['__main__'].__file__))
-        self.exe_path = exe_path if (exe_path[len(exe_path) - 1] == '/') else (exe_path + '/')
+        self.exe_path = Utils.get_exe_path()
         self.lock_file = Utils.get_safe_path(self.exe_path + 'var/run/sealion.pid')
         self.config = EmptyClass()
         self.config.sealion = SealionConfig(Utils.get_safe_path(self.exe_path + 'etc/config/sealion.json'))
