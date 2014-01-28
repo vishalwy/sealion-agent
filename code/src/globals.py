@@ -1,3 +1,4 @@
+import pdb
 import threading
 import os
 import api
@@ -64,7 +65,7 @@ class AgentConfig(Config):
             activity = old_activity['_id']
             
             for new_activity in new_activities:
-                if new_activity['_id'] == old_activity:
+                if new_activity['_id'] == activity:
                     activity = None
                     break
                     
@@ -96,7 +97,12 @@ class AgentConfig(Config):
         for activity in new_activities:
             activity_id = activity['_id']
             
-            if globals.activities.has(activity_id):
+            if globals.activities.has_key(activity_id):
+                t = [old_activity for old_activity in old_activities if old_activity['_id'] == activity_id]
+                
+                if len(t) and t[0]['interval'] == activity['interval'] and t[0]['command'] == activity['command']:
+                    continue
+                
                 globals.activities[activity_id].stop()
                 
             globals.activities[activity_id] = globals.activity_type(activity, globals.stop_event)

@@ -43,17 +43,29 @@ class Interface(threading.Thread):
         
     def connect(self):
         SocketIONamespace.api = self.api
-        self.sio = SocketIO(self.api.get_url(), transports = ['xhr-polling'], Namespace = SocketIONamespace, cookies = self.api.cookies, proxies = self.api.proxies)
+        kwargs = {
+            'Namespace': SocketIONamespace,
+            'cookies': self.api.cookies,
+            'proxies': self.api.proxies
+        }
+        
+        if len(self.api.proxies):
+            _log.info('Proxy supplied; forcing xhr-polling for socket-io')
+            kwargs['transports'] = ['xhr-polling']
+        
+        self.sio = SocketIO(self.api.get_url(), **kwargs)
         return self
 
     def run(self):       
-        _log.debug('Starting up socket io')
+        _log.debug('Starting up socket-io')
         
         while 1:
+            self.api.post_event.wait()
             self.sio.wait(5)
             
             if self.api.stop_event.is_set():
+                _log.debug('Socket-io received stop event')
                 self.sio.disconnect()
                 break
                 
-        _log.debug('Shutting down socket io')
+        _log.debug('Shutting down socket-io')

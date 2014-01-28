@@ -23,11 +23,11 @@ class OfflineStore(threading.Thread):
     def stop(self):
         self.task_queue.put({'op': 'close', 'kwargs': {}})
         
-    def put(self, activity, data):
-        self.task_queue.put({'op': 'insert', 'kwargs': {'activity': activity, 'data': data}})
+    def put(self, activity, data, callback):
+        self.task_queue.put({'op': 'insert', 'kwargs': {'activity': activity, 'data': data, 'callback': callback}})
         
-    def get(self, sender):
-        self.task_queue.put({'op': 'select', 'kwargs': {'sender': sender}})
+    def get(self, callback):
+        self.task_queue.put({'op': 'select', 'kwargs': {'callback': callback}})
         
     def rem(self, row_ids, activities):
         self.task_queue.put({'op': 'delete', 'kwargs': {'row_ids': row_ids, 'activities': activities}})
@@ -105,17 +105,18 @@ class OfflineStore(threading.Thread):
             
         return True
     
-    def insert(self, activity, data):
+    def insert(self, activity, data, callback = None):
         try:
             self.cursor.execute('INSERT INTO data VALUES(?, ?, ?, ?)', (activity, data['timestamp'], data['returnCode'], data['data']))
             self.conn.commit()
             _log.debug('Inserted ' + activity + ' @ ' + str(data['timestamp']) + ' to offline store')
+            callback and callback()
         except Exception, e:
             _log.error('Failed to insert rows from storage; ' + str(e))
         
         return True
     
-    def select(self, sender):
+    def select(self, callback):
         try:
             rows = self.cursor.execute('SELECT ROWID, * FROM data ORDER BY timestamp LIMIT 10')
         except Exception, e:
@@ -124,20 +125,7 @@ class OfflineStore(threading.Thread):
         
         rows = self.cursor.fetchall()
         _log.debug('Retreived %d rows from storage' % len(rows))
-        
-        for i in range(0, len(rows)):
-            row = row[i]
-            
-            data = {
-                'timestamp': row[2],
-                'returnCode': row[3],
-                'data': row[4]
-            }
-            
-            if sender.push({'row_id': row[0], 'activity': row[1], 'data': data}) == False:
-                _log.debug('Pushed %d rows to sender from offline storage' % i)
-                break
-                
+        callback(rows)
         return True
             
     def delete(self, row_ids = [], activities = []):
@@ -186,6 +174,8 @@ class Sender(threading.Thread):
         self.api = api
         self.off_store = off_store
         self.queue = queue.Queue(maxsize = 100)
+        self.lock = threading.RLock()
+        self.store_data_available = True
         
     def push(self, item):
         if self.api.post_event.is_set() == False:
@@ -199,9 +189,7 @@ class Sender(threading.Thread):
         return True
         
     def wait(self):
-        _log.debug('Sender waiting for post event')
         self.api.post_event.wait()
-        _log.debug('Sender received post event')
         
         if self.api.stop_event.is_set():
             _log.debug('Sender received stop event')
@@ -212,11 +200,39 @@ class Sender(threading.Thread):
     def update_store(self, del_rows, del_activities):
         if len(del_rows) or len(del_activities):
             self.off_store.rem(del_rows, del_activities)
+            
+    def store_available(self, is_available = None):
+        self.lock.acquire()
+        
+        if is_available == None:
+            is_available = self.store_data_available
+        else:
+            self.store_data_available = is_available
+            
+        self.lock.release()
+        return is_available
+    
+    def store_get_callback(self, rows):
+        row_count, i = len(rows), 0
+        
+        while i < row_count:            
+            data = {
+                'timestamp': rows[i][2],
+                'returnCode': rows[i][3],
+                'data': rows[i][4]
+            }
+            
+            if self.push({'row_id': rows[i][0], 'activity': rows[i][1], 'data': data}) == False:
+                break
+                
+            i += 1
+        
+        self.store_available(row_count != 0)
+        _log.debug('Pushed %d rows to sender from offline storage' % i)
         
     def run(self):
         _log.debug('Starting up sender')
         api_status = self.api.status
-        self.off_store.get(self)
         del_rows, del_activities = [], []
         
         while 1:
@@ -229,8 +245,8 @@ class Sender(threading.Thread):
                 self.update_store(del_rows, del_activities)
                 del_rows, del_activities = [], []
                 
-                if self.queue.full() == False:
-                    self.off_store.get(self)
+                if self.store_available() and self.queue.full() == False:
+                    self.off_store.get(self.store_get_callback)
                     
                 continue
                 
@@ -274,9 +290,13 @@ class Interface:
         self.sender.start()
         return True
     
+    def store_put_callback(self):
+        _log.debug('Marking offline store available on put callback')
+        self.sender.store_available(True)
+    
     def push(self, activity, data):
         if self.sender.push({'activity': activity, 'data': data}) == False:
-            self.off_store.put(activity, data)
+            self.off_store.put(activity, data, self.store_put_callback)
             
         t = int(time.time())
         
