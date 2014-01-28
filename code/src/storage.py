@@ -12,7 +12,6 @@ class OfflineStore(threading.Thread):
         self.conn = None
         self.conn_event = threading.Event()
         self.task_queue = queue.Queue()
-        self.sender = None
         
     def start(self):
         threading.Thread.start(self)
@@ -25,12 +24,8 @@ class OfflineStore(threading.Thread):
     def put(self, activity, data):
         self.task_queue.put({'op': 'insert', 'kwargs': {'activity': activity, 'data': data}})
         
-    def get(self):
-        read_event = threading.Event()
-        rows = []
-        self.task_queue.put({'op': 'select', 'kwargs': {'read_event': read_event, 'arr': rows}})
-        read_event.wait()
-        return rows
+    def get(self, sender):
+        self.task_queue.put({'op': 'select', 'kwargs': {'sender': sender}})
         
     def rem(self, row_ids, activities):
         self.task_queue.put({'op': 'delete', 'kwargs': {'row_ids': row_ids, 'activities': activities}})
@@ -78,7 +73,7 @@ class OfflineStore(threading.Thread):
         
         return True
     
-    def select(self, arr = [], read_event = None):
+    def select(self, sender):
         rows = self.cursor.execute('SELECT ROWID, * FROM data ORDER BY timestamp LIMIT 10')
         
         for row in rows:
@@ -88,10 +83,8 @@ class OfflineStore(threading.Thread):
                 'data': row[4]
             }
             
-            arr.append({'row_id': row[0], 'activity': row[1], 'data': data})
-         
-        read_event and read_event.set()
-        return arr
+            if sender.push({'row_id': row[0], 'activity': row[1], 'data': data}) == False:
+                break
             
     def delete(self, row_ids = [], activities = []):
         try:
@@ -131,76 +124,57 @@ class Sender(threading.Thread):
     def __init__(self, off_store):
         threading.Thread.__init__(self)
         self.off_store = off_store
-        self.queue = queue.Queue()
+        self.queue = queue.Queue(maxsize = 100)
         
-    def push(self, activity, data):
+    def push(self, item):
         try:
-            self.queue.put({'activity': activity, 'data': data}, False)
+            self.queue.put(item, False)
         except:
             return False
         
         return True
         
     def wait(self):
-        _log.debug('Offline store sender waiting for post event')
+        _log.debug('Sender waiting for post event')
         self.off_store.api.post_event.wait()
-        _log.debug('Offline store sender received post event')
+        _log.debug('Sender received post event')
         
         if self.off_store.api.stop_event.is_set():
-            _log.debug('Offline store sender received stop event')
+            _log.debug('Sender received stop event')
             return False
         
         return True
         
     def run(self):
-        _log.debug('Starting up offline store sender')
+        _log.debug('Starting up Sender')
+        api_status = self.off_store.api.status
         
         while 1:
-            _log.debug('Offline store sender waiting for rows')
-            rows = self.off_store.get()
-            row_count, i = len(rows), 0
-            _log.debug('Offline store sender got ' + str(row_count) + ' rows')
+            self.off_store.get(self)
             
-            if row_count == 0 or self.wait() == False:
+            if self.wait() == False:
                 break
                 
-            del_rows = []
+            try:
+                item = self.queue.get(True, 5)
+            except:
+                continue
+                
             del_activities = []
-            
-            while i < row_count:
-                if self.wait() == False:
-                    _log.debug('Shutting down offline store sender')
-                    return
+            del_rows = [item['row_id']] if item.has_key('row_id') else []
+
+            if self.off_store.api.post_data(item['activity'], item['data']) == api_status.MISMATCH:
+                del_activities.append(item['activity'])
                 
-                status = self.off_store.api.post_data(rows[i]['activity'], rows[i]['data'])
-                api_status = self.off_store.api.status
-                
-                if status == api_status.SUCCESS or status == api_status.DATA_CONFLICT:
-                    del_rows.append(rows[i]['row_id'])
-                elif status == api_status.MISMATCH:
-                    del_activities.append(rows[i]['activity'])
-                    j = i + 1
-                    
-                    while j < row_count:
-                        if rows[i]['activity'] == rows[j]['activity']:
-                            rows.pop(j)
-                            row_count -= 1
-                        else:
-                            j += 1
-                    
-                elif status == api_status.NOT_CONNECTED or status == api_status.NO_SERVICE:
-                    break
-                    
-                i += 1
-            
-            self.off_store.rem(del_rows, del_activities)
+            if len(del_rows) or len(del_activities):
+                self.off_store.rem(del_rows, del_activities)
             
         _log.debug('Shutting down offline store sender')
 
 class Interface:
     def __init__(self, path, api):
         self.api = api
-        self.off_store = OfflineStore(path, self.api)
+        self.off_store = OfflineStore(path)
         self.sender = Sender(self.off_store)
         
     def start(self):
@@ -211,6 +185,6 @@ class Interface:
         return True
     
     def push(self, activity, data):
-        if sender.push(activity, data) == False:
+        if sender.push({'activity': activity, 'data': data}) == False:
             self.off_store.put(activity, data)
         
