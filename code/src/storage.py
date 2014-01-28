@@ -141,7 +141,7 @@ class Sender(threading.Thread):
         _log.debug('Sender received post event')
         
         if self.api.stop_event.is_set():
-            _log.debug('Sender received stop event')
+            _log.debug('Sender received stop event; cleaning up queue')
             return False
         
         return True
@@ -149,16 +149,16 @@ class Sender(threading.Thread):
     def run(self):
         _log.debug('Starting up sender')
         api_status = self.api.status
+        self.off_store.get(self)
         
         while 1:
-            self.off_store.get(self)
-            
             if self.wait() == False:
                 break
                 
             try:
                 item = self.queue.get(True, 5)
             except:
+                (self.queue.full() == False) and self.off_store.get(self)
                 continue
                 
             del_activities, del_rows = [], []
@@ -167,12 +167,24 @@ class Sender(threading.Thread):
                 
             if (status == api_status.SUCCESS or status == api_status.DATA_CONFLICT) and row_id:
                 del_rows.append(row_id)
-            elif self.api.post_data(item['activity'], item['data']) == api_status.MISMATCH:
+            elif status == api_status.MISMATCH:
                 del_activities.append(item['activity'])
+            elif (status == api_status.NOT_CONNECTED or status == api_status.NO_SERVICE) and row_id == None:
+                self.off_store.put(item['activity'], item['data'])
+                continue
                 
             if len(del_rows) or len(del_activities):
                 self.off_store.rem(del_rows, del_activities)
             
+        while 1:
+            try:
+                item = self.queue.get(False)
+                
+                if item.get('row_id') == None:
+                    self.off_store.put(item['activity'], item['data'])
+            except:
+                break
+                
         self.off_store.stop()
         _log.debug('Shutting down sender')
 
@@ -189,7 +201,7 @@ class Interface:
         return True
     
     def push(self, activity, data):
-        if sender.push({'activity': activity, 'data': data}) == False:
+        if self.sender.push({'activity': activity, 'data': data}) == False:
             self.off_store.put(activity, data)
         
     def clear_offline_data(self):

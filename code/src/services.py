@@ -20,6 +20,7 @@ class Activity(threading.Thread):
         globals = Globals()
         whitelist = []
         is_whitelisted = True
+        command = self.activity['command']
 
         if hasattr(globals.config.sealion, 'whitelist'):
             whitelist = globals.config.sealion.whitelist
@@ -42,11 +43,11 @@ class Activity(threading.Thread):
             timestamp = int(round(time.time() * 1000))
             ret = {'return_code': 0, 'output': 'Command blocked by whitelist.'}
             
-            if is_whitelisted == True:
+            if self.is_whitelisted == True:
                 ret = Activity.execute(self.activity['command'])
                 
             data = {'returnCode': ret['return_code'], 'timestamp': timestamp, 'data': ret['output']}
-            globals.store.push(activity, data)
+            globals.store.push(self.activity['_id'], data)
             timeout = self.activity['interval']
             
             while timeout > 0:
