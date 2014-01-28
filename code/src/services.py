@@ -36,6 +36,7 @@ class Activity(threading.Thread):
 
     def run(self):
         _log.debug('Starting up activity')
+        globals = Globals()
         
         while 1:                
             timestamp = int(round(time.time() * 1000))
@@ -45,7 +46,7 @@ class Activity(threading.Thread):
                 ret = Activity.execute(self.activity['command'])
                 
             data = {'returnCode': ret['return_code'], 'timestamp': timestamp, 'data': ret['output']}
-            Activity.send(self.activity['_id'], data)
+            globals.store.push(activity, data)
             timeout = self.activity['interval']
             
             while timeout > 0:
@@ -56,13 +57,6 @@ class Activity(threading.Thread):
                 time.sleep(min(5, timeout))
                 timeout -= 5
         _log.debug('Shutting down activity')
-          
-    @staticmethod
-    def send(activity, data):
-        globals = Globals()
-                
-        if globals.api.is_not_connected(globals.api.post_data(activity, data)):
-            globals.off_store.put(activity, data)
 
     @staticmethod
     def execute(command):
