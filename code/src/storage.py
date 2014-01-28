@@ -122,7 +122,12 @@ class OfflineStore(threading.Thread):
             _log.error('Failed to retreive rows from storage; ' + str(e))
             return True
         
-        for row in rows:
+        rows = self.cursor.fetchall()
+        _log.debug('Retreived %d rows from storage' % len(rows))
+        
+        for i in range(0, len(rows)):
+            row = row[i]
+            
             data = {
                 'timestamp': row[2],
                 'returnCode': row[3],
@@ -130,6 +135,7 @@ class OfflineStore(threading.Thread):
             }
             
             if sender.push({'row_id': row[0], 'activity': row[1], 'data': data}) == False:
+                _log.debug('Pushed %d rows to sender from offline storage' % i)
                 break
                 
         return True

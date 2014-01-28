@@ -43,7 +43,7 @@ class Interface(threading.Thread):
         
     def connect(self):
         SocketIONamespace.api = self.api
-        self.sio = SocketIO(self.api.get_url(), Namespace = SocketIONamespace, cookies = self.api.cookies, proxies = self.api.proxies)
+        self.sio = SocketIO(self.api.get_url(), transports = ['xhr-polling'], Namespace = SocketIONamespace, cookies = self.api.cookies, proxies = self.api.proxies)
         return self
 
     def run(self):       

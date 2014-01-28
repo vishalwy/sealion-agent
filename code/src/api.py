@@ -1,3 +1,4 @@
+import pdb
 import logging
 import time
 import requests
@@ -95,9 +96,9 @@ class Interface(requests.Session):
         _log.debug('Setting post event')
         self.post_event.set()
     
-    def register(self, retry_count = -1):
+    def register(self, retry_count = -1, retry_interval = 5):
         data = self.config.agent.get_dict(['orgToken', 'name', 'category'])
-        response = self.exec_method('post', retry_count, self.get_url('agents'), data = data)    
+        response = self.exec_method('post', retry_count, retry_interval, self.get_url('agents'), data = data)    
         ret = self.status.SUCCESS
         
         if Interface.is_success(response):
@@ -125,8 +126,8 @@ class Interface(requests.Session):
         
         return ret
             
-    def get_config(self, retry_count = -1):
-        response = self.exec_method('get', retry_count, self.get_url('agents/1'))
+    def get_config(self, retry_count = -1, retry_interval = 5):
+        response = self.exec_method('get', retry_count, retry_interval, self.get_url('agents/1'))
         ret = self.status.SUCCESS
         
         if Interface.is_success(response):
@@ -138,8 +139,8 @@ class Interface(requests.Session):
             
         return ret
             
-    def post_data(self, activity_id, data, retry_count = 0):
-        response = self.exec_method('post', retry_count, self.get_url('agents/1/data/activities/' + activity_id), data = data)
+    def post_data(self, activity_id, data, retry_count = 0, retry_interval = 5):
+        response = self.exec_method('post', retry_count, retry_interval, self.get_url('agents/1/data/activities/' + activity_id), data = data)
         ret = self.status.SUCCESS
         
         if Interface.is_success(response):
@@ -152,7 +153,7 @@ class Interface(requests.Session):
         return ret
     
     def logout(self):
-        response = self.exec_method('delete', 0, self.get_url('agents/1/sessions/1'))
+        response = self.exec_method('delete', 0, 0, self.get_url('agents/1/sessions/1'))
         ret = self.status.SUCCESS
         
         if Interface.is_success(response) == False:
