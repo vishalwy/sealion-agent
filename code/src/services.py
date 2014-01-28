@@ -41,12 +41,15 @@ class Activity(threading.Thread):
         
         while 1:                
             timestamp = int(round(time.time() * 1000))
-            ret = {'return_code': 0, 'output': 'Command blocked by whitelist.'}
             
             if self.is_whitelisted == True:
                 ret = Activity.execute(self.activity['command'])
+            else:
+                ret = {'return_code': 0, 'output': 'Command blocked by whitelist.'}
+                _log.info('Command ' + self.activity['_id'] + ' is blocked by whitelist')
                 
             data = {'returnCode': ret['return_code'], 'timestamp': timestamp, 'data': ret['output']}
+            _log.debug('Pushing ' + self.activity['_id'] + ' @ ' + str(timestamp) + ' to store')
             globals.store.push(self.activity['_id'], data)
             timeout = self.activity['interval']
             

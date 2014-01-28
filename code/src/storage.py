@@ -1,5 +1,7 @@
+import pdb
 import logging
 import threading
+import time
 import sqlite3 as sqlite
 from constructs import *
 
@@ -108,7 +110,8 @@ class OfflineStore(threading.Thread):
         return True
     
     def close(self):
-        _log.debug('Offline store received stop event; cleaning up queue')
+        _log.debug('Offline store received stop event')
+        _log.debug('Offline store cleaning up queue')
         
         while 1:
             try:
@@ -128,6 +131,9 @@ class Sender(threading.Thread):
         self.queue = queue.Queue(maxsize = 100)
         
     def push(self, item):
+        if self.api.post_event.is_set() == False:
+            return False
+        
         try:
             self.queue.put(item, False)
         except:
@@ -141,7 +147,7 @@ class Sender(threading.Thread):
         _log.debug('Sender received post event')
         
         if self.api.stop_event.is_set():
-            _log.debug('Sender received stop event; cleaning up queue')
+            _log.debug('Sender received stop event')
             return False
         
         return True
@@ -175,6 +181,8 @@ class Sender(threading.Thread):
                 
             if len(del_rows) or len(del_activities):
                 self.off_store.rem(del_rows, del_activities)
+                
+        _log.debug('Sender cleaning up queue')
             
         while 1:
             try:
@@ -191,7 +199,9 @@ class Sender(threading.Thread):
 class Interface:
     def __init__(self, path, api):
         self.off_store = OfflineStore(path)
+        self.api = api
         self.sender = Sender(api, self.off_store)
+        self.last_ping_time = int(time.time())
         
     def start(self):
         if self.off_store.start() == False:
@@ -203,6 +213,12 @@ class Interface:
     def push(self, activity, data):
         if self.sender.push({'activity': activity, 'data': data}) == False:
             self.off_store.put(activity, data)
+            
+        t = int(time.time())
+        
+        if self.last_ping_time - t > 20:
+            self.last_ping_time = t
+            self.api.ping()
         
     def clear_offline_data(self):
         self.off_store.clr()
