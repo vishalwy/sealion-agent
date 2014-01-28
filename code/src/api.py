@@ -68,7 +68,7 @@ class Interface(requests.Session):
                   
         return self.config.agent.apiUrl + path
     
-    def exec_method(self, method, retry_count = -1, *args, **kwargs):
+    def exec_method(self, method, retry_count = -1, retry_interval = 5, *args, **kwargs):
         method = getattr(self, method)
         response, i = None, 0
         
@@ -77,7 +77,7 @@ class Interface(requests.Session):
                 break
                 
             if i > 0:
-                time.sleep(5)
+                time.sleep(retry_interval)
             
             try:
                 response = method(*args, **kwargs)
@@ -109,9 +109,9 @@ class Interface(requests.Session):
         
         return ret
     
-    def authenticate(self, retry_count = -1):
+    def authenticate(self, retry_count = -1, retry_interval = 5):
         data = self.config.agent.get_dict(['orgToken', 'agentVersion'])
-        response = self.exec_method('post', retry_count, self.get_url('agents/' + self.config.agent._id + '/sessions'), data = data)    
+        response = self.exec_method('post', retry_count, retry_interval, self.get_url('agents/' + self.config.agent._id + '/sessions'), data = data)    
         ret = self.status.SUCCESS
         
         if Interface.is_success(response):

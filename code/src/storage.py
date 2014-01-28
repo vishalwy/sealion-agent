@@ -156,6 +156,7 @@ class Sender(threading.Thread):
         _log.debug('Starting up sender')
         api_status = self.api.status
         self.off_store.get(self)
+        del_activities, del_rows = [], []
         
         while 1:
             if self.wait() == False:
@@ -164,10 +165,12 @@ class Sender(threading.Thread):
             try:
                 item = self.queue.get(True, 5)
             except:
-                (self.queue.full() == False) and self.off_store.get(self)
+                if self.queue.full() == False:
+                    self.off_store.rem(del_rows, del_activities)
+                    del_activities, del_rows = [], []
+                    self.off_store.get(self)
                 continue
                 
-            del_activities, del_rows = [], []
             row_id = item.get('row_id')
             status = self.api.post_data(item['activity'], item['data'])
                 
@@ -179,9 +182,7 @@ class Sender(threading.Thread):
                 self.off_store.put(item['activity'], item['data'])
                 continue
                 
-            if len(del_rows) or len(del_activities):
-                self.off_store.rem(del_rows, del_activities)
-                
+        self.off_store.rem(del_rows, del_activities)
         _log.debug('Sender cleaning up queue')
             
         while 1:
