@@ -40,24 +40,22 @@ class OfflineStore(threading.Thread):
         
         try:
             self.conn = sqlite.connect(self.path)
-        except:
-            _log.error('Failed to create offline storage at ' + self.path)
+        except Exception, e:
+            _log.error('Failed to create offline storage at ' + self.path + '; ' + str(e))
             _log.debug('Shutting down offline store')
-            return
-        finally:
             self.conn_event.set()
+            return
             
         self.cursor = self.conn.cursor()
         
-        try:
-            self.cursor.execute('CREATE TABLE data(' + 
-                'activity VARCHAR(50) NOT NULL, ' + 
-                'timestamp INT NOT NULL, ' + 
-                'return_code INT NOT NULL, ' + 
-                'output BLOB NOT NULL, ' + 
-                'PRIMARY KEY(activity, timestamp))')
-        except:
-            pass
+        if self.setup_schema() == False:
+            _log.error('Currupted storage found at ' + self.path)
+            self.close_db()
+            _log.debug('Shutting down offline store')
+            self.conn_event.set()
+            return
+        
+        self.conn_event.set()
         
         while 1:
             task = self.task_queue.get()
@@ -66,19 +64,63 @@ class OfflineStore(threading.Thread):
                 break
                 
         _log.debug('Shutting down offline store')
+        
+    def setup_schema(self):
+        is_existing_table = True
+        
+        #(index, col_name, col_type, not_null, default, pk)
+        schema = [
+            (0, 'activity', 'VARCHAR(50)', 1, None, 1),
+            (1, 'timestamp', 'INT', 1, None, 1), 
+            (2, 'return_code', 'INT', 1, None, 0), 
+            (3, 'output', 'BLOB', 1, None, 0)
+        ]
+                
+        try:
+            columns, pk = '', ''
+            
+            for col in schema:
+                not_null = 'NOT NULL' if col[3] == 1 else 'NULL'
+                default = '' if col[4] == None else col[4]
+                columns += '%s%s %s %s %s' % (', ' if len(columns) else '', col[1], col[2], not_null, default)
+                pk += (', ' if len(pk) else '') + col[1] if col[5] == 1 else ''
+            
+            pk = (', PRIMARY KEY(%s)' % pk) if len(pk) else ''
+            query = 'CREATE TABLE data(%s%s)' % (columns, pk)
+            self.cursor.execute(query)
+            is_existing_table = False
+        except:
+            pass
+        
+        if is_existing_table == True:
+            try:
+                self.cursor.execute('PRAGMA TABLE_INFO(data)')
+                schema = set(schema)
+                cur_schema = set(self.cursor.fetchall())
+
+                if len(schema - cur_schema) > 0 or len(cur_schema - schema) > 0:
+                    return False
+            except:
+                return False
+            
+        return True
     
     def insert(self, activity, data):
         try:
             self.cursor.execute('INSERT INTO data VALUES(?, ?, ?, ?)', (activity, data['timestamp'], data['returnCode'], data['data']))
             self.conn.commit()
             _log.debug('Inserted ' + activity + ' @ ' + str(data['timestamp']) + ' to offline store')
-        except:        
-            return False        
+        except Exception, e:
+            _log.error('Failed to insert rows from storage; ' + str(e))
         
         return True
     
     def select(self, sender):
-        rows = self.cursor.execute('SELECT ROWID, * FROM data ORDER BY timestamp LIMIT 10')
+        try:
+            rows = self.cursor.execute('SELECT ROWID, * FROM data ORDER BY timestamp LIMIT 10')
+        except Exception, e:
+            _log.error('Failed to retreive rows from storage; ' + str(e))
+            return True
         
         for row in rows:
             data = {
@@ -98,8 +140,8 @@ class OfflineStore(threading.Thread):
             self.cursor.execute('DELETE FROM data WHERE ROWID IN (%s) OR activity IN (%s)' % format, row_ids + activities)
             self.conn.commit()
             _log.debug('Deleted ' + str(self.cursor.rowcount) + ' records from offline store')
-        except:
-            return False
+        except Exception, e:
+            _log.error('Failed to delete rows from storage; ' + str(e))
         
         return True
     
@@ -108,10 +150,15 @@ class OfflineStore(threading.Thread):
             self.cursor.execute('DELETE FROM data')
             self.conn.commit()
             _log.debug('Deleting all records from offline store')
-        except:
-            return False
+        except Exception, e:
+            _log.error('Failed to truncate storage; ' + str(e))
         
         return True
+    
+    def close_db(self):
+        _log.debug('Closing offline storage at ' + self.path)
+        self.conn.close()
+        self.conn = None
     
     def close(self):
         _log.debug('Offline store received stop event')
@@ -124,8 +171,7 @@ class OfflineStore(threading.Thread):
             except:
                 break
 
-        _log.debug('Closing offline storage file')
-        self.conn.close()
+        self.close_db()
         return False
     
 class Sender(threading.Thread):    
@@ -174,10 +220,12 @@ class Sender(threading.Thread):
             try:
                 item = self.queue.get(True, 5)
             except:
+                self.update_store(del_rows, del_activities)
+                del_rows, del_activities = [], []
+                
                 if self.queue.full() == False:
-                    self.update_store(del_rows, del_activities)
-                    del_rows, del_activities = [], []
                     self.off_store.get(self)
+                    
                 continue
                 
             row_id = item.get('row_id')

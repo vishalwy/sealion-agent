@@ -57,27 +57,21 @@ class AgentConfig(Config):
             }    
         }
         
-    def get_changes(self, old_activities, new_activities):
-        return {'inserted': new_activities, 'updated': [], 'deleted': old_activities}
-    
-        ##fix the code to get proper insert, update, delete
-        old_set = set(tuple([tuple(activity.items()) for activity in old_activities]))
-        new_set = set(tuple([tuple(activity.items()) for activity in new_activities]))
+    def get_deleted_activities(self, old_activities, new_activities):
+        deleted_activities = []
         
-        inserted = [dict(elem) for elem in new_set - old_set]
-        deleted = [dict(elem) for elem in old_set - new_set]
-        updated = []
-        i = len(inserted) - 1
-        
-        while i >= 0:
-            if next((item for item in deleted if item['_id'] == inserted[i]['_id']), None):
-                updated.append(inserted[i])
-                deleted.remove(inserted[i])
-                inserted.pop(i)
+        for old_activity in old_activities:
+            activity = old_activity['_id']
+            
+            for new_activity in new_activities:
+                if new_activity['_id'] == old_activity:
+                    activity = None
+                    break
+                    
+            if activity != None:
+                deleted_activities.append(activity)
                 
-            i -= 1
-                
-        return {'inserted': inserted, 'updated': updated, 'deleted': deleted}
+        return deleted_activities
         
     def update(self, data):       
         if data.has_key('category'):
@@ -93,19 +87,19 @@ class AgentConfig(Config):
         if globals.activities == None:
             return ret
         
-        changes = self.get_changes(old_activities, new_activities)
+        deleted_activity_ids = self.get_deleted_activities(old_activities, new_activities)
         
-        for activity in changes['deleted']:
-            globals.activities[activity['_id']].stop()
-            del globals.activities[activity['_id']]
+        for activity_id in deleted_activity_ids:
+            globals.activities[activity_id].stop()
+            del globals.activities[activity_id]
             
-        for activity in changes['updated']:
-            globals.activities[activity['_id']].stop()
-            globals.activities[activity['_id']] = globals.activity_type(activity, globals.stop_event)
+        for activity in new_activities:
+            activity_id = activity['_id']
             
-        for activity in changes['inserted']:
-            globals.activities[activity['_id']] = globals.activity_type(activity, globals.stop_event)
-            globals.activities[activity['_id']].start()
+            if globals.activities.has(activity_id):
+                globals.activities[activity_id].stop()
+                
+            globals.activities[activity_id] = globals.activity_type(activity, globals.stop_event)
         
         return ret
 
