@@ -56,6 +56,7 @@ class Activity(threading.Thread):
                 
                 time.sleep(min(5, timeout))
                 timeout -= 5
+
         _log.debug('Shutting down activity')
 
     @staticmethod
@@ -148,7 +149,7 @@ def start():
     globals.activity_type = Activity
         
     while 1:
-        if globals.off_store.start() == False:
+        if globals.store.start() == False:
             quit()
 
         handle_conn_response(Connection().connect())
@@ -156,7 +157,7 @@ def start():
         length = len(activities)
         
         if length == 0:
-            globals.off_store.clr()
+            globals.store.clear_offline_data()
             
         globals.activities = {}
 

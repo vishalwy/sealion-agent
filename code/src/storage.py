@@ -39,7 +39,7 @@ class OfflineStore(threading.Thread):
         try:
             self.conn = sqlite.connect(self.path)
         except:
-            _log.error('Failed to create offline store at ' + self.path)
+            _log.error('Failed to create offline storage at ' + self.path)
             _log.debug('Shutting down offline store')
             return
         finally:
@@ -117,12 +117,13 @@ class OfflineStore(threading.Thread):
             except:
                 break
 
-        _log.debug('Closing offline store file')
+        _log.debug('Closing offline storage file')
         self.conn.close()
     
 class Sender(threading.Thread):    
-    def __init__(self, off_store):
+    def __init__(self, api, off_store):
         threading.Thread.__init__(self)
+        self.api = api
         self.off_store = off_store
         self.queue = queue.Queue(maxsize = 100)
         
@@ -136,18 +137,18 @@ class Sender(threading.Thread):
         
     def wait(self):
         _log.debug('Sender waiting for post event')
-        self.off_store.api.post_event.wait()
+        self.api.post_event.wait()
         _log.debug('Sender received post event')
         
-        if self.off_store.api.stop_event.is_set():
+        if self.api.stop_event.is_set():
             _log.debug('Sender received stop event')
             return False
         
         return True
         
     def run(self):
-        _log.debug('Starting up Sender')
-        api_status = self.off_store.api.status
+        _log.debug('Starting up sender')
+        api_status = self.api.status
         
         while 1:
             self.off_store.get(self)
@@ -160,22 +161,25 @@ class Sender(threading.Thread):
             except:
                 continue
                 
-            del_activities = []
-            del_rows = [item['row_id']] if item.has_key('row_id') else []
-
-            if self.off_store.api.post_data(item['activity'], item['data']) == api_status.MISMATCH:
+            del_activities, del_rows = [], []
+            row_id = item.get('row_id')
+            status = self.api.post_data(item['activity'], item['data'])
+                
+            if (status == api_status.SUCCESS or status == api_status.DATA_CONFLICT) and row_id:
+                del_rows.append(row_id)
+            elif self.api.post_data(item['activity'], item['data']) == api_status.MISMATCH:
                 del_activities.append(item['activity'])
                 
             if len(del_rows) or len(del_activities):
                 self.off_store.rem(del_rows, del_activities)
             
-        _log.debug('Shutting down offline store sender')
+        self.off_store.stop()
+        _log.debug('Shutting down sender')
 
 class Interface:
     def __init__(self, path, api):
-        self.api = api
         self.off_store = OfflineStore(path)
-        self.sender = Sender(self.off_store)
+        self.sender = Sender(api, self.off_store)
         
     def start(self):
         if self.off_store.start() == False:
@@ -188,3 +192,5 @@ class Interface:
         if sender.push({'activity': activity, 'data': data}) == False:
             self.off_store.put(activity, data)
         
+    def clear_offline_data(self):
+        self.off_store.clr()

@@ -1,10 +1,9 @@
-import pdb
 import threading
+import os
 import api
 import rtc
-import os
+import storage
 from helper import *
-from storage import OfflineStore
 
 class SealionConfig(Config):
     def __init__(self, file):
@@ -138,7 +137,7 @@ class Globals:
     def reset(self):
         self.stop_event = threading.Event()
         self.api = api.Interface(self.config, self.stop_event)
-        self.rtc = rtc.Interface(self.api)          
-        self.off_store = OfflineStore(Utils.get_safe_path(self.exe_path + 'var/dbs/' + self.config.agent.orgToken + '.db'), self.api)
+        self.rtc = rtc.Interface(self.api)   
+        self.store = storage.Interface(Utils.get_safe_path(self.exe_path + 'var/dbs/' + self.config.agent.orgToken + '.db'), self.api)
         self.activities = None
 
