@@ -21,7 +21,7 @@ class OfflineStore(threading.Thread):
         return True if self.conn else False
     
     def stop(self):
-        self.task_queue.put({'op': 'stop'})
+        self.task_queue.put({'op': 'close', 'kwargs': {}})
         
     def put(self, activity, data):
         self.task_queue.put({'op': 'insert', 'kwargs': {'activity': activity, 'data': data}})
@@ -33,7 +33,7 @@ class OfflineStore(threading.Thread):
         self.task_queue.put({'op': 'delete', 'kwargs': {'row_ids': row_ids, 'activities': activities}})
         
     def clr(self):
-        self.task_queue.put({'op': 'truncate'})
+        self.task_queue.put({'op': 'truncate', 'kwargs': {}})
         
     def run(self):
         _log.debug('Starting up offline store')
@@ -61,7 +61,9 @@ class OfflineStore(threading.Thread):
         
         while 1:
             task = self.task_queue.get()
-            getattr(self, task['op'])(**task['kwargs'])
+            
+            if getattr(self, task['op'])(**task['kwargs']) == False:
+                break
                 
         _log.debug('Shutting down offline store')
     
@@ -87,6 +89,8 @@ class OfflineStore(threading.Thread):
             
             if sender.push({'row_id': row[0], 'activity': row[1], 'data': data}) == False:
                 break
+                
+        return True
             
     def delete(self, row_ids = [], activities = []):
         try:
@@ -122,6 +126,7 @@ class OfflineStore(threading.Thread):
 
         _log.debug('Closing offline storage file')
         self.conn.close()
+        return False
     
 class Sender(threading.Thread):    
     def __init__(self, api, off_store):
@@ -151,12 +156,16 @@ class Sender(threading.Thread):
             return False
         
         return True
+    
+    def update_store(self, del_rows, del_activities):
+        if len(del_rows) or len(del_activities):
+            self.off_store.rem(del_rows, del_activities)
         
     def run(self):
         _log.debug('Starting up sender')
         api_status = self.api.status
         self.off_store.get(self)
-        del_activities, del_rows = [], []
+        del_rows, del_activities = [], []
         
         while 1:
             if self.wait() == False:
@@ -166,8 +175,8 @@ class Sender(threading.Thread):
                 item = self.queue.get(True, 5)
             except:
                 if self.queue.full() == False:
-                    self.off_store.rem(del_rows, del_activities)
-                    del_activities, del_rows = [], []
+                    self.update_store(del_rows, del_activities)
+                    del_rows, del_activities = [], []
                     self.off_store.get(self)
                 continue
                 
@@ -182,7 +191,7 @@ class Sender(threading.Thread):
                 self.off_store.put(item['activity'], item['data'])
                 continue
                 
-        self.off_store.rem(del_rows, del_activities)
+        self.update_store(del_rows, del_activities)
         _log.debug('Sender cleaning up queue')
             
         while 1:

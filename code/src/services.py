@@ -128,8 +128,10 @@ def handle_conn_response(status):
         _log.info('Failed to connect')
     elif status == globals.APIStatus.NOT_FOUND:
         _log.info('Uninstalling agent')
-    elif status == globals.APIStatus.UNAUTHERIZED or status == globals.APIStatus.BAD_REQUEST:
-        _log.info('Unautherized or bad request')
+    elif status == globals.APIStatus.UNAUTHERIZED:
+        _log.error('Agent unautherized to connect')
+    elif status == globals.APIStatus.BAD_REQUEST:
+        _log.error('Server marked the request as bad')
         
     quit()
         
