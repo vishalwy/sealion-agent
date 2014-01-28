@@ -14,44 +14,45 @@ class Activity(threading.Thread):
         self.lock = threading.RLock()
         self.stop_event = stop_event
         self.is_stop = False
+        self.is_whitelisted = self.is_in_whitelist()
+        
+    def is_in_whitelist(self):
+        globals = Globals()
+        whitelist = []
+        is_whitelisted = True
+
+        if hasattr(globals.config.sealion, 'whitelist'):
+            whitelist = globals.config.sealion.whitelist
+
+        if len(whitelist):
+            is_whitelisted = False
+
+            for i in range(0, len(whitelist)):
+                if re.match(whitelist[i], command):
+                    is_whitelisted = True
+                    break
+                    
+        return is_whitelisted
 
     def run(self):
         _log.debug('Starting up activity')
         
         while 1:                
             timestamp = int(round(time.time() * 1000))
-            activity = self.activity['_id']
-            command = self.activity['command']
-            globals = Globals()
-            whitelist = []
-            is_whitelisted = True
-            
-            if hasattr(globals.config.sealion, 'whitelist'):
-                whitelist = globals.config.sealion.whitelist
-
-            if len(whitelist):
-                is_whitelisted = False
-                
-                for i in range(0, len(whitelist)):
-                    if re.match(whitelist[i], command):
-                        is_whitelisted = True
-                        break
-                
             ret = {'return_code': 0, 'output': 'Command blocked by whitelist.'}
             
             if is_whitelisted == True:
-                ret = Activity.execute(command)
+                ret = Activity.execute(self.activity['command'])
                 
             data = {'returnCode': ret['return_code'], 'timestamp': timestamp, 'data': ret['output']}
-            t1 = int(time.time())
-            Activity.send(activity, data)
-            t2 = int(time.time())
-            timeout = max(1, self.activity['interval'] - (t2 - t1))
+            Activity.send(self.activity['_id'], data)
+            timeout = self.activity['interval']
             
             while timeout > 0:
                 if self.stop_event.is_set() or self.stop(True) == True:
                     _log.debug('Shutting down activity')
                     return
+                
                 time.sleep(min(5, timeout))
                 timeout -= 5
         _log.debug('Shutting down activity')
