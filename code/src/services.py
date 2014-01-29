@@ -171,7 +171,7 @@ class Controller(threading.Thread):
 
             self.globals.reset()
         
-        _log.debug('Controller singaling alarm')
+        _log.debug('Controller generating alarm signal')
         signal.alarm(2)
         _log.debug('Controller shutting down')
             
@@ -202,10 +202,12 @@ class Controller(threading.Thread):
 
 def sig_handler(signum, frame):    
     if signum == signal.SIGTERM:
-        _log.debug('Received SIGTERM signal')
+        _log.info('Received SIGTERM signal')
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
         Controller().stop()
     elif signum == signal.SIGINT:
-        _log.debug('Received SIGINT signal')
+        _log.info('Received SIGINT signal')
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         Controller().stop()
     elif signum == signal.SIGALRM:
         _log.debug('Received SIGALRM signal')

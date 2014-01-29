@@ -85,16 +85,12 @@ class Interface(threading.Thread):
         
         while 1:
             try:
-                if self.timeout == None:
-                    self.sio.wait()
-                else:
-                    self.sio.wait(self.timeout)
+                self.sio.wait(5)
             except Exception, e:
                 _log.debug(str(e))
+                self.connect()
             
             if self.api.stop_event.is_set():
                 break
-                
-            self.connect()
         
         _log.debug('Shutting down socket-io')
