@@ -4,8 +4,20 @@ sys.path.append('lib')
 sys.path.append('src')
 sys.path.append('lib/websocket_client') 
 
+def test(temp):
+    import os
+    import sys
+
+    f = open('/home/vishal/workspace/abc.txt', 'w')
+    f.write(temp)
+    f.close()
+
 import logging
-import helper
+try:
+    import helper
+except Exception, e:
+    test(str(e))
+
 import services
 from globals import Globals
 
