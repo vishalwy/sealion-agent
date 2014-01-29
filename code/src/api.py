@@ -1,6 +1,4 @@
-import pdb
 import logging
-from libxml2 import pos_id
 import time
 import requests
 import threading
@@ -28,9 +26,10 @@ class Interface(requests.Session):
         self.config = config
         self.stop_event = stop_event
         self.post_event = threading.Event()
-
+        self.proxies = requests.utils.get_environ_proxies(self.get_url())
+        
         if hasattr(self.config.sealion, 'proxy'):
-            self.proxies = self.config.sealion.proxy
+            self.proxies.update(self.config.sealion.proxy)
             
     @staticmethod
     def is_success(response):

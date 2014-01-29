@@ -7,7 +7,7 @@ from constructs import *
    
 class Utils(Namespace):
     @staticmethod
-    def sanitize_type(d, schema, is_delete_extra = True, regex = None):
+    def sanitize_type(d, schema, is_delete_extra = True, regex = None, is_regex = False):
         type_name = type(d).__name__
 
         if type_name == 'dict' and type(schema) is dict:
@@ -27,9 +27,14 @@ class Utils(Namespace):
                     flag = True
                     break
                     
-            if flag == True and (type_name == 'str' or type_name == 'unicode') and regex != None:
-                if re.compile(regex).match(d) == None:
+            if flag == True and (type_name == 'str' or type_name == 'unicode'):
+                if regex != None and re.match(regex, d) == None:
                     return False
+                elif is_regex == True:
+                    try:
+                        re.compile(d)
+                    except:
+                        return False
                 
             return flag
 
@@ -56,7 +61,8 @@ class Utils(Namespace):
                 if schema[key].has_key('depends') == True:
                     depends_check_keys.append(key)
 
-                if Utils.sanitize_type(d[key], schema[key]['type'], is_delete_extra, schema[key].get('regex')) == False:
+                if Utils.sanitize_type(d[key], schema[key]['type'], is_delete_extra, 
+                                        schema[key].get('regex'), schema[key].get('is_regex', False)) == False:
                     del d[key]
                     ret = 0 if is_optional == False else ret                
 

@@ -11,8 +11,14 @@ class SealionConfig(Config):
         Config.__init__(self)
         self.file = file
         self.schema = {
-            'proxy': {'type': {'https_proxy': {'type': 'str,unicode', 'optional': True}}, 'optional': True},
-            'whitelist': {'type': ['str,unicode'], 'optional': True},
+            'proxy': {
+                'type': {
+                    'https_proxy': {'type': 'str,unicode', 'optional': True}, 
+                    'http_proxy': {'type': 'str,unicode', 'optional': True}
+                },
+                'optional': True
+            },
+            'whitelist': {'type': ['str,unicode'], 'optional': True, 'is_regex': True},
             'env': {
                 'type': [{'name': {'type': 'str,unicode'}, 'value': {'type': 'str,unicode'}}],
                 'optional': True

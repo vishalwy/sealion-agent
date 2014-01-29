@@ -51,9 +51,10 @@ class Interface(threading.Thread):
         }
         
         if len(self.api.proxies):
-            _log.info('Proxy supplied; forcing xhr-polling for socket-io')
+            _log.info('Proxy detected; forcing xhr-polling for socket-io')
             kwargs['transports'] = ['xhr-polling']
         
+        _log.debug('Waiting for socket-io connection')
         self.sio = SocketIO(self.api.get_url(), **kwargs)
         return self
     
