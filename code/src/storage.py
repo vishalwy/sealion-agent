@@ -50,7 +50,7 @@ class OfflineStore(threading.Thread):
         self.cursor = self.conn.cursor()
         
         if self.setup_schema() == False:
-            _log.error('Currupted offline storage found at ' + self.path)
+            _log.error('Schema mismatch in offline storage at ' + self.path)
             self.close_db()
             _log.debug('Shutting down offline store')
             self.conn_event.set()
