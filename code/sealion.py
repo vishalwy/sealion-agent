@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import traceback
 
 exe_path = os.path.dirname(os.path.abspath(sys.modules['__main__'].__file__))
 exe_path = exe_path if (exe_path[len(exe_path) - 1] == '/') else (exe_path + '/')
@@ -10,12 +11,12 @@ sys.path.append(exe_path + 'lib/service')
 from daemon import Daemon
 
 class Sealion(Daemon):
-    def save_dump(self, exception):
+    def save_dump(self):
         path = '%svar/crash/agent%d.dmp' % (exe_path, int(time.time()))
         dir = os.path.dirname(path)
         os.path.isdir(dir) or os.makedirs(dir)
         f = open(path, 'w')
-        f.write(str(exception) + ' ' + exe_path)
+        traceback.print_exc(file = f)
         f.close()
     
     def run(self):
@@ -23,8 +24,8 @@ class Sealion(Daemon):
         
         try:        
             import __init__
-        except Exception, e:
-            self.save_dump(e)
+        except:
+            self.save_dump()
 
 daemon = Sealion(exe_path + 'var/run/sealion.pid')
 
