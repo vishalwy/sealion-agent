@@ -49,7 +49,7 @@ class Activity(threading.Thread):
                 _log.info('Command ' + self.activity['_id'] + ' is blocked by whitelist')
                 
             data = {'returnCode': ret['return_code'], 'timestamp': timestamp, 'data': ret['output']}
-            _log.debug('Pushing ' + self.activity['_id'] + ' @ ' + str(timestamp) + ' to store')
+            _log.debug('Pushing activity(%s @ %d) to store' % (self.activity['_id'], timestamp))
             globals.store.push(self.activity['_id'], data)
             timeout = self.activity['interval']
             break_flag = False

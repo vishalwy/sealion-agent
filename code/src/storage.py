@@ -40,6 +40,7 @@ class OfflineStore(threading.Thread):
         
         try:
             self.conn = sqlite.connect(self.path)
+            _log.debug('Created offline storage at ' + self.path)
         except Exception, e:
             _log.error('Failed to create offline storage at ' + self.path + '; ' + str(e))
             _log.debug('Shutting down offline store')
@@ -49,7 +50,7 @@ class OfflineStore(threading.Thread):
         self.cursor = self.conn.cursor()
         
         if self.setup_schema() == False:
-            _log.error('Currupted storage found at ' + self.path)
+            _log.error('Currupted offline storage found at ' + self.path)
             self.close_db()
             _log.debug('Shutting down offline store')
             self.conn_event.set()
@@ -109,10 +110,10 @@ class OfflineStore(threading.Thread):
         try:
             self.cursor.execute('INSERT INTO data VALUES(?, ?, ?, ?)', (activity, data['timestamp'], data['returnCode'], data['data']))
             self.conn.commit()
-            _log.debug('Inserted ' + activity + ' @ ' + str(data['timestamp']) + ' to offline store')
+            _log.debug('Inserted activity(%s @ %d) to offline storage' % (activity, data['timestamp']))
             callback and callback()
         except Exception, e:
-            _log.error('Failed to insert rows from storage; ' + str(e))
+            _log.error('Failed to insert rows to offline storage; ' + str(e))
         
         return True
     
@@ -120,11 +121,11 @@ class OfflineStore(threading.Thread):
         try:
             rows = self.cursor.execute('SELECT ROWID, * FROM data ORDER BY timestamp LIMIT 10')
         except Exception, e:
-            _log.error('Failed to retreive rows from storage; ' + str(e))
+            _log.error('Failed to retreive rows from offline storage; ' + str(e))
             return True
         
         rows = self.cursor.fetchall()
-        _log.debug('Retreived %d rows from storage' % len(rows))
+        _log.debug('Retreived %d rows from offline storage' % len(rows))
         callback(rows)
         return True
             
@@ -133,9 +134,9 @@ class OfflineStore(threading.Thread):
             format = (','.join('?' * len(row_ids)), ','.join('?' * len(activities)))
             self.cursor.execute('DELETE FROM data WHERE ROWID IN (%s) OR activity IN (%s)' % format, row_ids + activities)
             self.conn.commit()
-            _log.debug('Deleted ' + str(self.cursor.rowcount) + ' records from offline store')
+            _log.debug('Deleted ' + str(self.cursor.rowcount) + ' records from offline storage')
         except Exception, e:
-            _log.error('Failed to delete rows from storage; ' + str(e))
+            _log.error('Failed to delete rows from offline storage; ' + str(e))
         
         return True
     
@@ -143,9 +144,9 @@ class OfflineStore(threading.Thread):
         try:
             self.cursor.execute('DELETE FROM data')
             self.conn.commit()
-            _log.debug('Deleting all records from offline store')
+            _log.debug('Deleting all records from offline storage')
         except Exception, e:
-            _log.error('Failed to truncate storage; ' + str(e))
+            _log.error('Failed to truncate offline storage; ' + str(e))
         
         return True
     
@@ -210,7 +211,12 @@ class Sender(threading.Thread):
         if is_available == None:
             is_available = self.store_data_available
         else:
-            self.store_data_available = is_available
+            if is_available == True and self.store_data_available == False:
+                _log.debug('Marking offline store available')
+                self.store_data_available = True
+            elif is_available == False and self.store_data_available == True:
+                _log.debug('Marking offline store available')
+                self.store_data_available = False
             
         self.lock.release()
         return is_available
@@ -291,7 +297,6 @@ class Interface:
         return True
     
     def store_put_callback(self):
-        _log.debug('Marking offline store available on put callback')
         self.sender.store_available(True)
     
     def push(self, activity, data):

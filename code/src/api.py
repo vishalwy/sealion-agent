@@ -158,10 +158,10 @@ class Interface(requests.Session):
         ret = self.status.SUCCESS
         
         if Interface.is_success(response):
-            _log.debug('Sent ' + activity_id + ' @ ' + str(data['timestamp']))
+            _log.debug('Sent activity(%s @ %d)' % (activity_id, data['timestamp']))
             self.set_events(post_event = True)
         else:
-            ret = self.error('Send failed for ' + activity_id + ' @ ' + str(data['timestamp']), response)
+            ret = self.error('Send failed for activity(%s @ %d)' % (activity_id, data['timestamp']), response)
             
         return ret
     
