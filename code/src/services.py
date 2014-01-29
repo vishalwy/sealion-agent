@@ -52,14 +52,19 @@ class Activity(threading.Thread):
             _log.debug('Pushing ' + self.activity['_id'] + ' @ ' + str(timestamp) + ' to store')
             globals.store.push(self.activity['_id'], data)
             timeout = self.activity['interval']
+            break_flag = False
             
             while timeout > 0:
                 if self.stop_event.is_set() or self.stop(True) == True:
-                    _log.debug('Shutting down activity')
-                    return
+                    _log.debug('Activity received stop event')
+                    break_flag = True
+                    break
                 
                 time.sleep(min(5, timeout))
                 timeout -= 5
+                
+            if break_flag == True:
+                break
 
         _log.debug('Shutting down activity')
 

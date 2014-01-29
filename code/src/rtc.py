@@ -60,7 +60,6 @@ class Interface(threading.Thread):
         _log.debug('Starting up socket-io')
         
         while 1:
-            self.api.post_event.wait()
             self.sio.wait(5)
             
             if self.api.stop_event.is_set():

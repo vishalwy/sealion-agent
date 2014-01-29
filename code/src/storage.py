@@ -189,7 +189,10 @@ class Sender(threading.Thread):
         return True
         
     def wait(self):
-        self.api.post_event.wait()
+        if self.api.post_event.is_set() == False:
+            _log.debug('Sender waiting for post event')
+            self.api.post_event.wait()
+            _log.debug('Sender received post event')
         
         if self.api.stop_event.is_set():
             _log.debug('Sender received stop event')
@@ -244,10 +247,7 @@ class Sender(threading.Thread):
             except:
                 self.update_store(del_rows, del_activities)
                 del_rows, del_activities = [], []
-                
-                if self.store_available() and self.queue.full() == False:
-                    self.off_store.get(self.store_get_callback)
-                    
+                self.store_available() and self.off_store.get(self.store_get_callback)
                 continue
                 
             row_id = item.get('row_id')
