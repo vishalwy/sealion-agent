@@ -106,6 +106,7 @@ class AgentConfig(Config):
                 globals.activities[activity_id].stop()
                 
             globals.activities[activity_id] = globals.activity_type(activity, globals.stop_event)
+            globals.activities[activity_id].start()
         
         return ret
 

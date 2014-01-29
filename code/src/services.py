@@ -36,7 +36,7 @@ class Activity(threading.Thread):
         return is_whitelisted
 
     def run(self):
-        _log.debug('Starting up activity')
+        _log.debug('Starting up activity %s' % self.activity['_id'])
         globals = Globals()
         
         while 1:                
@@ -56,7 +56,7 @@ class Activity(threading.Thread):
             
             while timeout > 0:
                 if self.stop_event.is_set() or self.stop(True) == True:
-                    _log.debug('Activity received stop event')
+                    _log.debug('Activity %s received stop event' % self.activity['_id'])
                     break_flag = True
                     break
                 
@@ -66,7 +66,7 @@ class Activity(threading.Thread):
             if break_flag == True:
                 break
 
-        _log.debug('Shutting down activity')
+        _log.debug('Shutting down activity %s' % self.activity['_id'])
 
     @staticmethod
     def execute(command):
@@ -143,6 +143,7 @@ def handle_conn_response(status):
 def stop():
     _log.debug('Stopping all threads')
     Globals().api.stop()
+    Globals().rtc.stop()
     threads = threading.enumerate()
     curr_thread = threading.current_thread()
     

@@ -215,7 +215,7 @@ class Sender(threading.Thread):
                 _log.debug('Marking offline store available')
                 self.store_data_available = True
             elif is_available == False and self.store_data_available == True:
-                _log.debug('Marking offline store available')
+                _log.debug('Marking offline store not available')
                 self.store_data_available = False
             
         self.lock.release()
@@ -236,8 +236,8 @@ class Sender(threading.Thread):
                 
             i += 1
         
-        self.store_available(row_count != 0)
         _log.debug('Pushed %d rows to sender from offline storage' % i)
+        self.store_available(row_count != 0)
         
     def run(self):
         _log.debug('Starting up sender')
