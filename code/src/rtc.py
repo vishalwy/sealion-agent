@@ -85,7 +85,10 @@ class Interface(threading.Thread):
         
         while 1:
             try:
-                self.sio.wait()
+                if self.timeout == None:
+                    self.sio.wait()
+                else:
+                    self.sio.wait(self.timeout)
             except Exception, e:
                 _log.debug(str(e))
             

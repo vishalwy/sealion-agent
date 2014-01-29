@@ -3,6 +3,8 @@ import threading
 import time
 import subprocess
 import re
+import signal
+from constructs import *
 from globals import Globals
 
 _log = logging.getLogger(__name__)
@@ -120,38 +122,95 @@ class Connection(threading.Thread):
                 status = globals.APIStatus.SUCCESS
             
         return status
+       
+class Controller(threading.Thread):
+    __metaclass__ = SingletonType
     
-def handle_conn_response(status):
-    globals = Globals()
+    def __init__(self):
+        threading.Thread.__init__(self)
+        self.globals = Globals()
+        self.lock = threading.RLock()
+        self.is_stop = False
+        self.main_thread = threading.current_thread()
+    
+    def handle_conn_response(self, status):
+        if status == self.globals.APIStatus.SUCCESS:
+            return True
+        elif self.globals.api.is_not_connected(status):
+            _log.info('Failed to connect')
+        elif status == self.globals.APIStatus.NOT_FOUND:
+            _log.info('Uninstalling agent')
+        elif status == self.globals.APIStatus.UNAUTHERIZED:
+            _log.error('Agent unautherized to connect')
+        elif status == self.globals.APIStatus.BAD_REQUEST:
+            _log.error('Server marked the request as bad')
 
-    if status == globals.APIStatus.SUCCESS:
-        return
-    
-    stop()
-    
-    if globals.api.is_not_connected(status):
-        _log.info('Failed to connect')
-    elif status == globals.APIStatus.NOT_FOUND:
-        _log.info('Uninstalling agent')
-    elif status == globals.APIStatus.UNAUTHERIZED:
-        _log.error('Agent unautherized to connect')
-    elif status == globals.APIStatus.BAD_REQUEST:
-        _log.error('Server marked the request as bad')
+        return False
         
-    quit()
-        
-def stop():
-    _log.debug('Stopping all threads')
-    Globals().api.stop()
-    Globals().rtc.stop()
-    threads = threading.enumerate()
-    curr_thread = threading.current_thread()
-    
-    for thread in threads:
-        if thread.ident != curr_thread.ident:
-            _log.debug('Waiting for ' + str(thread))
-            thread.join()
+    def run(self):
+        while 1:
+            _log.debug('Controller starting up')
             
+            if self.globals.store.start() == False:
+                break
+
+            if self.handle_conn_response(Connection().connect()) == False:
+                break
+
+            if len(self.globals.config.agent.activities) == 0:
+                self.globals.store.clear_offline_data()
+
+            self.globals.manage_activities();
+            _log.debug('Controller waiting for stop event')
+            self.globals.stop_event.wait()
+            _log.debug('Controller received stop event')
+            self.stop_threads()
+
+            if self.stop(True) == True:
+                break
+
+            self.globals.reset()
+        
+        _log.debug('Controller singaling alarm')
+        signal.alarm(2)
+        _log.debug('Controller shutting down')
+            
+    def stop(self, is_query = None):
+        is_stop = True
+        self.lock.acquire()
+        
+        if is_query == True:
+            is_stop = self.is_stop
+        else:
+            self.is_stop = is_stop
+            self.globals.api.stop()
+            
+        self.lock.release()
+        return is_stop
+        
+    def stop_threads(self):
+        _log.debug('Stopping all threads')
+        self.globals.api.stop()
+        self.globals.rtc.stop()
+        threads = threading.enumerate()
+        curr_thread = threading.current_thread()
+
+        for thread in threads:
+            if thread.ident != curr_thread.ident and thread.ident != self.main_thread.ident:
+                _log.debug('Waiting for ' + str(thread))
+                thread.join()
+
+def sig_handler(signum, frame):    
+    if signum == signal.SIGTERM:
+        _log.debug('Received SIGTERM signal')
+        Controller().stop()
+    elif signum == signal.SIGINT:
+        _log.debug('Received SIGINT signal')
+        Controller().stop()
+    elif signum == signal.SIGALRM:
+        _log.debug('Received SIGALRM signal')
+        signal.alarm(0)
+    
 def quit(status = 0):
     _log.info('Shutting down with status code ' + str(status))
     exit()
@@ -159,20 +218,16 @@ def quit(status = 0):
 def start():
     globals = Globals()
     globals.activity_type = Activity
-        
+    controller = Controller()
+    signal.signal(signal.SIGALRM, sig_handler)
+    signal.signal(signal.SIGTERM, sig_handler)
+    signal.signal(signal.SIGINT, sig_handler)
+    controller.start()
+    
     while 1:
-        if globals.store.start() == False:
+        _log.debug('Waiting for signals SIGALRM or SIGTERM or SIGINT')
+        signal.pause()
+        
+        if controller.is_alive() == False:
             quit()
-
-        handle_conn_response(Connection().connect())
-                
-        if len(globals.config.agent.activities) == 0:
-            globals.store.clear_offline_data()
-            
-        globals.manage_activities();
-        _log.debug('Waiting for stop event')
-        globals.stop_event.wait()
-        _log.debug('Received stop event')
-        stop()        
-        globals.reset()
 
