@@ -1,5 +1,6 @@
 import pdb
 import logging
+from libxml2 import pos_id
 import time
 import requests
 import threading
@@ -61,6 +62,21 @@ class Interface(requests.Session):
         
         return False
     
+    def set_events(self, stop_event = None, post_event = None):
+        if stop_event == True and self.stop_event.is_set() == False:
+            _log.debug('Setting stop event')
+            self.stop_event.set()
+        elif stop_event == False and self.stop_event.is_set() == True:
+            _log.debug('Resetting stop event')
+            self.stop_event.clear()
+        
+        if post_event == True and self.post_event.is_set() == False:
+            _log.debug('Setting post event')
+            self.post_event.set()
+        elif post_event == False and self.post_event.is_set() == True:
+            _log.debug('Resetting post event')
+            self.post_event.clear()
+    
     def get_url(self, path = ''):
         path.strip()
         
@@ -93,8 +109,7 @@ class Interface(requests.Session):
         return response
     
     def ping(self):
-        _log.debug('Setting post event')
-        self.post_event.set()
+        self.set_events(post_event = True)
     
     def register(self, retry_count = -1, retry_interval = 5):
         data = self.config.agent.get_dict(['orgToken', 'name', 'category'])
@@ -119,8 +134,7 @@ class Interface(requests.Session):
             _log.info('Authentication successful')
             self.config.agent.update(response.json())
             self.config.agent.save()
-            _log.debug('Setting post event')
-            self.post_event.set()
+            self.set_events(post_event = True)
         else:
             ret = self.error('Authenitcation failed', response)
         
@@ -145,8 +159,7 @@ class Interface(requests.Session):
         
         if Interface.is_success(response):
             _log.debug('Sent ' + activity_id + ' @ ' + str(data['timestamp']))
-            _log.debug('Setting post event')
-            self.post_event.set()
+            self.set_events(post_event = True)
         else:
             ret = self.error('Send failed for ' + activity_id + ' @ ' + str(data['timestamp']), response)
             
@@ -162,17 +175,13 @@ class Interface(requests.Session):
         return ret
     
     def stop(self):
-        _log.debug('Setting stop event')
-        self.stop_event.set()
-        _log.debug('Setting post event')
-        self.post_event.set()
+        self.set_events(True, True)
     
     def error(self, message, response):        
         Interface.print_error(message, response)    
         
         if response == None:
-            _log.debug('Resetting post event')
-            self.post_event.clear()
+            self.set_events(post_event = False)
             return self.status.NOT_CONNECTED
         
         status = response.status_code
@@ -183,8 +192,7 @@ class Interface(requests.Session):
             code = 0
             
         if status >= 500:
-            _log.debug('Resetting post event')
-            self.post_event.clear()
+            self.set_events(post_event = False)
             return self.status.NO_SERVICE
         elif status == 400:
             self.stop()
