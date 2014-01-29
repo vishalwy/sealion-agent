@@ -65,5 +65,16 @@ class Interface(threading.Thread):
 
     def run(self):       
         _log.debug('Starting up socket-io')
-        self.sio.wait()                
+        
+        while 1:
+            try:
+                self.sio.wait()
+            except Exception, e:
+                _log.debug(str(e))
+            
+            if self.api.stop_event.is_set():
+                break
+                
+            self.connect()
+        
         _log.debug('Shutting down socket-io')

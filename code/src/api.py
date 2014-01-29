@@ -96,7 +96,7 @@ class Interface(requests.Session):
                 time.sleep(retry_interval)
             
             try:
-                response = method(*args, **kwargs)
+                response = method(timeout = 10, *args, **kwargs)
             except Exception, e:
                 _log.error(str(e)) 
                 

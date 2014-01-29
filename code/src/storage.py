@@ -1,4 +1,3 @@
-import pdb
 import logging
 import threading
 import time
@@ -239,6 +238,9 @@ class Sender(threading.Thread):
         _log.debug('Pushed %d rows to sender from offline storage' % i)
         self.store_available(row_count != 0)
         
+    def store_put_callback(self):
+        self.store_available(True)
+        
     def run(self):
         _log.debug('Starting up sender')
         api_status = self.api.status
@@ -296,12 +298,9 @@ class Interface:
         self.sender.start()
         return True
     
-    def store_put_callback(self):
-        self.sender.store_available(True)
-    
     def push(self, activity, data):
         if self.sender.push({'activity': activity, 'data': data}) == False:
-            self.off_store.put(activity, data, self.store_put_callback)
+            self.off_store.put(activity, data, self.sender.store_put_callback)
             
         t = int(time.time())
         
