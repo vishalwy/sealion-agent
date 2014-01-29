@@ -165,21 +165,14 @@ def start():
             quit()
 
         handle_conn_response(Connection().connect())
-        activities = globals.config.agent.activities
-        length = len(activities)
-        
-        if length == 0:
+                
+        if len(globals.config.agent.activities) == 0:
             globals.store.clear_offline_data()
             
-        globals.activities = {}
-
-        for i in range(0, length):
-            globals.activities[activities[i]['_id']] = Activity(activities[i], globals.stop_event)
-            globals.activities[activities[i]['_id']].start()
-
+        globals.manage_activities();
         _log.debug('Waiting for stop event')
         globals.stop_event.wait()
         _log.debug('Received stop event')
         stop()        
         globals.reset()
-    
+

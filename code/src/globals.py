@@ -89,25 +89,7 @@ class AgentConfig(Config):
             return ret
         
         deleted_activity_ids = self.get_deleted_activities(old_activities, new_activities)
-        
-        for activity_id in deleted_activity_ids:
-            globals.activities[activity_id].stop()
-            del globals.activities[activity_id]
-            
-        for activity in new_activities:
-            activity_id = activity['_id']
-            
-            if globals.activities.has_key(activity_id):
-                t = [old_activity for old_activity in old_activities if old_activity['_id'] == activity_id]
-                
-                if len(t) and t[0]['interval'] == activity['interval'] and t[0]['command'] == activity['command']:
-                    continue
-                
-                globals.activities[activity_id].stop()
-                
-            globals.activities[activity_id] = globals.activity_type(activity, globals.stop_event)
-            globals.activities[activity_id].start()
-        
+        globals.manage_activities(old_activities, deleted_activity_ids)
         return ret
 
 class Globals:
@@ -141,4 +123,27 @@ class Globals:
         self.rtc = rtc.Interface(self.api)   
         self.store = storage.Interface(Utils.get_safe_path(self.exe_path + 'var/dbs/' + self.config.agent.orgToken + '.db'), self.api)
         self.activities = None
+        
+    def manage_activities(self, old_activities = [], deleted_activity_ids = []):
+        self.activities = self.activities or {}
+        new_activities = self.config.agent.activities
+        
+        for activity_id in deleted_activity_ids:
+            self.activities[activity_id].stop()
+            del self.activities[activity_id]
+            
+        for activity in new_activities:
+            activity_id = activity['_id']
+            
+            if self.activities.has_key(activity_id):
+                t = [old_activity for old_activity in old_activities if old_activity['_id'] == activity_id]
+                
+                if len(t) and t[0]['interval'] == activity['interval'] and t[0]['command'] == activity['command']:
+                    continue
+                
+                self.activities[activity_id].stop()
+                
+            self.activities[activity_id] = self.activity_type(activity, self.stop_event)
+            self.activities[activity_id].start()
+
 
