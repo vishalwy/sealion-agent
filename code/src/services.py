@@ -92,12 +92,12 @@ class Activity(threading.Thread):
 class Connection(threading.Thread):
     def run(self):
         _log.debug('Starting up connection')
-        self.attempt()
+        self.attempt(retry_interval = 20)
         _log.debug('Shutting down connection')
     
-    def attempt(self, max_try = -1):
+    def attempt(self, max_try = -1, retry_interval = 5):
         globals = Globals()
-        status = globals.api.authenticate(max_try)
+        status = globals.api.authenticate(max_try, retry_interval)
         status == globals.APIStatus.SUCCESS and globals.rtc.connect().start()
         return status            
         

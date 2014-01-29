@@ -23,7 +23,7 @@ class OfflineStore(threading.Thread):
     def stop(self):
         self.task_queue.put({'op': 'close', 'kwargs': {}})
         
-    def put(self, activity, data, callback):
+    def put(self, activity, data, callback = None):
         self.task_queue.put({'op': 'insert', 'kwargs': {'activity': activity, 'data': data, 'callback': callback}})
         
     def get(self, callback):
@@ -264,7 +264,7 @@ class Sender(threading.Thread):
             elif status == api_status.MISMATCH:
                 del_activities.append(item['activity'])
             elif (status == api_status.NOT_CONNECTED or status == api_status.NO_SERVICE) and row_id == None:
-                self.off_store.put(item['activity'], item['data'])
+                self.off_store.put(item['activity'], item['data'], self.store_put_callback)
                 continue
                 
         self.update_store(del_rows, del_activities)

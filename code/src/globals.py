@@ -1,4 +1,3 @@
-import pdb
 import threading
 import os
 import api
@@ -13,8 +12,8 @@ class SealionConfig(Config):
         self.schema = {
             'proxy': {
                 'type': {
-                    'https_proxy': {'type': 'str,unicode', 'optional': True}, 
-                    'http_proxy': {'type': 'str,unicode', 'optional': True}
+                    'https': {'type': 'str,unicode', 'optional': True}, 
+                    'http': {'type': 'str,unicode', 'optional': True}
                 },
                 'optional': True
             },

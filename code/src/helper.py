@@ -92,7 +92,7 @@ class Utils(Namespace):
         exe_path = os.path.dirname(os.path.abspath(sys.modules['__main__'].__file__))
         exe_path = exe_path if (exe_path[len(exe_path) - 1] == '/') else (exe_path + '/')
         return exe_path
-    
+         
 class Config:
     def __init__(self):
         self.schema = {}
