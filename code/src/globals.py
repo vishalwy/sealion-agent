@@ -102,7 +102,6 @@ class Globals:
     
     def __init__(self):
         self.exe_path = Utils.get_exe_path()
-        self.lock_file = Utils.get_safe_path(self.exe_path + 'var/run/sealion.pid')
         self.config = EmptyClass()
         self.config.sealion = SealionConfig(Utils.get_safe_path(self.exe_path + 'etc/config/sealion.json'))
         self.config.agent = AgentConfig(Utils.get_safe_path(self.exe_path + 'etc/config/agent.json'))

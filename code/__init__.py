@@ -1,23 +1,15 @@
 #!/usr/bin/python
+import os
 import sys
-sys.path.append('lib')
-sys.path.append('src')
-sys.path.append('lib/websocket_client') 
 
-def test(temp):
-    import os
-    import sys
-
-    f = open('/home/vishal/workspace/abc.txt', 'w')
-    f.write(temp)
-    f.close()
+exe_path = os.path.dirname(os.path.abspath(sys.modules['__main__'].__file__))
+exe_path = exe_path if (exe_path[len(exe_path) - 1] == '/') else (exe_path + '/')
+sys.path.append(exe_path + 'lib')
+sys.path.append(exe_path + 'src')
+sys.path.append(exe_path + 'lib/websocket_client') 
 
 import logging
-try:
-    import helper
-except Exception, e:
-    test(str(e))
-
+import helper
 import services
 from globals import Globals
 
@@ -26,7 +18,6 @@ _log = logging.getLogger(__name__)
 logging_list = []
 logging_level = logging.INFO
 format = '%(asctime)-15s %(levelname)-6s %(thread)d - %(module)-s[%(lineno)-d]: %(message)s'
-exe_path = helper.Utils.get_exe_path()
 logging.basicConfig(level = logging_level, format = format)
 
 try:
