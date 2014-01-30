@@ -60,7 +60,8 @@ class AgentConfig(Config):
                 }],
                 'depends': ['_id', 'agentVersion'],
                 'optional': True
-            }    
+            },
+            'updateUrl': {'type': 'str,unicode', 'depends': ['_id'], 'regex': '^.+$'}
         }
         
     def get_deleted_activities(self, old_activities, new_activities):
@@ -79,16 +80,22 @@ class AgentConfig(Config):
                 
         return deleted_activities
         
-    def update(self, data):       
+    def update(self, data):             
         if data.has_key('category'):
             del data['category']
+            
+        globals = Globals()
+        version = data.get('agentVersion')
+            
+        if version and version != self.data['agentVersion']:
+            del data['agentVersion']
+            globals.api.update_agent()
             
         self.lock.acquire()
         old_activities = self.data['activities'] if self.data.has_key('activities') else []
         ret = Config.update(self, data)
         new_activities = self.data['activities'] if self.data.has_key('activities') else []
         self.lock.release()
-        globals = Globals()
         
         if globals.activities == None:
             return ret
