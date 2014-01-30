@@ -30,6 +30,7 @@ class Interface(requests.Session):
         self.post_event = threading.Event()
         self.proxies = requests.utils.get_environ_proxies(self.get_url())
         self.stop_status = Status.SUCCESS
+        self.is_authenticated = False
         
         if hasattr(self.config.sealion, 'proxy'):
             self.proxies.update(self.config.sealion.proxy)
@@ -136,6 +137,7 @@ class Interface(requests.Session):
             _log.info('Authentication successful')
             self.config.agent.update(response.json())
             self.config.agent.save()
+            self.is_authenticated = True
             self.set_events(post_event = True)
         else:
             ret = self.error('Authenitcation failed', response)

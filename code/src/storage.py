@@ -192,9 +192,10 @@ class Sender(threading.Thread):
         
     def wait(self):
         if self.api.post_event.is_set() == False:
-            _log.debug('Sender waiting for post event')
-            self.api.post_event.wait()
-            _log.debug('Sender received post event')
+            timeout = 30.0 if self.api.is_authenticated else None
+            
+            _log.debug('Sender waiting for post event' + (' for 30 seconds' if timeout else ''))
+            self.api.post_event.wait(timeout)
         
         if self.api.stop_event.is_set():
             _log.debug('Sender received stop event')
