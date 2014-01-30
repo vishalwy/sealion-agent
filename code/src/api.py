@@ -27,6 +27,7 @@ class Interface(requests.Session):
         self.stop_event = stop_event
         self.post_event = threading.Event()
         self.proxies = requests.utils.get_environ_proxies(self.get_url())
+        self.stop_status = Status.SUCCESS
         
         if hasattr(self.config.sealion, 'proxy'):
             self.proxies.update(self.config.sealion.proxy)
@@ -173,8 +174,11 @@ class Interface(requests.Session):
 
         return ret
     
-    def stop(self):
+    def stop(self, stop_status = None):
         self.set_events(True, True)
+        
+        if stop_status != None:
+            self.stop_status = stop_status
     
     def error(self, message, response):        
         Interface.print_error(message, response)    
@@ -194,22 +198,22 @@ class Interface(requests.Session):
             self.set_events(post_event = False)
             return self.status.NO_SERVICE
         elif status == 400:
-            self.stop()
+            self.stop(self.status.BAD_REQUEST)
             return self.status.BAD_REQUEST
         elif status == 401:
             if code == 200004:
                 return self.status.MISMATCH
             else:
-                self.stop()
+                self.stop(self.status.UNAUTHERIZED)
                 return self.status.UNAUTHERIZED
         elif status == 404:
-            self.stop()
+            self.stop(self.status.NOT_FOUND)
             return self.status.NOT_FOUND
         elif status == 409:
             if code == 204011:
                 return self.status.DATA_CONFLICT
             else:
-                self.stop()
+                self.stop(self.status.SESSION_CONFLICT)
                 return self.status.SESSION_CONFLICT
         
         return self.status.UNKNOWN

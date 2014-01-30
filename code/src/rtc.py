@@ -30,7 +30,7 @@ class SocketIONamespace(BaseNamespace):
 
     def on_agent_removed(self, *args):
         _log.debug('Socket-io received  agent_removed event')
-        self.rtc.api.stop()
+        self.rtc.api.stop(self.rtc.api.status.NOT_FOUND)
 
     def on_org_token_resetted(self, *args):
         _log.debug('Socket-io received  org_token_resetted event')

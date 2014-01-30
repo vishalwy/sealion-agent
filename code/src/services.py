@@ -133,7 +133,7 @@ class Controller(threading.Thread):
         self.is_stop = False
         self.main_thread = threading.current_thread()
     
-    def handle_conn_response(self, status):
+    def handle_response(self, status):
         if status == self.globals.APIStatus.SUCCESS:
             return True
         elif self.globals.api.is_not_connected(status):
@@ -154,7 +154,7 @@ class Controller(threading.Thread):
             if self.globals.store.start() == False:
                 break
 
-            if self.handle_conn_response(Connection().connect()) == False:
+            if self.handle_response(Connection().connect()) == False:
                 break
 
             if len(self.globals.config.agent.activities) == 0:
@@ -165,13 +165,16 @@ class Controller(threading.Thread):
             self.globals.stop_event.wait()
             _log.debug('Controller received stop event')
             self.stop_threads()
+            
+            if self.handle_response(self.globals.api.stop_status) == False:
+                break
 
             if self.stop(True) == True:
                 break
 
             self.globals.reset()
         
-        _log.debug('Controller generating alarm signal')
+        _log.debug('Controller generating SIGALRM signal')
         signal.alarm(2)
         _log.debug('Controller shutting down')
             
@@ -214,8 +217,8 @@ def sig_handler(signum, frame):
         signal.alarm(0)
     
 def quit(status = 0):
-    _log.info('Shutting down with status code ' + str(status))
-    exit()
+    _log.info('Shutting down with status code %d' % status)
+    exit(status)
     
 def start():
     globals = Globals()

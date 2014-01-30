@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import traceback
+import signal
 
 exe_path = os.path.dirname(os.path.abspath(sys.modules['__main__'].__file__))
 exe_path = exe_path if (exe_path[len(exe_path) - 1] == '/') else (exe_path + '/')
@@ -26,6 +27,12 @@ class Sealion(Daemon):
             import __init__
         except:
             self.save_dump()
+            
+def sig_handler(signum, frame):    
+    if signum == signal.SIGINT:
+        exit(2)
+    
+signal.signal(signal.SIGINT, sig_handler)
 
 daemon = Sealion(exe_path + 'var/run/sealion.pid')
 
