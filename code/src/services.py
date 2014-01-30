@@ -236,5 +236,7 @@ def start():
         signal.pause()
         
         if controller.is_alive() == False:
+            globals.stop_event.clear()
+            globals.api.logout()
             quit()
 

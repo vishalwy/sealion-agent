@@ -171,7 +171,9 @@ class Interface(requests.Session):
         response = self.exec_method('delete', 0, 0, self.get_url('agents/1/sessions/1'))
         ret = self.status.SUCCESS
         
-        if Interface.is_success(response) == False:
+        if Interface.is_success(response):
+            _log.debug('Logout successful')
+        else:
             ret = self.error('Logout failed for agent ' + self.config.agent._id, response)
 
         return ret

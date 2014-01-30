@@ -25,8 +25,8 @@ class OfflineStore(threading.Thread):
     def put(self, activity, data, callback = None):
         self.task_queue.put({'op': 'insert', 'kwargs': {'activity': activity, 'data': data, 'callback': callback}})
         
-    def get(self, callback):
-        self.task_queue.put({'op': 'select', 'kwargs': {'callback': callback}})
+    def get(self, limit, callback):
+        self.task_queue.put({'op': 'select', 'kwargs': {'limit': limit, 'callback': callback}})
         
     def rem(self, row_ids, activities):
         self.task_queue.put({'op': 'delete', 'kwargs': {'row_ids': row_ids, 'activities': activities}})
@@ -116,9 +116,7 @@ class OfflineStore(threading.Thread):
         
         return True
     
-    def select(self, callback):
-        limit = 50
-        
+    def select(self, limit, callback):        
         try:
             rows = self.cursor.execute('SELECT ROWID, * FROM data ORDER BY timestamp LIMIT %d' % limit)
         except Exception, e:
@@ -127,7 +125,7 @@ class OfflineStore(threading.Thread):
         
         rows = self.cursor.fetchall()
         _log.debug('Retreived %d rows from offline storage' % len(rows))
-        callback(rows, not len(rows) < limit)
+        callback(rows)
         return True
             
     def delete(self, row_ids = [], activities = []):
@@ -170,12 +168,14 @@ class OfflineStore(threading.Thread):
         self.close_db()
         return False
     
-class Sender(threading.Thread):    
+class Sender(threading.Thread):   
+    queue_max_size = 50
+    
     def __init__(self, api, off_store):
         threading.Thread.__init__(self)
         self.api = api
         self.off_store = off_store
-        self.queue = queue.Queue(maxsize = 100)
+        self.queue = queue.Queue(maxsize = self.queue_max_size)
         self.lock = threading.RLock()
         self.store_data_available = True
         
@@ -222,7 +222,7 @@ class Sender(threading.Thread):
         self.lock.release()
         return is_available
     
-    def store_get_callback(self, rows, is_more_data):
+    def store_get_callback(self, rows):
         row_count, i = len(rows), 0
         
         while i < row_count:            
@@ -238,7 +238,7 @@ class Sender(threading.Thread):
             i += 1
         
         _log.debug('Pushed %d rows to sender from offline storage' % i)
-        self.store_available(i != row_count or is_more_data)
+        self.store_available(i != row_count or self.queue_max_size == row_count)
         
     def store_put_callback(self):
         self.store_available(True)
@@ -257,7 +257,7 @@ class Sender(threading.Thread):
             except:
                 self.update_store(del_rows, del_activities)
                 del_rows, del_activities = [], []
-                self.store_available() and self.off_store.get(self.store_get_callback)
+                self.store_available() and self.off_store.get(self.queue_max_size, self.store_get_callback)
                 continue
                 
             row_id = item.get('row_id')
