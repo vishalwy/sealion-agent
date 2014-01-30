@@ -117,15 +117,17 @@ class OfflineStore(threading.Thread):
         return True
     
     def select(self, callback):
+        limit = 50
+        
         try:
-            rows = self.cursor.execute('SELECT ROWID, * FROM data ORDER BY timestamp LIMIT 10')
+            rows = self.cursor.execute('SELECT ROWID, * FROM data ORDER BY timestamp LIMIT %d' % limit)
         except Exception, e:
             _log.error('Failed to retreive rows from offline storage; ' + str(e))
             return True
         
         rows = self.cursor.fetchall()
         _log.debug('Retreived %d rows from offline storage' % len(rows))
-        callback(rows)
+        callback(rows, not len(rows) < limit)
         return True
             
     def delete(self, row_ids = [], activities = []):
@@ -220,7 +222,7 @@ class Sender(threading.Thread):
         self.lock.release()
         return is_available
     
-    def store_get_callback(self, rows):
+    def store_get_callback(self, rows, is_more_data):
         row_count, i = len(rows), 0
         
         while i < row_count:            
@@ -236,7 +238,7 @@ class Sender(threading.Thread):
             i += 1
         
         _log.debug('Pushed %d rows to sender from offline storage' % i)
-        self.store_available(row_count != 0)
+        self.store_available(i != row_count or is_more_data)
         
     def store_put_callback(self):
         self.store_available(True)
