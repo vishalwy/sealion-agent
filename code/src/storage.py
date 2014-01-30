@@ -180,9 +180,6 @@ class Sender(threading.Thread):
         self.store_data_available = True
         
     def push(self, item):
-        if self.api.post_event.is_set() == False:
-            return False
-        
         try:
             self.queue.put(item, False)
         except:
