@@ -25,6 +25,7 @@ class Sealion(Daemon):
         
         try:        
             import __init__
+            __init__.start()
         except:
             self.save_dump()
             

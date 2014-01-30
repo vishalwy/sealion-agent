@@ -66,5 +66,9 @@ logger.setLevel(logging_level)
 if len(logging_list) != 1 or logging_list[0] != 'all':
     for handler in logging.root.handlers:
         handler.addFilter(LoggingList(*logging_list))
+        
+def start():
+    services.start()
 
-services.start()
+if __name__ == "__main__":
+    start()
