@@ -164,7 +164,9 @@ class OfflineStore(threading.Thread):
         while 1:
             try:
                 task = self.task_queue.get(False)
-                getattr(self, task['op'])(**task['kwargs'])                        
+                
+                if task['op'] != 'select' and task['op'] != 'close':
+                    getattr(self, task['op'])(**task['kwargs'])                        
             except:
                 break
 

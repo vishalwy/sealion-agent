@@ -1,7 +1,7 @@
 import os
 import sys
 
-exe_path = os.path.dirname(os.path.abspath(sys.modules['__main__'].__file__))
+exe_path = os.path.dirname(os.path.abspath(__file__))
 exe_path = exe_path if (exe_path[len(exe_path) - 1] == '/') else (exe_path + '/')
 sys.path.append(exe_path + 'lib')
 sys.path.append(exe_path + 'src')
