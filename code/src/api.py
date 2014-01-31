@@ -207,13 +207,13 @@ class Interface(requests.Session):
             self.set_events(post_event = False)
             return self.status.NO_SERVICE
         elif status == 400:
-            self.stop(self.status.BAD_REQUEST)
+            self.stop()
             return self.status.BAD_REQUEST
         elif status == 401:
             if code == 200004:
                 return self.status.MISMATCH
             else:
-                self.stop(self.status.UNAUTHERIZED)
+                self.stop()
                 return self.status.UNAUTHERIZED
         elif status == 404:
             self.stop(self.status.NOT_FOUND)

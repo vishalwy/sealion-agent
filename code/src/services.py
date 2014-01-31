@@ -146,6 +146,8 @@ class Controller(threading.Thread):
             _log.error('Agent unautherized to connect')
         elif status == self.globals.APIStatus.BAD_REQUEST:
             _log.error('Server marked the request as bad')
+        elif status == self.globals.APIStatus.SESSION_CONFLICT:
+            _log.error('Agent session conflict')
 
         return False
         
