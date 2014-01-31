@@ -31,9 +31,12 @@ class Daemon(object):
             sys.exit(1) 
             
         if pid == 0:
+            atexit.register(self.inform_parent)
+            
             if self.initialize() == False:
                 sys.exit(1)
         else:
+            signal.pause()
             sys.stdout.write('%s started successfully\n' % self.__class__.__name__)
             sys.exit(0)             
             
@@ -45,11 +48,14 @@ class Daemon(object):
         os.dup2(si.fileno(), sys.stdin.fileno())
         os.dup2(so.fileno(), sys.stdout.fileno())
         os.dup2(se.fileno(), sys.stderr.fileno())
-        atexit.register(self.delpid)
+        atexit.register(self.delete_pid)
         pid = str(os.getpid())
         file(self.pidfile, 'w+').write('%s\n' % pid)
+        
+    def inform_parent(self):
+        pass
     
-    def delpid(self):
+    def delete_pid(self):
         os.remove(self.pidfile)
 
     def start(self):
