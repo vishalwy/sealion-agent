@@ -22,13 +22,13 @@ logging.basicConfig(level = logging_level, format = format)
 try:
     lf = logging.FileHandler(helper.Utils.get_safe_path(exe_path + 'var/log/sealion.log'))
 except Exception, e:
-    sys.stderr.write('Failed to open log file; ' + str(e))
+    sys.stderr.write('Failed to open log file; ' + str(e) + '\n')
     sys.exit(0)
     
 try:
     globals = Globals()
-except RuntimeError, e:
-    sys.stderr.write(str(e))
+except Exception, e:
+    sys.stderr.write(str(e) + '\n')
     sys.exit(0)
 
 class LoggingList(logging.Filter):

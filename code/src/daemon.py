@@ -3,6 +3,7 @@ import os
 import time
 import atexit
 import signal
+import os.path
 
 class Daemon(object):
     def __init__(self, pidfile, stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
@@ -12,11 +13,14 @@ class Daemon(object):
         self.pidfile = pidfile
     
     def daemonize(self):
+        self.initialize()
+        
         try: 
             pid = os.fork() 
             
             if pid > 0:
-                sys.exit(0) 
+                sys.stdout.write('%s started successfully\n' % self.__class__.__name__)
+                sys.exit(0)
         except OSError, e: 
             sys.stderr.write('Failed to daemonize: %d (%s)\n' % (e.errno, e.strerror))
     
@@ -26,19 +30,12 @@ class Daemon(object):
     
         try: 
             pid = os.fork() 
+            
+            if pid > 0:
+                sys.exit(0) 
         except OSError, e: 
             sys.stderr.write('Failed to daemonize: %d (%s)\n' % (e.errno, e.strerror))
             sys.exit(1) 
-            
-        if pid == 0:
-            atexit.register(self.inform_parent)
-            
-            if self.initialize() == False:
-                sys.exit(1)
-        else:
-            signal.pause()
-            sys.stdout.write('%s started successfully\n' % self.__class__.__name__)
-            sys.exit(0)             
             
         sys.stdout.flush()
         sys.stderr.flush()
@@ -51,22 +48,12 @@ class Daemon(object):
         atexit.register(self.delete_pid)
         pid = str(os.getpid())
         file(self.pidfile, 'w+').write('%s\n' % pid)
-        
-    def inform_parent(self):
-        pass
     
     def delete_pid(self):
         os.remove(self.pidfile)
 
     def start(self):
-        try:
-            pf = file(self.pidfile, 'r')
-            pid = int(pf.read().strip())
-            pf.close()
-        except IOError:
-            pid = None
-    
-        if pid:
+        if self.status(True):
             sys.stdout.write('%s is already running\n' % self.__class__.__name__)
             sys.exit(1)            
         
@@ -74,14 +61,7 @@ class Daemon(object):
         self.run()
 
     def stop(self):
-        try:
-            pf = file(self.pidfile, 'r')
-            pid = int(pf.read().strip())
-            pf.close()
-        except IOError:
-            pid = None
-    
-        if not pid:
+        if self.status(True) == False:
             sys.stdout.write('%s is not running\n' % self.__class__.__name__)
             return
 
@@ -105,7 +85,9 @@ class Daemon(object):
         self.stop()
         self.start()
         
-    def status(self):
+    def status(self, query = False):
+        ret = True
+        
         try:
             pf = file(self.pidfile, 'r')
             pid = int(pf.read().strip())
@@ -113,10 +95,13 @@ class Daemon(object):
         except IOError:
             pid = None
     
-        if pid:
-            sys.stdout.write('%s is running' % self.__class__.__name__)
-        elif not pid:
-            sys.stdout.write('%s is not running' % self.__class__.__name__)
+        if pid and os.path.exists('/proc/%d' % pid):
+            query == False and sys.stdout.write('%s is running\n' % self.__class__.__name__)
+        else:
+            query == False and sys.stdout.write('%s is not running\n' % self.__class__.__name__)
+            ret = False
+            
+        return ret
             
     def initialize(self):
         return True

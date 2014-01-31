@@ -27,7 +27,14 @@ class Sealion(Daemon):
         f.close()
         return path
         
-    def initialize(self):
+    def initialize(self):        
+        try:
+            f = open(self.pidfile, 'w');
+            f.close()
+        except Exception, e:
+            print str(e)
+            sys.exit(0)
+        
         os.chdir(exe_path)
         error, user_name = None, 'vishal'
         import __init__
@@ -51,6 +58,8 @@ class Sealion(Daemon):
         try:        
             import __init__
             __init__.start()
+        except SystemExit:
+            pass
         except:
             _log.error('Sealion agent crashed. Dump saved at %s' % self.save_dump())
             
