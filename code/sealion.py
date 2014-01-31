@@ -11,7 +11,7 @@ import pwd
 exe_path = os.path.dirname(os.path.abspath(sys.modules['__main__'].__file__))
 exe_path = exe_path if (exe_path[len(exe_path) - 1] == '/') else (exe_path + '/')
 sys.path.append(exe_path)
-sys.path.append(exe_path + 'lib/service') 
+sys.path.append(exe_path + 'src') 
 
 from daemon import Daemon
 
@@ -25,41 +25,40 @@ class Sealion(Daemon):
         f = open(path, 'w')
         traceback.print_exc(file = f)
         f.close()
-    
-    def run(self):       
+        return path
+        
+    def initialize(self):
         os.chdir(exe_path)
         error, user_name = None, 'vishal'
+        import __init__
         
+        try:
+            user = pwd.getpwnam(user_name)
+
+            if user.pw_uid != os.getuid():
+                os.setgid(user.pw_gid)
+                os.setuid(user.pw_uid)
+        except KeyError:
+            error = 'Failed to find user named ' + user_name
+        except:
+            error = 'Failed to change the group or user to ' + user_name
+
+        if error:
+            print error
+            sys.exit(0)
+    
+    def run(self):       
         try:        
             import __init__
-            
-            try:
-                user = pwd.getpwnam(user_name)
-                
-                if user.pw_uid != os.getuid():
-                    os.setgid(user.pw_gid)
-                    os.setuid(user.pw_uid)
-            except KeyError:
-                error = 'Failed to find user named ' + user_name
-            except:
-                error = 'Failed to change the group or user to ' + user_name
-                
-            if error:
-                _log.error(error)
-                _log.info('Shutting down with status code 0')
-                sys.exit(0)
-            
             __init__.start()
         except:
-            print 'hello'
-            self.save_dump()
+            _log.error('Sealion agent crashed. Dump saved at %s' % self.save_dump())
             
 def sig_handler(signum, frame):    
     if signum == signal.SIGINT:
         exit(2)
     
 signal.signal(signal.SIGINT, sig_handler)
-
 daemon = Sealion(exe_path + 'var/run/sealion.pid')
 
 if len(sys.argv) == 2:

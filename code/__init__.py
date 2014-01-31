@@ -22,14 +22,14 @@ logging.basicConfig(level = logging_level, format = format)
 try:
     lf = logging.FileHandler(helper.Utils.get_safe_path(exe_path + 'var/log/sealion.log'))
 except Exception, e:
-    _log.error('Failed to open log file; ' + str(e))
-    services.quit()
+    sys.stderr.write('Failed to open log file; ' + str(e))
+    sys.exit(0)
     
 try:
     globals = Globals()
 except RuntimeError, e:
-    _log.error(str(e))
-    services.quit()
+    sys.stderr.write(str(e))
+    sys.exit(0)
 
 class LoggingList(logging.Filter):
     def __init__(self, *logs):

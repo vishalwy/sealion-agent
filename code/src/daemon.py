@@ -26,16 +26,17 @@ class Daemon(object):
     
         try: 
             pid = os.fork() 
-    
-            if pid > 0:
-                sys.exit(0) 
         except OSError, e: 
             sys.stderr.write('Failed to daemonize: %d (%s)\n' % (e.errno, e.strerror))
             sys.exit(1) 
             
-        if self.initialize() == False:
-            sys.exit(1)
-    
+        if pid == 0:
+            if self.initialize() == False:
+                sys.exit(1)
+        else:
+            sys.stdout.write('%s started successfully\n' % self.__class__.__name__)
+            sys.exit(0)             
+            
         sys.stdout.flush()
         sys.stderr.flush()
         si = file(self.stdin, 'r')
@@ -44,7 +45,6 @@ class Daemon(object):
         os.dup2(si.fileno(), sys.stdin.fileno())
         os.dup2(so.fileno(), sys.stdout.fileno())
         os.dup2(se.fileno(), sys.stderr.fileno())
-    
         atexit.register(self.delpid)
         pid = str(os.getpid())
         file(self.pidfile, 'w+').write('%s\n' % pid)
@@ -89,6 +89,8 @@ class Daemon(object):
             if err.find('No such process') > 0:
                 if os.path.exists(self.pidfile):
                     os.remove(self.pidfile)
+                    
+                sys.stdout.write('%s stopped successfully\n' % self.__class__.__name__)
             else:
                 print sys.stderr.write(err)
                 sys.exit(1)
