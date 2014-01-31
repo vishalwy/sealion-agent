@@ -1,10 +1,12 @@
 #!/usr/bin/python
 
+import logging
 import os
 import sys
 import time
 import traceback
 import signal
+import pwd
 
 exe_path = os.path.dirname(os.path.abspath(sys.modules['__main__'].__file__))
 exe_path = exe_path if (exe_path[len(exe_path) - 1] == '/') else (exe_path + '/')
@@ -12,6 +14,8 @@ sys.path.append(exe_path)
 sys.path.append(exe_path + 'lib/service') 
 
 from daemon import Daemon
+
+_log = logging.getLogger(__name__)
 
 class Sealion(Daemon):
     def save_dump(self):
@@ -22,13 +26,32 @@ class Sealion(Daemon):
         traceback.print_exc(file = f)
         f.close()
     
-    def run(self):
+    def run(self):       
         os.chdir(exe_path)
+        error, user_name = None, 'vishal'
         
         try:        
             import __init__
+            
+            try:
+                user = pwd.getpwnam(user_name)
+                
+                if user.pw_uid != os.getuid():
+                    os.setgid(user.pw_gid)
+                    os.setuid(user.pw_uid)
+            except KeyError:
+                error = 'Failed to find user named ' + user_name
+            except:
+                error = 'Failed to change the group or user to ' + user_name
+                
+            if error:
+                _log.error(error)
+                _log.info('Shutting down with status code 0')
+                sys.exit(0)
+            
             __init__.start()
         except:
+            print 'hello'
             self.save_dump()
             
 def sig_handler(signum, frame):    
