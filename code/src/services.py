@@ -116,7 +116,7 @@ class Connection(threading.Thread):
         status = self.attempt(2)
         
         if globals.api.is_not_connected(status):
-            if hasattr(globals.config.agent, 'activities'):
+            if hasattr(globals.config.agent, 'activities') and hasattr(globals.config.agent, 'org'):
                 _log.info('Running commands in offline mode')
                 self.start()
                 status = globals.APIStatus.SUCCESS
@@ -154,11 +154,11 @@ class Controller(threading.Thread):
     def run(self):
         while 1:
             _log.debug('Controller starting up')
-            
-            if self.globals.store.start() == False:
-                break
 
             if self.handle_response(Connection().connect()) == False:
+                break
+                
+            if self.globals.store.start() == False:
                 break
 
             if len(self.globals.config.agent.activities) == 0:
@@ -176,7 +176,7 @@ class Controller(threading.Thread):
             if self.stop(True) == True:
                 break
 
-            self.globals.reset()
+            self.globals.reset_interfaces()
         
         _log.debug('Controller generating SIGALRM signal')
         signal.alarm(2)
@@ -238,7 +238,6 @@ def start():
         signal.pause()
         
         if controller.is_alive() == False:
-            globals.stop_event.clear()
             globals.api.logout()
             quit()
 

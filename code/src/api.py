@@ -170,6 +170,7 @@ class Interface(requests.Session):
         return ret
     
     def logout(self):
+        self.stop_event.clear()
         response = self.exec_method('delete', 0, 0, self.get_url('agents/1/sessions/1'))
         ret = self.status.SUCCESS
         

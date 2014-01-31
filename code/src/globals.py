@@ -61,7 +61,8 @@ class AgentConfig(Config):
                 'depends': ['_id', 'agentVersion'],
                 'optional': True
             },
-            'updateUrl': {'type': 'str,unicode', 'depends': ['_id'], 'regex': '^.+$'}
+            'updateUrl': {'type': 'str,unicode', 'depends': ['_id'], 'regex': '^.+$'},
+            'org': {'type': 'str,unicode', 'depends': ['orgToken', '_id', 'agentVersion'], 'regex': '^[a-zA-Z0-9]{24}$', 'optional': True}
         }
         
     def get_deleted_activities(self, old_activities, new_activities):
@@ -80,7 +81,7 @@ class AgentConfig(Config):
                 
         return deleted_activities
         
-    def update(self, data):             
+    def update(self, data):   
         if data.has_key('category'):
             del data['category']
             
@@ -109,6 +110,7 @@ class Globals:
     
     def __init__(self):
         self.exe_path = Utils.get_exe_path()
+        self.db_path = Utils.get_safe_path(self.exe_path + 'var/db/')
         self.config = EmptyClass()
         self.config.sealion = SealionConfig(Utils.get_safe_path(self.exe_path + 'etc/config/sealion.json'))
         self.config.agent = AgentConfig(Utils.get_safe_path(self.exe_path + 'etc/config/agent.json'))
@@ -123,16 +125,16 @@ class Globals:
         if ret != True:
             raise RuntimeError, ret
         
-        self.reset()
+        self.reset_interfaces()
         
     def url(self, path = ''):
         return self.api.get_url(path);
     
-    def reset(self):
+    def reset_interfaces(self):
         self.stop_event = threading.Event()
         self.api = api.Interface(self.config, self.stop_event)
         self.rtc = rtc.Interface(self.api)   
-        self.store = storage.Interface(Utils.get_safe_path(self.exe_path + 'var/dbs/' + self.config.agent.orgToken + '.db'), self.api)
+        self.store = storage.Interface(self.api, self.db_path)
         self.activities = None
         
     def manage_activities(self, old_activities = [], deleted_activity_ids = []):

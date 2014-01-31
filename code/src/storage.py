@@ -3,18 +3,21 @@ import threading
 import time
 import sqlite3 as sqlite
 from constructs import *
+from helper import Utils
 
 _log = logging.getLogger(__name__)
 
 class OfflineStore(threading.Thread):    
-    def __init__(self, path):
+    def __init__(self, db_path, config):
         threading.Thread.__init__(self)
-        self.path = path
+        self.db_file = db_path
+        self.config = config
         self.conn = None
         self.conn_event = threading.Event()
         self.task_queue = queue.Queue()
         
     def start(self):
+        self.db_file = Utils.get_safe_path(self.db_file + ('%s.db' % self.config.agent.org))
         threading.Thread.start(self)
         self.conn_event.wait()            
         return True if self.conn else False
@@ -38,10 +41,10 @@ class OfflineStore(threading.Thread):
         _log.debug('Starting up offline store')
         
         try:
-            self.conn = sqlite.connect(self.path)
-            _log.debug('Created offline storage at ' + self.path)
+            self.conn = sqlite.connect(self.db_file)
+            _log.debug('Created offline storage at ' + self.db_file)
         except Exception, e:
-            _log.error('Failed to create offline storage at ' + self.path + '; ' + str(e))
+            _log.error('Failed to create offline storage at ' + self.db_file + '; ' + str(e))
             _log.debug('Shutting down offline store')
             self.conn_event.set()
             return
@@ -49,7 +52,7 @@ class OfflineStore(threading.Thread):
         self.cursor = self.conn.cursor()
         
         if self.setup_schema() == False:
-            _log.error('Schema mismatch in offline storage at ' + self.path)
+            _log.error('Schema mismatch in offline storage at ' + self.db_file)
             self.close_db()
             _log.debug('Shutting down offline store')
             self.conn_event.set()
@@ -150,7 +153,7 @@ class OfflineStore(threading.Thread):
         return True
     
     def close_db(self):
-        _log.debug('Closing offline storage at ' + self.path)
+        _log.debug('Closing offline storage at ' + self.db_file)
         self.conn.close()
         self.conn = None
     
@@ -285,13 +288,13 @@ class Sender(threading.Thread):
         _log.debug('Shutting down sender')
 
 class Interface:
-    def __init__(self, path, api):
-        self.off_store = OfflineStore(path)
+    def __init__(self, api, db_path):
         self.api = api
+        self.off_store = OfflineStore(db_path, api.config)
         self.sender = Sender(api, self.off_store)
         self.last_ping_time = int(time.time())
         
-    def start(self):
+    def start(self):        
         if self.off_store.start() == False:
             return False
         
