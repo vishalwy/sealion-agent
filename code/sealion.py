@@ -1,5 +1,4 @@
 #!/usr/bin/python
-
 import logging
 import os
 import sys
@@ -7,8 +6,10 @@ import time
 import traceback
 import signal
 import pwd
+import subprocess
 
-exe_path = os.path.dirname(os.path.abspath(sys.modules['__main__'].__file__))
+module_path = os.path.abspath(__file__)
+exe_path = os.path.dirname(module_path)
 exe_path = exe_path if (exe_path[len(exe_path) - 1] == '/') else (exe_path + '/')
 sys.path.append(exe_path)
 sys.path.append(exe_path + 'src') 
@@ -70,9 +71,18 @@ class Sealion(Daemon):
             
     def on_fork(self):
         ret = os.wait()
+        is_resurrect = False
         
         if os.WIFEXITED(ret[1]) == False:
-            _log.error('Sealion agent killed; resurrecting')
+            is_resurrect = True
+            _log.error('%s killed' % self.__class__.__name__)
+        elif os.WEXITSTATUS(ret[1]) != 0:
+            is_resurrect = True
+            
+        if is_resurrect:
+            _log.info('%s resurrecting' % self.__class__.__name__)
+            subprocess.call([sys.executable, module_path, 'start'])
+            pass
             
         sys.exit(0)
     

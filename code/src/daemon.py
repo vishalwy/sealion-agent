@@ -23,16 +23,13 @@ class Daemon(object):
                 sys.exit(0)
         except OSError, e: 
             sys.stderr.write('Failed to daemonize: %d (%s)\n' % (e.errno, e.strerror))
-    
-        os.chdir("/") 
+     
+        os.chdir("/")
         os.setsid() 
         os.umask(0) 
     
         try: 
-            pid = os.fork() 
-            
-            if pid > 0:
-                self.on_fork() 
+            pid = os.fork()  
         except OSError, e: 
             sys.stderr.write('Failed to daemonize: %d (%s)\n' % (e.errno, e.strerror))
             sys.exit(1) 
@@ -45,6 +42,10 @@ class Daemon(object):
         os.dup2(si.fileno(), sys.stdin.fileno())
         os.dup2(so.fileno(), sys.stdout.fileno())
         os.dup2(se.fileno(), sys.stderr.fileno())
+        
+        if pid > 0:
+            self.on_fork()
+        
         atexit.register(self.delete_pid)
         pid = str(os.getpid())
         file(self.pidfile, 'w+').write('%s\n' % pid)
