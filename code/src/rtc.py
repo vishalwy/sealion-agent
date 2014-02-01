@@ -85,7 +85,7 @@ class Interface(threading.Thread):
         
         while 1:
             try:
-                self.sio.wait(5)
+                self.sio.wait()
             except Exception, e:
                 _log.debug(str(e))
                 self.connect()
