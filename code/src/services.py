@@ -221,10 +221,12 @@ def sig_handler(signum, frame):
         signal.alarm(0)
     
 def quit(status = 0):
-    _log.info('Shutting down with status code %d' % status)
+    _log.info('Agent shutting down with status code %d' % status)
     exit(status)
     
 def start():
+    _log.info('Agent starting up')
+    
     globals = Globals()
     globals.activity_type = Activity
     controller = Controller()

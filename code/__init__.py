@@ -16,19 +16,21 @@ _log = logging.getLogger(__name__)
 
 logging_list = []
 logging_level = logging.INFO
-format = '%(asctime)-15s %(levelname)-6s %(thread)d - %(module)-s[%(lineno)-d]: %(message)s'
-logging.basicConfig(level = logging_level, format = format)
+logging.basicConfig(level = logging_level, format = '%(message)s')
+logger = logging.getLogger()
 
 try:
     lf = logging.FileHandler(helper.Utils.get_safe_path(exe_path + 'var/log/sealion.log'))
+    lf.setFormatter(logging.Formatter('%(asctime)-15s %(levelname)-6s %(module)-s[%(lineno)-d]: %(message)s'))
+    logger.addHandler(lf)
 except Exception, e:
-    sys.stderr.write('Failed to open log file; ' + str(e) + '\n')
+    _log.error('Failed to open log file; ' + str(e))
     sys.exit(0)
     
 try:
     globals = Globals()
 except Exception, e:
-    sys.stderr.write(str(e) + '\n')
+    _log.error(str(e))
     sys.exit(0)
 
 class LoggingList(logging.Filter):
@@ -56,14 +58,13 @@ except:
     logging_list = []
     pass
 
-formatter = logging.Formatter(format if logging_level == logging.DEBUG else format.replace('%(thread)d - ', ''))
-logger = logging.getLogger()
-lf.setFormatter(formatter)
-logger.addHandler(lf)
 logger.setLevel(logging_level)
+format = '%(asctime)-15s %(levelname)-6s %(thread)d - %(module)-s[%(lineno)-d]: %(message)s'
+formatter = logging.Formatter(format if logging_level == logging.DEBUG else format.replace('%(thread)d - ', ''))
 
 if len(logging_list) != 1 or logging_list[0] != 'all':
     for handler in logging.root.handlers:
+        handler.setFormatter(formatter)
         handler.addFilter(LoggingList(*logging_list))
         
 def start():

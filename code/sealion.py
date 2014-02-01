@@ -66,7 +66,7 @@ class Sealion(Daemon):
             error = 'Failed to change the group or user to ' + self.user_name
 
         if error:
-            print error
+            _log(error)
             sys.exit(0)
             
     def on_fork(self):
@@ -75,12 +75,12 @@ class Sealion(Daemon):
         
         if os.WIFEXITED(ret[1]) == False:
             is_resurrect = True
-            _log.error('%s killed' % self.__class__.__name__)
+            _log.error('%s got terminated' % self.__class__.__name__)
         elif os.WEXITSTATUS(ret[1]) != 0:
             is_resurrect = True
             
         if is_resurrect:
-            _log.info('%s resurrecting' % self.__class__.__name__)
+            _log.info('Resurrecting %s' % self.__class__.__name__)
             subprocess.call([sys.executable, module_path, 'start'])
             pass
             
@@ -116,9 +116,8 @@ if len(sys.argv) == 2:
     elif sys.argv[1] == 'status':
         daemon.status()
     else:
-        sys.stdout.write("Unknown command\n")
-        sys.exit(2)
-    sys.exit(0)
+        sys.stdout.write("Unknown command; Usage: %s start|stop|restart|status\n" % sys.argv[0])    
 else:
     sys.stdout.write("Usage: %s start|stop|restart|status\n" % sys.argv[0])
-    sys.exit(2)
+    
+sys.exit(0)
