@@ -18,6 +18,8 @@ from daemon import Daemon
 _log = logging.getLogger(__name__)
 
 class Sealion(Daemon):
+    user_name = 'vishal'
+    
     def save_dump(self):
         path = '%svar/crash/agent%d.dmp' % (exe_path, int(time.time()))
         dir = os.path.dirname(path)
@@ -26,6 +28,18 @@ class Sealion(Daemon):
         traceback.print_exc(file = f)
         f.close()
         return path
+    
+    def set_procname(self):
+        proc_name = self.__class__.__name__
+        
+        try:
+            from ctypes import cdll, byref, create_string_buffer
+            libc = cdll.LoadLibrary('libc.so.6')
+            buff = create_string_buffer(len(proc_name) + 1)
+            buff.value = proc_name
+            libc.prctl(15, byref(buff), 0, 0, 0)
+        except:
+            pass
         
     def initialize(self):        
         try:
@@ -36,32 +50,44 @@ class Sealion(Daemon):
             sys.exit(0)
         
         os.chdir(exe_path)
-        error, user_name = None, 'vishal'
+        error = None
         import __init__
         
         try:
-            user = pwd.getpwnam(user_name)
+            user = pwd.getpwnam(self.user_name)
 
             if user.pw_uid != os.getuid():
                 os.setgid(user.pw_gid)
                 os.setuid(user.pw_uid)
         except KeyError:
-            error = 'Failed to find user named ' + user_name
+            error = 'Failed to find user named ' + self.user_name
         except:
-            error = 'Failed to change the group or user to ' + user_name
+            error = 'Failed to change the group or user to ' + self.user_name
 
         if error:
             print error
             sys.exit(0)
+            
+    def on_fork(self):
+        ret = os.wait()
+        
+        if os.WIFEXITED(ret[1]) == False:
+            _log.error('Sealion agent killed; resurrecting')
+            
+        sys.exit(0)
     
-    def run(self):       
+    def run(self):     
+        self.set_procname()
+        
         try:        
             import __init__
             __init__.start()
         except SystemExit:
             pass
         except:
-            _log.error('Sealion agent crashed. Dump saved at %s' % self.save_dump())
+            dump_file = self.save_dump()
+            _log.error('%s crashed. Dump file saved at %s' % (self.__class__.__name__, dump_file))
+            sys.exit(1)
             
 def sig_handler(signum, frame):    
     if signum == signal.SIGINT:

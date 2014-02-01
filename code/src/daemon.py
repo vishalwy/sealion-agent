@@ -32,7 +32,7 @@ class Daemon(object):
             pid = os.fork() 
             
             if pid > 0:
-                sys.exit(0) 
+                self.on_fork() 
         except OSError, e: 
             sys.stderr.write('Failed to daemonize: %d (%s)\n' % (e.errno, e.strerror))
             sys.exit(1) 
@@ -64,6 +64,8 @@ class Daemon(object):
         if self.status(True) == False:
             sys.stdout.write('%s is not running\n' % self.__class__.__name__)
             return
+        
+        pid = self.get_pid()
 
         try:
             while 1:
@@ -87,13 +89,7 @@ class Daemon(object):
         
     def status(self, query = False):
         ret = True
-        
-        try:
-            pf = file(self.pidfile, 'r')
-            pid = int(pf.read().strip())
-            pf.close()
-        except IOError:
-            pid = None
+        pid = self.get_pid()
     
         if pid and os.path.exists('/proc/%d' % pid):
             query == False and sys.stdout.write('%s is running\n' % self.__class__.__name__)
@@ -102,9 +98,22 @@ class Daemon(object):
             ret = False
             
         return ret
+    
+    def get_pid(self):
+        try:
+            pf = file(self.pidfile, 'r')
+            pid = int(pf.read().strip())
+            pf.close()
+        except:
+            pid = None
+
+        return pid
             
     def initialize(self):
         return True
+    
+    def on_fork(self):
+        sys.exit(0)
 
     def run(self):
         pass
