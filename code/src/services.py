@@ -13,7 +13,6 @@ class Activity(threading.Thread):
     def __init__(self, activity, stop_event):
         threading.Thread.__init__(self)
         self.activity = activity;
-        self.lock = threading.RLock()
         self.stop_event = stop_event
         self.is_stop = False
         self.is_whitelisted = self.is_in_whitelist()
@@ -57,7 +56,7 @@ class Activity(threading.Thread):
             break_flag = False
             
             while timeout > 0:
-                if self.stop_event.is_set() or self.stop(True) == True:
+                if self.stop_event.is_set() or self.is_stop == True:
                     _log.debug('Activity %s received stop event' % self.activity['_id'])
                     break_flag = True
                     break
@@ -79,17 +78,8 @@ class Activity(threading.Thread):
         ret['return_code'] = p.returncode;
         return ret
         
-    def stop(self, is_query = None):
-        is_stop = True
-        self.lock.acquire()
-        
-        if is_query == True:
-            is_stop = self.is_stop
-        else:
-            self.is_stop = is_stop
-            
-        self.lock.release()
-        return is_stop
+    def stop(self):
+        self.is_stop = True
     
 class Connection(threading.Thread):
     def run(self):
@@ -129,7 +119,6 @@ class Controller(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
         self.globals = Globals()
-        self.lock = threading.RLock()
         self.is_stop = False
         self.main_thread = threading.current_thread()
     
@@ -173,7 +162,7 @@ class Controller(threading.Thread):
             if self.handle_response(self.globals.api.stop_status) == False:
                 break
 
-            if self.stop(True) == True:
+            if self.is_stop == True:
                 break
 
             self.globals.reset_interfaces()
@@ -182,18 +171,9 @@ class Controller(threading.Thread):
         signal.alarm(2)
         _log.debug('Controller shutting down')
             
-    def stop(self, is_query = None):
-        is_stop = True
-        self.lock.acquire()
-        
-        if is_query == True:
-            is_stop = self.is_stop
-        else:
-            self.is_stop = is_stop
-            self.globals.api.stop()
-            
-        self.lock.release()
-        return is_stop
+    def stop(self):
+        self.is_stop = is_stop
+        self.globals.api.stop()
         
     def stop_threads(self):
         _log.debug('Stopping all threads')
