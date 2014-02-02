@@ -17,7 +17,6 @@ class Status(EmptyClass):
     NOT_FOUND = 6
     UNAUTHERIZED = 7
     SESSION_CONFLICT = 8
-    AGENT_UPDATE = 9
     UNKNOWN = -1
 
 class Interface(requests.Session):    
@@ -239,20 +238,22 @@ class Interface(requests.Session):
         is_completed = False
         
         with open(filename, 'wb') as f:
-            for chunk in response.iter_content(chunk_size = 1024):
-                if self.stop_event.is_set():
-                    _log.info('Updater received stop event')
-                    break
-                
-                if chunk:
-                    f.write(chunk)
-                    f.flush()
-            
-            is_completed = True
+            try:
+                for chunk in response.iter_content(chunk_size = 1024):
+                    if self.stop_event.is_set():
+                        _log.info('Updater received stop event')
+                        break
+
+                    if chunk:
+                        f.write(chunk)
+                        f.flush()
+
+                is_completed = True
+            except Exception, e:
+                _log.error(str(e))
             
         if is_completed == True:
             _log.info('Update succesfully downloaed to %s' % filename)
-            self.stop(self.status.AGENT_UPDATE)
         else:
             _log.info('Aborted downloading update')
                     

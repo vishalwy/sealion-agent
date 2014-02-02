@@ -145,8 +145,6 @@ class Controller(ExceptionThread):
     def handle_response(self, status):
         if status == self.globals.APIStatus.SUCCESS:
             return True
-        elif status == self.globals.APIStatus.AGENT_UPDATE:
-            _log.info('Stoping agent for update')
         elif self.globals.api.is_not_connected(status):
             _log.info('Failed to connect')
         elif status == self.globals.APIStatus.NOT_FOUND:
