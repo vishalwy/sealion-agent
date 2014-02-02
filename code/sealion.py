@@ -91,9 +91,11 @@ class sealion(Daemon):
             is_resurrect = True
             
         if is_resurrect:
-            _log.info('Resurrecting %s' % self.__class__.__name__)
-            subprocess.call([sys.executable, module_path, 'start'])
-            pass
+            if self.is_crash_loop():
+                _log.info('Crash loop detected; contact support@sealion.com to troubleshoot')
+            else:                        
+                _log.info('Resurrecting %s' % self.__class__.__name__)
+                subprocess.call([sys.executable, module_path, 'start'])
             
         sys.exit(0)
         
@@ -118,13 +120,6 @@ class sealion(Daemon):
         self.set_procname()
         sys.excepthook = self.exception_hook
         import __init__
-        
-        if self.is_crash_loop():
-            _log.info('Detected crash loop; starting agent in update only mode')
-            
-            while 1:
-                time.sleep(5)
-        
         __init__.start()
             
 def sig_handler(signum, frame):    
