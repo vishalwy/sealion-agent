@@ -4,6 +4,7 @@ import time
 import subprocess
 import re
 import signal
+import os
 from constructs import *
 from globals import Globals
 
@@ -39,19 +40,20 @@ class Activity(threading.Thread):
     def run(self):
         _log.debug('Starting up activity %s' % self.activity['_id'])
         globals = Globals()
+        self.timeout = 30
+        
+        if hasattr(globals.config.sealion, 'commandTimeout'):
+            self.timeout = globals.config.sealion.commandTimeout            
         
         while 1:                
             timestamp = int(round(time.time() * 1000))
+            ret = self.execute()      
             
-            if self.is_whitelisted == True:
-                ret = Activity.execute(self.activity['command'])
-            else:
-                ret = {'return_code': 0, 'output': 'Command blocked by whitelist.'}
-                _log.info('Command ' + self.activity['_id'] + ' is blocked by whitelist')
+            if ret != None:
+                data = {'returnCode': ret['return_code'], 'timestamp': timestamp, 'data': ret['output']}
+                _log.debug('Pushing activity(%s @ %d) to store' % (self.activity['_id'], timestamp))
+                globals.store.push(self.activity['_id'], data)
                 
-            data = {'returnCode': ret['return_code'], 'timestamp': timestamp, 'data': ret['output']}
-            _log.debug('Pushing activity(%s @ %d) to store' % (self.activity['_id'], timestamp))
-            globals.store.push(self.activity['_id'], data)
             timeout = self.activity['interval']
             break_flag = False
             
@@ -69,12 +71,30 @@ class Activity(threading.Thread):
 
         _log.debug('Shutting down activity %s' % self.activity['_id'])
 
-    @staticmethod
-    def execute(command):
-        ret = {};
-        p = subprocess.Popen(['sh', '-c', command], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output = p.communicate();
-        ret['output'] = output[0] if output[0] else output[1]
+    def execute(self):
+        if self.is_whitelisted == False:
+            ret = {'return_code': 0, 'output': 'Command blocked by whitelist.'}
+            _log.info('Command ' + self.activity['_id'] + ' is blocked by whitelist')
+            return ret
+        
+        ret = {'output': 'Command exceded timeout', 'return_code': 0};
+        p = subprocess.Popen(['sh', '-c', self.activity['command']], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        start_time = time.time()
+        
+        while p.poll() is None:
+            time.sleep(1)
+            
+            if self.stop_event.is_set() or self.is_stop == True:
+                return None
+            
+            if time.time() - start_time > self.timeout:
+                _log.info('Command ' + self.activity['_id'] + ' exceded timeout; killing now')
+                os.kill(p.pid, signal.SIGKILL)
+                os.waitpid(-1, os.WNOHANG)
+                return ret
+            
+        output = p.stdout.read()
+        ret['output'] = output if output else p.stderr.read()
         ret['return_code'] = p.returncode;
         return ret
         
