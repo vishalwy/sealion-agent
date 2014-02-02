@@ -1,7 +1,7 @@
 import logging
-import threading
 import time
 from socketio_client import SocketIO, BaseNamespace
+from constructs import *
 
 _log = logging.getLogger(__name__)
 
@@ -46,9 +46,9 @@ class SocketIONamespace(BaseNamespace):
         self.rtc.update_heartbeat()
         self.rtc.api.get_config()
         
-class Interface(threading.Thread):    
+class Interface(ExceptionThread):    
     def __init__(self, api):
-        threading.Thread.__init__(self)
+        ExceptionThread.__init__(self)
         self.api = api
         self.sio = None
         self.last_heartbeat = int(time.time())
@@ -80,7 +80,7 @@ class Interface(threading.Thread):
     def is_heartbeating(self):
         return (int(time.time()) - self.last_heartbeat) < 30
 
-    def run(self):       
+    def exe(self):       
         _log.debug('Starting up socket-io')
         
         while 1:

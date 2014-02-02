@@ -182,7 +182,7 @@ class Interface(requests.Session):
         return ret
     
     def update_agent(self):
-        threading.Thread(target = self.download_file).start()
+        ExceptionThread(target = self.download_file).start()
     
     def stop(self, stop_status = None):
         self.set_events(True, True)

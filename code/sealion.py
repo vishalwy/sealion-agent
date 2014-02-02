@@ -21,13 +21,18 @@ _log = logging.getLogger(__name__)
 class sealion(Daemon):
     user_name = 'vishal'
     
-    def save_dump(self):
+    def save_dump(self, type, value, tb):
         path = '%svar/crash/agent%d.dmp' % (exe_path, int(time.time()))
         dir = os.path.dirname(path)
-        os.path.isdir(dir) or os.makedirs(dir)
-        f = open(path, 'w')
-        traceback.print_exc(file = f)
-        f.close()
+        
+        try:
+            os.path.isdir(dir) or os.makedirs(dir)
+            f = open(path, 'w')
+            traceback.print_exception(type, value, tb, file = f)
+            f.close()
+        except:
+            return None
+        
         return path
     
     def set_procname(self, proc_name = None):
@@ -86,19 +91,23 @@ class sealion(Daemon):
             pass
             
         sys.exit(0)
+        
+    def exception_hook(self, type, value, tb):
+        if type != SystemExit:
+            dump_file = self.save_dump(type, value, tb)
+            
+            if dump_file:
+                _log.error('%s crashed. Dump file saved at %s' % (self.__class__.__name__, dump_file))
+            else:
+                _log.error('%s crashed. Failed to save dump file' % self.__class__.__name__)
+            
+            os._exit(1)
     
     def run(self):     
         self.set_procname()
-        
-        try:        
-            import __init__
-            __init__.start()
-        except SystemExit:
-            pass
-        except:
-            dump_file = self.save_dump()
-            _log.error('%s crashed. Dump file saved at %s' % (self.__class__.__name__, dump_file))
-            sys.exit(1)
+        sys.excepthook = self.exception_hook
+        import __init__
+        __init__.start()
             
 def sig_handler(signum, frame):    
     if signum == signal.SIGINT:

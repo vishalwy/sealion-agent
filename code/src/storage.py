@@ -7,9 +7,9 @@ from helper import Utils
 
 _log = logging.getLogger(__name__)
 
-class OfflineStore(threading.Thread):    
+class OfflineStore(ExceptionThread):    
     def __init__(self, db_path, config):
-        threading.Thread.__init__(self)
+        ExceptionThread.__init__(self)
         self.db_file = db_path
         self.config = config
         self.conn = None
@@ -18,7 +18,7 @@ class OfflineStore(threading.Thread):
         
     def start(self):
         self.db_file = Utils.get_safe_path(self.db_file + ('%s.db' % self.config.agent.org))
-        threading.Thread.start(self)
+        ExceptionThread.start(self)
         self.conn_event.wait()            
         return True if self.conn else False
     
@@ -37,7 +37,7 @@ class OfflineStore(threading.Thread):
     def clr(self):
         self.task_queue.put({'op': 'truncate', 'kwargs': {}})
         
-    def run(self):
+    def exe(self):
         _log.debug('Starting up offline store')
         
         try:
@@ -173,11 +173,11 @@ class OfflineStore(threading.Thread):
         self.close_db()
         return False
     
-class Sender(threading.Thread):   
+class Sender(ExceptionThread):   
     queue_max_size = 50
     
     def __init__(self, api, off_store):
-        threading.Thread.__init__(self)
+        ExceptionThread.__init__(self)
         self.api = api
         self.off_store = off_store
         self.queue = queue.Queue(maxsize = self.queue_max_size)
@@ -246,7 +246,7 @@ class Sender(threading.Thread):
     def store_put_callback(self):
         self.store_available(True)
         
-    def run(self):
+    def exe(self):
         _log.debug('Starting up sender')
         api_status = self.api.status
         del_rows, del_activities = [], []

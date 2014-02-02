@@ -10,9 +10,9 @@ from globals import Globals
 
 _log = logging.getLogger(__name__)
 
-class Activity(threading.Thread):
+class Activity(ExceptionThread):
     def __init__(self, activity, stop_event):
-        threading.Thread.__init__(self)
+        ExceptionThread.__init__(self)
         self.activity = activity;
         self.stop_event = stop_event
         self.is_stop = False
@@ -37,7 +37,7 @@ class Activity(threading.Thread):
                     
         return is_whitelisted
 
-    def run(self):
+    def exe(self):
         _log.debug('Starting up activity %s' % self.activity['_id'])
         globals = Globals()
         self.timeout = 30
@@ -101,8 +101,8 @@ class Activity(threading.Thread):
     def stop(self):
         self.is_stop = True
     
-class Connection(threading.Thread):
-    def run(self):
+class Connection(ExceptionThread):
+    def exe(self):
         _log.debug('Starting up connection')
         self.attempt(retry_interval = 20)
         _log.debug('Shutting down connection')
@@ -133,11 +133,11 @@ class Connection(threading.Thread):
             
         return status
        
-class Controller(threading.Thread):
+class Controller(ExceptionThread):
     __metaclass__ = SingletonType
     
     def __init__(self):
-        threading.Thread.__init__(self)
+        ExceptionThread.__init__(self)
         self.globals = Globals()
         self.is_stop = False
         self.main_thread = threading.current_thread()
@@ -160,7 +160,7 @@ class Controller(threading.Thread):
 
         return False
         
-    def run(self):
+    def exe(self):
         while 1:
             _log.debug('Controller starting up')
 
@@ -192,7 +192,7 @@ class Controller(threading.Thread):
         _log.debug('Controller shutting down')
             
     def stop(self):
-        self.is_stop = is_stop
+        self.is_stop = True
         self.globals.api.stop()
         
     def stop_threads(self):

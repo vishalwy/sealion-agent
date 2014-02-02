@@ -1,3 +1,6 @@
+import threading
+import sys
+
 try:
     import queue as t
 except ImportError:
@@ -45,3 +48,23 @@ class DictEx(dict):
 def enum(*sequential, **named):
     enums = dict(zip(sequential, range(len(sequential))), **named)
     return type('Enum', (), enums)
+
+class ExceptionThread(threading.Thread):
+    def __init__(self, group = None, target = None, name = None, *args, **kwargs):
+        self.orig_target = target
+        target = self.run if target else target
+        threading.Thread.__init__(self, group, target, name, *args, **kwargs)
+        
+    def run(self):        
+        try:
+            (self.orig_target if self.orig_target else self.exe)()
+        except:
+            type, value, tb = sys.exc_info()
+            sys.excepthook(type, value, tb)
+            
+    def exe(self):
+        pass
+    
+
+        
+    
