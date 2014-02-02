@@ -184,7 +184,9 @@ class Interface(requests.Session):
         response = self.exec_method('post', retry_count, retry_interval, self.get_url('/orgs/%s/agents/%s/crashreport' % (self.config.agent.orgToken, self.config.agent._id)), data = report)    
         ret = self.status.SUCCESS
         
-        if Interface.is_success(response) == False:
+        if Interface.is_success(response):
+            _log.debug('Sent crash dump @ ' + report['timestamp'])
+        else:
             ret = self.error('Failed to send crash dump', response)
         
         return ret

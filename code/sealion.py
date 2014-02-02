@@ -27,16 +27,23 @@ class sealion(Daemon):
         return '%svar/crash/' % exe_path 
     
     def save_dump(self, type, value, tb):
-        path = self.crash_dump_path + ('agent%d.dmp' % int(time.time()))
+        path = self.crash_dump_path + ('sealion_%d.dmp' % int(round(time.time() * 1000)))
         dir = os.path.dirname(path)
+        f = None
         
         try:
-            os.path.isdir(dir) or os.makedirs(dir)
+            os.path.isdir(dir) or os.makedirs(dir)            
+            report = {
+                'timestamp': int(round(time.time() * 1000)),
+                'stack': ''.join(traceback.format_exception(type, value, tb))
+            }
+            
             f = open(path, 'w')
-            traceback.print_exception(type, value, tb, file = f)
-            f.close()
+            json.dump(report, f)
         except:
             return None
+        finally:
+            f and f.close()
         
         return path
     
@@ -46,44 +53,47 @@ class sealion(Daemon):
         try:
             f = open(file_name, 'r')
             report = json.load(f)
+        except:
+            pass
         finally:
             f and f.close()
             
         return report
     
-    def send_crash_dumps(self):
-        _log.debug('Crash dump sender starting up')
+    def send_crash_dumps(self):        
         from globals import Globals
-        api = Globals().api
+        globals = Globals()
         path = self.crash_dump_path
+        globals.api.stop_event.wait(2 * 60)
+        _log.debug('Crash dump sender starting up')
         
         for file in os.listdir(path):
             file_name = path + file
             
             if os.path.isfile(file_name):
-                status = api.status.UNKNOWN
+                status = globals.Status.UNKNOWN
                 report = None
                 
                 while 1:
-                    if api.stop_event.is_set():
+                    if globals.api.stop_event.is_set():
                         break
                     
                     report = report if report else self.read_dump(file_name)
                     
                     if report != None:
-                        status = api.send_crash_report(report)
+                        status = globals.api.send_crash_report(report)
                         
                     if api.is_not_connected(status) == False:
-                        if status != api.status.SUCCESS:
+                        if status != globals.Status.SUCCESS:
                             _log.error('Currupted crash dump %s' % file_name)
                         
                         _log.info('Removing crash dump %s' % file_name)
                         os.remove(file_name)
                         break
                         
-                    api.stop_event.wait(30)
+                    globals.api.stop_event.wait(30)
                     
-            if api.stop_event.is_set():
+            if globals.api.stop_event.is_set():
                 break
                 
         _log.debug('Crash dump sender shutting down')
