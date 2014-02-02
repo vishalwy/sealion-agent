@@ -40,6 +40,17 @@ class sealion(Daemon):
         
         return path
     
+    def read_dump(self, file_name):
+        f, report = None, None
+        
+        try:
+            f = open(file_name, 'r')
+            report = json.load(f)
+        finally:
+            f and f.close()
+            
+        return report
+    
     def send_crash_dumps(self):
         _log.debug('Crash dump sender starting up')
         from globals import Globals
@@ -50,19 +61,17 @@ class sealion(Daemon):
             file_name = path + file
             
             if os.path.isfile(file_name):
-                status = api.status.SUCCESS
+                status = api.status.UNKNOWN
+                report = None
                 
                 while 1:
                     if api.stop_event.is_set():
                         break
                     
-                    try:
-                        f = open(file_name, 'r')
-                        report = json.load(f)
-                        f.close()
+                    report = report if report else self.read_dump(file_name)
+                    
+                    if report != None:
                         status = api.send_crash_report(report)
-                    except:
-                        _log.error('Currupted crash dump %s' % file_name)
                         
                     if api.is_not_connected(status) == False:
                         if status != api.status.SUCCESS:
