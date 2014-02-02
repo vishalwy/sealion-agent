@@ -128,6 +128,8 @@ class Globals:
         if ret != True:
             raise RuntimeError, ret
         
+        self.reset_interfaces()
+        
     def url(self, path = ''):
         return self.api.get_url(path);
     

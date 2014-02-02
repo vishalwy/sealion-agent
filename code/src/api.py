@@ -180,8 +180,8 @@ class Interface(requests.Session):
 
         return ret
     
-    def send_crash_report(self, report):
-        response = self.exec_method('post', 3, 30, self.get_url('/orgs/%s/agents/%s/crashreport' % (self.config.agent.orgToken, self.config.agent._id)), data = report)    
+    def send_crash_report(self, report, retry_count = 3, retry_interval = 30):
+        response = self.exec_method('post', retry_count, retry_interval, self.get_url('/orgs/%s/agents/%s/crashreport' % (self.config.agent.orgToken, self.config.agent._id)), data = report)    
         ret = self.status.SUCCESS
         
         if Interface.is_success(response) == False:

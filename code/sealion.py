@@ -7,6 +7,7 @@ import traceback
 import signal
 import pwd
 import subprocess
+import json
 
 module_path = os.path.abspath(__file__)
 exe_path = os.path.dirname(module_path)
@@ -38,6 +39,41 @@ class sealion(Daemon):
             return None
         
         return path
+    
+    def send_crash_dumps(self):
+        _log.debug('Crash dump sender starting up')
+        from globals import Globals
+        api = Globals().api
+        path = self.crash_dump_path
+        
+        for file in os.listdir(path):
+            file_name = path + file
+            
+            if os.path.isfile(file_name):
+                status = api.status.SUCCESS
+                
+                while 1:
+                    if api.stop_event.is_set():
+                        break
+                    
+                    try:
+                        f = open(file_name, 'r')
+                        report = json.load(f)
+                        f.close()
+                        status = api.send_crash_report(report)
+                    except:
+                        pass
+                        
+                    if api.is_not_connected(status) == False:
+                        os.remove(file_name)
+                        break
+                        
+                    api.stop_event.wait(30)
+                    
+            if api.stop_event.is_set():
+                break
+                
+        _log.debug('Crash dump sender shutting down')
     
     def set_procname(self, proc_name = None):
         proc_name = proc_name if proc_name else self.__class__.__name__
@@ -118,6 +154,10 @@ class sealion(Daemon):
     def run(self):     
         self.set_procname()
         sys.excepthook = self.exception_hook
+        
+        from constructs import ExceptionThread
+        ExceptionThread(target = self.send_crash_dumps).start()        
+        
         import __init__
         __init__.start()
             

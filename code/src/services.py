@@ -162,8 +162,6 @@ class Controller(ExceptionThread):
         _log.debug('Controller starting up')
         
         while 1:
-            self.globals.reset_interfaces()
-
             if self.handle_response(Connection().connect()) == False:
                 break
                 
