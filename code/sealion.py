@@ -62,9 +62,13 @@ class sealion(Daemon):
                         f.close()
                         status = api.send_crash_report(report)
                     except:
-                        pass
+                        _log.error('Currupted crash dump %s' % file_name)
                         
                     if api.is_not_connected(status) == False:
+                        if status != api.status.SUCCESS:
+                            _log.error('Currupted crash dump %s' % file_name)
+                        
+                        _log.info('Removing crash dump %s' % file_name)
                         os.remove(file_name)
                         break
                         
