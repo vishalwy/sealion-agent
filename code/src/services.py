@@ -39,7 +39,6 @@ class Activity(ExceptionThread):
 
     def exe(self):
         _log.debug('Starting up activity %s' % self.activity['_id'])
-        a()
         globals = Globals()
         self.timeout = 30
         
