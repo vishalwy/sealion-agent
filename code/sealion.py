@@ -30,8 +30,8 @@ class sealion(Daemon):
         f.close()
         return path
     
-    def set_procname(self):
-        proc_name = self.__class__.__name__
+    def set_procname(self, proc_name = None):
+        proc_name = proc_name if proc_name else self.__class__.__name__
         
         try:
             from ctypes import cdll, byref, create_string_buffer
@@ -70,6 +70,7 @@ class sealion(Daemon):
             sys.exit(0)
             
     def on_fork(self):
+        self.set_procname('%s-monit' % self.__class__.__name__ )
         ret = os.wait()
         is_resurrect = False
         
