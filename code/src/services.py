@@ -93,7 +93,7 @@ class Activity(ExceptionThread):
                 os.waitpid(-1, os.WNOHANG)
                 return ret
             
-        output = p.stdout.read()
+        output = p.stdout.read(256 * 1024)
         ret['output'] = output if output else p.stderr.read()
         ret['return_code'] = p.returncode;
         return ret
@@ -131,7 +131,7 @@ class Connection(ExceptionThread):
                 self.start()
                 status = globals.APIStatus.SUCCESS
             
-        return status
+        return status       
        
 class Controller(ExceptionThread):
     __metaclass__ = SingletonType
@@ -159,8 +159,10 @@ class Controller(ExceptionThread):
         return False
         
     def exe(self):
+        _log.debug('Controller starting up')
+        
         while 1:
-            _log.debug('Controller starting up')
+            self.globals.reset_interfaces()
 
             if self.handle_response(Connection().connect()) == False:
                 break

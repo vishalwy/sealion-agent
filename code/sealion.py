@@ -24,7 +24,6 @@ class sealion(Daemon):
     @property
     def crash_dump_path(self):
         return '%svar/crash/' % exe_path 
-        
     
     def save_dump(self, type, value, tb):
         path = self.crash_dump_path + ('agent%d.dmp' % int(time.time()))

@@ -91,12 +91,12 @@ class Interface(requests.Session):
         method = getattr(self, method)
         response, i = None, 0
         
-        while retry_count == -1 or i <= retry_count:
+        while retry_count == -1 or i <= retry_count:                
+            if i > 0:
+                self.stop_event.wait(retry_interval)
+                
             if self.stop_event.is_set():
                 break
-                
-            if i > 0:
-                time.sleep(retry_interval)
             
             try:
                 response = method(timeout = 10, *args, **kwargs)
@@ -123,7 +123,7 @@ class Interface(requests.Session):
             self.config.agent.update(response.json())
             self.config.agent.save()
         else:
-            ret = self.error('Registration failed', response)
+            ret = self.error('Failed to register agent', response)
         
         return ret
     
@@ -139,7 +139,7 @@ class Interface(requests.Session):
             self.is_authenticated = True
             self.set_events(post_event = True)
         else:
-            ret = self.error('Authenitcation failed', response)
+            ret = self.error('Failed to authenticate agent', response)
         
         return ret
             
@@ -152,7 +152,7 @@ class Interface(requests.Session):
             self.config.agent.update(response.json())
             self.config.agent.save()
         else:
-            ret = self.error('Get config failed', response)
+            ret = self.error('Failed to get config', response)
             
         return ret
             
@@ -164,7 +164,7 @@ class Interface(requests.Session):
             _log.debug('Sent activity(%s @ %d)' % (activity_id, data['timestamp']))
             self.set_events(post_event = True)
         else:
-            ret = self.error('Send failed for activity(%s @ %d)' % (activity_id, data['timestamp']), response)
+            ret = self.error('Failed to send activity(%s @ %d)' % (activity_id, data['timestamp']), response)
             
         return ret
     
@@ -176,8 +176,17 @@ class Interface(requests.Session):
         if Interface.is_success(response):
             _log.debug('Logout successful')
         else:
-            ret = self.error('Logout failed for agent ' + self.config.agent._id, response)
+            ret = self.error('Failed to logout agent ' + self.config.agent._id, response)
 
+        return ret
+    
+    def send_crash_report(self, report):
+        response = self.exec_method('post', 3, 30, self.get_url('/orgs/%s/agents/%s/crashreport' % (self.config.agent.orgToken, self.config.agent._id)), data = report)    
+        ret = self.status.SUCCESS
+        
+        if Interface.is_success(response) == False:
+            ret = self.error('Failed to send crash dump', response)
+        
         return ret
     
     def update_agent(self):

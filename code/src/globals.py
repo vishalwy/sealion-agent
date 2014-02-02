@@ -28,7 +28,8 @@ class SealionConfig(Config):
                     'modules': {'type': ['str,unicode'], 'depends': ['level'], 'regex': '^.+$', 'optional': True}
                 },
                 'optional': True
-            }
+            },
+            'commandTimeout': {'type': 'float', 'optional': True}
         }
         
     def set(self, data = None):
@@ -126,8 +127,6 @@ class Globals:
         
         if ret != True:
             raise RuntimeError, ret
-        
-        self.reset_interfaces()
         
     def url(self, path = ''):
         return self.api.get_url(path);
