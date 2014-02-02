@@ -21,8 +21,13 @@ _log = logging.getLogger(__name__)
 class sealion(Daemon):
     user_name = 'vishal'
     
+    @property
+    def crash_dump_path(self):
+        return '%svar/crash/' % exe_path 
+        
+    
     def save_dump(self, type, value, tb):
-        path = '%svar/crash/agent%d.dmp' % (exe_path, int(time.time()))
+        path = self.crash_dump_path + ('agent%d.dmp' % int(time.time()))
         dir = os.path.dirname(path)
         
         try:
@@ -92,6 +97,12 @@ class sealion(Daemon):
             
         sys.exit(0)
         
+    def is_crash_loop(self):
+        t = int(time.time())
+        path = self.crash_dump_path
+        files = [f for f in os.listdir(path) if os.path.isfile(path + f) and t - os.path.getmtime(path + f) < 120]
+        return len(files) >= 5
+        
     def exception_hook(self, type, value, tb):
         if type != SystemExit:
             dump_file = self.save_dump(type, value, tb)
@@ -107,6 +118,13 @@ class sealion(Daemon):
         self.set_procname()
         sys.excepthook = self.exception_hook
         import __init__
+        
+        if self.is_crash_loop():
+            _log.info('Detected crash loop; starting agent in update only mode')
+            
+            while 1:
+                time.sleep(5)
+        
         __init__.start()
             
 def sig_handler(signum, frame):    
