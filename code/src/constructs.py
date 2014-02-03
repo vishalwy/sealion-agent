@@ -55,9 +55,9 @@ class ExceptionThread(threading.Thread):
         target = self.run if target else target
         threading.Thread.__init__(self, group, target, name, *args, **kwargs)
         
-    def run(self):        
+    def run(self, *args, **kwargs):        
         try:
-            (self.orig_target if self.orig_target else self.exe)()
+            (self.orig_target if self.orig_target else self.exe)(*args, **kwargs)
         except:
             type, value, tb = sys.exc_info()
             sys.excepthook(type, value, tb)

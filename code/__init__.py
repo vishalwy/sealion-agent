@@ -62,9 +62,10 @@ logger.setLevel(logging_level)
 format = '%(asctime)-15s %(levelname)-6s %(thread)d - %(module)-s[%(lineno)-d]: %(message)s'
 formatter = logging.Formatter(format if logging_level == logging.DEBUG else format.replace('%(thread)d - ', ''))
 
-if len(logging_list) != 1 or logging_list[0] != 'all':
-    for handler in logging.root.handlers:
-        handler.setFormatter(formatter)
+for handler in logging.root.handlers:
+    handler.setFormatter(formatter)
+    
+    if len(logging_list) != 1 or logging_list[0] != 'all':
         handler.addFilter(LoggingList(*logging_list))
         
 def start():
