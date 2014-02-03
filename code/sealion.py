@@ -21,6 +21,7 @@ _log = logging.getLogger(__name__)
 
 class sealion(Daemon):
     user_name = 'vishal'
+    crash_dump_timeout = 90
     
     @property
     def crash_dump_path(self):
@@ -72,11 +73,13 @@ class sealion(Daemon):
         return report
     
     def send_crash_dumps(self):        
+        _log.debug('Crash dump sender starting up')
+        crash_dump_timeout = self.crash_dump_timeout + 20
         from globals import Globals
         globals = Globals()
         path = self.crash_dump_path
-        globals.api.stop_event.wait(2 * 60)
-        _log.debug('Crash dump sender starting up')
+        globals.api.stop_event.wait(crash_dump_timeout)
+        _log.debug('Crash dump sender waiting for stop event for %d seconds', crash_dump_timeout)
         
         for file in os.listdir(path):
             file_name = path + file
@@ -174,7 +177,7 @@ class sealion(Daemon):
     def is_crash_loop(self):
         t = int(time.time())
         path = self.crash_dump_path
-        files = [f for f in os.listdir(path) if os.path.isfile(path + f) and t - os.path.getmtime(path + f) < 120]
+        files = [f for f in os.listdir(path) if os.path.isfile(path + f) and t - os.path.getmtime(path + f) < self.crash_dump_timeout]
         return len(files) >= 5
         
     def exception_hook(self, type, value, tb):
