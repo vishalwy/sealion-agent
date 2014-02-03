@@ -256,7 +256,14 @@ class Interface(requests.Session):
         filename = temp_dir + url.split('/')[-1]
         
         _log.info('Update found; downloading to %s' % filename)
-        response = requests.get(url, stream = True)
+        
+        try:
+            response = requests.get(url, stream = True)
+        except Exception, e:
+            _log.error('Failed to download the update %s' % str(e))
+            self.updater = None
+            return
+            
         is_completed = False
         
         with open(filename, 'wb') as f:
