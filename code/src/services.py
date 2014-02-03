@@ -101,7 +101,7 @@ class Activity(ExceptionThread):
     def stop(self):
         self.is_stop = True
     
-class Connection(ExceptionThread):
+class Connection(ExceptionThread):    
     def exe(self):
         _log.debug('Starting up connection')
         self.attempt(retry_interval = 20)
@@ -110,7 +110,10 @@ class Connection(ExceptionThread):
     def attempt(self, max_try = -1, retry_interval = 5):
         globals = Globals()
         status = globals.api.authenticate(max_try, retry_interval)
-        status == globals.APIStatus.SUCCESS and globals.rtc.connect().start()
+        
+        if status == globals.APIStatus.SUCCESS and globals.is_update_only_mode == False: 
+            globals.rtc.connect().start()
+            
         return status            
         
     def connect(self):
@@ -126,7 +129,10 @@ class Connection(ExceptionThread):
         status = self.attempt(2)
         
         if globals.api.is_not_connected(status):
-            if hasattr(globals.config.agent, 'activities') and hasattr(globals.config.agent, 'org'):
+            if globals.is_update_only_mode == True:
+                self.start()
+                status = globals.APIStatus.SUCCESS
+            elif hasattr(globals.config.agent, 'activities') and hasattr(globals.config.agent, 'org'):
                 _log.info('Running commands in offline mode')
                 self.start()
                 status = globals.APIStatus.SUCCESS
@@ -165,16 +171,29 @@ class Controller(ExceptionThread):
             if self.handle_response(Connection().connect()) == False:
                 break
                 
-            if self.globals.store.start() == False:
-                break
+            if self.globals.is_update_only_mode == False:            
+                if self.globals.store.start() == False:
+                    break
 
-            if len(self.globals.config.agent.activities) == 0:
-                self.globals.store.clear_offline_data()
+                if len(self.globals.config.agent.activities) == 0:
+                    self.globals.store.clear_offline_data()
 
-            self.globals.manage_activities();
-            _log.debug('Controller waiting for stop event')
-            self.globals.stop_event.wait()
-            _log.debug('Controller received stop event')
+                self.globals.manage_activities();
+                self.globals.stop_event.wait()
+                _log.debug('Controller received stop event')
+            else:
+                while 1:
+                    if self.globals.api.post_event.is_set() == False:
+                        _log.debug('Controller waiting for post event')
+                        self.globals.api.post_event.wait()
+                    
+                    if self.globals.stop_event.is_set():
+                        _log.debug('Controller received stop event')
+                        break
+                    
+                    self.globals.api.get_config()
+                    self.globals.stop_event.wait(5 * 60)
+            
             self.stop_threads()
             
             if self.handle_response(self.globals.api.stop_status) == False:

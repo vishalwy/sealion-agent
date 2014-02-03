@@ -114,6 +114,7 @@ class Globals:
         exe_path = exe_path[:-1] if exe_path[len(exe_path) - 1] == '/' else exe_path
         self.exe_path = exe_path[:exe_path.rfind('/') + 1]
         self.db_path = Utils.get_safe_path(self.exe_path + 'var/db/')
+        self.is_update_only_mode = False
         self.config = EmptyClass()
         self.config.sealion = SealionConfig(Utils.get_safe_path(self.exe_path + 'etc/config/sealion.json'))
         self.config.agent = AgentConfig(Utils.get_safe_path(self.exe_path + 'etc/config/agent.json'))

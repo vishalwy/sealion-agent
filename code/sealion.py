@@ -181,15 +181,16 @@ class sealion(Daemon):
     def run(self):     
         self.set_procname()
         sys.excepthook = self.exception_hook
+        is_update_only_mode = False
         
         if  self.is_crash_loop() == True:
-            _log.info('Crash loop detected; contact support@sealion.com to troubleshoot')
-            sys.exit(0)
+            _log.info('Crash loop detected; starting agent in update only mode')
+            is_update_only_mode = True
         
         from constructs import ExceptionThread
         ExceptionThread(target = self.send_crash_dumps).start()
         import __init__
-        __init__.start()
+        __init__.start(is_update_only_mode)
             
 def sig_handler(signum, frame):    
     if signum == signal.SIGINT:

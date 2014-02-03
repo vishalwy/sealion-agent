@@ -68,7 +68,8 @@ for handler in logging.root.handlers:
     if len(logging_list) != 1 or logging_list[0] != 'all':
         handler.addFilter(LoggingList(*logging_list))
         
-def start():
+def start(is_update_only_mode = False):
+    globals.is_update_only_mode = is_update_only_mode
     services.start()
 
 if __name__ == "__main__":
