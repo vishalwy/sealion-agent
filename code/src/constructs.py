@@ -50,14 +50,16 @@ def enum(*sequential, **named):
     return type('Enum', (), enums)
 
 class ExceptionThread(threading.Thread):
-    def __init__(self, group = None, target = None, name = None, *args, **kwargs):
+    def __init__(self, group = None, target = None, name = None, args = (), kwargs = {}):
         self.orig_target = target
+        self.orig_args = args
+        self.orig_kwargs = kwargs
         target = self.run if target else target
-        threading.Thread.__init__(self, group, target, name, *args, **kwargs)
+        threading.Thread.__init__(self, group, target, name)
         
-    def run(self, *args, **kwargs):        
+    def run(self):        
         try:
-            (self.orig_target if self.orig_target else self.exe)(*args, **kwargs)
+            (self.orig_target if self.orig_target else self.exe)(*self.orig_args, **self.orig_kwargs)
         except:
             type, value, tb = sys.exc_info()
             sys.excepthook(type, value, tb)
