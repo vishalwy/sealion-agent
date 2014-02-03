@@ -1,8 +1,8 @@
 import logging
-import time
 import requests
 import threading
 import tempfile
+import subprocess
 from constructs import *
 
 _log = logging.getLogger(__name__)
@@ -198,11 +198,11 @@ class Interface(requests.Session):
         
         return ret
     
-    def update_agent(self):
+    def update_agent(self, exe_path):
         if self.updater != None:
             return
         
-        self.updater = ExceptionThread(target = self.download_file)
+        self.updater = ExceptionThread(target = self.download_file, args=(exe_path,))
         self.updater.start()
     
     def stop(self, stop_status = None):
@@ -249,11 +249,11 @@ class Interface(requests.Session):
         
         return self.status.UNKNOWN
     
-    def download_file(self):
+    def download_file(self, exe_path):
         url = self.config.agent.updateUrl
-        filename = tempfile.gettempdir()
-        filename = filename + '/' if filename[len(filename) - 1] != '/' else filename
-        filename = filename + url.split('/')[-1]
+        temp_dir = tempfile.gettempdir()
+        temp_dir = temp_dir + '/' if temp_dir[len(temp_dir) - 1] != '/' else temp_dir
+        filename = temp_dir + url.split('/')[-1]
         
         _log.info('Update found; downloading to %s' % filename)
         response = requests.get(url, stream = True)
@@ -278,10 +278,9 @@ class Interface(requests.Session):
             _log.info('Update succesfully downloaed to %s' % filename)
         else:
             _log.info('Aborted downloading update')
-            
+            self.updater = None
+            return
+        
+        subprocess.call(['tar', '-xf', filename, '--directory=%s' % temp_dir])
+        subprocess.Popen([temp_dir + 'sealion-agent/installer.sh', '-i', exe_path])
         self.updater = None
-                    
-        
-        
-
-        
