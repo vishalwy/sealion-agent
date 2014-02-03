@@ -27,6 +27,8 @@ class sealion(Daemon):
         return '%svar/crash/' % exe_path 
     
     def save_dump(self, type, value, tb):
+        from globals import Globals
+        globals = Globals()
         path = self.crash_dump_path + ('sealion_%d.dmp' % int(round(time.time() * 1000)))
         dir = os.path.dirname(path)
         f = None
@@ -37,6 +39,12 @@ class sealion(Daemon):
                 'timestamp': int(round(time.time() * 1000)),
                 'stack': ''.join(traceback.format_exception(type, value, tb))
             }
+            
+            if hasattr(globals.config.agent, 'orgToken'):
+                report['orgToken'] = globals.config.agent.orgToken
+                
+            if hasattr(globals.config.agent, '_id'):
+                report['_id'] = globals.config.agent._id
             
             f = open(path, 'w')
             json.dump(report, f)
@@ -58,6 +66,9 @@ class sealion(Daemon):
         finally:
             f and f.close()
             
+        if report and (not report.get('orgToken') or not report.get('_id')):
+            report = None
+        
         return report
     
     def send_crash_dumps(self):        
@@ -80,13 +91,12 @@ class sealion(Daemon):
                     
                     report = report if report else self.read_dump(file_name)
                     
-                    if report != None:
-                        status = globals.api.send_crash_report(report)
+                    if report == None:
+                        break
                         
-                    if api.is_not_connected(status) == False:
-                        if status != globals.Status.SUCCESS:
-                            _log.error('Currupted crash dump %s' % file_name)
-                        
+                    status = globals.api.send_crash_report(report)
+
+                    if api.is_not_connected(status) == False:                        
                         _log.info('Removing crash dump %s' % file_name)
                         os.remove(file_name)
                         break

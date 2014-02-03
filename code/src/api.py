@@ -30,6 +30,7 @@ class Interface(requests.Session):
         self.proxies = requests.utils.get_environ_proxies(self.get_url())
         self.stop_status = Status.SUCCESS
         self.is_authenticated = False
+        self.updater = None
         
         if hasattr(self.config.sealion, 'proxy'):
             self.proxies.update(self.config.sealion.proxy)
@@ -180,19 +181,25 @@ class Interface(requests.Session):
 
         return ret
     
-    def send_crash_report(self, report, retry_count = 3, retry_interval = 30):
-        response = self.exec_method('post', retry_count, retry_interval, self.get_url('/orgs/%s/agents/%s/crashreport' % (self.config.agent.orgToken, self.config.agent._id)), data = report)    
+    def send_crash_report(self, data, retry_count = 3, retry_interval = 30):
+        orgToken, agentId = data['orgToken'], data['_id']
+        del data['orgToken'], data['_id']
+        response = self.exec_method('post', retry_count, retry_interval, self.get_url('/orgs/%s/agents/%s/crashreport' % (orgToken, agentId)), data = data)    
         ret = self.status.SUCCESS
         
         if Interface.is_success(response):
-            _log.debug('Sent crash dump @ ' + report['timestamp'])
+            _log.debug('Sent crash dump @ ' + data['timestamp'])
         else:
             ret = self.error('Failed to send crash dump', response)
         
         return ret
     
     def update_agent(self):
-        ExceptionThread(target = self.download_file).start()
+        if self.updater != None:
+            return
+        
+        self.updater = ExceptionThread(target = self.download_file)
+        self.updater.start()
     
     def stop(self, stop_status = None):
         self.set_events(True, True)
@@ -267,6 +274,8 @@ class Interface(requests.Session):
             _log.info('Update succesfully downloaed to %s' % filename)
         else:
             _log.info('Aborted downloading update')
+            
+        self.updater = None
                     
         
         
