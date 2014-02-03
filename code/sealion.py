@@ -81,33 +81,36 @@ class sealion(Daemon):
         globals.api.stop_event.wait(crash_dump_timeout)
         _log.debug('Crash dump sender waiting for stop event for %d seconds', crash_dump_timeout)
         
-        for file in os.listdir(path):
-            file_name = path + file
-            
-            if os.path.isfile(file_name):
-                status = globals.APIStatus.UNKNOWN
-                report = None
-                
-                while 1:
-                    if globals.api.stop_event.is_set():
-                        break
-                    
-                    report = report if report else self.read_dump(file_name)
-                    
-                    if report == None:
-                        break
-                        
-                    status = globals.api.send_crash_report(report)
+        try:
+            for file in os.listdir(path):
+                file_name = path + file
 
-                    if api.is_not_connected(status) == False:                        
-                        _log.info('Removing crash dump %s' % file_name)
-                        os.remove(file_name)
-                        break
-                        
-                    globals.api.stop_event.wait(30)
-                    
-            if globals.api.stop_event.is_set():
-                break
+                if os.path.isfile(file_name):
+                    status = globals.APIStatus.UNKNOWN
+                    report = None
+
+                    while 1:
+                        if globals.api.stop_event.is_set():
+                            break
+
+                        report = report if report else self.read_dump(file_name)
+
+                        if report == None:
+                            break
+
+                        status = globals.api.send_crash_report(report)
+
+                        if api.is_not_connected(status) == False:                        
+                            _log.info('Removing crash dump %s' % file_name)
+                            os.remove(file_name)
+                            break
+
+                        globals.api.stop_event.wait(30)
+
+                if globals.api.stop_event.is_set():
+                    break
+        except:
+            pass
                 
         _log.debug('Crash dump sender shutting down')
     
@@ -125,6 +128,11 @@ class sealion(Daemon):
         
     def initialize(self):        
         try:
+            dir = os.path.dirname(self.pidfile)
+            
+            if os.path.isdir(dir) != True:
+                os.makedirs(dir)
+            
             f = open(self.pidfile, 'w');
             f.close()
         except Exception, e:
@@ -145,18 +153,6 @@ class sealion(Daemon):
             sys.exit(0)
         except Exception, e:
             _log.error('Failed to change the group or user to %s; %s' % (self.user_name, str(e)))
-            sys.exit(0)
-            
-        try:
-            dir = os.path.dirname(pid_file)
-            
-            if os.path.isdir(dir) != True:
-                os.makedirs(dir)
-                
-            f = open(self.pidfile, 'w')
-            f.close()
-        except Exception, e:
-            _log('Failed to create file %s; %s' % (self.pidfile, str(e)))
             sys.exit(0)
             
     def on_fork(self):        
@@ -186,7 +182,12 @@ class sealion(Daemon):
     def is_crash_loop(self):
         t = int(time.time())
         path = self.crash_dump_path
-        files = [f for f in os.listdir(path) if os.path.isfile(path + f) and t - os.path.getmtime(path + f) < self.crash_dump_timeout]
+        
+        try:
+            files = [f for f in os.listdir(path) if os.path.isfile(path + f) and t - os.path.getmtime(path + f) < self.crash_dump_timeout]
+        except:
+            return 0
+        
         return len(files) >= 5
         
     def exception_hook(self, type, value, tb):

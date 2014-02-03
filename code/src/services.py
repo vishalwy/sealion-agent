@@ -121,7 +121,7 @@ class Connection(ExceptionThread):
         status = globals.APIStatus.SUCCESS
         
         if hasattr(globals.config.agent, '_id') == False:
-            status = globals.api.register()
+            status = globals.api.register(retry_count = 4, retry_interval = 10)
             
         if status != globals.APIStatus.SUCCESS:
             return status
