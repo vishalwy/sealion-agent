@@ -51,7 +51,7 @@ class AgentConfig(Config):
             'apiUrl': {'type': 'str,unicode', 'regex': '^https://[^\s:]+(:[0-9]+)?$' },
             'name': {'type': 'str,unicode',  'regex': '^.+$'},
             'category': {'type': 'str,unicode', 'regex': '^.+$', 'optional': True},
-            'agentVersion': {'type': 'str,unicode', 'depends': ['_id'], 'regex': '^[0-9\.]+$', 'optional': True},
+            'agentVersion': {'type': 'str,unicode', 'regex': '^[0-9\.]+$'},
             'activities': {
                 'type': [{
                     '_id': {'type': 'str,unicode', 'regex': '^[a-zA-Z0-9]{24}$'}, 
@@ -62,7 +62,7 @@ class AgentConfig(Config):
                 'depends': ['_id', 'agentVersion'],
                 'optional': True
             },
-            'updateUrl': {'type': 'str,unicode', 'depends': ['_id'], 'regex': '^.+$'},
+            'updateUrl': {'type': 'str,unicode', 'regex': '^.+$'},
             'org': {'type': 'str,unicode', 'depends': ['orgToken', '_id', 'agentVersion'], 'regex': '^[a-zA-Z0-9]{24}$', 'optional': True}
         }
         
@@ -88,7 +88,7 @@ class AgentConfig(Config):
             
         globals = Globals()
         version = data.get('agentVersion')
-            
+             
         if version and version != self.data['agentVersion']:
             del data['agentVersion']
             globals.api.update_agent()
