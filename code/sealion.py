@@ -137,8 +137,15 @@ class sealion(Daemon):
             _log(error)
             sys.exit(0)
             
-    def on_fork(self):
+    def on_fork(self):        
         self.set_procname('%s-monit' % self.__class__.__name__ )
+        
+        global logging, time, traceback, signal, pwd, json
+        del logging, time, traceback, signal, pwd, json
+        import gc
+        gc.collect()
+        del gc
+        
         ret = os.wait()
         is_resurrect = False
         
@@ -149,11 +156,8 @@ class sealion(Daemon):
             is_resurrect = True
             
         if is_resurrect:
-            if self.is_crash_loop():
-                _log.info('Crash loop detected; contact support@sealion.com to troubleshoot')
-            else:                        
-                _log.info('Resurrecting %s' % self.__class__.__name__)
-                subprocess.call([sys.executable, module_path, 'start'])
+            _log.info('Resurrecting %s' % self.__class__.__name__)
+            subprocess.call([sys.executable, module_path, 'start'])
             
         sys.exit(0)
         
@@ -178,9 +182,12 @@ class sealion(Daemon):
         self.set_procname()
         sys.excepthook = self.exception_hook
         
-        from constructs import ExceptionThread
-        ExceptionThread(target = self.send_crash_dumps).start()        
+        if  self.is_crash_loop() == True:
+            _log.info('Crash loop detected; contact support@sealion.com to troubleshoot')
+            sys.exit(0)
         
+        from constructs import ExceptionThread
+        ExceptionThread(target = self.send_crash_dumps).start()
         import __init__
         __init__.start()
             
