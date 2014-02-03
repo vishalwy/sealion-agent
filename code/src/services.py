@@ -38,7 +38,7 @@ class Activity(ExceptionThread):
         return is_whitelisted
 
     def exe(self):
-        _log.debug('Starting up activity %s' % self.activity['_id'])
+        _log.info('Starting up activity %s' % self.activity['_id'])
         globals = Globals()
         self.timeout = 30
         
@@ -69,7 +69,7 @@ class Activity(ExceptionThread):
             if break_flag == True:
                 break
 
-        _log.debug('Shutting down activity %s' % self.activity['_id'])
+        _log.info('Shutting down activity %s' % self.activity['_id'])
 
     def execute(self):
         if self.is_whitelisted == False:
