@@ -85,7 +85,7 @@ class sealion(Daemon):
             file_name = path + file
             
             if os.path.isfile(file_name):
-                status = globals.Status.UNKNOWN
+                status = globals.APIStatus.UNKNOWN
                 report = None
                 
                 while 1:
@@ -132,7 +132,6 @@ class sealion(Daemon):
             sys.exit(0)
         
         os.chdir(exe_path)
-        error = None
         import __init__
         
         try:
@@ -141,13 +140,23 @@ class sealion(Daemon):
             if user.pw_uid != os.getuid():
                 os.setgid(user.pw_gid)
                 os.setuid(user.pw_uid)
-        except KeyError:
-            error = 'Failed to find user named ' + self.user_name
-        except:
-            error = 'Failed to change the group or user to ' + self.user_name
-
-        if error:
-            _log(error)
+        except KeyError, e:
+            _log.error('Failed to find user named %s; %s' % (self.user_name, str(e)))
+            sys.exit(0)
+        except Exception, e:
+            _log.error('Failed to change the group or user to %s; %s' % (self.user_name, str(e)))
+            sys.exit(0)
+            
+        try:
+            dir = os.path.dirname(pid_file)
+            
+            if os.path.isdir(dir) != True:
+                os.makedirs(dir)
+                
+            f = open(self.pidfile, 'w')
+            f.close()
+        except Exception, e:
+            _log('Failed to create file %s; %s' % (self.pidfile, str(e)))
             sys.exit(0)
             
     def on_fork(self):        
