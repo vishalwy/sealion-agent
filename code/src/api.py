@@ -46,7 +46,9 @@ class Interface(requests.Session):
         
         if response != None:
             try:
-                temp = response.json()['message']
+                response_json = response.json()
+                code = response_json['code']
+                temp = 'Error ' + str(code) + '; ' + response_json['message']
             except:
                 temp = 'Error ' + str(response.status_code)
         
@@ -288,6 +290,8 @@ class Interface(requests.Session):
             self.updater = None
             return
         
+        _log.debug('Extracting %s to %s', (filename, temp_dir))
         subprocess.call(['tar', '-xf', filename, '--directory=%s' % temp_dir])
+        _log.info('Installing update')
         subprocess.Popen([temp_dir + 'sealion-agent/installer.sh', '-i', exe_path])
         self.updater = None
