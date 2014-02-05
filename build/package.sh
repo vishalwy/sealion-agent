@@ -1,5 +1,7 @@
 #!/bin/bash
 
+VERSION="2.0.0"
+
 TEST_API_URL="https://api-test.sealion.com"
 TEST_UPDATE_URL="http://test.sealion.com/sealion-agent.tar.gz"
 
@@ -8,11 +10,11 @@ PROD_UPDATE_URL="http://api.sealion.com/sealion-agent.tar.gz"
 
 API_URL=
 UPDATE_URL=
-TARGET=0
+TARGET="custom"
 
 check_conflict()
 {
-    if [[ $TARGET -eq 1 || "$API_URL" != "" || "$UPDATE_URL" != "" ]] ; then
+    if [[ "$API_URL" != "" && "$UPDATE_URL" != "" ]] ; then
         echo "You cannot specify multiple targets or urls"
         exit 1
     fi
@@ -21,9 +23,9 @@ check_conflict()
 set_target()
 {
     check_conflict
-    API_URL=$1
-    UPDATE_URL=$2
-    TARGET=1
+    TARGET=$1
+    API_URL=$2
+    UPDATE_URL=$3
 }
 
 while getopts a:u:t: OPT ; do
@@ -38,9 +40,9 @@ while getopts a:u:t: OPT ; do
             ;;
         t)
             if [ "$OPTARG" == "prod" ] ; then
-                set_target $PROD_API_URL $PROD_UPDATE_URL
+                set_target "prod" $PROD_API_URL $PROD_UPDATE_URL
             elif [ "$OPTARG" == "test" ] ; then
-                set_target $TEST_API_URL $TEST_UPDATE_URL
+                set_target "test" $TEST_API_URL $TEST_UPDATE_URL
             else
                 echo "Invalid argument for option -$OPTARG." >&2    
                 exit 1
@@ -64,12 +66,28 @@ fi
 
 BASEDIR=$(dirname $0)
 OUTPUT=sealion-agent
+TARGET="$TARGET.bin"
+rm -rf $BASEDIR/$TARGET >/dev/null 2>&1
+mkdir -p $BASEDIR/$TARGET/$OUTPUT/agent
 
-rm -rf $BASEDIR/bin >/dev/null 2>&1
-mkdir -p $BASEDIR/bin/$OUTPUT/agent
-find $BASEDIR/../code/ -mindepth 1 -maxdepth 1 -type d ! -name 'etc' -exec cp -r {} $BASEDIR/bin/$OUTPUT/agent \;
-cp -r $BASEDIR/etc $BASEDIR/bin/$OUTPUT/agent
-$BASEDIR/configure.sh -a $API_URL -u $UPDATE_URL
-tar -zcvf $BASEDIR/bin/$OUTPUT.tar.gz --exclude="*.pyc" --exclude="var" --exclude="*~" --exclude-backups --directory=$BASEDIR/bin $OUTPUT/
-rm -rf $BASEDIR/bin/$OUTPUT
+generate_installer()
+{
+    INSTALLER=$BASEDIR/$TARGET/$OUTPUT/installer.sh
+    cp $BASEDIR/scripts/installer.sh.in $INSTALLER
+    URL="$(echo "$API_URL" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
+    ARGS="-i 's/\(^API\_URL=\)\(\"[^\"]\+\"\)/\1\"$URL\"/'"
+    eval sed "$ARGS" $INSTALLER
+    URL="$(echo "$UPDATE_URL" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
+    ARGS="-i 's/\(^UPDATE\_URL=\)\(\"[^\"]\+\"\)/\1\"$URL\"/'"
+    eval sed "$ARGS" $INSTALLER
+    ARGS="-i 's/\(^VERSION=\)\(\"[^\"]\+\"\)/\1\"$VERSION\"/'"
+    eval sed "$ARGS" $INSTALLER
+    echo "Installer generated at $INSTALLER"
+}
+
+find $BASEDIR/../code/ -mindepth 1 -maxdepth 1 -type d ! -name 'etc' -exec cp -r {} $BASEDIR/$TARGET/$OUTPUT/agent \;
+cp -r $BASEDIR/etc $BASEDIR/$TARGET/$OUTPUT/agent
+generate_installer
+tar -zcvf $BASEDIR/$TARGET/$OUTPUT.tar.gz --exclude="*.pyc" --exclude="var" --exclude="*~" --exclude-backups --directory=$BASEDIR/$TARGET $OUTPUT/
+rm -rf $BASEDIR/$TARGET/$OUTPUT
 
