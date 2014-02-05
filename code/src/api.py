@@ -130,6 +130,15 @@ class Interface(requests.Session):
         
         return ret
     
+    def unregister(self):
+        response = self.exec_method('delete', 2, 5, self.get_url('orgs/%s/servers/%s' % (self.config.agent.orgToken, self.config.agent._id)))
+        ret = self.status.SUCCESS
+        
+        if Interface.is_success(response) == False:
+            ret = self.error('Failed to register agent', response)
+            
+        return ret
+    
     def authenticate(self, retry_count = -1, retry_interval = 5):
         data = self.config.agent.get_dict(['orgToken', 'agentVersion'])
         response = self.exec_method('post', retry_count, retry_interval, self.get_url('agents/' + self.config.agent._id + '/sessions'), data = data)    

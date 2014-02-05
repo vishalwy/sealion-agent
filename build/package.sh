@@ -65,6 +65,8 @@ if [[ "$API_URL" == "" || "$UPDATE_URL" == "" ]] ; then
 fi
 
 BASEDIR=$(dirname $0)
+BASEDIR=${BASEDIR%/}
+BASEDIR="'$BASEDIR'"
 OUTPUT=sealion-agent
 TARGET="$TARGET.bin"
 rm -rf $BASEDIR/$TARGET >/dev/null 2>&1

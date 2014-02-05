@@ -51,6 +51,8 @@ VERSION="<version>"
 
 #script variables
 BASEDIR=$(dirname $0)
+BASEDIR=${BASEDIR%/}
+BASEDIR="'$BASEDIR'"
 USER_NAME="vishal"
 IS_UPDATE=1
 INIT_FILE="sealion.py"
@@ -86,12 +88,12 @@ install_service()
 
     chown -R $USER_NAME:$USER_NAME $INSTALL_PATH
     
-    ln -sf $INIT_FILE $INIT_D_PATH/sealion
-    chmod +x $INIT_FILE
+    ln -sf $SERVICE_FILE $INIT_D_PATH/sealion
+    chmod +x $SERVICE_FILE
     
     for (( i = 1 ; i < 7 ; i++ )) ; do
         VAR_NAME="RC"$i"_PATH"
-        ln -sf $INIT_FILE ${!VAR_NAME}/${SYMLINK_PATHS[$i]}99sealion
+        ln -sf $SERVICE_FILE ${!VAR_NAME}/${SYMLINK_PATHS[$i]}99sealion
         
         if [ $? -ne 0 ] ; then
             echo "Error: Cannot create service. Unable to update init.d files" >&2
@@ -141,6 +143,8 @@ while getopts i:o:c:H:x:s: OPT ; do
 done
 
 INSTALL_PATH=${INSTALL_PATH%/}
+INSTALL_PATH="'$INSTALL_PATH'"
+SERVICE_FILE="$INSTALL_PATH/sealion"
 
 if [ "$ORG_TOKEN" != '' ] ; then
     if [[ $EUID -ne 0 ]]; then
@@ -183,14 +187,14 @@ if [ "$ORG_TOKEN" != '' ] ; then
     fi
 else
     if [ ! -f "$INSTALL_PATH/$INIT_FILE" ] ; then
-        echo "Error: $INSTALL_PATH is not a valid sealion update directory"
+        echo "Error: $INSTALL_PATH is not a valid sealion directory"
         exit 1
     fi
 fi
 
 if [ -f "$INSTALL_PATH/$INIT_FILE" ] ; then
     echo "Stopping agent..."
-    $INSTALL_PATH/$INIT_FILE stop
+    python $INSTALL_PATH/$INIT_FILE stop
 fi
 
 echo "Copying files..."
@@ -226,5 +230,5 @@ else
 fi
 
 echo "Starting agent..."
-$INSTALL_PATH/$INIT_FILE start
+python $INSTALL_PATH/$INIT_FILE start
 
