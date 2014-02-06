@@ -21,13 +21,13 @@ class Status(EmptyClass):
 
 class Interface(requests.Session):    
     status = Status
+    self.proxies = requests.utils.get_environ_proxies(self.get_url())
     
     def __init__(self, config, stop_event, *args, **kwargs):
         super(Interface, self).__init__(*args, **kwargs)
         self.config = config
         self.stop_event = stop_event
         self.post_event = threading.Event()
-        self.proxies = requests.utils.get_environ_proxies(self.get_url())
         self.stop_status = Status.SUCCESS
         self.is_authenticated = False
         self.updater = None
@@ -265,12 +265,10 @@ class Interface(requests.Session):
         temp_dir = tempfile.gettempdir()
         temp_dir = temp_dir + '/' if temp_dir[len(temp_dir) - 1] != '/' else temp_dir
         filename = temp_dir + url.split('/')[-1]
-        response = None
-        
         _log.info('Update found; downloading to %s' % filename)
         
         try:
-            response = requests.get(url, stream = True)
+            response = self.get(url, stream = True)
         except Exception, e:
             _log.error('Failed to download the update %s' % str(e))
             self.updater = None
