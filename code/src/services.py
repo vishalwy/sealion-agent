@@ -46,7 +46,7 @@ class Activity(ExceptionThread):
             self.timeout = globals.config.sealion.commandTimeout            
         
         while 1:                
-            timestamp = int(round(time.time() * 1000))
+            timestamp = int(time.time() * 1000)
             ret = self.execute()      
             
             if ret != None:

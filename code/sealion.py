@@ -30,14 +30,14 @@ class sealion(Daemon):
     def save_dump(self, type, value, tb):
         from globals import Globals
         globals = Globals()
-        path = self.crash_dump_path + ('sealion_%d.dmp' % int(round(time.time() * 1000)))
+        path = self.crash_dump_path + ('sealion_%d.dmp' % int(time.time() * 1000))
         dir = os.path.dirname(path)
         f = None
         
         try:
             os.path.isdir(dir) or os.makedirs(dir)            
             report = {
-                'timestamp': int(round(time.time() * 1000)),
+                'timestamp': int(time.time() * 1000),
                 'stack': ''.join(traceback.format_exception(type, value, tb))
             }
             
