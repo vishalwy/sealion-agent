@@ -70,5 +70,9 @@ rm -rf $BASEDIR
 
 if [ $? -ne 0 ] ; then
     echo "Error: Failed to remove files"
+    exit 1
 fi
+
+echo "Sealion agent uninstalled successfully"
+
 
