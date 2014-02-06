@@ -66,7 +66,6 @@ fi
 
 BASEDIR=$(dirname $0)
 BASEDIR=${BASEDIR%/}
-BASEDIR="'$BASEDIR'"
 OUTPUT=sealion-agent
 TARGET="$TARGET.bin"
 rm -rf $BASEDIR/$TARGET >/dev/null 2>&1
@@ -85,15 +84,15 @@ generate_scripts()
     ARGS="-i 's/\(^VERSION=\)\(\"[^\"]\+\"\)/\1\"$VERSION\"/'"
     eval sed "$ARGS" $INSTALLER
     echo "Installer generated"
-    cp $BASEDIR/scripts/uninstall.sh $BASEDIR/$TARGET/$OUTPUT/$OUTPUT/agent/
+    cp $BASEDIR/scripts/uninstall.sh $BASEDIR/$TARGET/$OUTPUT/agent/
     echo "Uninstaller generated"
-    cp $BASEDIR/scripts/sealion $BASEDIR/$TARGET/$OUTPUT/$OUTPUT/agent/etc/
+    cp $BASEDIR/scripts/sealion $BASEDIR/$TARGET/$OUTPUT/agent/etc/
     echo "Service script generated"
 }
 
 find $BASEDIR/../code/ -mindepth 1 -maxdepth 1 -type d ! -name 'etc' -exec cp -r {} $BASEDIR/$TARGET/$OUTPUT/agent \;
 cp -r $BASEDIR/etc $BASEDIR/$TARGET/$OUTPUT/agent
-generate_installer
+generate_scripts
 tar -zcvf $BASEDIR/$TARGET/$OUTPUT.tar.gz --exclude="*.pyc" --exclude="var" --exclude="*~" --exclude-backups --directory=$BASEDIR/$TARGET $OUTPUT/
 rm -rf $BASEDIR/$TARGET/$OUTPUT
 

@@ -15,6 +15,5 @@
 
 BASEDIR=$(dirname $0)
 BASEDIR=${BASEDIR%/}
-BASEDIR="'$BASEDIR'"
 python $BASEDIR/../sealion.py $1
 

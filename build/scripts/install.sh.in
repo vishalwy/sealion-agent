@@ -52,7 +52,6 @@ VERSION="<version>"
 #script variables
 BASEDIR=$(dirname $0)
 BASEDIR=${BASEDIR%/}
-BASEDIR="'$BASEDIR'"
 USER_NAME="sealion"
 IS_UPDATE=1
 INIT_FILE="sealion.py"
@@ -140,7 +139,6 @@ if [ "$INSTALL_PATH" != "$DEFAULT_INSTALL_PATH" ] ; then
     INSTALL_AS_SERVICE=0
 fi
 
-INSTALL_PATH="'$INSTALL_PATH'"
 SERVICE_FILE="$INSTALL_PATH/etc/sealion"
 
 if [ "$ORG_TOKEN" != '' ] ; then

@@ -2,7 +2,6 @@
 
 BASEDIR=$(dirname $0)
 BASEDIR=${BASEDIR%/}
-BASEDIR="'$BASEDIR'"
 USER_NAME="sealion"
 
 if [ ! -f "$BASEDIR/sealion.py" ] ; then
@@ -49,7 +48,7 @@ uninstall_service()
     fi
 }
 
-if [ "$BASEDIR" == "'/usr/local/sealion-agent'" ] ; then
+if [ "$BASEDIR" == "/usr/local/sealion-agent" ] ; then
     echo "Removing service"
     uninstall_service
 fi
