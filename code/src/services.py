@@ -11,12 +11,22 @@ from globals import Globals
 _log = logging.getLogger(__name__)
 
 class Activity(ExceptionThread):
+    timestampLock = threading.RLock()
+    
     def __init__(self, activity, stop_event):
         ExceptionThread.__init__(self)
         self.activity = activity;
         self.stop_event = stop_event
         self.is_stop = False
         self.is_whitelisted = self.is_in_whitelist()
+        
+    @staticmethod
+    def get_timestamp():
+        Activity.timestampLock.acquire()
+        t = int(time.time() * 1000)
+        time.sleep(0.001)
+        Activity.timestampLock.release()
+        return t
         
     def is_in_whitelist(self):
         globals = Globals()
@@ -46,7 +56,7 @@ class Activity(ExceptionThread):
             self.timeout = globals.config.sealion.commandTimeout            
         
         while 1:                
-            timestamp = int(time.time() * 1000)
+            timestamp = Activity.get_timestamp()
             ret = self.execute()      
             
             if ret != None:
@@ -154,7 +164,7 @@ class Controller(ExceptionThread):
         elif self.globals.api.is_not_connected(status):
             _log.info('Failed to connect')
         elif status == self.globals.APIStatus.NOT_FOUND:
-            _log.info('Uninstalling agent')
+            subprocess.Popen([self.globals.exe_path + 'uninstall.sh'])
         elif status == self.globals.APIStatus.UNAUTHERIZED:
             _log.error('Agent unautherized to connect')
         elif status == self.globals.APIStatus.BAD_REQUEST:
