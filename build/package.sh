@@ -83,14 +83,18 @@ generate_scripts()
     eval sed "$ARGS" $INSTALLER
     ARGS="-i 's/\(^VERSION=\)\(\"[^\"]\+\"\)/\1\"$VERSION\"/'"
     eval sed "$ARGS" $INSTALLER
+    chmod +x $INSTALLER
     echo "Installer generated"
     cp $BASEDIR/scripts/uninstall.sh $BASEDIR/$TARGET/$OUTPUT/agent/
+    chmod +x $BASEDIR/$TARGET/$OUTPUT/agent/uninstall.sh
     echo "Uninstaller generated"
     cp $BASEDIR/scripts/sealion $BASEDIR/$TARGET/$OUTPUT/agent/etc/
+    chmod +x $BASEDIR/$TARGET/$OUTPUT/agent/etc/sealion
     echo "Service script generated"
 }
 
 find $BASEDIR/../code/ -mindepth 1 -maxdepth 1 -type d ! -name 'etc' -exec cp -r {} $BASEDIR/$TARGET/$OUTPUT/agent \;
+cp $BASEDIR/../code/* $BASEDIR/$TARGET/$OUTPUT/agent
 cp -r $BASEDIR/etc $BASEDIR/$TARGET/$OUTPUT/agent
 generate_scripts
 tar -zcvf $BASEDIR/$TARGET/$OUTPUT.tar.gz --exclude="*.pyc" --exclude="var" --exclude="*~" --exclude-backups --directory=$BASEDIR/$TARGET $OUTPUT/

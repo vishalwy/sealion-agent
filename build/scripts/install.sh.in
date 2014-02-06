@@ -86,8 +86,6 @@ install_service()
         echo "Error: Cannot create service. Could not locate init.d/rc directories" >&2
         return 1
     fi
-
-    chown -R $USER_NAME:$USER_NAME $INSTALL_PATH
     
     ln -sf $SERVICE_FILE $INIT_D_PATH/sealion
     chmod +x $SERVICE_FILE
@@ -209,7 +207,8 @@ if [ $IS_UPDATE -eq 0 ] ; then
         ARGS="-i 's/\({\)/\1\n    \"proxy\": {\"https\": \"$PROXY\"},/'"
         eval sed "$ARGS" $INSTALL_PATH/etc/config/sealion.json
     fi
-    
+
+    chown -R $USER_NAME:$USER_NAME $INSTALL_PATH    
     echo "Sealion agent installed successfully"    
 
     if [ $INSTALL_AS_SERVICE -eq 1 ] ; then
