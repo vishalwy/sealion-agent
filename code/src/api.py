@@ -21,7 +21,8 @@ class Status(EmptyClass):
 
 class Interface(requests.Session):    
     status = Status
-    env_proxy = None
+    update_env_proxy = None
+    api_env_proxy = None
     
     def __init__(self, config, stop_event, *args, **kwargs):
         super(Interface, self).__init__(*args, **kwargs)
@@ -32,10 +33,11 @@ class Interface(requests.Session):
         self.is_authenticated = False
         self.updater = None
         
-        if Interface.env_proxy == None:
-            Interface.env_proxy = requests.utils.get_environ_proxies(self.get_url())
+        if Interface.api_env_proxy == None:
+            Interface.api_env_proxy = requests.utils.get_environ_proxies(self.get_url())
+            Interface.update_env_proxy = requests.utils.get_environ_proxies(self.config.agent.updateUrl)
             
-        self.proxies = Interface.env_proxy
+        self.proxies = Interface.api_env_proxy
         
         if hasattr(self.config.sealion, 'proxy'):
             self.proxies.update(self.config.sealion.proxy)
@@ -273,7 +275,7 @@ class Interface(requests.Session):
         _log.info('Update found; downloading to %s' % filename)
         
         try:
-            response = self.get(url, stream = True)
+            response = requests.get(url, stream = True, proxies = Interface.update_env_proxy)
         except Exception, e:
             _log.error('Failed to download the update %s' % str(e))
             self.updater = None
