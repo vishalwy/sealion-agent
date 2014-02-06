@@ -72,10 +72,10 @@ TARGET="$TARGET.bin"
 rm -rf $BASEDIR/$TARGET >/dev/null 2>&1
 mkdir -p $BASEDIR/$TARGET/$OUTPUT/agent
 
-generate_installer()
+generate_scripts()
 {
-    INSTALLER=$BASEDIR/$TARGET/$OUTPUT/installer.sh
-    cp $BASEDIR/scripts/installer.sh.in $INSTALLER
+    INSTALLER=$BASEDIR/$TARGET/$OUTPUT/install.sh
+    cp $BASEDIR/scripts/install.sh.in $INSTALLER
     URL="$(echo "$API_URL" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
     ARGS="-i 's/\(^API\_URL=\)\(\"[^\"]\+\"\)/\1\"$URL\"/'"
     eval sed "$ARGS" $INSTALLER
@@ -84,7 +84,11 @@ generate_installer()
     eval sed "$ARGS" $INSTALLER
     ARGS="-i 's/\(^VERSION=\)\(\"[^\"]\+\"\)/\1\"$VERSION\"/'"
     eval sed "$ARGS" $INSTALLER
-    echo "Installer generated at $INSTALLER"
+    echo "Installer generated"
+    cp $BASEDIR/scripts/uninstall.sh $BASEDIR/$TARGET/$OUTPUT/$OUTPUT/agent/
+    echo "Uninstaller generated"
+    cp $BASEDIR/scripts/sealion $BASEDIR/$TARGET/$OUTPUT/$OUTPUT/agent/etc/
+    echo "Service script generated"
 }
 
 find $BASEDIR/../code/ -mindepth 1 -maxdepth 1 -type d ! -name 'etc' -exec cp -r {} $BASEDIR/$TARGET/$OUTPUT/agent \;

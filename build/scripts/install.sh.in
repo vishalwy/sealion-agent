@@ -53,13 +53,14 @@ VERSION="<version>"
 BASEDIR=$(dirname $0)
 BASEDIR=${BASEDIR%/}
 BASEDIR="'$BASEDIR'"
-USER_NAME="vishal"
+USER_NAME="sealion"
 IS_UPDATE=1
 INIT_FILE="sealion.py"
+DEFAULT_INSTALL_PATH="/usr/local/sealion-agent"
 INSTALL_AS_SERVICE=1
 
 #setup variables
-INSTALL_PATH="/usr/local/sealion-agent"
+INSTALL_PATH=$DEFAULT_INSTALL_PATH
 ORG_TOKEN=
 CATEGORY=
 HOST_NAME=$(hostname)
@@ -80,6 +81,7 @@ install_service()
     RC5_PATH=`find /etc/ -type d -name rc5.d`
     RC6_PATH=`find /etc/ -type d -name rc6.d`
     INIT_D_PATH=`find /etc/ -type d -name init.d`
+    SYMLINK_PATHS=(K K S S S S K)
 
     if [[ -z $RC1_PATH || -z $RC2_PATH || -z $RC3_PATH || -z $RC4_PATH || -z $RC5_PATH || -z $RC6_PATH || -z $INIT_D_PATH ]] ; then
         echo "Error: Cannot create service. Could not locate init.d/rc directories" >&2
@@ -104,7 +106,7 @@ install_service()
     return 0
 }
 
-while getopts i:o:c:H:x:s: OPT ; do
+while getopts i:o:c:H:x: OPT ; do
     case "$OPT" in
         i)
             INSTALL_PATH=$OPTARG
@@ -121,16 +123,6 @@ while getopts i:o:c:H:x:s: OPT ; do
         x)
             PROXY=$OPTARG
             ;;
-        s)
-            if [ "$OPTARG" == "true" ] ; then
-                INSTALL_AS_SERVICE=1
-            elif [ "$OPTARG" == "false" ] ; then
-                INSTALL_AS_SERVICE=0
-            else
-                echo "Invalid argument for option -$OPTARG." >&2    
-                exit 1
-            fi
-            ;;
         \?)
             echo "Invalid argument -$OPTARG" >&2
             exit 126
@@ -143,12 +135,17 @@ while getopts i:o:c:H:x:s: OPT ; do
 done
 
 INSTALL_PATH=${INSTALL_PATH%/}
+
+if [ "$INSTALL_PATH" != "$DEFAULT_INSTALL_PATH" ] ; then
+    INSTALL_AS_SERVICE=0
+fi
+
 INSTALL_PATH="'$INSTALL_PATH'"
-SERVICE_FILE="$INSTALL_PATH/sealion"
+SERVICE_FILE="$INSTALL_PATH/etc/sealion"
 
 if [ "$ORG_TOKEN" != '' ] ; then
     if [[ $EUID -ne 0 ]]; then
-        echo "Error: You need to run this as root" >&2
+        echo "Error: You need to run this as root user" >&2
         exit 1
     fi
 
@@ -215,10 +212,10 @@ if [ $IS_UPDATE -eq 0 ] ; then
         eval sed "$ARGS" $INSTALL_PATH/etc/config/sealion.json
     fi
     
-    echo "Sealion agent installed successfully"
-    echo "Creating service"    
+    echo "Sealion agent installed successfully"    
 
-    if [ INSTALL_AS_SERVICE -eq 1 ] ; then
+    if [ $INSTALL_AS_SERVICE -eq 1 ] ; then
+        echo "Creating service"
         install_service
     fi
 else
