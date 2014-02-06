@@ -21,7 +21,7 @@ class Status(EmptyClass):
 
 class Interface(requests.Session):    
     status = Status
-    self.proxies = requests.utils.get_environ_proxies(self.get_url())
+    env_proxy = None
     
     def __init__(self, config, stop_event, *args, **kwargs):
         super(Interface, self).__init__(*args, **kwargs)
@@ -31,6 +31,11 @@ class Interface(requests.Session):
         self.stop_status = Status.SUCCESS
         self.is_authenticated = False
         self.updater = None
+        
+        if Interface.env_proxy == None:
+            Interface.env_proxy = requests.utils.get_environ_proxies(self.get_url())
+            
+        self.proxies = Interface.env_proxy
         
         if hasattr(self.config.sealion, 'proxy'):
             self.proxies.update(self.config.sealion.proxy)
