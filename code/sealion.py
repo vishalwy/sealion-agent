@@ -128,6 +128,19 @@ class sealion(Daemon):
         
     def initialize(self):        
         try:
+            user = pwd.getpwnam(self.user_name)
+
+            if user.pw_uid != os.getuid():
+                os.setgid(user.pw_gid)
+                os.setuid(user.pw_uid)
+        except KeyError, e:
+            _log.error('Failed to find user named %s; %s' % (self.user_name, str(e)))
+            sys.exit(0)
+        except Exception, e:
+            _log.error('Failed to change the group or user to %s; %s' % (self.user_name, str(e)))
+            sys.exit(0)
+            
+        try:
             dir = os.path.dirname(self.pidfile)
             
             if os.path.isdir(dir) != True:
@@ -141,19 +154,6 @@ class sealion(Daemon):
         
         os.chdir(exe_path)
         import __init__
-        
-        try:
-            user = pwd.getpwnam(self.user_name)
-
-            if user.pw_uid != os.getuid():
-                os.setgid(user.pw_gid)
-                os.setuid(user.pw_uid)
-        except KeyError, e:
-            _log.error('Failed to find user named %s; %s' % (self.user_name, str(e)))
-            sys.exit(0)
-        except Exception, e:
-            _log.error('Failed to change the group or user to %s; %s' % (self.user_name, str(e)))
-            sys.exit(0)
             
     def on_fork(self):        
         self.set_procname('%s-monit' % self.__class__.__name__ )
