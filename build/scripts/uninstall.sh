@@ -10,7 +10,7 @@ if [ ! -f "$BASEDIR/sealion.py" ] ; then
 fi
 
 python $BASEDIR/sealion.py stop
-python $BASEDIR/src/unregister.py
+python $BASEDIR/src/unregister.py >/dev/null 2>&1
 
 if [ $? -ne 0 ] ; then
     echo "Error: Failed to unregister agent"
@@ -53,9 +53,18 @@ if [ "$BASEDIR" == "/usr/local/sealion-agent" ] ; then
     uninstall_service
 fi
 
-pkill -KILL -u $USER_NAME
-userdel $USER_NAME
-groupdel $USER_NAME
+id $USER_NAME >/dev/null 2>&1
+
+if [ $? -eq 0 ] ; then
+    pkill -KILL -u $USER_NAME
+    userdel $USER_NAME
+fi
+
+id -g $USER_NAME >/dev/null 2>&1
+
+if [ $? -eq 0 ] ; then
+    groupdel $USER_NAME
+fi
 
 rm -rf $BASEDIR
 
