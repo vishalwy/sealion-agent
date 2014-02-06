@@ -35,7 +35,7 @@ class Interface(requests.Session):
         
         if Interface.api_env_proxy == None:
             Interface.api_env_proxy = requests.utils.get_environ_proxies(self.get_url())
-            Interface.update_env_proxy = requests.utils.get_environ_proxies(self.config.agent.updateUrl)
+            Interface.update_env_proxy = requests.utils.get_environ_proxies('/'.join(self.config.agent.updateUrl.split('/')[:-1]))
             
         self.proxies = Interface.api_env_proxy
         
