@@ -299,11 +299,7 @@ class Interface(requests.Session):
             self.updater = None
             return
         
-        try:
-            _log.debug('Extracting %s to %s', (filename, temp_dir))
-            subprocess.call(['tar', '-xf', filename, '--directory=%s' % temp_dir])
-            _log.info('Installing update')
-            subprocess.Popen([temp_dir + 'sealion-agent/install.sh', '-i', exe_path])
-        except Exception, e:
-            _log.error('Failed to update; ' + str(e))
-            self.updater = None
+        _log.debug('Extracting %s to %s', (filename, temp_dir))
+        subprocess.call(['tar', '-xf', filename, '--directory=%s' % temp_dir])
+        _log.info('Installing update')
+        subprocess.Popen([temp_dir + 'sealion-agent/install.sh', '-i', exe_path])
