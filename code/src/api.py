@@ -265,6 +265,7 @@ class Interface(requests.Session):
         temp_dir = tempfile.gettempdir()
         temp_dir = temp_dir + '/' if temp_dir[len(temp_dir) - 1] != '/' else temp_dir
         filename = temp_dir + url.split('/')[-1]
+        response = None
         
         _log.info('Update found; downloading to %s' % filename)
         
@@ -293,13 +294,18 @@ class Interface(requests.Session):
                 _log.error(str(e))
             
         if is_completed == True:
-            _log.info('Update succesfully downloaed to %s' % filename)
+            _log.info('Update succesfully downloaded to %s' % filename)
         else:
             _log.info('Aborted downloading update')
             self.updater = None
             return
         
         _log.debug('Extracting %s to %s', (filename, temp_dir))
-        subprocess.call(['tar', '-xf', filename, '--directory=%s' % temp_dir])
+        
+        if subprocess.call(['tar', '-xf', filename, '--directory=%s' % temp_dir]):
+            _log.error('Failed to extract update %s', filename)
+            self.updater = None
+            return
+            
         _log.info('Installing update')
         subprocess.Popen([temp_dir + 'sealion-agent/install.sh', '-i', exe_path])
