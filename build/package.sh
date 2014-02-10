@@ -64,7 +64,8 @@ if [[ "$API_URL" == "" || "$UPDATE_URL" == "" ]] ; then
     exit 1
 fi
 
-BASEDIR=$(dirname $0)
+BASEDIR=$(readlink -f '$0')
+BASEDIR=$(dirname $BASEDIR)
 BASEDIR=${BASEDIR%/}
 OUTPUT=sealion-agent
 TARGET="$TARGET.bin"

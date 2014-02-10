@@ -1,6 +1,7 @@
 #!/bin/bash
 
-BASEDIR=$(dirname $0)
+BASEDIR=$(readlink -f '$0')
+BASEDIR=$(dirname $BASEDIR)
 BASEDIR=${BASEDIR%/}
 USER_NAME="sealion"
 
@@ -49,21 +50,21 @@ uninstall_service()
 }
 
 if [ "$BASEDIR" == "/usr/local/sealion-agent" ] ; then
+	id $USER_NAME >/dev/null 2>&1
+
+	if [ $? -eq 0 ] ; then
+		pkill -KILL -u $USER_NAME
+		userdel $USER_NAME
+	fi
+
+	id -g $USER_NAME >/dev/null 2>&1
+
+	if [ $? -eq 0 ] ; then
+		groupdel $USER_NAME
+	fi
+
     echo "Removing service"
     uninstall_service
-fi
-
-id $USER_NAME >/dev/null 2>&1
-
-if [ $? -eq 0 ] ; then
-    pkill -KILL -u $USER_NAME
-    userdel $USER_NAME
-fi
-
-id -g $USER_NAME >/dev/null 2>&1
-
-if [ $? -eq 0 ] ; then
-    groupdel $USER_NAME
 fi
 
 rm -rf $BASEDIR
@@ -74,5 +75,3 @@ if [ $? -ne 0 ] ; then
 fi
 
 echo "Sealion agent uninstalled successfully"
-
-

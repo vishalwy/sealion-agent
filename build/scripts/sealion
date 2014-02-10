@@ -13,7 +13,8 @@
 # 
 ### END INIT INFO
 
-BASEDIR=$(dirname $0)
+BASEDIR=$(readlink -f '$0')
+BASEDIR=$(dirname $BASEDIR)
 BASEDIR=${BASEDIR%/}
 python $BASEDIR/../sealion.py $1
 
