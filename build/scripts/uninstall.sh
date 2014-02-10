@@ -53,6 +53,7 @@ if [ "$BASEDIR" == "/usr/local/sealion-agent" ] ; then
 	id $USER_NAME >/dev/null 2>&1
 
 	if [ $? -eq 0 ] ; then
+		echo "Removing $USER_NAME user"
 		pkill -KILL -u $USER_NAME
 		userdel $USER_NAME
 	fi
@@ -60,6 +61,7 @@ if [ "$BASEDIR" == "/usr/local/sealion-agent" ] ; then
 	id -g $USER_NAME >/dev/null 2>&1
 
 	if [ $? -eq 0 ] ; then
+		echo "Removing $USER_NAME group"
 		groupdel $USER_NAME
 	fi
 
@@ -67,7 +69,13 @@ if [ "$BASEDIR" == "/usr/local/sealion-agent" ] ; then
     uninstall_service
 fi
 
-rm -rf $BASEDIR
+if [[ $EUID -ne 0 ]]; then
+	cd /
+	rm -rf $BASEDIR
+else
+	find $BASEDIR/ -mindepth 1 -maxdepth 1 -type d ! -name 'var' -exec rm -rf {} \;
+	find $BASEDIR/ -mindepth 1 -maxdepth 1 -type f ! -name 'uninstall.sh' -exec rm {} \;
+fi
 
 if [ $? -ne 0 ] ; then
     echo "Error: Failed to remove files"
