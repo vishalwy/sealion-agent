@@ -24,7 +24,7 @@ try:
     lf.setFormatter(logging.Formatter('%(asctime)-15s %(levelname)-6s %(module)-s[%(lineno)-d]: %(message)s'))
     logger.addHandler(lf)
 except Exception, e:
-    _log.error('Failed to open log file; ' + str(e))
+    sys.stderr.write('Failed to open log file; ' + str(e))
     sys.exit(0)
     
 try:

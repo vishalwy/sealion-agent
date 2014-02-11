@@ -2,31 +2,35 @@ import os
 import json
 import re
 import threading
+import logging
 from constructs import *
+
+_log = logging.getLogger(__name__)
    
 class Utils(Namespace):
     @staticmethod
-    def sanitize_type(d, schema, is_delete_extra = True, regex = None, is_regex = False):
-        type_name = type(d).__name__
+    def sanitize_type(d, schema, is_delete_extra = True, regex = None, is_regex = False, is_log = False):
+        d_type_name = type(d).__name__
+        schema_type_name = type(schema).__name__
 
-        if type_name == 'dict' and type(schema) is dict:
-            return Utils.sanitize_dict(d, schema, is_delete_extra)
-        elif type_name == 'list' and type(schema) is list:
+        if d_type_name == 'dict' and schema_type_name == 'dict':
+            return Utils.sanitize_dict(d, schema, is_delete_extra, is_log)
+        elif d_type_name == 'list' and schema_type_name == 'list':
             for i in range(0, len(d)):
-                if Utils.sanitize_type(d[i], schema[0], is_delete_extra, regex) == False:
+                if Utils.sanitize_type(d[i], schema[0], is_delete_extra, regex, is_log) == False:
                     return False
                 
             return True
-        else:
+        elif schema_type_name == 'str':
             types = schema.split(',')
             flag = False
             
             for i in range(0, len(types)):
-                if type_name == types[i]:
+                if d_type_name == types[i]:
                     flag = True
                     break
                     
-            if flag == True and (type_name == 'str' or type_name == 'unicode'):
+            if flag == True and (d_type_name == 'str' or d_type_name == 'unicode'):
                 if regex != None and re.match(regex, d) == None:
                     return False
                 elif is_regex == True:
@@ -36,9 +40,11 @@ class Utils(Namespace):
                         return False
                 
             return flag
+        
+        return False
 
     @staticmethod
-    def sanitize_dict(d, schema, is_delete_extra = True):
+    def sanitize_dict(d, schema, is_delete_extra = True, is_log = False):
         ret = 1
 
         if is_delete_extra == True:  
@@ -51,6 +57,7 @@ class Utils(Namespace):
 
             for i in range(0, len(keys)):
                 if schema.has_key(keys[i]) == False:
+                    is_log and _log.warn('Ignoring config key %s; unknown key' % keys[i])
                     del d[keys[i]]
                     continue
 
@@ -66,7 +73,8 @@ class Utils(Namespace):
                     depends_check_keys.append(key)
 
                 if Utils.sanitize_type(d[key], schema[key]['type'], is_delete_extra, 
-                                        schema[key].get('regex'), schema[key].get('is_regex', False)) == False:
+                                        schema[key].get('regex'), schema[key].get('is_regex', False), is_log) == False:
+                    is_log and _log.warn('Ignoring config value %s; improper format' % key)
                     del d[key]
                     ret = 0 if is_optional == False else ret                
 
@@ -76,6 +84,7 @@ class Utils(Namespace):
             for i in range(0, len(depends)):
                 if d.has_key(depends[i]) == False:
                     if d.has_key(depends_check_keys[j]):
+                        is_log and _log.warn('Ignoring config value %s; failed dependency' % depends_check_keys[j])
                         del d[depends_check_keys[j]]
                         
                     break
@@ -160,7 +169,7 @@ class Config:
             
         config = Config.parse(data, is_data)
         
-        if Utils.sanitize_dict(config, self.schema) == False:
+        if Utils.sanitize_dict(config, self.schema, True, not is_data) == False:
             if is_data == False:
                 return self.file + ' is either missing or currupted'
             else:
