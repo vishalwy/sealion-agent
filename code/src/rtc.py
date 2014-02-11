@@ -72,7 +72,11 @@ class Interface(ExceptionThread):
     def stop(self):
         if self.sio != None:
             _log.debug('Disconnecting socket-io')
-            self.sio.disconnect()
+            
+            try:
+                self.sio.disconnect()
+            except:
+                pass
             
     def update_heartbeat(self):
         self.last_heartbeat = int(time.time())
