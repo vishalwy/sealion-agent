@@ -12,7 +12,7 @@ class SealionConfig(Config):
         self.schema = {
             'whitelist': {'type': ['str,unicode'], 'optional': True, 'is_regex': True},
             'env': {
-                'type': [{'name': {'type': 'str,unicode'}, 'value': {'type': 'str,unicode'}}],
+                'type': [{'.': {'type': 'str,unicode'}}],
                 'optional': True
             },
             'logging': {
@@ -30,7 +30,8 @@ class SealionConfig(Config):
         variables = self.data['env'] if self.data.has_key('env') else []
         
         for i in range(0, len(variables)):
-            os.environ[variables[i]['name']] = variables[i]['value']
+            for key in variables[i]:
+                os.environ[key] = variables[i][key]
             
         return ret        
         

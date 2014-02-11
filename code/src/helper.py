@@ -1,4 +1,3 @@
-import sys
 import os
 import json
 import re
@@ -44,6 +43,11 @@ class Utils(Namespace):
 
         if is_delete_extra == True:  
             keys = d.keys()
+            
+            if schema.has_key('.') and len(schema.keys()) == 1 and len(keys) == 1:
+                temp = {}
+                temp[keys[0]] = schema['.']
+                schema = temp
 
             for i in range(0, len(keys)):
                 if schema.has_key(keys[i]) == False:
