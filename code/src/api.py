@@ -21,8 +21,6 @@ class Status(EmptyClass):
 
 class Interface(requests.Session):    
     status = Status
-    update_env_proxy = None
-    api_env_proxy = None
     
     def __init__(self, config, stop_event, *args, **kwargs):
         super(Interface, self).__init__(*args, **kwargs)
@@ -32,15 +30,6 @@ class Interface(requests.Session):
         self.stop_status = Status.SUCCESS
         self.is_authenticated = False
         self.updater = None
-        
-        if Interface.api_env_proxy == None:
-            Interface.api_env_proxy = requests.utils.get_environ_proxies(self.get_url())
-            Interface.update_env_proxy = requests.utils.get_environ_proxies('/'.join(self.config.agent.updateUrl.split('/')[:-1]))
-            
-        self.proxies = Interface.api_env_proxy
-        
-        if hasattr(self.config.sealion, 'proxy'):
-            self.proxies.update(self.config.sealion.proxy)
             
     @staticmethod
     def is_success(response):
@@ -273,30 +262,34 @@ class Interface(requests.Session):
         temp_dir = temp_dir + '/' if temp_dir[len(temp_dir) - 1] != '/' else temp_dir
         filename = temp_dir + url.split('/')[-1]
         _log.info('Update found; downloading to %s' % filename)
+        f = None
         
         try:
-            response = requests.get(url, stream = True, proxies = Interface.update_env_proxy)
+            f = open(filename, 'wb')
+            response = requests.get(url, stream = True)
         except Exception, e:
             _log.error('Failed to download the update %s' % str(e))
+            f and f.close()
             self.updater = None
             return
             
         is_completed = False
         
-        with open(filename, 'wb') as f:
-            try:
-                for chunk in response.iter_content(chunk_size = 1024):
-                    if self.stop_event.is_set():
-                        _log.info('Updater received stop event')
-                        break
+        try:
+            for chunk in response.iter_content(chunk_size = 1024):
+                if self.stop_event.is_set():
+                    _log.info('Updater received stop event')
+                    break
 
-                    if chunk:
-                        f.write(chunk)
-                        f.flush()
+                if chunk:
+                    f.write(chunk)
+                    f.flush()
 
-                is_completed = True
-            except Exception, e:
-                _log.error(str(e))
+            is_completed = True
+        except Exception, e:
+            _log.error(str(e))
+        finally:
+            f.close()
             
         if is_completed == True:
             _log.info('Update succesfully downloaded to %s' % filename)

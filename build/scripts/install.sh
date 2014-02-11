@@ -172,7 +172,7 @@ if [ "$ORG_TOKEN" != '' ] ; then
     id $USER_NAME >/dev/null 2>&1
 
     if [ $? -ne 0 ] ; then
-        useradd -r -d $INSTALL_PATH -g $USER_NAME $USER_NAME >/dev/null 2>&1
+        useradd -r -g $USER_NAME $USER_NAME >/dev/null 2>&1
         
         if [ $? -ne 0 ] ; then
             echo "Error: Cannot create $USER_NAME user" >&2

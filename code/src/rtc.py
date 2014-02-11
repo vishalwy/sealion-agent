@@ -1,5 +1,6 @@
 import logging
 import time
+import requests
 from socketio_client import SocketIO, BaseNamespace
 from constructs import *
 
@@ -57,11 +58,10 @@ class Interface(ExceptionThread):
         SocketIONamespace.rtc = self
         kwargs = {
             'Namespace': SocketIONamespace,
-            'cookies': self.api.cookies,
-            'proxies': self.api.proxies
+            'cookies': self.api.cookies
         }
         
-        if len(self.api.proxies):
+        if len(requests.utils.get_environ_proxies(self.api.get_url())):
             _log.info('Proxy detected; forcing xhr-polling for socket-io')
             kwargs['transports'] = ['xhr-polling']
         
