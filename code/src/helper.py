@@ -9,15 +9,15 @@ _log = logging.getLogger(__name__)
    
 class Utils(Namespace):
     @staticmethod
-    def sanitize_type(d, schema, is_delete_extra = True, regex = None, is_regex = False, is_log = False):
+    def sanitize_type(d, schema, is_delete_extra = True, regex = None, is_regex = False, file = None):
         d_type_name = type(d).__name__
         schema_type_name = type(schema).__name__
 
         if d_type_name == 'dict' and schema_type_name == 'dict':
-            return Utils.sanitize_dict(d, schema, is_delete_extra, is_log)
+            return Utils.sanitize_dict(d, schema, is_delete_extra, file)
         elif d_type_name == 'list' and schema_type_name == 'list':
             for i in range(0, len(d)):
-                if Utils.sanitize_type(d[i], schema[0], is_delete_extra, regex, is_log) == False:
+                if Utils.sanitize_type(d[i], schema[0], is_delete_extra, regex, file) == False:
                     return False
                 
             return True
@@ -44,7 +44,7 @@ class Utils(Namespace):
         return False
 
     @staticmethod
-    def sanitize_dict(d, schema, is_delete_extra = True, is_log = False):
+    def sanitize_dict(d, schema, is_delete_extra = True, file = None):
         ret = 1
 
         if is_delete_extra == True:  
@@ -57,7 +57,7 @@ class Utils(Namespace):
 
             for i in range(0, len(keys)):
                 if schema.has_key(keys[i]) == False:
-                    is_log and _log.warn('Ignoring config key %s; unknown key' % keys[i])
+                    file and _log.warn('Ignoring config key %s in %s; unknown key' % (keys[i], file))
                     del d[keys[i]]
                     continue
 
@@ -73,8 +73,8 @@ class Utils(Namespace):
                     depends_check_keys.append(key)
 
                 if Utils.sanitize_type(d[key], schema[key]['type'], is_delete_extra, 
-                                        schema[key].get('regex'), schema[key].get('is_regex', False), is_log) == False:
-                    is_log and _log.warn('Ignoring config value %s; improper format' % key)
+                                        schema[key].get('regex'), schema[key].get('is_regex', False), file) == False:
+                    file and _log.warn('Ignoring config value %s in %s; improper format' % (key, file))
                     del d[key]
                     ret = 0 if is_optional == False else ret                
 
@@ -84,7 +84,7 @@ class Utils(Namespace):
             for i in range(0, len(depends)):
                 if d.has_key(depends[i]) == False:
                     if d.has_key(depends_check_keys[j]):
-                        is_log and _log.warn('Ignoring config value %s; failed dependency' % depends_check_keys[j])
+                        file and _log.warn('Ignoring config value %s in %s; failed dependency' % (depends_check_keys[j], file))
                         del d[depends_check_keys[j]]
                         
                     break
@@ -169,7 +169,7 @@ class Config:
             
         config = Config.parse(data, is_data)
         
-        if Utils.sanitize_dict(config, self.schema, True, not is_data) == False:
+        if Utils.sanitize_dict(config, self.schema, True, self.file if is_data == False else None) == False:
             if is_data == False:
                 return self.file + ' is either missing or currupted'
             else:

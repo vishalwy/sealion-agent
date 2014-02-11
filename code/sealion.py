@@ -78,8 +78,8 @@ class sealion(Daemon):
         from globals import Globals
         globals = Globals()
         path = self.crash_dump_path
-        globals.api.stop_event.wait(crash_dump_timeout)
         _log.debug('Crash dump sender waiting for stop event for %d seconds', crash_dump_timeout)
+        globals.api.stop_event.wait(crash_dump_timeout)
         
         try:
             for file in os.listdir(path):
