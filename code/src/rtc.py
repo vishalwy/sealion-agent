@@ -8,42 +8,42 @@ _log = logging.getLogger(__name__)
 
 class SocketIONamespace(BaseNamespace):
     def on_connect(self):
-        _log.debug('Socket-io connected')
+        _log.info('Socket-io connected')
         self.rtc.update_heartbeat()
         self.rtc.api.ping()
         
     def on_disconnect(self):
-        _log.debug('Socket-io disconnected')
+        _log.info('Socket-io disconnected')
         
     def on_heartbeat(self):
         _log.debug('Socket-io heartbeat')
         self.rtc.update_heartbeat()
 
     def on_activity_updated(self, *args):
-        _log.debug('Socket-io received  activity_updated event')
+        _log.info('Socket-io received  activity_updated event')
         self.rtc.update_heartbeat()
         self.rtc.api.get_config()
 
     def on_activitylist_in_category_updated(self, *args):
-        _log.debug('Socket-io received  activitylist_in_category_updated event')
+        _log.info('Socket-io received  activitylist_in_category_updated event')
         self.rtc.update_heartbeat()
         self.rtc.api.get_config()
 
     def on_agent_removed(self, *args):
-        _log.debug('Socket-io received  agent_removed event')
+        _log.info('Socket-io received  agent_removed event')
         self.rtc.api.stop(self.rtc.api.status.NOT_FOUND)
 
     def on_org_token_resetted(self, *args):
-        _log.debug('Socket-io received  org_token_resetted event')
+        _log.info('Socket-io received  org_token_resetted event')
         self.rtc.api.stop()
 
     def on_server_category_changed(self, *args):
-        _log.debug('Socket-io received  server_category_changed event')
+        _log.info('Socket-io received  server_category_changed event')
         self.rtc.update_heartbeat()
         self.rtc.api.get_config()
 
     def on_activity_deleted(self, *args):
-        _log.debug('Socket-io received  activity_deleted event')
+        _log.info('Socket-io received  activity_deleted event')
         self.rtc.update_heartbeat()
         self.rtc.api.get_config()
         

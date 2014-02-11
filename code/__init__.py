@@ -59,8 +59,7 @@ except:
     pass
 
 logger.setLevel(logging_level)
-format = '%(asctime)-15s %(levelname)-6s %(thread)d - %(module)-s[%(lineno)-d]: %(message)s'
-formatter = logging.Formatter(format if logging_level == logging.DEBUG else format.replace('%(thread)d - ', ''))
+formatter = logging.Formatter('%(asctime)-15s %(levelname)-6s %(thread)d - %(module)-s[%(lineno)-d]: %(message)s')
 
 for handler in logging.root.handlers:
     handler.setFormatter(formatter)

@@ -73,6 +73,7 @@ if [[ $EUID -ne 0 ]]; then
 	cd /
 	rm -rf $BASEDIR
 else
+        find $BASEDIR/var/ -mindepth 1 -maxdepth 1 -type d ! -name 'log' -exec rm -rf {} \;
 	find $BASEDIR/ -mindepth 1 -maxdepth 1 -type d ! -name 'var' -exec rm -rf {} \;
 	find $BASEDIR/ -mindepth 1 -maxdepth 1 -type f ! -name 'uninstall.sh' -exec rm {} \;
 fi

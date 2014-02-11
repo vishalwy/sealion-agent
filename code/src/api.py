@@ -188,7 +188,7 @@ class Interface(requests.Session):
         if Interface.is_success(response):
             _log.debug('Logout successful')
         else:
-            ret = self.error('Failed to logout agent ' + self.config.agent._id, response)
+            ret = self.error('Failed to logout agent', response)
 
         return ret
     
@@ -201,7 +201,7 @@ class Interface(requests.Session):
         if Interface.is_success(response):
             _log.debug('Sent crash dump @ ' + data['timestamp'])
         else:
-            ret = self.error('Failed to send crash dump', response)
+            ret = self.error('Failed to send crash dump', response, True)
         
         return ret
     
@@ -218,11 +218,11 @@ class Interface(requests.Session):
         if stop_status != None:
             self.stop_status = stop_status
     
-    def error(self, message, response):        
+    def error(self, message, response, is_ignore_status = False):        
         Interface.print_error(message, response)    
         
         if response == None:
-            self.set_events(post_event = False)
+            is_ignore_status == False and self.set_events(post_event = False)
             return self.status.NOT_CONNECTED
         
         status = response.status_code
@@ -233,25 +233,25 @@ class Interface(requests.Session):
             code = 0
             
         if status >= 500:
-            self.set_events(post_event = False)
+            is_ignore_status == False and self.set_events(post_event = False)
             return self.status.NO_SERVICE
         elif status == 400:
-            self.stop()
+            is_ignore_status == False and self.stop()
             return self.status.BAD_REQUEST
         elif status == 401:
             if code == 200004:
                 return self.status.MISMATCH
             else:
-                self.stop()
+                is_ignore_status == False and self.stop()
                 return self.status.UNAUTHERIZED
         elif status == 404:
-            self.stop(self.status.NOT_FOUND)
+            is_ignore_status == False and self.stop(self.status.NOT_FOUND)
             return self.status.NOT_FOUND
         elif status == 409:
             if code == 204011:
                 return self.status.DATA_CONFLICT
             else:
-                self.stop(self.status.SESSION_CONFLICT)
+                is_ignore_status == False and self.stop(self.status.SESSION_CONFLICT)
                 return self.status.SESSION_CONFLICT
         
         return self.status.UNKNOWN

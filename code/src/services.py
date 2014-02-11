@@ -159,11 +159,14 @@ class Controller(ExceptionThread):
         self.main_thread = threading.current_thread()
     
     def handle_response(self, status):
+        _log.debug('Handling response status %d' % status)
+        
         if status == self.globals.APIStatus.SUCCESS:
             return True
         elif self.globals.api.is_not_connected(status):
             _log.info('Failed to connect')
         elif status == self.globals.APIStatus.NOT_FOUND:
+            _log.info('Uninstalling agent')
             subprocess.Popen([self.globals.exe_path + 'uninstall.sh'])
         elif status == self.globals.APIStatus.UNAUTHERIZED:
             _log.error('Agent unautherized to connect')
