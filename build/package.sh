@@ -75,7 +75,7 @@ mkdir -p $BASEDIR/$TARGET/$OUTPUT/agent
 generate_scripts()
 {
     INSTALLER=$BASEDIR/$TARGET/$OUTPUT/install.sh
-    cp $BASEDIR/scripts/install.sh.in $INSTALLER
+    cp $BASEDIR/scripts/install.sh $INSTALLER
     URL="$(echo "$API_URL" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
     ARGS="-i 's/\(^API\_URL=\)\(\"[^\"]\+\"\)/\1\"$URL\"/'"
     eval sed "$ARGS" $INSTALLER
