@@ -149,8 +149,8 @@ class sealion(Daemon):
             f = open(self.pidfile, 'w');
             f.close()
         except Exception, e:
-            print str(e)
-            sys.exit(0)
+            _log.error(str(e))
+            sys.exit(1)
         
         os.chdir(exe_path)
         import __init__
