@@ -49,33 +49,33 @@ uninstall_service()
     fi
 }
 
-if [ "$BASEDIR" == "/usr/local/sealion-agent" ] ; then
-	id $USER_NAME >/dev/null 2>&1
-
-	if [ $? -eq 0 ] ; then
-		echo "Removing $USER_NAME user"
-		pkill -KILL -u $USER_NAME
-		userdel $USER_NAME
-	fi
-
-	id -g $USER_NAME >/dev/null 2>&1
-
-	if [ $? -eq 0 ] ; then
-		echo "Removing $USER_NAME group"
-		groupdel $USER_NAME
-	fi
-
-    echo "Removing service"
-    uninstall_service
-fi
-
 if [[ $EUID -ne 0 ]]; then
-	cd /
-	rm -rf $BASEDIR
+    find $BASEDIR/var/ -mindepth 1 -maxdepth 1 -type d ! -name 'log' -exec rm -rf {} \;
+    find $BASEDIR/ -mindepth 1 -maxdepth 1 -type d ! -name 'var' -exec rm -rf {} \;
+    find $BASEDIR/ -mindepth 1 -maxdepth 1 -type f ! -name 'uninstall.sh' -exec rm {} \;
 else
-        find $BASEDIR/var/ -mindepth 1 -maxdepth 1 -type d ! -name 'log' -exec rm -rf {} \;
-	find $BASEDIR/ -mindepth 1 -maxdepth 1 -type d ! -name 'var' -exec rm -rf {} \;
-	find $BASEDIR/ -mindepth 1 -maxdepth 1 -type f ! -name 'uninstall.sh' -exec rm {} \;
+    if [ "$BASEDIR" == "/usr/local/sealion-agent" ] ; then
+        id $USER_NAME >/dev/null 2>&1
+
+        if [ $? -eq 0 ] ; then
+                echo "Removing $USER_NAME user"
+                pkill -KILL -u $USER_NAME
+                userdel $USER_NAME
+        fi
+
+        id -g $USER_NAME >/dev/null 2>&1
+
+        if [ $? -eq 0 ] ; then
+                echo "Removing $USER_NAME group"
+                groupdel $USER_NAME
+        fi
+
+        echo "Removing service"
+        uninstall_service
+    fi
+
+    cd /
+    rm -rf $BASEDIR
 fi
 
 if [ $? -ne 0 ] ; then
