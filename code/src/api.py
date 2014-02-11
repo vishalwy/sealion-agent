@@ -179,7 +179,7 @@ class Interface(requests.Session):
     def logout(self):
         ret = self.status.SUCCESS
         
-        if hasattr(self.config.agent, '_id') == False:
+        if hasattr(self.config.agent, '_id') == False or self.is_authenticated == False:
             return ret
         
         self.stop_event.clear()
