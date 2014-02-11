@@ -64,7 +64,7 @@ INSTALL_PATH=$DEFAULT_INSTALL_PATH
 ORG_TOKEN=
 CATEGORY=
 HOST_NAME=$(hostname)
-PROXY=
+PROXY=$https_proxy
 
 update_agent_config()
 {
@@ -205,7 +205,7 @@ if [ $IS_UPDATE -eq 0 ] ; then
 
     if [ "$PROXY" != "" ] ; then
         PROXY="$(echo "$PROXY" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
-        ARGS="-i 's/\(^{\)/\1\n    \"proxy\": {\"https\": \"$PROXY\"},/'"
+        ARGS="-i 's/\(\"env\"\s*:\s*\[\)/\1{\"https\_proxy\": \"$PROXY\"}/'"
         eval sed "$ARGS" $INSTALL_PATH/etc/config/sealion.json
     fi
 

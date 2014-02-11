@@ -1,3 +1,4 @@
 {
-    "logging": {"level": "debug", "modules": ["__main__", "api", "services", "storage", "helper", "rtc"]}
+    "logging": {"level": "info", "modules": ["__main__", "api", "services", "storage", "helper", "rtc"]},
+    "env": []
 }
