@@ -50,7 +50,7 @@ UPDATE_URL="<agent-download-url>"
 VERSION="<version>"
 
 #script variables
-BASEDIR=$(readlink -f '$0')
+BASEDIR=$(readlink -f "$0")
 BASEDIR=$(dirname $BASEDIR)
 BASEDIR=${BASEDIR%/}
 USER_NAME="sealion"
