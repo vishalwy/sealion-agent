@@ -19,7 +19,7 @@ from daemon import Daemon
 
 _log = logging.getLogger(__name__)
 
-class sealion(Daemon):
+class Sealion(Daemon):
     user_name = 'sealion'
     crash_dump_timeout = 90
     
