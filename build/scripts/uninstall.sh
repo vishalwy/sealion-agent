@@ -5,22 +5,24 @@ BASEDIR=$(dirname $BASEDIR)
 BASEDIR=${BASEDIR%/}
 USER_NAME="sealion"
 
-if [[ "$(id -u -n)" != "$USER_NAME" or $EUID -ne 0 ]]
+if [[ "$(id -u -n)" != "$USER_NAME" && $EUID -ne 0 ]] ; then
     echo "Error: You need to run this as either root or $USER_NAME user" >&2
     exit 1
 fi
 
 if [ -f "$BASEDIR/sealion.py" ] ; then
+    echo "Stopping agent"
     python $BASEDIR/sealion.py stop
 fi
 
 if [ -f "$BASEDIR/src/unregister.py" ] ; then
+    echo "Unregistering agent"
     python $BASEDIR/src/unregister.py >/dev/null 2>&1
-fi
 
-if [ $? -ne 0 ] ; then
-    echo "Error: Failed to unregister agent" >&2
-    exit 1
+    if [ $? -ne 0 ] ; then
+        echo "Error: Failed to unregister agent" >&2
+        exit 1
+    fi
 fi
 
 uninstall_service()

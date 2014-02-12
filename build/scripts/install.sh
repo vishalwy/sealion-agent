@@ -202,11 +202,11 @@ else
 fi
 
 if [ -f "$INSTALL_PATH/$INIT_FILE" ] ; then
-    echo "Stopping agent..."
+    echo "Stopping agent"
     python $INSTALL_PATH/$INIT_FILE stop
 fi
 
-echo "Copying files..."
+echo "Copying files"
 
 if [ $IS_UPDATE -eq 0 ] ; then
     cp -r $BASEDIR/agent/* $INSTALL_PATH
@@ -247,6 +247,6 @@ else
     echo "Sealion agent updated successfully"
 fi
 
-echo "Starting agent..."
+echo "Starting agent"
 python $INSTALL_PATH/$INIT_FILE start
 
