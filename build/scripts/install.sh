@@ -190,6 +190,11 @@ if [ "$ORG_TOKEN" != '' ] ; then
         echo "User $USER_NAME already exists"
     fi
 else
+    if [ "$(id -u -n)" != "$USER_NAME" ] ; then
+        echo "Error: You need to run this as $USER_NAME user" >&2
+        exit 1
+    fi
+
     if [ ! -f "$INSTALL_PATH/$INIT_FILE" ] ; then
         echo "Error: $INSTALL_PATH is not a valid sealion install directory" >&2
         exit 1

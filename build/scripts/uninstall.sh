@@ -5,13 +5,18 @@ BASEDIR=$(dirname $BASEDIR)
 BASEDIR=${BASEDIR%/}
 USER_NAME="sealion"
 
-if [ ! -f "$BASEDIR/sealion.py" ] ; then
-    echo "Error: $BASEDIR is not a valid sealion install directory" >&2
+if [[ "$(id -u -n)" != "$USER_NAME" or $EUID -ne 0 ]]
+    echo "Error: You need to run this as either root or $USER_NAME user" >&2
     exit 1
 fi
 
-python $BASEDIR/sealion.py stop
-python $BASEDIR/src/unregister.py >/dev/null 2>&1
+if [ -f "$BASEDIR/sealion.py" ] ; then
+    python $BASEDIR/sealion.py stop
+fi
+
+if [ -f "$BASEDIR/src/unregister.py" ] ; then
+    python $BASEDIR/src/unregister.py >/dev/null 2>&1
+fi
 
 if [ $? -ne 0 ] ; then
     echo "Error: Failed to unregister agent" >&2
