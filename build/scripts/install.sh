@@ -24,26 +24,6 @@ if [ $KERNEL_VERSION -le 2 ] ; then
     fi
 fi
 
-#check for python (min 2.6)
-PYTHON=0
-
-case "$(python --version 2>&1)" in
-    *" 3."*)
-        PYTHON=1
-        ;;
-    *" 2.6."*)
-        PYTHON=1
-        ;;
-    *" 2.7."*)
-        PYTHON=1
-        ;;
-esac
-
-if [ $PYTHON -eq 0 ] ; then
-    echo "Error: SeaLion agent requires python version 2.6 or above" >&2
-    exit 1
-fi
-
 #config variables
 API_URL="<api-url>"
 UPDATE_URL="<agent-download-url>"
@@ -54,11 +34,11 @@ BASEDIR=$(readlink -f "$0")
 BASEDIR=$(dirname $BASEDIR)
 BASEDIR=${BASEDIR%/}
 USER_NAME="sealion"
+PYTHON=$(which python)
 IS_UPDATE=1
-INIT_FILE="sealion.py"
 DEFAULT_INSTALL_PATH="/usr/local/sealion-agent"
 INSTALL_AS_SERVICE=1
-USAGE="Usage: $0 {-o <org token> [-c <category name>] [-h <host name>] [-x <https proxy>] | -h}"
+USAGE="Usage: $0 {-o <org token> [-c <category name>] [-h <host name>] [-x <https proxy>] [-p <python binary>] | -h}"
 
 #setup variables
 INSTALL_PATH=$DEFAULT_INSTALL_PATH
@@ -71,7 +51,7 @@ NO_PROXY=$no_proxy
 update_agent_config()
 {
     ARGS="-i 's/\(\"$1\"\s*:\s*\)\(\"[^\"]\+\"\)/\1\"$2\"/'"
-    eval sed "$ARGS" $INSTALL_PATH/etc/config/agent.json
+    eval sed "$ARGS" $INSTALL_PATH/etc/agent.json
 }
 
 install_service()
@@ -106,7 +86,7 @@ install_service()
     return 0
 }
 
-while getopts :i:o:c:H:x:h OPT ; do
+while getopts :i:o:c:H:x:p:h OPT ; do
     case "$OPT" in
         i)
             INSTALL_PATH=$OPTARG
@@ -127,6 +107,9 @@ while getopts :i:o:c:H:x:h OPT ; do
         x)
             PROXY=$OPTARG
             ;;
+        p)
+            PYTHON=$OPTARG
+            ;;
         \?)
             echo "Invalid option -$OPTARG" >&2
             exit 126
@@ -138,13 +121,35 @@ while getopts :i:o:c:H:x:h OPT ; do
     esac
 done
 
+#check for python (min 2.6)
+PYTHON_OK=0
+
+if [ -f $PYTHON ] ; then
+    case "$($PYTHON --version 2>&1)" in
+        *" 3."*)
+            PYTHON_OK=1
+            ;;
+        *" 2.6."*)
+            PYTHON_OK=1
+            ;;
+        *" 2.7."*)
+            PYTHON_OK=1
+            ;;
+    esac
+fi
+
+if [ $PYTHON_OK -eq 0 ] ; then
+    echo "Error: SeaLion agent requires python version 2.6 or above" >&2
+    exit 1
+fi
+
 INSTALL_PATH=${INSTALL_PATH%/}
 
 if [ "$INSTALL_PATH" != "$DEFAULT_INSTALL_PATH" ] ; then
     INSTALL_AS_SERVICE=0
 fi
 
-SERVICE_FILE="$INSTALL_PATH/etc/sealion"
+SERVICE_FILE="$INSTALL_PATH/etc/init.d/sealion"
 
 if [ "$ORG_TOKEN" != '' ] ; then
     if [[ $EUID -ne 0 ]]; then
@@ -195,15 +200,15 @@ else
         exit 1
     fi
 
-    if [ ! -f "$INSTALL_PATH/$INIT_FILE" ] ; then
+    if [ ! -f $SERVICE_FILE ] ; then
         echo "Error: $INSTALL_PATH is not a valid sealion install directory" >&2
         exit 1
     fi
 fi
 
-if [ -f "$INSTALL_PATH/$INIT_FILE" ] ; then
+if [ -f $SERVICE_FILE ] ; then
     echo "Stopping agent"
-    python $INSTALL_PATH/$INIT_FILE stop
+    $SERVICE_FILE stop
 fi
 
 echo "Copying files"
@@ -222,15 +227,19 @@ if [ $IS_UPDATE -eq 0 ] ; then
     if [ "$PROXY" != "" ] ; then
         PROXY="$(echo "$PROXY" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
         ARGS="-i 's/\(\"env\"\s*:\s*\[\)/\1{\"https\_proxy\": \"$PROXY\"}/'"
-        eval sed "$ARGS" $INSTALL_PATH/etc/config/sealion.json
+        eval sed "$ARGS" $INSTALL_PATH/etc/config.json
         TEMP_VAR=", "
     fi
 
     if [ "$NO_PROXY" != "" ] ; then
         NO_PROXY="$(echo "$NO_PROXY" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
         ARGS="-i 's/\(\"env\"\s*:\s*\[\)/\1{\"no\_proxy\": \"$NO_PROXY\"}$TEMP_VAR/'"
-        eval sed "$ARGS" $INSTALL_PATH/etc/config/sealion.json
+        eval sed "$ARGS" $INSTALL_PATH/etc/config.json
     fi
+
+    ARGS="-i 's/python/$PYTHON/'"
+    eval sed "$ARGS" $INSTALL_PATH/etc/init.d/sealion
+    eval sed "$ARGS" $INSTALL_PATH/uninstall
 
     chown -R $USER_NAME:$USER_NAME $INSTALL_PATH    
     echo "Sealion agent installed successfully"    
@@ -248,5 +257,5 @@ else
 fi
 
 echo "Starting agent"
-python $INSTALL_PATH/$INIT_FILE start
+$SERVICE_FILE start
 
