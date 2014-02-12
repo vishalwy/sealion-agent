@@ -23,15 +23,7 @@ class Interface(ExceptionThread):
             
         return status            
         
-    def connect(self):
-        status = Interface.globals.APIStatus.SUCCESS
-        
-        if hasattr(Interface.globals.config.agent, '_id') == False:
-            status = Interface.globals.api.register(retry_count = 4, retry_interval = 10)
-            
-        if status != Interface.globals.APIStatus.SUCCESS:
-            return status
-        
+    def connect(self):        
         status = self.attempt(2)
         
         if Interface.globals.api.is_not_connected(status):

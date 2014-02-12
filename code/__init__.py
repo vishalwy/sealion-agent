@@ -18,11 +18,12 @@ _log = logging.getLogger(__name__)
 logging_list = []
 logging_level = logging.INFO
 logging.basicConfig(level = logging_level, format = '%(message)s')
+formatter = logging.Formatter('%(asctime)-15s %(levelname)-7s %(thread)d - %(module)-s[%(lineno)-d]: %(message)s')
 logger = logging.getLogger()
 
 try:
     lf = logging.handlers.RotatingFileHandler(helper.Utils.get_safe_path(exe_path + 'var/log/sealion.log'), maxBytes = 1024 * 1024 * 100, backupCount = 10)
-    lf.setFormatter(logging.Formatter('%(asctime)-15s %(levelname)-6s %(module)-s[%(lineno)-d]: %(message)s'))
+    lf.setFormatter(formatter)
     logger.addHandler(lf)
 except Exception, e:
     sys.stderr.write('Failed to open log file; ' + str(e))
@@ -33,7 +34,7 @@ try:
 except Exception, e:
     _log.error(str(e))
     sys.exit(0)
-
+    
 class LoggingList(logging.Filter):
     def __init__(self, *logs):
         self.logs = [logging.Filter(log) for log in logs]
@@ -57,18 +58,21 @@ try:
         logging_list = []
 except:
     logging_list = []
-    pass
 
-logger.setLevel(logging_level)
-formatter = logging.Formatter('%(asctime)-15s %(levelname)-6s %(thread)d - %(module)-s[%(lineno)-d]: %(message)s')
-
-for handler in logging.root.handlers:
-    handler.setFormatter(formatter)
-    
+for handler in logging.root.handlers:    
     if len(logging_list) != 1 or logging_list[0] != 'all':
         handler.addFilter(LoggingList(*logging_list))
         
-def start(is_update_only_mode = False):
+if hasattr(globals.config.agent, '_id') == False:   
+    if globals.api.register(retry_count = 2, retry_interval = 10) != globals.APIStatus.SUCCESS:
+        sys.exit(0)
+        
+logger.setLevel(logging_level)
+
+for handler in logging.root.handlers:
+    handler.setFormatter(formatter)
+               
+def start(is_update_only_mode = False): 
     globals.is_update_only_mode = is_update_only_mode
     services.start()
 
