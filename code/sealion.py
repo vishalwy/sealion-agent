@@ -220,7 +220,7 @@ def sig_handler(signum, frame):
         exit(2)
     
 signal.signal(signal.SIGINT, sig_handler)
-daemon = sealion(exe_path + 'var/run/sealion.pid')
+daemon = Sealion(exe_path + 'var/run/sealion.pid')
 
 if len(sys.argv) == 2:
     if sys.argv[1] == 'start':
