@@ -8,6 +8,7 @@ sys.path.append(exe_path + 'src')
 sys.path.append(exe_path + 'lib/websocket_client') 
 
 import logging
+import logging.handlers
 import helper
 import services
 from globals import Globals
@@ -20,7 +21,7 @@ logging.basicConfig(level = logging_level, format = '%(message)s')
 logger = logging.getLogger()
 
 try:
-    lf = logging.FileHandler(helper.Utils.get_safe_path(exe_path + 'var/log/sealion.log'))
+    lf = logging.handlers.RotatingFileHandler(helper.Utils.get_safe_path(exe_path + 'var/log/sealion.log'), maxBytes = 1024 * 1024 * 100, backupCount = 10)
     lf.setFormatter(logging.Formatter('%(asctime)-15s %(levelname)-6s %(module)-s[%(lineno)-d]: %(message)s'))
     logger.addHandler(lf)
 except Exception, e:

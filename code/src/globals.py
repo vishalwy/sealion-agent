@@ -22,7 +22,7 @@ class SealionConfig(Config):
                 },
                 'optional': True
             },
-            'commandTimeout': {'type': 'float', 'optional': True}
+            'commandTimeout': {'type': 'int,float', 'optional': True}
         }
         
     def set(self, data = None):
@@ -110,8 +110,8 @@ class Globals:
         self.db_path = Utils.get_safe_path(self.exe_path + 'var/db/')
         self.is_update_only_mode = False
         self.config = EmptyClass()
-        self.config.sealion = SealionConfig(Utils.get_safe_path(self.exe_path + 'etc/config/sealion.json'))
-        self.config.agent = AgentConfig(Utils.get_safe_path(self.exe_path + 'etc/config/agent.json'))
+        self.config.sealion = SealionConfig(Utils.get_safe_path(self.exe_path + 'etc/config.json'))
+        self.config.agent = AgentConfig(Utils.get_safe_path(self.exe_path + 'etc/agent.json'))
         self.APIStatus = api.Status
         ret = self.config.sealion.set()
         
