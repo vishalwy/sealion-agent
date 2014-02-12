@@ -66,16 +66,16 @@ else
         id $USER_NAME >/dev/null 2>&1
 
         if [ $? -eq 0 ] ; then
-                echo "Removing $USER_NAME user"
-                pkill -KILL -u $USER_NAME
-                userdel $USER_NAME
+            echo "Removing $USER_NAME user"
+            pkill -KILL -u $USER_NAME
+            userdel $USER_NAME
         fi
 
         id -g $USER_NAME >/dev/null 2>&1
 
         if [ $? -eq 0 ] ; then
-                echo "Removing $USER_NAME group"
-                groupdel $USER_NAME
+            echo "Removing $USER_NAME group"
+            groupdel $USER_NAME
         fi
 
         echo "Removing service"
