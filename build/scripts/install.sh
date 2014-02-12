@@ -71,7 +71,6 @@ install_service()
     fi
     
     ln -sf $SERVICE_FILE $INIT_D_PATH/sealion
-    chmod +x $SERVICE_FILE
     
     for (( i = 1 ; i < 7 ; i++ )) ; do
         VAR_NAME="RC"$i"_PATH"
@@ -222,7 +221,7 @@ if [ $IS_UPDATE -eq 0 ] ; then
         CONFIG="$CONFIG, \"category\": \"$CATEGORY\""
     fi
         
-    echo "{$CONFIG}" >$INSTALL_PATH/etc/config/agent.json
+    echo "{$CONFIG}" >$INSTALL_PATH/etc/agent.json
 
     if [ "$PROXY" != "" ] ; then
         PROXY="$(echo "$PROXY" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
@@ -237,10 +236,10 @@ if [ $IS_UPDATE -eq 0 ] ; then
         eval sed "$ARGS" $INSTALL_PATH/etc/config.json
     fi
 
+    PYTHON="$(echo "$PYTHON" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
     ARGS="-i 's/python/$PYTHON/'"
     eval sed "$ARGS" $INSTALL_PATH/etc/init.d/sealion
-    eval sed "$ARGS" $INSTALL_PATH/uninstall
-
+    eval sed "$ARGS" $INSTALL_PATH/uninstall.sh
     chown -R $USER_NAME:$USER_NAME $INSTALL_PATH    
     echo "Sealion agent installed successfully"    
 
