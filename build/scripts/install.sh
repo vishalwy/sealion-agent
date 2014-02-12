@@ -66,6 +66,7 @@ ORG_TOKEN=
 CATEGORY=
 HOST_NAME=$(hostname)
 PROXY=$https_proxy
+NO_PROXY=$no_proxy
 
 update_agent_config()
 {
@@ -205,6 +206,7 @@ echo "Copying files..."
 if [ $IS_UPDATE -eq 0 ] ; then
     cp -r $BASEDIR/agent/* $INSTALL_PATH
     CONFIG="\"orgToken\": \"$ORG_TOKEN\", \"apiUrl\": \"$API_URL\", \"updateUrl\": \"$UPDATE_URL\", \"agentVersion\": \"$VERSION\", \"name\": \"$HOST_NAME\""
+    TEMP_VAR=""
 
     if [ "$CATEGORY" != "" ] ; then
         CONFIG="$CONFIG, \"category\": \"$CATEGORY\""
@@ -215,6 +217,13 @@ if [ $IS_UPDATE -eq 0 ] ; then
     if [ "$PROXY" != "" ] ; then
         PROXY="$(echo "$PROXY" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
         ARGS="-i 's/\(\"env\"\s*:\s*\[\)/\1{\"https\_proxy\": \"$PROXY\"}/'"
+        eval sed "$ARGS" $INSTALL_PATH/etc/config/sealion.json
+        TEMP_VAR=", "
+    fi
+
+    if [ "$NO_PROXY" != "" ] ; then
+        NO_PROXY="$(echo "$NO_PROXY" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
+        ARGS="-i 's/\(\"env\"\s*:\s*\[\)/\1{\"no\_proxy\": \"$NO_PROXY\"}$TEMP_VAR/'"
         eval sed "$ARGS" $INSTALL_PATH/etc/config/sealion.json
     fi
 
