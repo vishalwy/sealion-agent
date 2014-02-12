@@ -51,7 +51,10 @@ class Daemon(object):
         file(self.pidfile, 'w+').write('%s\n' % pid)
     
     def delete_pid(self):
-        os.remove(self.pidfile)
+        try:
+            os.remove(self.pidfile)
+        except:
+            pass
 
     def start(self):
         if self.status(True):
