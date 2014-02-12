@@ -58,6 +58,7 @@ IS_UPDATE=1
 INIT_FILE="sealion.py"
 DEFAULT_INSTALL_PATH="/usr/local/sealion-agent"
 INSTALL_AS_SERVICE=1
+USAGE="Usage: $0 {-o <org token> [-c <category name>] [-h <host name>] [-x <https proxy>] | -h}"
 
 #setup variables
 INSTALL_PATH=$DEFAULT_INSTALL_PATH
@@ -104,7 +105,7 @@ install_service()
     return 0
 }
 
-while getopts i:o:c:H:x: OPT ; do
+while getopts :i:o:c:H:x:h OPT ; do
     case "$OPT" in
         i)
             INSTALL_PATH=$OPTARG
@@ -115,6 +116,10 @@ while getopts i:o:c:H:x: OPT ; do
         c)
             CATEGORY=$OPTARG
             ;;
+        h)
+            echo $USAGE
+            exit 0
+            ;;
         H)
             HOST_NAME=$OPTARG
             ;;
@@ -122,7 +127,7 @@ while getopts i:o:c:H:x: OPT ; do
             PROXY=$OPTARG
             ;;
         \?)
-            echo "Invalid argument -$OPTARG" >&2
+            echo "Invalid option -$OPTARG" >&2
             exit 126
             ;;
         :)
@@ -148,7 +153,7 @@ if [ "$ORG_TOKEN" != '' ] ; then
 
     IS_UPDATE=0
 
-    #create installation dir
+    echo "Creating install directory at $INSTALL_PATH"
     mkdir -p $INSTALL_PATH
 
     if [ $? -ne 0 ] ; then
@@ -156,32 +161,36 @@ if [ "$ORG_TOKEN" != '' ] ; then
         exit 118
     fi
 
-    #create sealion group
     id -g $USER_NAME >/dev/null 2>&1
 
     if [ $? -ne 0 ] ; then
+        echo "Creating $USER_NAME group"
         groupadd -r $USER_NAME >/dev/null 2>&1
         
         if [ $? -ne 0 ] ; then
             echo "Error: Cannot create $USER_NAME group" >&2
             exit 1
         fi
+    else
+        echo "Group $USER_NAME already exists"
     fi
 
-    #create sealion user
     id $USER_NAME >/dev/null 2>&1
 
     if [ $? -ne 0 ] ; then
+        echo "Creating $USER_NAME user"
         useradd -r -g $USER_NAME $USER_NAME >/dev/null 2>&1
         
         if [ $? -ne 0 ] ; then
             echo "Error: Cannot create $USER_NAME user" >&2
             exit 1
         fi
+    else
+        echo "User $USER_NAME already exists"
     fi
 else
     if [ ! -f "$INSTALL_PATH/$INIT_FILE" ] ; then
-        echo "Error: $INSTALL_PATH is not a valid sealion directory"
+        echo "Error: $INSTALL_PATH is not a valid sealion install directory" >&2
         exit 1
     fi
 fi

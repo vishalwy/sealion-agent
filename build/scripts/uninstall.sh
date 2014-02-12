@@ -6,7 +6,7 @@ BASEDIR=${BASEDIR%/}
 USER_NAME="sealion"
 
 if [ ! -f "$BASEDIR/sealion.py" ] ; then
-    echo "Error: $BASEDIR is not a valid sealion directory"
+    echo "Error: $BASEDIR is not a valid sealion install directory" >&2
     exit 1
 fi
 
@@ -14,7 +14,7 @@ python $BASEDIR/sealion.py stop
 python $BASEDIR/src/unregister.py >/dev/null 2>&1
 
 if [ $? -ne 0 ] ; then
-    echo "Error: Failed to unregister agent"
+    echo "Error: Failed to unregister agent" >&2
     exit 1
 fi
 
@@ -37,19 +37,20 @@ uninstall_service()
             rm -f $VAR_NAME
 
             if [ $? -ne 0 ] ; then
-                echo "Error: Failed to remove $VAR_NAME file"
+                echo "Error: Failed to remove $VAR_NAME file" >&2
             fi
         done
 
         rm -f $INIT_D_PATH/sealion
         
         if [ $? -ne 0 ] ; then
-            echo "Error: Failed to remove $INIT_D_PATH/sealion file"
+            echo "Error: Failed to remove $INIT_D_PATH/sealion file" >&2
         fi
     fi
 }
 
 if [[ $EUID -ne 0 ]]; then
+    echo "Removing files except logs and uninstall.sh"
     find $BASEDIR/var/ -mindepth 1 -maxdepth 1 -type d ! -name 'log' -exec rm -rf {} \;
     find $BASEDIR/ -mindepth 1 -maxdepth 1 -type d ! -name 'var' -exec rm -rf {} \;
     find $BASEDIR/ -mindepth 1 -maxdepth 1 -type f ! -name 'uninstall.sh' -exec rm {} \;
@@ -74,13 +75,9 @@ else
         uninstall_service
     fi
 
+    echo "Removing files"
     cd /
     rm -rf $BASEDIR
-fi
-
-if [ $? -ne 0 ] ; then
-    echo "Error: Failed to remove files"
-    exit 1
 fi
 
 echo "Sealion agent uninstalled successfully"

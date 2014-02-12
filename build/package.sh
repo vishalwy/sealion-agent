@@ -2,11 +2,13 @@
 
 VERSION="2.0.0"
 
+USAGE="Usage: $0 {-t <prod|test> | -a <api url> -u <update url> | -h}"
+
 TEST_API_URL="https://api-test.sealion.com"
 TEST_UPDATE_URL="http://test.sealion.com/sealion-agent.tar.gz"
 
 PROD_API_URL="https://api.sealion.com"
-PROD_UPDATE_URL="http://api.sealion.com/sealion-agent.tar.gz"
+PROD_UPDATE_URL="https://s3.amazonaws.com/sealion.com/sealion-agent.tar.gz"
 
 API_URL=
 UPDATE_URL=
@@ -28,7 +30,7 @@ set_target()
     UPDATE_URL=$3
 }
 
-while getopts a:u:t: OPT ; do
+while getopts :a:u:t:h OPT ; do
     case "$OPT" in
         a)
             check_conflict
@@ -37,6 +39,10 @@ while getopts a:u:t: OPT ; do
         u)
             check_conflict
             UPDATE_URL=$OPTARG
+            ;;
+        h)
+            echo $USAGE
+            exit 0
             ;;
         t)
             if [ "$OPTARG" == "prod" ] ; then
@@ -49,11 +55,11 @@ while getopts a:u:t: OPT ; do
             fi
             ;;
         \?)
-            echo "Invalid argument -$OPTARG" >&2
+            echo "Invalid option -$OPTARG" >&2
             exit 126
             ;;
         :)
-            echo "Option -$OPTARG requires an argument." >&2
+            echo "Option $OPTARG requires an argument." >&2
             exit 125
             ;;
     esac
@@ -61,6 +67,7 @@ done
 
 if [[ "$API_URL" == "" || "$UPDATE_URL" == "" ]] ; then
     echo "Please specify valid target or urls"
+    echo $USAGE
     exit 1
 fi
 
