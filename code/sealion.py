@@ -19,7 +19,7 @@ from daemon import Daemon
 
 _log = logging.getLogger(__name__)
 
-class Sealion(Daemon):
+class sealion(Daemon):
     user_name = 'sealion'
     crash_dump_timeout = 90
     
@@ -220,7 +220,7 @@ def sig_handler(signum, frame):
         exit(2)
     
 signal.signal(signal.SIGINT, sig_handler)
-daemon = Sealion(exe_path + 'var/run/sealion.pid')
+daemon = sealion(exe_path + 'var/run/sealion.pid')
 
 if len(sys.argv) == 2:
     if sys.argv[1] == 'start':

@@ -128,10 +128,13 @@ class Globals:
     def url(self, path = ''):
         return self.api.get_url(path);
     
+    def reset_rtc_interface(self):
+        self.rtc = rtc.Interface(self.api)
+    
     def reset_interfaces(self):
         self.stop_event = threading.Event()
         self.api = api.Interface(self.config, self.stop_event)
-        self.rtc = rtc.Interface(self.api)   
+        self.reset_rtc_interface()
         self.store = storage.Interface(self.api, self.db_path)
         self.activities = None
         

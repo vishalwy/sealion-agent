@@ -7,6 +7,7 @@ import signal
 import os
 from constructs import *
 from globals import Globals
+import connection
 
 _log = logging.getLogger(__name__)
 
@@ -109,45 +110,7 @@ class Activity(ExceptionThread):
         return ret
         
     def stop(self):
-        self.is_stop = True
-    
-class Connection(ExceptionThread):    
-    def exe(self):
-        _log.debug('Starting up connection')
-        self.attempt(retry_interval = 20)
-        _log.debug('Shutting down connection')
-    
-    def attempt(self, max_try = -1, retry_interval = 5):
-        globals = Globals()
-        status = globals.api.authenticate(max_try, retry_interval)
-        
-        if status == globals.APIStatus.SUCCESS and globals.is_update_only_mode == False: 
-            globals.rtc.connect().start()
-            
-        return status            
-        
-    def connect(self):
-        globals = Globals()
-        status = globals.APIStatus.SUCCESS
-        
-        if hasattr(globals.config.agent, '_id') == False:
-            status = globals.api.register(retry_count = 4, retry_interval = 10)
-            
-        if status != globals.APIStatus.SUCCESS:
-            return status
-        
-        status = self.attempt(2)
-        
-        if globals.api.is_not_connected(status):
-            if globals.is_update_only_mode == True:
-                self.start()
-                status = globals.APIStatus.SUCCESS
-            elif hasattr(globals.config.agent, 'activities') and hasattr(globals.config.agent, 'org'):
-                _log.info('Running commands in offline mode')
-                self.start()
-                status = globals.APIStatus.SUCCESS
-            
-        return status       
+        self.is_stop = Tr       
        
 class Controller(ExceptionThread):
     __metaclass__ = SingletonType
@@ -181,7 +144,7 @@ class Controller(ExceptionThread):
         _log.debug('Controller starting up')
         
         while 1:
-            if self.handle_response(Connection().connect()) == False:
+            if self.handle_response(connection.Interface(self.globals).connect()) == False:
                 break
                 
             if self.globals.is_update_only_mode == False:            

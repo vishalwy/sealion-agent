@@ -4,6 +4,7 @@ import threading
 import tempfile
 import subprocess
 from constructs import *
+import connection
 
 _log = logging.getLogger(__name__)
 
@@ -242,7 +243,13 @@ class Interface(requests.Session):
             if code == 200004:
                 return self.status.MISMATCH
             else:
-                is_ignore_status == False and self.stop()
+                if is_ignore_status == False:
+                    if code == 200001:
+                        self.set_events(post_event = False)
+                        connection.Interface().reconnect()
+                    else:
+                        self.stop()
+                    
                 return self.status.UNAUTHERIZED
         elif status == 404:
             is_ignore_status == False and self.stop(self.status.NOT_FOUND)

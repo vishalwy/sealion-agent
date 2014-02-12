@@ -53,6 +53,7 @@ class Interface(ExceptionThread):
         self.api = api
         self.sio = None
         self.last_heartbeat = int(time.time())
+        self.is_stop = False
         
     def connect(self):
         SocketIONamespace.rtc = self
@@ -70,6 +71,8 @@ class Interface(ExceptionThread):
         return self
     
     def stop(self):
+        self.is_stop = True
+        
         if self.sio != None:
             _log.debug('Disconnecting socket-io')
             
@@ -92,9 +95,10 @@ class Interface(ExceptionThread):
                 self.sio.wait()
             except Exception, e:
                 _log.debug(str(e))
-                self.connect()
             
-            if self.api.stop_event.is_set():
+            if self.is_stop == True:
                 break
+                
+            self.connect()
         
         _log.debug('Shutting down socket-io')
