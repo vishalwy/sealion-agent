@@ -193,6 +193,16 @@ class Interface(requests.Session):
 
         return ret
     
+    def get_agent_version(self):
+        response = self.exec_method('get', 0, 0, self.get_url('agents/agentVersion?agentVersion=%s' % self.config.agent.agentVersion))
+        
+        if Interface.is_success(response):
+            ret = response.json()['agentVersion']
+        else:
+            ret = self.error('Failed to get agent version', response, True)
+        
+        return ret
+    
     def send_crash_report(self, data, retry_count = 3, retry_interval = 30):
         orgToken, agentId = data['orgToken'], data['_id']
         del data['orgToken'], data['_id']

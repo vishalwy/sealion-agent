@@ -17,23 +17,16 @@ class Interface(ExceptionThread):
     
     def attempt(self, max_try = -1, retry_interval = 5):
         status = Interface.globals.api.authenticate(max_try, retry_interval)
-        
-        if status == Interface.globals.APIStatus.SUCCESS and Interface.globals.is_update_only_mode == False: 
-            Interface.globals.rtc.connect().start()
-            
+        status == Interface.globals.APIStatus.SUCCESS and Interface.globals.rtc.connect().start()
         return status            
         
     def connect(self):        
         status = self.attempt(2)
         
-        if Interface.globals.api.is_not_connected(status):
-            if Interface.globals.is_update_only_mode == True:
-                self.start()
-                status = Interface.globals.APIStatus.SUCCESS
-            elif hasattr(Interface.globals.config.agent, 'activities') and hasattr(Interface.globals.config.agent, 'org'):
-                _log.info('Running commands in offline mode')
-                self.start()
-                status = Interface.globals.APIStatus.SUCCESS
+        if Interface.globals.api.is_not_connected(status) and hasattr(Interface.globals.config.agent, 'activities') and hasattr(Interface.globals.config.agent, 'org'):
+            _log.info('Running commands in offline mode')
+            self.start()
+            status = Interface.globals.APIStatus.SUCCESS
             
         return status
     

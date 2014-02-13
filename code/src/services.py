@@ -144,10 +144,19 @@ class Controller(ExceptionThread):
         _log.debug('Controller starting up')
         
         while 1:
-            if self.handle_response(connection.Interface(self.globals).connect()) == False:
-                break
+            if self.globals.is_update_only_mode == True:
+                version = self.globals.api.get_agent_version()
                 
-            if self.globals.is_update_only_mode == False:            
+                if type(version) is str and version != self.globals.config.agent.agentVersion:
+                    self.globals.api.update_agent(self.globals.exe_path)
+                    break
+                    
+                if self.is_stop == True:
+                    break
+            else:
+                if self.handle_response(connection.Interface(self.globals).connect()) == False:
+                    break
+                
                 if self.globals.store.start() == False:
                     break
 
@@ -155,30 +164,18 @@ class Controller(ExceptionThread):
                     self.globals.store.clear_offline_data()
 
                 self.globals.manage_activities();
+                _log.debug('Controller waiting for post event')
                 self.globals.stop_event.wait()
                 _log.debug('Controller received stop event')
-            else:
-                while 1:
-                    if self.globals.api.post_event.is_set() == False:
-                        _log.debug('Controller waiting for post event')
-                        self.globals.api.post_event.wait()
-                    
-                    if self.globals.stop_event.is_set():
-                        _log.debug('Controller received stop event')
-                        break
-                    
-                    self.globals.api.get_config()
-                    self.globals.stop_event.wait(5 * 60)
+                self.stop_threads()
             
-            self.stop_threads()
-            
-            if self.handle_response(self.globals.api.stop_status) == False:
-                break
+                if self.handle_response(self.globals.api.stop_status) == False:
+                    break
 
-            if self.is_stop == True:
-                break
+                if self.is_stop == True:
+                    break
 
-            self.globals.reset_interfaces()
+                self.globals.reset_interfaces()
         
         _log.debug('Controller generating SIGALRM signal')
         signal.alarm(2)
