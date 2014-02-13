@@ -72,7 +72,7 @@ logger.setLevel(logging_level)
 for handler in logging.root.handlers:
     handler.setFormatter(formatter)
                
-def start(is_update_only_mode = True): 
+def start(is_update_only_mode = False): 
     globals.is_update_only_mode = is_update_only_mode
     services.start()
 

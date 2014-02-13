@@ -146,8 +146,9 @@ class Controller(ExceptionThread):
         while 1:
             if self.globals.is_update_only_mode == True:
                 version = self.globals.api.get_agent_version()
+                version_type = type(version)
                 
-                if type(version) is str and version != self.globals.config.agent.agentVersion:
+                if (version_type is str or version_type is unicode) and version != self.globals.config.agent.agentVersion:
                     self.globals.api.update_agent(self.globals.exe_path)
                 
                 _log.debug('Controller waiting for stop event for %d seconds' % (5 * 60, ))
