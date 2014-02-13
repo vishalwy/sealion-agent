@@ -149,9 +149,12 @@ class Controller(ExceptionThread):
                 
                 if type(version) is str and version != self.globals.config.agent.agentVersion:
                     self.globals.api.update_agent(self.globals.exe_path)
-                    break
-                    
-                if self.is_stop == True:
+                
+                _log.debug('Controller waiting for stop event for %d seconds' % (5 * 60, ))
+                self.globals.stop_event.wait(5 * 60)
+                
+                if self.globals.stop_event.is_set():
+                    _log.debug('Controller received stop event')
                     break
             else:
                 if self.handle_response(connection.Interface(self.globals).connect()) == False:
@@ -164,7 +167,7 @@ class Controller(ExceptionThread):
                     self.globals.store.clear_offline_data()
 
                 self.globals.manage_activities();
-                _log.debug('Controller waiting for post event')
+                _log.debug('Controller waiting for stop event')
                 self.globals.stop_event.wait()
                 _log.debug('Controller received stop event')
                 self.stop_threads()

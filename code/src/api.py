@@ -194,7 +194,7 @@ class Interface(requests.Session):
         return ret
     
     def get_agent_version(self):
-        response = self.exec_method('get', 0, 0, self.get_url('agents/agentVersion?agentVersion=%s' % self.config.agent.agentVersion))
+        response = self.exec_method('get', 0, 0, self.get_url('agents/agentVersion'), params = {'agentVersion': self.config.agent.agentVersion})
         
         if Interface.is_success(response):
             ret = response.json()['agentVersion']
@@ -206,7 +206,7 @@ class Interface(requests.Session):
     def send_crash_report(self, data, retry_count = 3, retry_interval = 30):
         orgToken, agentId = data['orgToken'], data['_id']
         del data['orgToken'], data['_id']
-        response = self.exec_method('post', retry_count, retry_interval, self.get_url('/orgs/%s/agents/%s/crashreport' % (orgToken, agentId)), data = data)    
+        response = self.exec_method('post', retry_count, retry_interval, self.get_url('orgs/%s/agents/%s/crashreport' % (orgToken, agentId)), data = data)    
         ret = self.status.SUCCESS
         
         if Interface.is_success(response):
