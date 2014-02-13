@@ -206,7 +206,7 @@ class sealion(Daemon):
         sys.excepthook = self.exception_hook
         is_update_only_mode = False
         
-        if  self.is_crash_loop() == True:
+        if self.is_crash_loop() == True:
             _log.info('Crash loop detected; starting agent in update only mode')
             is_update_only_mode = True
         
@@ -232,8 +232,8 @@ if len(sys.argv) == 2:
     elif sys.argv[1] == 'status':
         daemon.status()
     else:
-        sys.stdout.write("Unknown command; Usage: %s start|stop|restart|status\n" % sys.argv[0])    
+        sys.stdout.write("Unknown command; Usage: %s start|stop|restart|status\n" % daemon.__class__.__name__)    
 else:
-    sys.stdout.write("Usage: %s start|stop|restart|status\n" % sys.argv[0])
+    sys.stdout.write("Usage: %s start|stop|restart|status\n" % daemon.__class__.__name__)
     
 sys.exit(0)
