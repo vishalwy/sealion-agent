@@ -275,7 +275,7 @@ class Interface(requests.Session):
     
     def download_file(self, exe_path):
         url = self.config.agent.updateUrl
-        temp_dir = tempfile.gettempdir()
+        temp_dir = tempfile.mkdtemp()
         temp_dir = temp_dir + '/' if temp_dir[len(temp_dir) - 1] != '/' else temp_dir
         filename = temp_dir + url.split('/')[-1]
         _log.info('Update found; downloading to %s' % filename)
