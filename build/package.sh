@@ -81,7 +81,14 @@ mkdir -p $BASEDIR/$TARGET/$OUTPUT/agent
 
 generate_scripts()
 {
+    cp $BASEDIR/scripts/uninstall.sh $BASEDIR/$TARGET/$OUTPUT/agent/
+    chmod +x $BASEDIR/$TARGET/$OUTPUT/agent/uninstall.sh
+    echo "Uninstaller generated"
+    cp $BASEDIR/scripts/sealion $BASEDIR/$TARGET/$OUTPUT/agent/etc/init.d
+    chmod +x $BASEDIR/$TARGET/$OUTPUT/agent/etc/init.d/sealion
+    echo "Service script generated"
     INSTALLER=$BASEDIR/$TARGET/$OUTPUT/install.sh
+    CURL_INSTALLER=$BASEDIR/$TARGET/curl-install.sh
     cp $BASEDIR/scripts/install.sh $INSTALLER
     URL="$(echo "$API_URL" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
     ARGS="-i 's/\(^API\_URL=\)\(\"[^\"]\+\"\)/\1\"$URL\"/'"
@@ -93,12 +100,11 @@ generate_scripts()
     eval sed "$ARGS" $INSTALLER
     chmod +x $INSTALLER
     echo "Installer generated"
-    cp $BASEDIR/scripts/uninstall.sh $BASEDIR/$TARGET/$OUTPUT/agent/
-    chmod +x $BASEDIR/$TARGET/$OUTPUT/agent/uninstall.sh
-    echo "Uninstaller generated"
-    cp $BASEDIR/scripts/sealion $BASEDIR/$TARGET/$OUTPUT/agent/etc/init.d
-    chmod +x $BASEDIR/$TARGET/$OUTPUT/agent/etc/init.d/sealion
-    echo "Service script generated"
+    cp $BASEDIR/scripts/curl-install.sh $CURL_INSTALLER
+    ARGS="-i 's/\(^DOWNLOAD\_URL=\)\(\"[^\"]\+\"\)/\1\"$URL\"/'"
+    eval sed "$ARGS" $CURL_INSTALLER
+    chmod +x $CURL_INSTALLER
+    echo "Curl installer generated"
 }
 
 find $BASEDIR/../code/ -mindepth 1 -maxdepth 1 -type d ! -name 'etc' -exec cp -r {} $BASEDIR/$TARGET/$OUTPUT/agent \;
