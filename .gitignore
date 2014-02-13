@@ -1,17 +1,10 @@
 # Ignore all files ending in ~ (temp files)
 *~
 *.pyc
-release/sealion.sh
-release/test.sealion.com/*
-release/sealion.com/*
-
 
 
 ## Ignore folders ##
+build/bin/
+code/var/
+code/etc/
 
-sealion-agent/tmp/
-sealion-agent/etc/dbs/
-sealion-agent/etc/certificates/
-sealion-agent/.idea/
-
-!sealion-agent/node_modules/

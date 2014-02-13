@@ -41,6 +41,7 @@ class Interface(ExceptionThread):
         if Interface.globals.api.is_authenticated == False:
             return
         
+        Interface.globals.api.is_authenticated = False
         _log.info('Reauthenticating')
         Interface.globals.rtc.stop()
         _log.info('Waiting for socket-io to disconnect')
