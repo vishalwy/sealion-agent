@@ -6,7 +6,7 @@ TMP_FILE_PATH=${TMP_FILE_PATH%/}
 TMP_FILE_NAME="$TMP_FILE_PATH/sealion-agent.tar.gz"
 
 echo "Downloading agent installer"
-curl $DOWNLOAD_URL -o $TMP_FILE_NAME
+curl -k $DOWNLOAD_URL -o $TMP_FILE_NAME
 
 if [ $? -ne 0 ] ; then
     echo "Error: Failed to download agent installer" >&2

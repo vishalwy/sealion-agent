@@ -5,7 +5,7 @@ VERSION="2.0.0"
 USAGE="Usage: $0 {-t prod|test | -a <api url> -u <update url> | -h}"
 
 TEST_API_URL="https://api-test.sealion.com"
-TEST_UPDATE_URL="http://test.sealion.com/sealion-agent.tar.gz"
+TEST_UPDATE_URL="https://agent-test.sealion.com/sealion-agent.tar.gz"
 
 PROD_API_URL="https://api.sealion.com"
 PROD_UPDATE_URL="https://s3.amazonaws.com/sealion.com/sealion-agent.tar.gz"
