@@ -8,9 +8,9 @@ from helper import Utils
 
 _log = logging.getLogger(__name__)
 
-class OfflineStore(ExceptionThread):    
+class OfflineStore(ThreadEx):    
     def __init__(self, db_path, config):
-        ExceptionThread.__init__(self)
+        ThreadEx.__init__(self)
         self.db_file = db_path
         self.config = config
         self.conn = None
@@ -19,7 +19,7 @@ class OfflineStore(ExceptionThread):
         
     def start(self):
         self.db_file = Utils.get_safe_path(self.db_file + ('%s.db' % self.config.agent.org))
-        ExceptionThread.start(self)
+        ThreadEx.start(self)
         self.conn_event.wait()            
         return True if self.conn else False
     
@@ -174,11 +174,11 @@ class OfflineStore(ExceptionThread):
         self.close_db()
         return False
     
-class Sender(ExceptionThread):   
+class Sender(ThreadEx):   
     queue_max_size = 50
     
     def __init__(self, api, off_store):
-        ExceptionThread.__init__(self)
+        ThreadEx.__init__(self)
         self.api = api
         self.off_store = off_store
         self.queue = queue.Queue(maxsize = self.queue_max_size)

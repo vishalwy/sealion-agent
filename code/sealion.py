@@ -156,7 +156,7 @@ class sealion(Daemon):
         import __init__
             
     def on_fork(self):        
-        self.set_procname('%s-monit' % self.__class__.__name__ )
+        self.set_procname()
         
         global logging, time, traceback, signal, pwd, json
         del logging, time, traceback, signal, pwd, json
@@ -200,7 +200,7 @@ class sealion(Daemon):
             os._exit(1)
     
     def run(self):     
-        self.set_procname()
+        self.set_procname('%s-worker' % self.__class__.__name__ )
         sys.excepthook = self.exception_hook
         is_update_only_mode = False
         
@@ -208,8 +208,8 @@ class sealion(Daemon):
             _log.info('Crash loop detected; starting agent in update only mode')
             is_update_only_mode = True
         
-        from constructs import ExceptionThread
-        ExceptionThread(target = self.send_crash_dumps).start()
+        from constructs import ThreadEx
+        ThreadEx(target = self.send_crash_dumps).start()
         import __init__
         __init__.start(is_update_only_mode)
             

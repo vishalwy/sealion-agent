@@ -3,12 +3,12 @@ from constructs import *
 
 _log = logging.getLogger(__name__)
 
-class Interface(ExceptionThread):
+class Interface(ThreadEx):
     globals = None
     
     def __init__(self, globals = None):
         Interface.globals = Interface.globals or globals
-        ExceptionThread.__init__(self)
+        ThreadEx.__init__(self)
     
     def exe(self):
         _log.debug('Starting up connection')

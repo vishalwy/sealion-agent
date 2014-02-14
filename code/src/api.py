@@ -220,7 +220,7 @@ class Interface(requests.Session):
         if self.updater != None:
             return
         
-        self.updater = ExceptionThread(target = self.download_file, args=(exe_path,))
+        self.updater = ThreadEx(target = self.download_file, args=(exe_path,))
         self.updater.start()
     
     def stop(self, stop_status = None):

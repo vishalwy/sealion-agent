@@ -49,7 +49,7 @@ def enum(*sequential, **named):
     enums = dict(zip(sequential, range(len(sequential))), **named)
     return type('Enum', (), enums)
 
-class ExceptionThread(threading.Thread):
+class ThreadEx(threading.Thread):
     def __init__(self, group = None, target = None, name = None, args = (), kwargs = {}):
         self.orig_target = target
         self.orig_args = args

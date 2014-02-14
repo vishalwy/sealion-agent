@@ -11,11 +11,11 @@ import connection
 
 _log = logging.getLogger(__name__)
 
-class Activity(ExceptionThread):
+class Activity(ThreadEx):
     timestampLock = threading.RLock()
     
     def __init__(self, activity, stop_event):
-        ExceptionThread.__init__(self)
+        ThreadEx.__init__(self)
         self.activity = activity;
         self.stop_event = stop_event
         self.is_stop = False
@@ -113,11 +113,11 @@ class Activity(ExceptionThread):
     def stop(self):
         self.is_stop = True       
        
-class Controller(ExceptionThread):
+class Controller(ThreadEx):
     __metaclass__ = SingletonType
     
     def __init__(self):
-        ExceptionThread.__init__(self)
+        ThreadEx.__init__(self)
         self.globals = Globals()
         self.is_stop = False
         self.main_thread = threading.current_thread()

@@ -47,9 +47,9 @@ class SocketIONamespace(BaseNamespace):
         self.rtc.update_heartbeat()
         self.rtc.api.get_config()
         
-class Interface(ExceptionThread):    
+class Interface(ThreadEx):    
     def __init__(self, api):
-        ExceptionThread.__init__(self)
+        ThreadEx.__init__(self)
         self.api = api
         self.sio = None
         self.last_heartbeat = int(time.time())
