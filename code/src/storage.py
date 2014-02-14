@@ -1,6 +1,7 @@
 import logging
 import threading
 import time
+import gc
 import sqlite3 as sqlite
 from constructs import *
 from helper import Utils
@@ -249,7 +250,7 @@ class Sender(ExceptionThread):
     def exe(self):
         _log.debug('Starting up sender')
         api_status = self.api.status
-        del_rows, del_activities = [], []
+        del_rows, del_activities, gc_threshold = [], [], 0
         
         while 1:
             if self.wait() == False:
@@ -257,10 +258,20 @@ class Sender(ExceptionThread):
                 
             try:
                 item = self.queue.get(True, 5)
+                gc_threshold = 1
             except:
                 self.update_store(del_rows, del_activities)
                 del_rows, del_activities = [], []
-                self.store_available() and self.off_store.get(self.queue_max_size, self.store_get_callback)
+                
+                if self.store_available():
+                    self.off_store.get(self.queue_max_size, self.store_get_callback)
+                else:
+                    gc_threshold = gc_threshold + 1 if gc_threshold else 0
+                    
+                if gc_threshold == 3:
+                    gc_threshold = 0
+                    _log.debug('GC collected %d unreachables' % gc.collect())
+                    
                 continue
                 
             row_id = item.get('row_id')

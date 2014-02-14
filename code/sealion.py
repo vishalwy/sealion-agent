@@ -162,8 +162,6 @@ class sealion(Daemon):
         del logging, time, traceback, signal, pwd, json
         import gc
         gc.collect()
-        del gc
-        
         ret = os.wait()
         is_resurrect = False
         

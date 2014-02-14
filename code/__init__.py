@@ -1,3 +1,6 @@
+import gc
+gc.set_threshold(500, 7, 7)
+
 import os
 import sys
 

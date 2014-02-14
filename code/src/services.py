@@ -64,6 +64,7 @@ class Activity(ExceptionThread):
                 data = {'returnCode': ret['return_code'], 'timestamp': timestamp, 'data': ret['output']}
                 _log.debug('Pushing activity(%s @ %d) to store' % (self.activity['_id'], timestamp))
                 globals.store.push(self.activity['_id'], data)
+                ret = None
                 
             timeout = self.activity['interval']
             break_flag = False
@@ -110,7 +111,7 @@ class Activity(ExceptionThread):
         return ret
         
     def stop(self):
-        self.is_stop = Tr       
+        self.is_stop = True       
        
 class Controller(ExceptionThread):
     __metaclass__ = SingletonType
