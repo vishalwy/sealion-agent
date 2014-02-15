@@ -20,7 +20,7 @@ from daemon import Daemon
 _log = logging.getLogger(__name__)
 
 class sealion(Daemon):
-    user_name = 'vishal'
+    user_name = 'sealion'
     crash_dump_timeout = 90
     
     @property
@@ -186,7 +186,7 @@ class sealion(Daemon):
             os._exit(1)
     
     def run(self):     
-        self.set_procname('%s-worker' % self.__class__.__name__ )
+        self.set_procname('%s' % self.__class__.__name__ )
         sys.excepthook = self.exception_hook
         is_update_only_mode = False
         
