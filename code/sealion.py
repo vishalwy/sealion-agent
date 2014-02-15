@@ -153,7 +153,7 @@ class sealion(Daemon):
             sys.exit(1)
         
         os.chdir(exe_path)
-        import __init__
+        import main
             
     def on_fork(self, cpid):        
         try:
@@ -196,8 +196,8 @@ class sealion(Daemon):
         
         from constructs import ThreadEx
         ThreadEx(target = self.send_crash_dumps).start()
-        import __init__
-        __init__.start(is_update_only_mode)
+        import main
+        main.start(is_update_only_mode)
             
 def sig_handler(signum, frame):    
     if signum == signal.SIGINT:
