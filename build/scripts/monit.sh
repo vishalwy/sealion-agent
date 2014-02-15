@@ -9,7 +9,7 @@ LOG_FILE="$BASEDIR/var/log/sealion.log"
 ORIG_PID=$1
 
 while true ; do
-    sleep 5
+    sleep 60
 
     PID=$(cat $PID_FILE)
 
