@@ -44,7 +44,8 @@ class Daemon(object):
         os.dup2(se.fileno(), sys.stderr.fileno())
         
         if pid > 0:
-            self.on_fork()
+            self.on_fork(pid)
+            sys.exit(0)
         
         atexit.register(self.delete_pid)
         pid = str(os.getpid())
@@ -120,8 +121,8 @@ class Daemon(object):
     def initialize(self):
         return True
     
-    def on_fork(self):
-        sys.exit(0)
+    def on_fork(self, cpid):
+        pass
 
     def run(self):
         pass

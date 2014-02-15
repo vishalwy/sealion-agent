@@ -129,9 +129,13 @@ class Controller(ThreadEx):
             return True
         elif self.globals.api.is_not_connected(status):
             _log.info('Failed to connect')
-        elif status == self.globals.APIStatus.NOT_FOUND:
-            _log.info('Uninstalling agent')
-            subprocess.Popen([self.globals.exe_path + 'uninstall.sh'])
+        elif status == self.globals.APIStatus.NOT_FOUND:           
+            try:
+                _log.info('Uninstalling agent')
+                subprocess.Popen([self.globals.exe_path + 'uninstall.sh'])
+            except:
+                _log.error('Failed to open uninstall script')
+                
         elif status == self.globals.APIStatus.UNAUTHERIZED:
             _log.error('Agent unautherized to connect')
         elif status == self.globals.APIStatus.BAD_REQUEST:

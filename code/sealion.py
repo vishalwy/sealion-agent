@@ -20,7 +20,7 @@ from daemon import Daemon
 _log = logging.getLogger(__name__)
 
 class sealion(Daemon):
-    user_name = 'sealion'
+    user_name = 'vishal'
     crash_dump_timeout = 90
     
     @property
@@ -155,25 +155,11 @@ class sealion(Daemon):
         os.chdir(exe_path)
         import __init__
             
-    def on_fork(self):        
-        self.set_procname()
-        
-        global logging, time, traceback, signal, pwd, json
-        del logging, time, traceback, signal, pwd, json
-        import gc
-        gc.collect()
-        ret = os.wait()
-        is_resurrect = False
-        
-        if os.WIFEXITED(ret[1]) == False:
-            is_resurrect = True
-            _log.error('%s got terminated' % self.__class__.__name__)
-        elif os.WEXITSTATUS(ret[1]) != 0:
-            is_resurrect = True
-            
-        if is_resurrect:
-            _log.info('Resurrecting %s' % self.__class__.__name__)
-            subprocess.call([sys.executable, module_path, 'start'])
+    def on_fork(self, cpid):        
+        try:
+            subprocess.Popen([exe_path + 'monit.sh', str(cpid)])
+        except:
+            _log.error('Failed to open monitoring script')
             
         sys.exit(0)
         
