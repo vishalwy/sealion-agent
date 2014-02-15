@@ -84,6 +84,9 @@ generate_scripts()
     cp $BASEDIR/scripts/uninstall.sh $BASEDIR/$TARGET/$OUTPUT/agent/
     chmod +x $BASEDIR/$TARGET/$OUTPUT/agent/uninstall.sh
     echo "Uninstaller generated"
+    cp $BASEDIR/scripts/monit.sh $BASEDIR/$TARGET/$OUTPUT/agent/
+    chmod +x $BASEDIR/$TARGET/$OUTPUT/agent/monit.sh
+    echo "Monit script generated"
     cp $BASEDIR/scripts/sealion $BASEDIR/$TARGET/$OUTPUT/agent/etc/init.d
     chmod +x $BASEDIR/$TARGET/$OUTPUT/agent/etc/init.d/sealion
     echo "Service script generated"
