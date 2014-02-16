@@ -3,9 +3,9 @@
 BASEDIR=$(readlink -f "$0")
 BASEDIR=$(dirname $BASEDIR)
 BASEDIR=${BASEDIR%/}
-PID_FILE="$BASEDIR/var/run/sealion.pid"
-SERVICE_FILE="$BASEDIR/etc/init.d/sealion"
-LOG_FILE="$BASEDIR/var/log/sealion.log"
+PID_FILE="$BASEDIR/../var/run/sealion.pid"
+SERVICE_FILE="$BASEDIR/../etc/init.d/sealion"
+LOG_FILE="$BASEDIR/../var/log/sealion.log"
 ORIG_PID=$1
 
 while true ; do

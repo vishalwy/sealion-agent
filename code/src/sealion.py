@@ -20,7 +20,7 @@ _log = logging.getLogger(__name__)
 
 class sealion(Daemon):
     user_name = 'sealion'
-    crash_dump_timeout = 90
+    crash_dump_timeout = 60 * 5
     
     @property
     def crash_dump_path(self):
@@ -171,7 +171,7 @@ class sealion(Daemon):
         except:
             return 0
         
-        return len(files) >= 5
+        return len(files) >= 4
         
     def exception_hook(self, type, value, tb):
         if type != SystemExit:
