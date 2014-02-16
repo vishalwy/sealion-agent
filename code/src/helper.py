@@ -125,7 +125,7 @@ class Config:
         
     @staticmethod
     def parse(file, is_data = False):
-        value = {}
+        value, f = {}, None
 
         if is_data == True or os.path.isfile(file) == True:        
             try:
@@ -133,31 +133,30 @@ class Config:
 
                 if is_data != True:
                     f = open(file, 'r')
-                    data = f.read()
-                    f.close()
-                    data = re.sub('#.*\n', '', data)
-                    value = json.loads(data)
+                    value = json.load(f)
                 elif type(data) is dict:
                     value = data
                 else:
-                    data = re.sub('#.*\n', '', data)
                     value = json.loads(data)
             except:
                 pass
+            finally:
+                f and f.close()
 
         return value
         
     def save(self):
         self.lock.acquire()
+        f = None
         
         try:
             f = open(self.file, 'w')
             json.dump(self.data, f)
-            f.close()
             return True
         except:
             return False
         finally:
+            f and f.close()
             self.lock.release()
             
     def set(self, data = None):

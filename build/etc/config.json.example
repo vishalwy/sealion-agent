@@ -1,0 +1,32 @@
+/*
+This file contains an example configuration for sealion agent. The format for this configuration file is JSON(www.json.org).
+In this file you will find comments like this to explain configuration keys and possible values. 
+You should not use comments in the original config.json file as it will cause the parser to ignore the file altogether.
+All the keys in the configuration are optional.
+*/
+{
+    /*Enable logging for agent*/
+    "logging": {
+        
+        /*Set the logging level. Possible values are none/error/info/debug. Setting level to none will turn off logging.*/
+        "level": "info",
+        
+        /*
+        Set the modules you want to enable logging. You can specify the name of any *.py file under src/ and lib/ directories.
+        You can enable logging for all the modules by specifying ["all"] as the value for this key.
+        */
+        "modules": ["__main__", "api", "connection", "daemon", "globals", "helper", "main", "rtc", "services", "storage"]
+    },
+
+    /*Specify the environment variables you want to export for the agent and the commands you schedule as an array of key value pairs.*/
+    "env": [{"https_proxy": "https://abc.example.com:5555"}, {"no_proxy": "localhost, xyz.example.com"}, {"password": "my-awesome-password"}],
+
+    /*
+    White list the commands you want to execute. Value of this key should be an array of regular expressions.
+    Absence of this key or an empty array as the value implies no white list
+    */
+    "whitelist": ["^\s*top.*", "script\.sh"],
+
+    /*Maximum time a command is allowed to execute; in seconds. Default is 30 seconds.*/
+    "commandTimeout": 40.5
+}
