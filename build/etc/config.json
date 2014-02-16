@@ -1,4 +1,4 @@
 {
-    "logging": {"level": "info", "modules": ["__main__", "api", "connection", "daemon", "globals", "helper", "main", "rtc", "sealion", "services", "storage"]},
+    "logging": {"level": "info", "modules": ["__main__", "api", "connection", "daemon", "globals", "helper", "main", "rtc", "services", "storage"]},
     "env": []
 }

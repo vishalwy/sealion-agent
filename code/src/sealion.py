@@ -20,7 +20,8 @@ _log = logging.getLogger(__name__)
 
 class sealion(Daemon):
     user_name = 'sealion'
-    crash_dump_timeout = 60 * 5
+    monit_interval = 60
+    crash_dump_threshold = 5
     
     @property
     def crash_dump_path(self):
@@ -72,8 +73,8 @@ class sealion(Daemon):
         return report
     
     def send_crash_dumps(self):        
-        _log.debug('Crash dump sender starting up')
-        crash_dump_timeout = self.crash_dump_timeout + 20
+        _log.debug('Crash dump sender starting up')        
+        crash_dump_timeout = (self.monit_interval * self.crash_dump_threshold) + 10
         from globals import Globals
         globals = Globals()
         path = self.crash_dump_path
@@ -156,7 +157,7 @@ class sealion(Daemon):
             
     def on_fork(self, cpid):        
         try:
-            subprocess.Popen([exe_path + 'bin/monit.sh', str(cpid)])
+            subprocess.Popen([exe_path + 'bin/monit.sh', str(cpid), str(self.monit_interval)])
         except:
             _log.error('Failed to open monitoring script')
             
@@ -165,9 +166,10 @@ class sealion(Daemon):
     def is_crash_loop(self):
         t = int(time.time())
         path = self.crash_dump_path
+        crash_dump_timeout = self.monit_interval * self.crash_dump_threshold
         
         try:
-            files = [f for f in os.listdir(path) if os.path.isfile(path + f) and t - os.path.getmtime(path + f) < self.crash_dump_timeout]
+            files = [f for f in os.listdir(path) if os.path.isfile(path + f) and t - os.path.getmtime(path + f) < crash_dump_timeout]
         except:
             return 0
         
