@@ -188,7 +188,7 @@ class Controller(ThreadEx):
         
         self.is_stop = True
         _log.debug('Controller generating SIGALRM signal')
-        signal.alarm()
+        signal.alarm(1)
         _log.debug('Controller shutting down')
             
     def stop(self):

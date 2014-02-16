@@ -14,7 +14,7 @@ ORIG_PID=$1
 INTERVAL=$2
 
 while true ; do
-    sleep INTERVAL
+    sleep $INTERVAL
     PID=$(cat $PID_FILE 2>/dev/null)
 
     if [[ $? -ne 0 || "$PID" != "$ORIG_PID" ]] ; then
