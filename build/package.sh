@@ -84,8 +84,8 @@ generate_scripts()
     cp $BASEDIR/scripts/uninstall.sh $BASEDIR/$TARGET/$OUTPUT/agent/
     chmod +x $BASEDIR/$TARGET/$OUTPUT/agent/uninstall.sh
     echo "Uninstaller generated"
-    cp $BASEDIR/scripts/monit.sh $BASEDIR/$TARGET/$OUTPUT/agent/
-    chmod +x $BASEDIR/$TARGET/$OUTPUT/agent/monit.sh
+    cp $BASEDIR/scripts/monit.sh $BASEDIR/$TARGET/$OUTPUT/agent/bin/
+    chmod +x $BASEDIR/$TARGET/$OUTPUT/agent/bin/monit.sh
     echo "Monit script generated"
     cp $BASEDIR/scripts/sealion $BASEDIR/$TARGET/$OUTPUT/agent/etc/init.d
     chmod +x $BASEDIR/$TARGET/$OUTPUT/agent/etc/init.d/sealion
@@ -114,6 +114,7 @@ find $BASEDIR/../code/ -mindepth 1 -maxdepth 1 -type d ! -name 'etc' -exec cp -r
 cp $BASEDIR/../code/* $BASEDIR/$TARGET/$OUTPUT/agent
 cp -r $BASEDIR/etc $BASEDIR/$TARGET/$OUTPUT/agent
 mkdir -p $BASEDIR/$TARGET/$OUTPUT/agent/etc/init.d
+mkdir -p $BASEDIR/$TARGET/$OUTPUT/agent/bin
 generate_scripts
 tar -zcvf $BASEDIR/$TARGET/$OUTPUT.tar.gz --exclude="*.pyc" --exclude="var" --exclude="*~" --exclude-backups --directory=$BASEDIR/$TARGET $OUTPUT/
 rm -rf $BASEDIR/$TARGET/$OUTPUT

@@ -1,4 +1,3 @@
-#!/usr/bin/python
 import logging
 import os
 import sys
@@ -9,9 +8,9 @@ import pwd
 import subprocess
 import json
 
-module_path = os.path.abspath(__file__)
-exe_path = os.path.dirname(module_path)
-exe_path = exe_path if (exe_path[len(exe_path) - 1] == '/') else (exe_path + '/')
+exe_path = os.path.dirname(os.path.abspath(__file__))
+exe_path = exe_path[:-1] if exe_path[len(exe_path) - 1] == '/' else exe_path
+exe_path = exe_path[:exe_path.rfind('/') + 1]
 sys.path.append(exe_path)
 sys.path.append(exe_path + 'src') 
 
@@ -157,7 +156,7 @@ class sealion(Daemon):
             
     def on_fork(self, cpid):        
         try:
-            subprocess.Popen([exe_path + 'monit.sh', str(cpid)])
+            subprocess.Popen([exe_path + 'bin/monit.sh', str(cpid)])
         except:
             _log.error('Failed to open monitoring script')
             
