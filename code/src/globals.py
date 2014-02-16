@@ -1,9 +1,12 @@
 import threading
 import os
+import gc
 import api
 import rtc
 import storage
 from helper import *
+
+_log = logging.getLogger(__name__)
 
 class SealionConfig(Config):
     def __init__(self, file):
@@ -129,14 +132,17 @@ class Globals:
         return self.api.get_url(path);
     
     def reset_rtc_interface(self):
+        self.rtc = None
+        _log.debug('GC collected %d unreachables' % gc.collect())
         self.rtc = rtc.Interface(self.api)
     
     def reset_interfaces(self):
+        self.store = None
+        self.activities = None
         self.stop_event = threading.Event()
         self.api = api.Interface(self.config, self.stop_event)
         self.reset_rtc_interface()
         self.store = storage.Interface(self.api, self.db_path)
-        self.activities = None
         
     def manage_activities(self, old_activities = [], deleted_activity_ids = []):
         self.activities = self.activities or {}
