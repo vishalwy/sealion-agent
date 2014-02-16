@@ -186,8 +186,9 @@ class Controller(ThreadEx):
 
                 self.globals.reset_interfaces()
         
+        self.is_stop = True
         _log.debug('Controller generating SIGALRM signal')
-        signal.alarm(2)
+        signal.alarm()
         _log.debug('Controller shutting down')
             
     def stop(self):
@@ -238,7 +239,8 @@ def start():
         _log.debug('Waiting for signals SIGALRM or SIGTERM or SIGINT')
         signal.pause()
         
-        if controller.is_alive() == False:
+        if controller.is_stop == True:
             globals.api.logout()
+            controller.join()
             quit()
 
