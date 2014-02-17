@@ -254,7 +254,7 @@ class Interface(requests.Session):
                 return self.status.MISMATCH
             else:
                 if is_ignore_status == False:
-                    if code == 200001:
+                    if code == 200001 and self.stop_status == Status.SUCCESS:
                         self.set_events(post_event = False)
                         connection.Interface().reconnect()
                     else:
