@@ -106,6 +106,13 @@ generate_scripts()
     cp $BASEDIR/scripts/curl-install.sh $CURL_INSTALLER
     ARGS="-i 's/\(^DOWNLOAD\_URL=\)\(\"[^\"]\+\"\)/\1\"$URL\"/'"
     eval sed "$ARGS" $CURL_INSTALLER
+    
+    case "$UPDATE_URL" in
+        *http:*)
+            sed -i 's/\(^PROXY=\)\(.*$\)/\1$http_proxy/' $CURL_INSTALLER
+            ;;
+    esac
+
     chmod +x $CURL_INSTALLER
     echo "Curl installer generated"
 }

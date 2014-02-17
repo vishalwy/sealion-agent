@@ -244,8 +244,13 @@ if [ $IS_UPDATE -eq 0 ] ; then
     echo "Sealion agent installed successfully"    
 
     if [ $INSTALL_AS_SERVICE -eq 1 ] ; then
-        echo "Creating service"
         install_service
+
+        if [ $? -ne 0 ] ; then
+            echo "Use $SERVICE_FILE to control sealion"
+        else
+            echo "Service created"
+        fi
     fi
 else
     find $BASEDIR/agent/ -mindepth 1 -maxdepth 1 -type d ! -name 'etc' -exec cp -r {} $INSTALL_PATH \;
