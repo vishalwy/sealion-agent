@@ -176,6 +176,7 @@ class OfflineStore(ThreadEx):
     
 class Sender(ThreadEx):   
     queue_max_size = 50
+    ping_interval = 10
     
     def __init__(self, api, off_store):
         ThreadEx.__init__(self)
@@ -194,7 +195,7 @@ class Sender(ThreadEx):
         finally:
             t = int(time.time())
         
-            if self.last_ping_time - t > 30:
+            if self.last_ping_time - t > self.ping_interval:
                 self.last_ping_time = t
                 self.api.ping()
         
@@ -202,7 +203,7 @@ class Sender(ThreadEx):
         
     def wait(self):
         if self.api.post_event.is_set() == False:
-            timeout = 30.0 if self.api.is_authenticated else None
+            timeout = self.ping_interval if self.api.is_authenticated else None
             
             _log.debug('Sender waiting for post event' + (' for 30 seconds' if timeout else ''))
             self.api.post_event.wait(timeout)
