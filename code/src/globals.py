@@ -4,7 +4,7 @@ import gc
 import api
 import rtc
 import storage
-from helper import *
+from helper import Utils, Config
 
 _log = logging.getLogger(__name__)
 

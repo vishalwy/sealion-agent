@@ -170,7 +170,7 @@ class Interface(requests.Session):
         ret = self.status.SUCCESS
         
         if Interface.is_success(response):
-            _log.debug('Sent activity(%s @ %d)' % (activity_id, data['timestamp']))
+            _log.info('Sent activity(%s @ %d)' % (activity_id, data['timestamp']))
             self.set_events(post_event = True)
         else:
             ret = self.error('Failed to send activity(%s @ %d)' % (activity_id, data['timestamp']), response)
@@ -187,7 +187,7 @@ class Interface(requests.Session):
         response = self.exec_method('delete', 0, 0, self.get_url('agents/1/sessions/1'))
         
         if Interface.is_success(response):
-            _log.debug('Logout successful')
+            _log.info('Logout successful')
         else:
             ret = self.error('Failed to logout agent', response)
 
@@ -210,7 +210,7 @@ class Interface(requests.Session):
         ret = self.status.SUCCESS
         
         if Interface.is_success(response):
-            _log.debug('Sent crash dump @ ' + data['timestamp'])
+            _log.info('Sent crash dump @ ' + data['timestamp'])
         else:
             ret = self.error('Failed to send crash dump', response, True)
         
@@ -276,8 +276,8 @@ class Interface(requests.Session):
     def download_file(self, exe_path):
         url = self.config.agent.updateUrl
         temp_dir = tempfile.mkdtemp()
-        temp_dir = temp_dir + '/' if temp_dir[len(temp_dir) - 1] != '/' else temp_dir
-        filename = temp_dir + url.split('/')[-1]
+        temp_dir = temp_dir[:-1] if temp_dir[len(temp_dir) - 1] == '/' else temp_dir
+        filename = '%s/%s' % (temp_dir, url.split('/')[-1])
         _log.info('Update found; downloading to %s' % filename)
         f = None
         
@@ -315,12 +315,12 @@ class Interface(requests.Session):
             self.updater = None
             return
         
-        _log.debug('Extracting %s to %s', (filename, temp_dir))
+        _log.debug('Extracting %s to %s' % (filename, temp_dir))
         
         if subprocess.call(['tar', '-xf', filename, '--directory=%s' % temp_dir]):
-            _log.error('Failed to extract update %s', filename)
+            _log.error('Failed to extract update %s' % filename)
             self.updater = None
             return
             
         _log.info('Installing update')
-        subprocess.Popen([temp_dir + 'sealion-agent/install.sh', '-i', exe_path])
+        subprocess.Popen(['sh', '-c', '%(temp_dir)s/sealion-agent/install.sh -i %s && rm -rf %(temp_dir)s' % {'temp_dir': temp_dir, 'exe_path': exe_path}])

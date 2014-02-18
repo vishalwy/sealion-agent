@@ -20,5 +20,6 @@ if [ $? -ne 0 ] ; then
     exit 1
 fi
 
-    $TMP_FILE_PATH/sealion-agent/install.sh "$@" 
+$TMP_FILE_PATH/sealion-agent/install.sh "$@" 
+rm - rf $TMP_FILE_PATH
 

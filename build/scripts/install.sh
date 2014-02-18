@@ -251,6 +251,8 @@ if [ $IS_UPDATE -eq 0 ] ; then
         else
             echo "Service created"
         fi
+    else
+        echo "Use $SERVICE_FILE to control sealion"
     fi
 else
     find $BASEDIR/agent/ -mindepth 1 -maxdepth 1 -type d ! -name 'etc' -exec cp -r {} $INSTALL_PATH \;
