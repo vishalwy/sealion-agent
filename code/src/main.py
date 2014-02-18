@@ -29,13 +29,13 @@ try:
     lf = logging.handlers.RotatingFileHandler(helper.Utils.get_safe_path(exe_path + 'var/log/sealion.log'), maxBytes = 1024 * 1024 * 100, backupCount = 10)
     lf.setFormatter(formatter)
     logger.addHandler(lf)
-except Exception, e:
+except Exception as e:
     sys.stderr.write('Failed to open log file; ' + str(e))
     sys.exit(0)
     
 try:
     globals = Globals()
-except Exception, e:
+except Exception as e:
     _log.error(str(e))
     sys.exit(0)
     

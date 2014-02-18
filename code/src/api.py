@@ -100,7 +100,7 @@ class Interface(requests.Session):
             
             try:
                 response = method(timeout = 10, *args, **kwargs)
-            except Exception, e:
+            except Exception as e:
                 _log.error(str(e)) 
                 
             if response != None:
@@ -284,7 +284,7 @@ class Interface(requests.Session):
         try:
             f = open(filename, 'wb')
             response = requests.get(url, stream = True)
-        except Exception, e:
+        except Exception as e:
             _log.error('Failed to download the update %s' % str(e))
             f and f.close()
             self.updater = None
@@ -303,7 +303,7 @@ class Interface(requests.Session):
                     f.flush()
 
             is_completed = True
-        except Exception, e:
+        except Exception as e:
             _log.error(str(e))
         finally:
             f.close()

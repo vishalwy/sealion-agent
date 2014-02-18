@@ -133,10 +133,10 @@ class sealion(Daemon):
             if user.pw_uid != os.getuid():
                 os.setgid(user.pw_gid)
                 os.setuid(user.pw_uid)
-        except KeyError, e:
+        except KeyError as e:
             _log.error('Failed to find user named %s; %s' % (self.user_name, str(e)))
             sys.exit(0)
-        except Exception, e:
+        except Exception as e:
             _log.error('Failed to change the group or user to %s; %s' % (self.user_name, str(e)))
             sys.exit(0)
             
@@ -148,7 +148,7 @@ class sealion(Daemon):
             
             f = open(self.pidfile, 'w');
             f.close()
-        except Exception, e:
+        except Exception as e:
             _log.error(str(e))
             sys.exit(1)
         

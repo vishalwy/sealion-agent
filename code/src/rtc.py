@@ -93,7 +93,7 @@ class Interface(ThreadEx):
         while 1:
             try:
                 self.sio.wait()
-            except Exception, e:
+            except Exception as e:
                 _log.debug(str(e))
             
             if self.is_stop == True:

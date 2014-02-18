@@ -44,7 +44,7 @@ class OfflineStore(ThreadEx):
         try:
             self.conn = sqlite.connect(self.db_file)
             _log.debug('Created offline storage at ' + self.db_file)
-        except Exception, e:
+        except Exception as e:
             _log.error('Failed to create offline storage at ' + self.db_file + '; ' + str(e))
             _log.debug('Shutting down offline store')
             self.conn_event.set()
@@ -115,7 +115,7 @@ class OfflineStore(ThreadEx):
             self.conn.commit()
             _log.debug('Inserted activity(%s @ %d) to offline storage' % (activity, data['timestamp']))
             callback and callback()
-        except Exception, e:
+        except Exception as e:
             _log.error('Failed to insert rows to offline storage; ' + str(e))
         
         return True
@@ -123,7 +123,7 @@ class OfflineStore(ThreadEx):
     def select(self, limit, callback):        
         try:
             rows = self.cursor.execute('SELECT ROWID, * FROM data ORDER BY timestamp LIMIT %d' % limit)
-        except Exception, e:
+        except Exception as e:
             _log.error('Failed to retreive rows from offline storage; ' + str(e))
             return True
         
@@ -138,7 +138,7 @@ class OfflineStore(ThreadEx):
             self.cursor.execute('DELETE FROM data WHERE ROWID IN (%s) OR activity IN (%s)' % format, row_ids + activities)
             self.conn.commit()
             _log.debug('Deleted ' + str(self.cursor.rowcount) + ' records from offline storage')
-        except Exception, e:
+        except Exception as e:
             _log.error('Failed to delete rows from offline storage; ' + str(e))
         
         return True
@@ -148,7 +148,7 @@ class OfflineStore(ThreadEx):
             self.cursor.execute('DELETE FROM data')
             self.conn.commit()
             _log.debug('Deleting all records from offline storage')
-        except Exception, e:
+        except Exception as e:
             _log.error('Failed to truncate offline storage; ' + str(e))
         
         return True

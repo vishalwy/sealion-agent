@@ -21,7 +21,7 @@ class Daemon(object):
             if pid > 0:
                 sys.stdout.write('%s started successfully\n' % self.__class__.__name__)
                 sys.exit(0)
-        except OSError, e: 
+        except OSError as e: 
             sys.stderr.write('Failed to daemonize: %d (%s)\n' % (e.errno, e.strerror))
      
         os.chdir("/")
@@ -30,7 +30,7 @@ class Daemon(object):
     
         try: 
             pid = os.fork()  
-        except OSError, e: 
+        except OSError as e: 
             sys.stderr.write('Failed to daemonize: %d (%s)\n' % (e.errno, e.strerror))
             sys.exit(1) 
             
@@ -76,20 +76,20 @@ class Daemon(object):
             while 1:
                 os.kill(pid, signal.SIGTERM)
                 time.sleep(0.5)
-        except OSError, err:
+        except OSError as err:
             err = str(err)
             
             if err.find('No such process') > 0:
                 if os.path.exists(self.pidfile):
                     try:
                         os.remove(self.pidfile)
-                    except Exception, e:
+                    except Exception as e:
                         sys.stderr.write(str(e))
                         sys.exit(1)
                     
                 sys.stdout.write('%s stopped successfully\n' % self.__class__.__name__)
             else:
-                print sys.stderr.write(err)
+                sys.stderr.write(err)
                 sys.exit(1)
 
     def restart(self):        
