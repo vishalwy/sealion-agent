@@ -21,5 +21,5 @@ if [ $? -ne 0 ] ; then
 fi
 
 $TMP_FILE_PATH/sealion-agent/install.sh "$@" 
-rm - rf $TMP_FILE_PATH
+rm -rf $TMP_FILE_PATH
 

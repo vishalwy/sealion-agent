@@ -128,10 +128,10 @@ if [ -f $PYTHON ] ; then
         *" 3."*)
             PYTHON_OK=1
             ;;
-        *" 2.6."*)
+        *" 2.6"*)
             PYTHON_OK=1
             ;;
-        *" 2.7."*)
+        *" 2.7"*)
             PYTHON_OK=1
             ;;
     esac

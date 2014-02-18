@@ -184,12 +184,19 @@ class Sender(ThreadEx):
         self.queue = queue.Queue(maxsize = self.queue_max_size)
         self.lock = threading.RLock()
         self.store_data_available = True
+        self.last_ping_time = int(time.time())
         
     def push(self, item):
         try:
             self.queue.put(item, False)
         except:
             return False
+        finally:
+            t = int(time.time())
+        
+            if self.last_ping_time - t > 30:
+                self.last_ping_time = t
+                self.api.ping()
         
         return True
         
@@ -305,7 +312,6 @@ class Interface:
         self.api = api
         self.off_store = OfflineStore(db_path, api.config)
         self.sender = Sender(api, self.off_store)
-        self.last_ping_time = int(time.time())
         
     def start(self):        
         if self.off_store.start() == False:
@@ -317,12 +323,6 @@ class Interface:
     def push(self, activity, data):
         if self.sender.push({'activity': activity, 'data': data}) == False:
             self.off_store.put(activity, data, self.sender.store_put_callback)
-            
-        t = int(time.time())
-        
-        if self.last_ping_time - t > 20:
-            self.last_ping_time = t
-            self.api.ping()
         
     def clear_offline_data(self):
         self.off_store.clr()
