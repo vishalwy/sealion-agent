@@ -72,27 +72,28 @@ if [[ "$API_URL" == "" || "$UPDATE_URL" == "" ]] ; then
 fi
 
 BASEDIR=$(readlink -f "$0")
-BASEDIR=$(dirname $BASEDIR)
+BASEDIR=$(dirname "$BASEDIR")
 BASEDIR=${BASEDIR%/}
 OUTPUT=sealion-agent
 TARGET="bin/$TARGET"
-rm -rf $BASEDIR/$TARGET >/dev/null 2>&1
-mkdir -p $BASEDIR/$TARGET/$OUTPUT/agent
+cd "$BASEDIR"
+rm -rf $TARGET >/dev/null 2>&1
+mkdir -p $TARGET/$OUTPUT/agent
 
 generate_scripts()
 {
-    cp $BASEDIR/scripts/uninstall.sh $BASEDIR/$TARGET/$OUTPUT/agent/
-    chmod +x $BASEDIR/$TARGET/$OUTPUT/agent/uninstall.sh
+    cp scripts/uninstall.sh $TARGET/$OUTPUT/agent/
+    chmod +x $TARGET/$OUTPUT/agent/uninstall.sh
     echo "Uninstaller generated"
-    cp $BASEDIR/scripts/monit.sh $BASEDIR/$TARGET/$OUTPUT/agent/bin/
-    chmod +x $BASEDIR/$TARGET/$OUTPUT/agent/bin/monit.sh
+    cp scripts/monit.sh $TARGET/$OUTPUT/agent/bin/
+    chmod +x $TARGET/$OUTPUT/agent/bin/monit.sh
     echo "Monit script generated"
-    cp $BASEDIR/scripts/sealion $BASEDIR/$TARGET/$OUTPUT/agent/etc/init.d
-    chmod +x $BASEDIR/$TARGET/$OUTPUT/agent/etc/init.d/sealion
+    cp scripts/sealion $TARGET/$OUTPUT/agent/etc/init.d
+    chmod +x $TARGET/$OUTPUT/agent/etc/init.d/sealion
     echo "Service script generated"
-    INSTALLER=$BASEDIR/$TARGET/$OUTPUT/install.sh
-    CURL_INSTALLER=$BASEDIR/$TARGET/curl-install.sh
-    cp $BASEDIR/scripts/install.sh $INSTALLER
+    INSTALLER=$TARGET/$OUTPUT/install.sh
+    CURL_INSTALLER=$TARGET/curl-install.sh
+    cp scripts/install.sh $INSTALLER
     URL="$(echo "$API_URL" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
     ARGS="-i 's/\(^API\_URL=\)\(\"[^\"]\+\"\)/\1\"$URL\"/'"
     eval sed "$ARGS" $INSTALLER
@@ -103,19 +104,19 @@ generate_scripts()
     eval sed "$ARGS" $INSTALLER
     chmod +x $INSTALLER
     echo "Installer generated"
-    cp $BASEDIR/scripts/curl-install.sh $CURL_INSTALLER
+    cp scripts/curl-install.sh $CURL_INSTALLER
     ARGS="-i 's/\(^DOWNLOAD\_URL=\)\(\"[^\"]\+\"\)/\1\"$URL\"/'"
     eval sed "$ARGS" $CURL_INSTALLER    
     chmod +x $CURL_INSTALLER
     echo "Curl installer generated"
 }
 
-find $BASEDIR/../code/ -mindepth 1 -maxdepth 1 -type d ! -name 'etc' -exec cp -r {} $BASEDIR/$TARGET/$OUTPUT/agent \;
-cp $BASEDIR/../code/* $BASEDIR/$TARGET/$OUTPUT/agent
-cp -r $BASEDIR/etc $BASEDIR/$TARGET/$OUTPUT/agent
-mkdir -p $BASEDIR/$TARGET/$OUTPUT/agent/etc/init.d
-mkdir -p $BASEDIR/$TARGET/$OUTPUT/agent/bin
+find ../code/ -mindepth 1 -maxdepth 1 -type d ! -name 'etc' -exec cp -r {} $TARGET/$OUTPUT/agent \;
+cp ../code/* $TARGET/$OUTPUT/agent
+cp -r etc $TARGET/$OUTPUT/agent
+mkdir -p $TARGET/$OUTPUT/agent/etc/init.d
+mkdir -p $TARGET/$OUTPUT/agent/bin
 generate_scripts
-tar -zcvf $BASEDIR/$TARGET/$OUTPUT.tar.gz --exclude="*.pyc" --exclude="var" --exclude="*~" --exclude-backups --directory=$BASEDIR/$TARGET $OUTPUT/
-rm -rf $BASEDIR/$TARGET/$OUTPUT
+tar -zcvf $TARGET/$OUTPUT.tar.gz --exclude="*.pyc" --exclude="var" --exclude="*~" --exclude-backups --directory=$TARGET $OUTPUT/
+rm -rf $TARGET/$OUTPUT
 

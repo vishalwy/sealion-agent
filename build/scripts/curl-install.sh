@@ -13,7 +13,7 @@ if [ $? -ne 0 ] ; then
     exit 117
 fi
 
-tar -xf $TMP_FILE_NAME --directory="$TMP_FILE_PATH/" >/dev/null 2>&1
+tar -xf $TMP_FILE_NAME --directory="$TMP_FILE_PATH" >/dev/null 2>&1
 
 if [ $? -ne 0 ] ; then
     echo "Error: Failed to extract files" >&2

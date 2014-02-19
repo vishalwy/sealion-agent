@@ -31,8 +31,9 @@ VERSION="<version>"
 
 #script variables
 BASEDIR=$(readlink -f "$0")
-BASEDIR=$(dirname $BASEDIR)
+BASEDIR=$(dirname "$BASEDIR")
 BASEDIR=${BASEDIR%/}
+cd "$BASEDIR"
 USER_NAME="sealion"
 PYTHON=$(which python)
 IS_UPDATE=1
@@ -47,43 +48,6 @@ CATEGORY=
 HOST_NAME=$(hostname)
 PROXY=$https_proxy
 NO_PROXY=$no_proxy
-
-update_agent_config()
-{
-    ARGS="-i 's/\(\"$1\"\s*:\s*\)\(\"[^\"]\+\"\)/\1\"$2\"/'"
-    eval sed "$ARGS" $INSTALL_PATH/etc/agent.json
-}
-
-install_service()
-{
-    RC1_PATH=`find /etc/ -type d -name rc1.d`
-    RC2_PATH=`find /etc/ -type d -name rc2.d`
-    RC3_PATH=`find /etc/ -type d -name rc3.d`
-    RC4_PATH=`find /etc/ -type d -name rc4.d`
-    RC5_PATH=`find /etc/ -type d -name rc5.d`
-    RC6_PATH=`find /etc/ -type d -name rc6.d`
-    INIT_D_PATH=`find /etc/ -type d -name init.d`
-    SYMLINK_PATHS=(K K S S S S K)
-
-    if [[ -z $RC1_PATH || -z $RC2_PATH || -z $RC3_PATH || -z $RC4_PATH || -z $RC5_PATH || -z $RC6_PATH || -z $INIT_D_PATH ]] ; then
-        echo "Error: Cannot create service. Could not locate init.d/rc directories" >&2
-        return 1
-    fi
-    
-    ln -sf $SERVICE_FILE $INIT_D_PATH/sealion
-    
-    for (( i = 1 ; i < 7 ; i++ )) ; do
-        VAR_NAME="RC"$i"_PATH"
-        ln -sf $SERVICE_FILE ${!VAR_NAME}/${SYMLINK_PATHS[$i]}99sealion
-        
-        if [ $? -ne 0 ] ; then
-            echo "Error: Cannot create service. Unable to update init.d files" >&2
-            return 1
-        fi
-    done
-    
-    return 0
-}
 
 while getopts :i:o:c:H:x:p:h OPT ; do
     case "$OPT" in
@@ -142,6 +106,59 @@ if [ $PYTHON_OK -eq 0 ] ; then
     exit 1
 fi
 
+update_agent_config()
+{
+    ARGS="-i 's/\(\"$1\"\s*:\s*\)\(\"[^\"]\+\"\)/\1\"$2\"/'"
+    eval sed "$ARGS" "\"$INSTALL_PATH/etc/agent.json\""
+}
+
+install_service()
+{
+    RC1_PATH=`find /etc/ -type d -name rc1.d`
+    RC2_PATH=`find /etc/ -type d -name rc2.d`
+    RC3_PATH=`find /etc/ -type d -name rc3.d`
+    RC4_PATH=`find /etc/ -type d -name rc4.d`
+    RC5_PATH=`find /etc/ -type d -name rc5.d`
+    RC6_PATH=`find /etc/ -type d -name rc6.d`
+    INIT_D_PATH=`find /etc/ -type d -name init.d`
+    SYMLINK_PATHS=(K K S S S S K)
+
+    if [[ -z $RC1_PATH || -z $RC2_PATH || -z $RC3_PATH || -z $RC4_PATH || -z $RC5_PATH || -z $RC6_PATH || -z $INIT_D_PATH ]] ; then
+        echo "Error: Cannot create service. Could not locate init.d/rc directories" >&2
+        return 1
+    fi
+    
+    ln -sf "$SERVICE_FILE" $INIT_D_PATH/sealion
+    
+    for (( i = 1 ; i < 7 ; i++ )) ; do
+        VAR_NAME="RC"$i"_PATH"
+        ln -sf "$SERVICE_FILE" ${!VAR_NAME}/${SYMLINK_PATHS[$i]}99sealion
+        
+        if [ $? -ne 0 ] ; then
+            echo "Error: Cannot create service. Unable to update init.d files" >&2
+            return 1
+        fi
+    done
+    
+    return 0
+}
+
+check_dependency()
+{
+    cd agent/lib
+    ret=$($PYTHON -c 'import sys; sys.path.append("websocket_client"); import socketio_client' 2>&1)
+
+    if [ $? -ne 0 ] ; then
+        echo $ret | grep -o ImportError:.*$ | sed 's/ImportError:/Error: Python package dependency check failed;/'
+        rm -rf *.pyc
+        exit 1
+    fi
+
+    rm -rf *.pyc
+    cd ../../
+}
+
+check_dependency
 INSTALL_PATH=${INSTALL_PATH%/}
 
 if [ "$INSTALL_PATH" != "$DEFAULT_INSTALL_PATH" ] ; then
@@ -158,8 +175,8 @@ if [ "$ORG_TOKEN" != '' ] ; then
 
     IS_UPDATE=0
 
-    echo "Creating install directory at $INSTALL_PATH"
-    mkdir -p $INSTALL_PATH
+    echo "Creating install directory at '$INSTALL_PATH'"
+    mkdir -p "$INSTALL_PATH"
 
     if [ $? -ne 0 ] ; then
         echo "Error: Cannot create installation directory" >&2
@@ -199,21 +216,21 @@ else
         exit 1
     fi
 
-    if [ ! -f $SERVICE_FILE ] ; then
-        echo "Error: $INSTALL_PATH is not a valid sealion install directory" >&2
+    if [ ! -f "$SERVICE_FILE" ] ; then
+        echo "Error: '$INSTALL_PATH' is not a valid sealion install directory" >&2
         exit 1
     fi
 fi
 
-if [ -f $SERVICE_FILE ] ; then
+if [ -f "$SERVICE_FILE" ] ; then
     echo "Stopping agent"
-    $SERVICE_FILE stop
+    "$SERVICE_FILE" stop
 fi
 
 echo "Copying files"
 
 if [ $IS_UPDATE -eq 0 ] ; then
-    cp -r $BASEDIR/agent/* $INSTALL_PATH
+    cp -r agent/* "$INSTALL_PATH"
     CONFIG="\"orgToken\": \"$ORG_TOKEN\", \"apiUrl\": \"$API_URL\", \"updateUrl\": \"$UPDATE_URL\", \"agentVersion\": \"$VERSION\", \"name\": \"$HOST_NAME\""
     TEMP_VAR=""
 
@@ -221,41 +238,41 @@ if [ $IS_UPDATE -eq 0 ] ; then
         CONFIG="$CONFIG, \"category\": \"$CATEGORY\""
     fi
         
-    echo "{$CONFIG}" >$INSTALL_PATH/etc/agent.json
+    echo "{$CONFIG}" >"$INSTALL_PATH/etc/agent.json"
 
     if [ "$PROXY" != "" ] ; then
         PROXY="$(echo "$PROXY" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
         ARGS="-i 's/\(\"env\"\s*:\s*\[\)/\1{\"https\_proxy\": \"$PROXY\"}/'"
-        eval sed "$ARGS" $INSTALL_PATH/etc/config.json
+        eval sed "$ARGS" "\"$INSTALL_PATH/etc/config.json\""
         TEMP_VAR=", "
     fi
 
     if [ "$NO_PROXY" != "" ] ; then
         NO_PROXY="$(echo "$NO_PROXY" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
         ARGS="-i 's/\(\"env\"\s*:\s*\[\)/\1{\"no\_proxy\": \"$NO_PROXY\"}$TEMP_VAR/'"
-        eval sed "$ARGS" $INSTALL_PATH/etc/config.json
+        eval sed "$ARGS" "\"$INSTALL_PATH/etc/config.json\""
     fi
 
     PYTHON="$(echo "$PYTHON" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
-    ARGS="-i 's/python/$PYTHON/'"
-    eval sed "$ARGS" $INSTALL_PATH/etc/init.d/sealion
-    eval sed "$ARGS" $INSTALL_PATH/uninstall.sh
-    chown -R $USER_NAME:$USER_NAME $INSTALL_PATH    
+    ARGS="-i 's/python/\"$PYTHON\"/'"
+    eval sed "$ARGS" "\"$INSTALL_PATH/etc/init.d/sealion\""
+    eval sed "$ARGS" "\"$INSTALL_PATH/uninstall.sh\""
+    chown -R $USER_NAME:$USER_NAME "$INSTALL_PATH"
     echo "Sealion agent installed successfully"    
 
     if [ $INSTALL_AS_SERVICE -eq 1 ] ; then
         install_service
 
         if [ $? -ne 0 ] ; then
-            echo "Use $SERVICE_FILE to control sealion"
+            echo "Use '$SERVICE_FILE' to control sealion"
         else
             echo "Service created"
         fi
     else
-        echo "Use $SERVICE_FILE to control sealion"
+        echo "Use '$SERVICE_FILE' to control sealion"
     fi
 else
-    find $BASEDIR/agent/ -mindepth 1 -maxdepth 1 -type d ! -name 'etc' -exec cp -r {} $INSTALL_PATH \;
+    find agent/ -mindepth 1 -maxdepth 1 -type d ! -name 'etc' -exec cp -r {} "$INSTALL_PATH" \;
     update_agent_config "agentVersion" $VERSION
     update_agent_config "apiUrl" $API_URL
     update_agent_config "updateUrl" $UPDATE_URL
@@ -263,5 +280,5 @@ else
 fi
 
 echo "Starting agent"
-$SERVICE_FILE start
+"$SERVICE_FILE" start
 

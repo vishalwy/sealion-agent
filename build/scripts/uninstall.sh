@@ -1,23 +1,24 @@
 #!/bin/bash
 
 BASEDIR=$(readlink -f "$0")
-BASEDIR=$(dirname $BASEDIR)
+BASEDIR=$(dirname "$BASEDIR")
 BASEDIR=${BASEDIR%/}
 USER_NAME="sealion"
+cd "$BASEDIR"
 
 if [[ "$(id -u -n)" != "$USER_NAME" && $EUID -ne 0 ]] ; then
     echo "Error: You need to run this as either root or $USER_NAME user" >&2
     exit 1
 fi
 
-if [ -f "$BASEDIR/etc/conf.d/sealion" ] ; then
+if [ -f "etc/conf.d/sealion" ] ; then
     echo "Stopping agent"
-    $BASEDIR/etc/conf.d/sealion stop
+    etc/conf.d/sealion stop
 fi
 
-if [ -f "$BASEDIR/src/unregister.py" ] ; then
+if [ -f "src/unregister.py" ] ; then
     echo "Unregistering agent"
-    python $BASEDIR/src/unregister.py >/dev/null 2>&1
+    python src/unregister.py >/dev/null 2>&1
 
     if [ $? -ne 0 ] ; then
         echo "Error: Failed to unregister agent" >&2
@@ -58,9 +59,8 @@ uninstall_service()
 
 if [[ $EUID -ne 0 ]]; then
     echo "Removing files except logs and uninstall.sh"
-    find $BASEDIR/var/ -mindepth 1 -maxdepth 1 -type d ! -name 'log' -exec rm -rf {} \;
-    find $BASEDIR/ -mindepth 1 -maxdepth 1 -type d ! -name 'var' -exec rm -rf {} \;
-    find $BASEDIR/ -mindepth 1 -maxdepth 1 -type f ! -name 'uninstall.sh' -exec rm {} \;
+    find var -mindepth 1 -maxdepth 1 -type d ! -name 'log' -exec rm -rf {} \;
+    find . -mindepth 1 -maxdepth 1 -type d ! -name 'var' -exec rm -rf {} \;
 else
     if [ "$BASEDIR" == "/usr/local/sealion-agent" ] ; then
         id $USER_NAME >/dev/null 2>&1
@@ -84,7 +84,7 @@ else
 
     echo "Removing files"
     cd /
-    rm -rf $BASEDIR
+    rm -rf "$BASEDIR"
 fi
 
 echo "Sealion agent uninstalled successfully"
