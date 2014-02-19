@@ -101,8 +101,13 @@ class Activity(ThreadEx):
             
             if time.time() - start_time > self.timeout:
                 _log.info('Command ' + self.activity['_id'] + ' exceded timeout; killing now')
-                os.kill(p.pid, signal.SIGKILL)
-                os.waitpid(-1, os.WNOHANG)
+                
+                try:
+                    os.kill(p.pid, signal.SIGKILL)
+                    os.waitpid(-1, os.WNOHANG)
+                except:
+                    pass
+                
                 return ret
             
         output = p.stdout.read(256 * 1024)

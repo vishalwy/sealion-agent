@@ -205,7 +205,7 @@ class Sender(ThreadEx):
         if self.api.post_event.is_set() == False:
             timeout = self.ping_interval if self.api.is_authenticated else None
             
-            _log.debug('Sender waiting for post event' + (' for 30 seconds' if timeout else ''))
+            _log.debug('Sender waiting for post event' + (' for %d seconds' % timeout if timeout else ''))
             self.api.post_event.wait(timeout)
         
         if self.api.stop_event.is_set():

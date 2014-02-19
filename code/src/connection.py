@@ -12,7 +12,7 @@ class Interface(ThreadEx):
     
     def exe(self):
         _log.debug('Starting up connection')
-        self.attempt(retry_interval = 20)
+        self.attempt(retry_interval = 10)
         _log.debug('Shutting down connection')
     
     def attempt(self, max_try = -1, retry_interval = 5):
