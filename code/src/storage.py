@@ -2,7 +2,6 @@ import logging
 import threading
 import time
 import gc
-import multiprocessing
 import sqlite3 as sqlite
 from constructs import *
 from helper import Utils
@@ -176,14 +175,14 @@ class OfflineStore(ThreadEx):
         return False
     
 class Sender(ThreadEx):   
-    queue_max_size = 50
+    queue_max_size = 100
     ping_interval = 10
     
     def __init__(self, api, off_store):
         ThreadEx.__init__(self)
         self.api = api
         self.off_store = off_store
-        self.queue = multiprocessing.Queue(self.queue_max_size)
+        self.queue = queue.Queue(self.queue_max_size)
         self.lock = threading.RLock()
         self.store_data_available = True
         self.last_ping_time = int(time.time())

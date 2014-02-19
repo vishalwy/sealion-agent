@@ -11,8 +11,57 @@ import connection
 
 _log = logging.getLogger(__name__)
 
+class Job:
+    timestamp_lock = threading.RLock()
+    
+    def __init__(self, activity_id, command):
+        self.activity_id = activity_id
+        self.command = command
+        self.timestamp = Job.get_timestamp()
+        self.is_timedout = False
+        self.process = None
+    
+    @staticmethod
+    def get_timestamp():
+        Job.timestamp_lock.acquire()
+        t = int(time.time() * 1000)
+        time.sleep(0.001)
+        Job.timestamp_lock.release()
+        return t
+    
+    def start(self):
+        self.process = subprocess.Popen(['sh', '-c', self.command], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            
+    def stop(self):
+        try:
+            os.kill(self.process.pid, signal.SIGKILL)
+            os.waitpid(-1, os.WNOHANG)
+            self.is_timedout = True
+            self.process.returncode = 0
+            return True
+        except:
+            return False
+        
+    def send(self):
+        data = {'returnCode': 0, 'timestamp': self.timestamp}
+        
+        if self.process == None:
+            data['data'] = 'Command blocked by whitelist.'
+        elif self.is_timedout == True:
+            data['data'] = 'Command exceeded timeout.'
+        else:            
+            output = self.process.stdout.read(256 * 1024)
+            data['data'] = output if output else self.process.stderr.read()
+            data['returnCode'] = self.process.returncode
+            
+        _log.debug('Pushing activity(%s @ %d) to store' % (self.activity_id, self.timestamp))
+        Globals().store.push(self.activity_id, data)
+        
+
 class Activity(ThreadEx):
-    timestampLock = threading.RLock()
+    jobs_lock = threading.RLock()
+    jobs = []
+    timeout = -1
     
     def __init__(self, activity):
         ThreadEx.__init__(self)
@@ -20,18 +69,45 @@ class Activity(ThreadEx):
         self.is_stop = False
         self.globals = Globals()
         self.is_whitelisted = self.is_in_whitelist()
-        self.timeout = 30
         
-        if hasattr(self.globals.config.sealion, 'commandTimeout'):
-            self.timeout = self.globals.config.sealion.commandTimeout
+        if Activity.timeout == -1:
+            try:
+                Activity.timeout = Globals().config.sealion.commandTimeout
+            except:
+                Activity.timeout = 30
+                
+            Activity.timeout = int(Activity.timeout * 1000)
+            
+    @staticmethod
+    def reset_timeout():
+        _log.debug('Resetting activity timeout to -1')
+        Activity.timeout = -1
+    
+    @staticmethod
+    def put_job(job):
+        Activity.jobs_lock.acquire()
+        Activity.jobs.append(job)
+        Activity.jobs_lock.release()
         
     @staticmethod
-    def get_timestamp():
-        Activity.timestampLock.acquire()
+    def get_finished_jobs():
         t = int(time.time() * 1000)
-        time.sleep(0.001)
-        Activity.timestampLock.release()
-        return t
+        finished_jobs = []
+        running_jobs = []
+        Activity.jobs_lock.acquire()
+        
+        for job in Activity.jobs:
+            if t - job.timestamp > Activity.timeout:
+                job.stop() and _log.info('Killed activity(%s @ %d) as it exceeded timeout' % (job.activity_id, job.timestamp))
+                
+            if job.process.poll() != None:
+                finished_jobs.append(job)
+            else:
+                running_jobs.append(job)
+        
+        Activity.jobs = running_jobs
+        Activity.jobs_lock.release()
+        return finished_jobs
         
     def is_in_whitelist(self):
         whitelist = []
@@ -54,16 +130,8 @@ class Activity(ThreadEx):
     def exe(self):
         _log.info('Starting up activity %s' % self.activity['_id'])                      
         
-        while 1:                
-            timestamp = Activity.get_timestamp()
-            ret = self.execute()      
-            
-            if ret != None:
-                data = {'returnCode': ret['return_code'], 'timestamp': timestamp, 'data': ret['output']}
-                _log.debug('Pushing activity(%s @ %d) to store' % (self.activity['_id'], timestamp))
-                self.globals.store.push(self.activity['_id'], data)
-                ret = None
-                
+        while 1:
+            self.execute()
             timeout = self.activity['interval']
             break_flag = False
             
@@ -82,36 +150,14 @@ class Activity(ThreadEx):
         _log.info('Shutting down activity %s' % self.activity['_id'])
         
     def execute(self):
+        job = Job(self.activity['_id'], self.activity['command'])
+        
         if self.is_whitelisted == False:
-            ret = {'return_code': 0, 'output': 'Command blocked by whitelist.'}
-            _log.info('Command ' + self.activity['_id'] + ' is blocked by whitelist')
-            return ret
-        
-        ret = {'output': 'Command exceded timeout', 'return_code': 0};
-        p = subprocess.Popen(['sh', '-c', self.activity['command']], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        start_time = time.time()
-        
-        while p.poll() is None:
-            time.sleep(1)
-            
-            if self.globals.stop_event.is_set() or self.is_stop == True:
-                return None
-            
-            if time.time() - start_time > self.timeout:
-                _log.info('Command ' + self.activity['_id'] + ' exceded timeout; killing now')
-                
-                try:
-                    os.kill(p.pid, signal.SIGKILL)
-                    os.waitpid(-1, os.WNOHANG)
-                except:
-                    pass
-                
-                return ret
-            
-        output = p.stdout.read(256 * 1024)
-        ret['output'] = output if output else p.stderr.read()
-        ret['return_code'] = p.returncode;
-        return ret
+            _log.info('Activity ' + job.activity_id + ' is blocked by whitelist')
+            job.send()
+        else:
+            job.start()
+            Activity.put_job(job)
         
     def stop(self):
         self.is_stop = True       
@@ -176,9 +222,19 @@ class Controller(ThreadEx):
                     self.globals.store.clear_offline_data()
 
                 self.globals.manage_activities();
-                _log.debug('Controller waiting for stop event')
-                self.globals.stop_event.wait()
-                _log.debug('Controller received stop event')
+                
+                while 1:
+                    for job in Activity.get_finished_jobs():
+                        job.send()
+                        
+                    self.globals.stop_event.wait(5)
+                    
+                    if self.globals.stop_event.is_set():
+                        _log.debug('Controller received stop event')
+                        Activity.reset_timeout()
+                        Activity.get_finished_jobs()
+                        break
+                
                 self.stop_threads()
             
                 if self.handle_response(self.globals.api.stop_status) == False:
