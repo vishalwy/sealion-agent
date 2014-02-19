@@ -2,6 +2,7 @@ import logging
 import threading
 import time
 import gc
+import multiprocessing
 import sqlite3 as sqlite
 from constructs import *
 from helper import Utils
@@ -182,7 +183,7 @@ class Sender(ThreadEx):
         ThreadEx.__init__(self)
         self.api = api
         self.off_store = off_store
-        self.queue = queue.Queue(maxsize = self.queue_max_size)
+        self.queue = multiprocessing.Queue(self.queue_max_size)
         self.lock = threading.RLock()
         self.store_data_available = True
         self.last_ping_time = int(time.time())
@@ -203,8 +204,8 @@ class Sender(ThreadEx):
         
     def wait(self):
         if self.api.post_event.is_set() == False:
+            _log.debug('GC collected %d unreachables' % gc.collect())
             timeout = self.ping_interval if self.api.is_authenticated else None
-            
             _log.debug('Sender waiting for post event' + (' for %d seconds' % timeout if timeout else ''))
             self.api.post_event.wait(timeout)
         
@@ -258,7 +259,7 @@ class Sender(ThreadEx):
     def exe(self):
         _log.debug('Starting up sender')
         api_status = self.api.status
-        del_rows, del_activities, gc_threshold = [], [], 0
+        del_rows, del_activities, gc_counter, gc_threshold = [], [], 0, 2
         
         while 1:
             if self.wait() == False:
@@ -266,20 +267,19 @@ class Sender(ThreadEx):
                 
             try:
                 item = self.queue.get(True, 5)
-                gc_threshold = 1
+                gc_counter = 1
             except:
                 self.update_store(del_rows, del_activities)
                 del_rows, del_activities = [], []
+                gc_counter = gc_counter + 1 if gc_counter else 0
+                    
+                if gc_counter == gc_threshold:
+                    _log.debug('GC collected %d unreachables' % gc.collect())
+                    gc_counter = 0
                 
                 if self.store_available():
                     self.off_store.get(self.queue_max_size, self.store_get_callback)
-                else:
-                    gc_threshold = gc_threshold + 1 if gc_threshold else 0
-                    
-                if gc_threshold == 3:
-                    gc_threshold = 0
-                    _log.debug('GC collected %d unreachables' % gc.collect())
-                    
+                
                 continue
                 
             row_id = item.get('row_id')
@@ -305,6 +305,7 @@ class Sender(ThreadEx):
             except:
                 break
                 
+        self.queue.close()
         self.off_store.stop()
         _log.debug('Shutting down sender')
 

@@ -14,12 +14,16 @@ _log = logging.getLogger(__name__)
 class Activity(ThreadEx):
     timestampLock = threading.RLock()
     
-    def __init__(self, activity, stop_event):
+    def __init__(self, activity):
         ThreadEx.__init__(self)
         self.activity = activity;
-        self.stop_event = stop_event
         self.is_stop = False
+        self.globals = Globals()
         self.is_whitelisted = self.is_in_whitelist()
+        self.timeout = 30
+        
+        if hasattr(self.globals.config.sealion, 'commandTimeout'):
+            self.timeout = self.globals.config.sealion.commandTimeout
         
     @staticmethod
     def get_timestamp():
@@ -30,13 +34,12 @@ class Activity(ThreadEx):
         return t
         
     def is_in_whitelist(self):
-        globals = Globals()
         whitelist = []
         is_whitelisted = True
         command = self.activity['command']
 
-        if hasattr(globals.config.sealion, 'whitelist'):
-            whitelist = globals.config.sealion.whitelist
+        if hasattr(self.globals.config.sealion, 'whitelist'):
+            whitelist = self.globals.config.sealion.whitelist
 
         if len(whitelist):
             is_whitelisted = False
@@ -49,12 +52,7 @@ class Activity(ThreadEx):
         return is_whitelisted
 
     def exe(self):
-        _log.info('Starting up activity %s' % self.activity['_id'])
-        globals = Globals()
-        self.timeout = 30
-        
-        if hasattr(globals.config.sealion, 'commandTimeout'):
-            self.timeout = globals.config.sealion.commandTimeout            
+        _log.info('Starting up activity %s' % self.activity['_id'])                      
         
         while 1:                
             timestamp = Activity.get_timestamp()
@@ -63,14 +61,14 @@ class Activity(ThreadEx):
             if ret != None:
                 data = {'returnCode': ret['return_code'], 'timestamp': timestamp, 'data': ret['output']}
                 _log.debug('Pushing activity(%s @ %d) to store' % (self.activity['_id'], timestamp))
-                globals.store.push(self.activity['_id'], data)
+                self.globals.store.push(self.activity['_id'], data)
                 ret = None
                 
             timeout = self.activity['interval']
             break_flag = False
             
             while timeout > 0:
-                if self.stop_event.is_set() or self.is_stop == True:
+                if self.globals.stop_event.is_set() or self.is_stop == True:
                     _log.debug('Activity %s received stop event' % self.activity['_id'])
                     break_flag = True
                     break
@@ -82,7 +80,7 @@ class Activity(ThreadEx):
                 break
 
         _log.info('Shutting down activity %s' % self.activity['_id'])
-
+        
     def execute(self):
         if self.is_whitelisted == False:
             ret = {'return_code': 0, 'output': 'Command blocked by whitelist.'}
@@ -96,7 +94,7 @@ class Activity(ThreadEx):
         while p.poll() is None:
             time.sleep(1)
             
-            if self.stop_event.is_set() or self.is_stop == True:
+            if self.globals.stop_event.is_set() or self.is_stop == True:
                 return None
             
             if time.time() - start_time > self.timeout:
@@ -245,7 +243,7 @@ def start():
         signal.pause()
         
         if controller.is_stop == True:
-            globals.api.logout()
             controller.join()
+            globals.api.logout()
             quit()
 

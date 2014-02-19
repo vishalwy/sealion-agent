@@ -165,7 +165,7 @@ class Globals:
                 
                 self.activities[activity_id].stop()
                 
-            self.activities[activity_id] = self.activity_type(activity, self.stop_event)
+            self.activities[activity_id] = self.activity_type(activity)
             self.activities[activity_id].start()
 
 
