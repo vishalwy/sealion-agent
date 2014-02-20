@@ -11,8 +11,11 @@ class SocketIONamespace(BaseNamespace):
         _log.info('Socket-io connected')
         self.rtc.update_heartbeat()
         self.rtc.api.ping()
+        self.rtc.is_disconnected and self.rtc.api.get_config()
+        self.rtc.is_disconnected = False
         
     def on_disconnect(self):
+        self.rtc.is_disconnected = True
         _log.info('Socket-io disconnected')
         
     def on_heartbeat(self):
@@ -54,6 +57,7 @@ class Interface(ThreadEx):
         self.sio = None
         self.last_heartbeat = int(time.time())
         self.is_stop = False
+        self.is_disconnected = False
         
     def connect(self):
         SocketIONamespace.rtc = self

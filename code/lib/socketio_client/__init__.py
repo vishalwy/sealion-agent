@@ -185,8 +185,9 @@ class SocketIO(object):
                     except StopIteration:
                         _log.warn(warning)
                     self.disconnect()
-                    if self._stop_waiting(for_callbacks):
-                        break
+                    
+                if self.__transport._wants_to_disconnect:
+                    break
         except KeyboardInterrupt:
             pass
 

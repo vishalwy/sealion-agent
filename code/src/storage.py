@@ -267,6 +267,10 @@ class Sender(ThreadEx):
             try:
                 item = self.queue.get(True, 5)
                 gc_counter = 1
+                
+                if any(a for a in del_activities if a == item['activity']):
+                    _log.debug('Discarding activity %s' % item['activity'])
+                    continue
             except:
                 self.update_store(del_rows, del_activities)
                 del_rows, del_activities = [], []
@@ -287,10 +291,9 @@ class Sender(ThreadEx):
             if (status == api_status.SUCCESS or status == api_status.DATA_CONFLICT) and row_id:
                 del_rows.append(row_id)
             elif status == api_status.MISMATCH:
-                del_activities.append(item['activity'])
-            elif (status == api_status.NOT_CONNECTED or status == api_status.NO_SERVICE) and row_id == None:
-                self.off_store.put(item['activity'], item['data'], self.store_put_callback)
-                continue
+                any(a for a in del_activities if a == item['activity']) == False and del_activities.append(item['activity'])
+            elif (status == api_status.NOT_CONNECTED or status == api_status.NO_SERVICE):
+                row_id == None and self.off_store.put(item['activity'], item['data'], self.store_put_callback)
                 
         self.update_store(del_rows, del_activities)
         _log.debug('Sender cleaning up queue')

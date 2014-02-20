@@ -25,8 +25,5 @@ All the keys in the configuration are optional.
     White list the commands you want to execute. Value of this key should be an array of regular expressions.
     Absence of this key or an empty array as the value implies no white list
     */
-    "whitelist": ["^\s*top.*", "script\.sh"],
-
-    /*Maximum time a command is allowed to execute; in seconds. Default is 30 seconds.*/
-    "commandTimeout": 40.5
+    "whitelist": ["^\s*top.*", "script\.sh"]
 }

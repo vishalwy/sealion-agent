@@ -234,10 +234,14 @@ class Controller(ThreadEx):
 
                 self.globals.manage_activities();
                 
-                while 1:                    
+                while 1:             
+                    finished_job_count = 0
+                    
                     for job in Activity.get_finished_jobs():
                         job.send()
+                        finished_job_count += 1
                         
+                    finished_job_count and _log.debug('Fetched %d finished jobs', finished_job_count)
                     self.globals.stop_event.wait(5)
                     
                     if self.globals.stop_event.is_set():
