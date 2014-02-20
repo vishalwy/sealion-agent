@@ -22,7 +22,7 @@ class SingletonType(type):
     
 class Namespace:    
     def __init__(self):
-        raise RuntimeError, 'Cannot instantiate class'
+        raise RuntimeError('Cannot instantiate class')
     
 class DictEx(dict):
     def __init__(self, *args, **kwargs):

@@ -121,12 +121,12 @@ class Globals:
         ret = self.config.sealion.set()
         
         if ret != True:
-            raise RuntimeError, ret
+            raise RuntimeError(ret)
         
         ret = self.config.agent.set()
         
         if ret != True:
-            raise RuntimeError, ret
+            raise RuntimeError(ret)
         
         self.reset_interfaces()
         
