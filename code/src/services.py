@@ -28,10 +28,9 @@ class Job:
     def get_timestamp():
         Job.timestamp_lock.acquire()
         t = int(time.time() * 1000)
-        max_sleep = 250
         
-        if t - Job.prev_time < max_sleep:
-            time.sleep((max_sleep - (t - Job.prev_time)) / 1000)
+        if t - Job.prev_time < 250:
+            time.sleep(0.250)
             
         Job.prev_time = t
         Job.timestamp_lock.release()
