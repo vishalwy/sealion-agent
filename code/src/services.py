@@ -13,6 +13,7 @@ _log = logging.getLogger(__name__)
 
 class Job:
     timestamp_lock = threading.RLock()
+    prev_time = int(time.time() * 1000)
     
     def __init__(self, activity_id, command):
         self.activity_id = activity_id
@@ -25,7 +26,11 @@ class Job:
     def get_timestamp():
         Job.timestamp_lock.acquire()
         t = int(time.time() * 1000)
-        time.sleep(0.001)
+        
+        if t - Job.prev_time < 200:
+            time.sleep(0.200)
+            
+        Job.prev_time = t
         Job.timestamp_lock.release()
         return t
     
@@ -72,7 +77,7 @@ class Activity(ThreadEx):
         
         if Activity.timeout == -1:
             try:
-                Activity.timeout = Globals().config.sealion.commandTimeout
+                Activity.timeout = self.globals.config.sealion.commandTimeout
             except:
                 Activity.timeout = 30
                 

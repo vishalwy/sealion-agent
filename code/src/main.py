@@ -1,6 +1,7 @@
 import os
 import sys
 
+os.nice(19)
 exe_path = os.path.dirname(os.path.abspath(__file__))
 exe_path = exe_path[:-1] if exe_path[len(exe_path) - 1] == '/' else exe_path
 exe_path = exe_path[:exe_path.rfind('/') + 1]

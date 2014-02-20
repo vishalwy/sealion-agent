@@ -304,7 +304,6 @@ class Sender(ThreadEx):
             except:
                 break
                 
-        self.queue.close()
         self.off_store.stop()
         _log.debug('Shutting down sender')
 
