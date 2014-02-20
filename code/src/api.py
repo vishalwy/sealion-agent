@@ -171,12 +171,8 @@ class Interface(requests.Session):
         ret = self.status.SUCCESS
         
         if Interface.is_success(response):
-            if self.post_event.is_set():
-                _log.debug('Sent activity(%s @ %d)' % (activity_id, data['timestamp']))
-            else:
-                _log.info('Sent activity(%s @ %d)' % (activity_id, data['timestamp']))
-            
             self.set_events(post_event = True)
+            _log.debug('Sent activity(%s @ %d)' % (activity_id, data['timestamp']))
         else:
             ret = self.error('Failed to send activity(%s @ %d)' % (activity_id, data['timestamp']), response)
             

@@ -35,6 +35,7 @@ class Job:
         return t
     
     def start(self):
+        _log.debug('Executing activity(%s @ %d)' % (self.activity_id, self.timestamp))
         self.process = subprocess.Popen(['sh', '-c', self.command], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             
     def stop(self):
@@ -146,8 +147,8 @@ class Activity(ThreadEx):
                     break_flag = True
                     break
                 
-                time.sleep(min(5, timeout))
-                timeout -= 5
+                time.sleep(min(2, timeout))
+                timeout -= 2
                 
             if break_flag == True:
                 break
@@ -228,7 +229,7 @@ class Controller(ThreadEx):
 
                 self.globals.manage_activities();
                 
-                while 1:
+                while 1:                    
                     for job in Activity.get_finished_jobs():
                         job.send()
                         
