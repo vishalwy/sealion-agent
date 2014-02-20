@@ -5,6 +5,7 @@ import subprocess
 import re
 import signal
 import os
+import tempfile
 from constructs import *
 from globals import Globals
 import connection
@@ -21,14 +22,15 @@ class Job:
         self.timestamp = Job.get_timestamp()
         self.is_timedout = False
         self.process = None
+        self.output_file = None
     
     @staticmethod
     def get_timestamp():
         Job.timestamp_lock.acquire()
         t = int(time.time() * 1000)
         
-        if t - Job.prev_time < 200:
-            time.sleep(0.200)
+        if t - Job.prev_time < 250:
+            time.sleep(0.250)
             
         Job.prev_time = t
         Job.timestamp_lock.release()
@@ -36,7 +38,8 @@ class Job:
     
     def start(self):
         _log.debug('Executing activity(%s @ %d)' % (self.activity_id, self.timestamp))
-        self.process = subprocess.Popen(['sh', '-c', self.command], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.output_file = tempfile.TemporaryFile()
+        self.process = subprocess.Popen(['sh', '-c', self.command], stdout = self.output_file, stderr = self.output_file)
             
     def stop(self):
         try:
@@ -56,9 +59,10 @@ class Job:
         elif self.is_timedout == True:
             data['data'] = 'Command exceeded timeout.'
         else:            
-            output = self.process.stdout.read(256 * 1024)
-            data['data'] = output if output else self.process.stderr.read()
+            self.output_file.seek(0, os.SEEK_SET)
+            data['data'] = self.output_file.read(256 * 1024)
             data['returnCode'] = self.process.returncode
+            self.output_file.close()
             
         _log.debug('Pushing activity(%s @ %d) to store' % (self.activity_id, self.timestamp))
         Globals().store.push(self.activity_id, data)

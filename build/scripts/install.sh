@@ -33,7 +33,6 @@ VERSION="<version>"
 BASEDIR=$(readlink -f "$0")
 BASEDIR=$(dirname "$BASEDIR")
 BASEDIR=${BASEDIR%/}
-cd "$BASEDIR"
 USER_NAME="sealion"
 PYTHON=$(which python)
 IS_UPDATE=1
@@ -158,8 +157,10 @@ check_dependency()
     cd ../../
 }
 
-check_dependency
+INSTALL_PATH=$(readlink -m "$INSTALL_PATH")
 INSTALL_PATH=${INSTALL_PATH%/}
+cd "$BASEDIR"
+check_dependency
 
 if [ "$INSTALL_PATH" != "$DEFAULT_INSTALL_PATH" ] ; then
     INSTALL_AS_SERVICE=0
