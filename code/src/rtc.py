@@ -90,7 +90,7 @@ class Interface(ThreadEx):
         self.last_heartbeat = int(time.time())
         
     def is_heartbeating(self):
-        if self.sio.heartbeat_timeout == -1:
+        if self.sio == None or self.sio.heartbeat_timeout == -1:
             return True
         
         t = int(time.time())        

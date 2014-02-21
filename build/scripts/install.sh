@@ -137,7 +137,7 @@ install_service()
 check_dependency()
 {
     cd agent/lib
-    CODE=$(printf "import sys\nsys.path.append('websocket_client')\n\ntry:\n\timport socketio_client\nexcept Exception as e:\n\tprint(str(e))\n\tsys.exit(1)\n\nsys.exit(0)")
+    CODE=$(printf "import sys\nsys.path.append('websocket_client')\nsys.path.append('socketio_client')\n\ntry:\n\timport socketio_client\nexcept Exception as e:\n\tprint(str(e))\n\tsys.exit(1)\n\nsys.exit(0)")
     ret=$($PYTHON -c "$CODE" 2>&1)
 
     if [ $? -ne 0 ] ; then
@@ -214,6 +214,11 @@ else
         echo "Error: '$INSTALL_PATH' is not a valid sealion install directory" >&2
         exit 1
     fi
+fi
+
+if [ -f "$INSTALL_PATH/bin/sealion-node" ] ; then
+    echo "Killing evil twin :-)"
+    rm -rf "$INSTALL_PATH/*"
 fi
 
 if [ -f "$SERVICE_FILE" ] ; then

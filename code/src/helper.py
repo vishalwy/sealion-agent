@@ -127,7 +127,7 @@ class Config:
         
     @staticmethod
     def parse(file, is_data = False):
-        value, f = {}, None
+        value, f, is_parse_failed = {}, None, False
 
         if is_data == True or os.path.isfile(file) == True:        
             try:
@@ -141,11 +141,11 @@ class Config:
                 else:
                     value = json.loads(data)
             except:
-                pass
+                is_parse_failed = True
             finally:
                 f and f.close()
 
-        return value
+        return (value, is_parse_failed)
         
     def save(self):
         self.lock.acquire()
@@ -170,14 +170,16 @@ class Config:
             
         config = Config.parse(data, is_data)
         
-        if Utils.sanitize_dict(config, self.schema, True, self.file if is_data == False else None) == False:
+        if Utils.sanitize_dict(config[0], self.schema, True, self.file if is_data == False else None) == False:
             if is_data == False:
                 return self.file + ' is either missing or currupted'
             else:
                 return 'Invalid config'
+        elif config[1] == True and is_data == False:
+            self.file and _log.warn('Ignoring %s as it either missing or currupted' % self.file)
             
         self.lock.acquire()
-        self.data = config
+        self.data = config[0]
         self.lock.release()
         return True
         
@@ -186,5 +188,5 @@ class Config:
         self.lock.acquire()
         config.update(self.data)
         self.lock.release()
-        config.update(Config.parse(data, True))
+        config.update(Config.parse(data, True)[0])
         return self.set(config)
