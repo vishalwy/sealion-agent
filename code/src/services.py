@@ -242,6 +242,7 @@ class Controller(ThreadEx):
                         
                     finished_job_count and _log.debug('Fetched %d finished jobs', finished_job_count)
                     self.globals.stop_event.wait(5)
+                    self.globals.rtc.is_heartbeating()
                     
                     if self.globals.stop_event.is_set():
                         _log.debug('Controller received stop event')

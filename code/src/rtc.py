@@ -72,8 +72,6 @@ class Interface(ThreadEx):
         
         _log.debug('Waiting for socket-io connection')
         self.sio = SocketIO(self.api.get_url(), **kwargs)
-        import pdb
-        pdb.set_trace()
         return self
     
     def stop(self):
@@ -94,7 +92,7 @@ class Interface(ThreadEx):
         if self.sio.heartbeat_timeout == -1:
             return True
         
-        return (int(time.time()) - self.last_heartbeat) < 30
+        return (int(time.time()) - self.last_heartbeat) < self.sio.heartbeat_timeout
 
     def exe(self):       
         _log.debug('Starting up socket-io')
