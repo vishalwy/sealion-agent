@@ -134,6 +134,7 @@ class SocketIO(object):
         self.client_supported_transports = transports
         self.kw = kw
         self.define(Namespace)
+        self.heartbeat_timeout = -1
 
     def __enter__(self):
         return self
@@ -254,6 +255,7 @@ class SocketIO(object):
             self.is_secure, self.base_url, **self.kw)
         _log.debug('[transports available] %s', ' '.join(
             socketIO_session.server_supported_transports))
+        self.heartbeat_timeout = socketIO_session.heartbeat_timeout
         # Initialize heartbeat_pacemaker
         self.heartbeat_pacemaker = self._make_heartbeat_pacemaker(
             heartbeat_interval=socketIO_session.heartbeat_timeout / 2)

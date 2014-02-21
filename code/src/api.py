@@ -4,6 +4,7 @@ import requests
 import threading
 import tempfile
 import subprocess
+import time
 from constructs import *
 import connection
 
@@ -139,6 +140,7 @@ class Interface(requests.Session):
     
     def authenticate(self, retry_count = -1, retry_interval = 5):
         data = self.config.agent.get_dict(['orgToken', 'agentVersion'])
+        data['timestamp'] = int(time.time() * 1000)
         response = self.exec_method('post', retry_count, retry_interval, self.get_url('agents/' + self.config.agent._id + '/sessions'), data = data)    
         ret = self.status.SUCCESS
         
