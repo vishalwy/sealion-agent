@@ -48,15 +48,15 @@ class Utils(Namespace):
         ret = 1
 
         if is_delete_extra == True:  
-            keys = d.keys()
+            keys = list(d.keys())
             
-            if schema.has_key('.') and len(schema.keys()) == 1 and len(keys) == 1:
+            if ('.' in schema) and len(schema.keys()) == 1 and len(keys) == 1:
                 temp = {}
                 temp[keys[0]] = schema['.']
                 schema = temp
 
             for i in range(0, len(keys)):
-                if schema.has_key(keys[i]) == False:
+                if (keys[i] in schema) == False:
                     file and _log.warn('Ignoring config key "%s" in %s; unknown key' % (keys[i], file))
                     del d[keys[i]]
                     continue
@@ -65,11 +65,11 @@ class Utils(Namespace):
 
         for key in schema:
             is_optional = schema[key].get('optional', False)
-
-            if d.has_key(key) == False:
+            
+            if (key in d) == False:
                 ret = 0 if is_optional == False else ret
             else:
-                if schema[key].has_key('depends') == True:
+                if ('depends' in schema[key]) == True:
                     depends_check_keys.append(key)
 
                 if Utils.sanitize_type(d[key], schema[key]['type'], is_delete_extra, 
@@ -82,8 +82,8 @@ class Utils(Namespace):
             depends = schema[depends_check_keys[j]]['depends']
 
             for i in range(0, len(depends)):
-                if d.has_key(depends[i]) == False:
-                    if d.has_key(depends_check_keys[j]):
+                if (depends[i] in d) == False:
+                    if (depends_check_keys[j]) in d:
                         file and _log.warn('Ignoring config key "%s" in %s; failed dependency' % (depends_check_keys[j], file))
                         del d[depends_check_keys[j]]
                         
@@ -112,6 +112,8 @@ class Config:
         
         try:
             return self.data[attr]
+        except KeyError as e:
+            raise AttributeError(str(e))
         finally:
             self.lock.release()
         

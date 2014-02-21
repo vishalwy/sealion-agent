@@ -33,7 +33,11 @@ except ImportError:
 
     HAVE_SSL = False
 
-from urlparse import urlparse
+try:
+    from urlparse import urlparse
+except ImportError:
+    from urllib.parse import urlparse
+    
 import os
 import array
 import struct
@@ -202,7 +206,7 @@ def create_connection(url, timeout=None, **options):
     return websock
 
 _MAX_INTEGER = (1 << 32) -1
-_AVAILABLE_KEY_CHARS = range(0x21, 0x2f + 1) + range(0x3a, 0x7e + 1)
+_AVAILABLE_KEY_CHARS = [i for j in (range(0x21, 0x2f + 1), range(0x3a, 0x7e + 1)) for i in j]
 _MAX_CHAR_BYTE = (1<<8) -1
 
 # ref. Websocket gets an update, and it breaks stuff.
@@ -857,7 +861,7 @@ class WebSocketApp(object):
                 if data is None:
                     break
                 self._callback(self.on_message, data)
-        except Exception, e:
+        except Exception as e:
             self._callback(self.on_error, e)
         finally:
             if thread:
@@ -870,7 +874,7 @@ class WebSocketApp(object):
         if callback:
             try:
                 callback(self, *args)
-            except Exception, e:
+            except Exception as e:
                 logger.error(e)
                 if logger.isEnabledFor(logging.DEBUG):
                     _, _, tb = sys.exc_info()

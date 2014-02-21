@@ -38,7 +38,7 @@ class DictEx(dict):
             is_tuple = True if type(keys[i]) is tuple else False
             key = keys[i][0] if is_tuple else keys[i]
             
-            if self.has_key(key):
+            if (key in self):
                 ret[key] = self[key]
             elif is_tuple and len(keys[i]) > 1:
                 ret[key] = keys[i][1]

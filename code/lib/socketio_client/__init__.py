@@ -3,7 +3,11 @@ import json
 import requests
 import time
 from collections import namedtuple
-from urlparse import urlparse
+
+try:
+    from urlparse import urlparse
+except ImportError:
+    from urllib.parse import urlparse
 
 from .exceptions import ConnectionError, TimeoutError, PacketError
 from .transports import _get_response, _negotiate_transport, TRANSPORTS
@@ -259,7 +263,7 @@ class SocketIO(object):
         # Initialize heartbeat_pacemaker
         self.heartbeat_pacemaker = self._make_heartbeat_pacemaker(
             heartbeat_interval=socketIO_session.heartbeat_timeout / 2)
-        self.heartbeat_pacemaker.next()
+        next(self.heartbeat_pacemaker)
         # Negotiate transport
         transport = _negotiate_transport(
             self.client_supported_transports, socketIO_session,

@@ -6,14 +6,6 @@ if [ "`uname -s`" != "Linux" ] ; then
     exit 1
 fi
 
-#check for platform architecture
-PLATFORM=`uname -m`
-
-if [[ "$PLATFORM" != 'x86_64' && "$PLATFORM" != 'i686' ]] ; then
-    echo "Error: Platform not supported" >&2
-    exit 1
-fi
-
 #check for kernel version (min 2.6)
 eval $(uname -r | awk -F'.' '{printf("KERNEL_VERSION=%s KERNEL_MAJOR=%s\n", $1, $2)}')
 
@@ -145,10 +137,11 @@ install_service()
 check_dependency()
 {
     cd agent/lib
-    ret=$($PYTHON -c 'import sys; sys.path.append("websocket_client"); import socketio_client' 2>&1)
+    CODE=$(printf "import sys\nsys.path.append('websocket_client')\n\ntry:\n\timport socketio_client\nexcept Exception as e:\n\tprint(str(e))\n\tsys.exit(1)\n\nsys.exit(0)")
+    ret=$($PYTHON -c "$CODE" 2>&1)
 
     if [ $? -ne 0 ] ; then
-        echo $ret | grep -o ImportError:.*$ | sed 's/ImportError:/Error: Python package dependency check failed;/'
+        echo "Error: Python package dependency check failed; $ret"
         rm -rf *.pyc
         exit 1
     fi

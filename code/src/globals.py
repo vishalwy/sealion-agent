@@ -32,7 +32,7 @@ class SealionConfig(Config):
         
     def set(self, data = None):
         ret = Config.set(self, data)
-        variables = self.data['env'] if self.data.has_key('env') else []
+        variables = self.data['env'] if ('env' in self.data) else []
         
         for i in range(0, len(variables)):
             for key in variables[i]:
@@ -82,7 +82,7 @@ class AgentConfig(Config):
         return deleted_activities
         
     def update(self, data):   
-        if data.has_key('category'):
+        if ('category' in data):
             del data['category']
             
         globals = Globals()
@@ -93,9 +93,9 @@ class AgentConfig(Config):
             globals.api.update_agent(globals.exe_path)
             
         self.lock.acquire()
-        old_activities = self.data['activities'] if self.data.has_key('activities') else []
+        old_activities = self.data['activities'] if ('activities' in self.data) else []
         ret = Config.update(self, data)
-        new_activities = self.data['activities'] if self.data.has_key('activities') else []
+        new_activities = self.data['activities'] if ('activities' in self.data) else []
         self.lock.release()
         
         if globals.activities == None:
@@ -105,9 +105,7 @@ class AgentConfig(Config):
         globals.manage_activities(old_activities, deleted_activity_ids)
         return ret
 
-class Globals:
-    __metaclass__ = SingletonType
-    
+class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
     def __init__(self):
         exe_path = os.path.dirname(os.path.abspath(__file__))
         exe_path = exe_path[:-1] if exe_path[len(exe_path) - 1] == '/' else exe_path
@@ -157,7 +155,7 @@ class Globals:
         for activity in new_activities:
             activity_id = activity['_id']
             
-            if self.activities.has_key(activity_id):
+            if (activity_id in self.activities):
                 t = [old_activity for old_activity in old_activities if old_activity['_id'] == activity_id]
                 
                 if len(t) and t[0]['interval'] == activity['interval'] and t[0]['command'] == activity['command']:

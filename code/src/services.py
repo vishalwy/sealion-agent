@@ -171,10 +171,8 @@ class Activity(ThreadEx):
         
     def stop(self):
         self.is_stop = True       
-       
-class Controller(ThreadEx):
-    __metaclass__ = SingletonType
-    
+
+class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx):    
     def __init__(self):
         ThreadEx.__init__(self)
         self.globals = Globals()

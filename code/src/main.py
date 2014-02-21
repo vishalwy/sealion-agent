@@ -7,7 +7,8 @@ exe_path = exe_path[:-1] if exe_path[len(exe_path) - 1] == '/' else exe_path
 exe_path = exe_path[:exe_path.rfind('/') + 1]
 sys.path.append(exe_path + 'lib')
 sys.path.append(exe_path + 'src')
-sys.path.append(exe_path + 'lib/websocket_client') 
+sys.path.append(exe_path + 'lib/websocket_client')
+sys.path.append(exe_path + 'lib/socketio_client') 
 
 import logging
 import logging.handlers
@@ -33,7 +34,7 @@ except Exception as e:
     
 try:
     globals = Globals()
-except Exception as e:
+except RuntimeError as e:
     _log.error(str(e))
     sys.exit(0)
     
