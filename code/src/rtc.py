@@ -15,8 +15,9 @@ class SocketIONamespace(BaseNamespace):
         self.rtc.is_disconnected = False
         
     def on_disconnect(self):
-        self.rtc.is_disconnected = True
         _log.info('Socket-io disconnected')
+        self.rtc.update_heartbeat()
+        self.rtc.is_disconnected = True
         
     def on_heartbeat(self):
         _log.debug('Socket-io heartbeat')
@@ -55,9 +56,9 @@ class Interface(ThreadEx):
         ThreadEx.__init__(self)
         self.api = api
         self.sio = None
-        self.last_heartbeat = int(time.time())
         self.is_stop = False
         self.is_disconnected = False
+        self.update_heartbeat()
         
     def connect(self):
         SocketIONamespace.rtc = self
@@ -92,7 +93,10 @@ class Interface(ThreadEx):
         if self.sio.heartbeat_timeout == -1:
             return True
         
-        return (int(time.time()) - self.last_heartbeat) < self.sio.heartbeat_timeout
+        t = int(time.time())        
+        is_beating = True if t - self.last_heartbeat < self.sio.heartbeat_timeout else False
+        self.update_heartbeat()
+        return is_beating
 
     def exe(self):       
         _log.debug('Starting up socket-io')

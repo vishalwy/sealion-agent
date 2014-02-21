@@ -288,12 +288,13 @@ class Sender(ThreadEx):
             row_id = item.get('row_id')
             status = self.api.post_data(item['activity'], item['data'])
                 
-            if (status == api_status.SUCCESS or status == api_status.DATA_CONFLICT) and row_id:
-                del_rows.append(row_id)
-            elif status == api_status.MISMATCH:
+            if status == api_status.MISMATCH:
                 any(a for a in del_activities if a == item['activity']) == False and del_activities.append(item['activity'])
             elif (status == api_status.NOT_CONNECTED or status == api_status.NO_SERVICE):
                 row_id == None and self.off_store.put(item['activity'], item['data'], self.store_put_callback)
+            else:
+                row_id and del_rows.append(row_id)
+                
                 
         self.update_store(del_rows, del_activities)
         _log.debug('Sender cleaning up queue')
