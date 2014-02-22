@@ -27,7 +27,7 @@ class SealionConfig(Config):
                 },
                 'optional': True
             },
-            'commandTimeout': {'type': 'int,float', 'optional': True}
+            'commandTimeout': {'type': 'int,float', 'optional': True, 'regex': '^\+?((0?[5-9]{1}|(0?[1-9][0-9]+))|((0?[5-9]{1}|(0?[1-9][0-9]+))\.[0-9]*))$'}
         }
         
     def set(self, data = None):

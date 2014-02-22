@@ -326,4 +326,4 @@ class Interface(requests.Session):
             return
             
         _log.info('Installing update')
-        subprocess.Popen(['sh', '-c', '"%(temp_dir)s/sealion-agent/install.sh" -i "%(exe_path)s" -p "%(executable)s" && rm -rf "%(temp_dir)s"' % {'temp_dir': temp_dir, 'exe_path': exe_path, 'executable': sys.executable}])
+        subprocess.Popen('"%(temp_dir)s/sealion-agent/install.sh" -i "%(exe_path)s" -p "%(executable)s" && rm -rf "%(temp_dir)s"' % {'temp_dir': temp_dir, 'exe_path': exe_path, 'executable': sys.executable}, shell=True)

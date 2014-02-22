@@ -249,7 +249,7 @@ class Sender(ThreadEx):
                 
             i += 1
         
-        _log.debug('Pushed %d rows to sender from offline storage' % i)
+        i and _log.debug('Pushed %d rows to sender from offline storage' % i)
         self.store_available(i != row_count or self.queue_max_size == row_count)
         
     def store_put_callback(self):

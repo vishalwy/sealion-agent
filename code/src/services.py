@@ -5,6 +5,7 @@ import subprocess
 import re
 import signal
 import os
+import sys
 import tempfile
 from constructs import *
 from globals import Globals
@@ -39,19 +40,18 @@ class Job:
     def start(self):
         _log.debug('Executing activity(%s @ %d)' % (self.activity_id, self.timestamp))
         self.output_file = tempfile.TemporaryFile()
-        self.process = subprocess.Popen(['sh', '-c', self.command], stdout = self.output_file, stderr = self.output_file)
+        self.process = subprocess.Popen(self.command, shell=True, stdout = self.output_file, stderr = self.output_file, preexec_fn = os.setpgrp)
             
     def stop(self):
         try:
-            os.kill(self.process.pid, signal.SIGKILL)
-            os.waitpid(-1, os.WNOHANG)
+            os.killpg(self.process.pid, signal.SIGKILL)
             self.is_timedout = True
             self.process.returncode = 0
             return True
         except:
             return False
         
-    def send(self):
+    def post_output(self):
         data = {'returnCode': 0, 'timestamp': self.timestamp}
         
         if self.process == None:
@@ -164,7 +164,7 @@ class Activity(ThreadEx):
         
         if self.is_whitelisted == False:
             _log.info('Activity ' + job.activity_id + ' is blocked by whitelist')
-            job.send()
+            job.post_output()
         else:
             job.start()
             Activity.put_job(job)
@@ -235,7 +235,7 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
                     finished_job_count = 0
                     
                     for job in Activity.get_finished_jobs():
-                        job.send()
+                        job.post_output()
                         finished_job_count += 1
                         
                     finished_job_count and _log.debug('Fetched %d finished jobs', finished_job_count)
@@ -301,8 +301,10 @@ def quit(status = 0):
     
 def start():
     _log.info('Agent starting up')
-    
+    _log.info('Using python binary at %s' % sys.executable)
+    _log.info('Python version : %s' % '.'.join([str(i) for i in sys.version_info]))
     globals = Globals()
+    _log.info('Agent version  : %s' % globals.config.agent.agentVersion)
     globals.activity_type = Activity
     controller = Controller()
     signal.signal(signal.SIGALRM, sig_handler)

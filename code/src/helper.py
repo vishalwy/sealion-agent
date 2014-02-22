@@ -30,10 +30,10 @@ class Utils(Namespace):
                     flag = True
                     break
                     
-            if flag == True and (d_type_name == 'str' or d_type_name == 'unicode'):
-                if regex != None and re.match(regex, d) == None:
+            if flag == True:
+                if regex != None and re.match(regex, str(d)) == None:
                     return False
-                elif is_regex == True:
+                elif (d_type_name == 'str' or d_type_name == 'unicode') and is_regex == True:
                     try:
                         re.compile(d)
                     except:

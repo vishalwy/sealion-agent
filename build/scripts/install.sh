@@ -30,7 +30,7 @@ PYTHON=$(which python)
 IS_UPDATE=1
 DEFAULT_INSTALL_PATH="/usr/local/sealion-agent"
 INSTALL_AS_SERVICE=1
-USAGE="Usage: $0 {-o <org token> [-c <category name>] [-h <host name>] [-x <https proxy>] [-p <python binary>] | -h}"
+USAGE="Usage: $0 {-o <org token> [-c <category name>] [-H <host name>] [-x <https proxy>] [-p <python binary>] | -h}"
 
 #setup variables
 INSTALL_PATH=$DEFAULT_INSTALL_PATH
