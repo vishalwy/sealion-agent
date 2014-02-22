@@ -117,6 +117,6 @@ cp -r etc $TARGET/$OUTPUT/agent
 mkdir -p $TARGET/$OUTPUT/agent/etc/init.d
 mkdir -p $TARGET/$OUTPUT/agent/bin
 generate_scripts
-tar -zcvf $TARGET/$OUTPUT.tar.gz --exclude="*.pyc" --exclude="var" --exclude="*~" --exclude-backups --directory=$TARGET $OUTPUT/
+tar -zcvf $TARGET/$OUTPUT.tar.gz --exclude="*.pyc" --exclude="var" --exclude="__pycache__" --exclude="*~" --exclude-vcs --exclude-backups --directory=$TARGET $OUTPUT/
 rm -rf $TARGET/$OUTPUT
 

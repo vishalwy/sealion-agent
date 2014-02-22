@@ -5,7 +5,7 @@ TMP_FILE_PATH=$(mktemp -d /tmp/sealion-agent.XXXX)
 TMP_FILE_PATH=${TMP_FILE_PATH%/}
 TMP_FILE_NAME="$TMP_FILE_PATH/sealion-agent.tar.gz"
 
-echo "Downloading agent installer"
+echo "Downloading agent installer..."
 curl -s $DOWNLOAD_URL -o $TMP_FILE_NAME >/dev/null 2>&1
 
 if [ $? -ne 0 ] ; then

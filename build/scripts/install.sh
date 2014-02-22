@@ -143,10 +143,12 @@ check_dependency()
     if [ $? -ne 0 ] ; then
         echo "Error: Python package dependency check failed; $ret"
         rm -rf *.pyc
+        find . -type d -name '__pycache__' -exec rm -rf {} \;
         exit 1
     fi
 
     rm -rf *.pyc
+    find . -type d -name '__pycache__' -exec rm -rf {} \;
     cd ../../
 }
 
@@ -168,24 +170,25 @@ if [ "$ORG_TOKEN" != '' ] ; then
     fi
 
     IS_UPDATE=0
-
-    echo "Creating install directory at '$INSTALL_PATH'"
     mkdir -p "$INSTALL_PATH"
 
     if [ $? -ne 0 ] ; then
-        echo "Error: Cannot create installation directory" >&2
+        echo "Error: Cannot create installation directory at '$INSTALL_PATH'" >&2
         exit 118
+    else
+        echo "Install directory created at '$INSTALL_PATH'"
     fi
 
     id -g $USER_NAME >/dev/null 2>&1
 
     if [ $? -ne 0 ] ; then
-        echo "Creating $USER_NAME group"
         groupadd -r $USER_NAME >/dev/null 2>&1
         
         if [ $? -ne 0 ] ; then
             echo "Error: Cannot create $USER_NAME group" >&2
             exit 1
+        else
+            echo "Group $USER_NAME created"
         fi
     else
         echo "Group $USER_NAME already exists"
@@ -194,12 +197,13 @@ if [ "$ORG_TOKEN" != '' ] ; then
     id $USER_NAME >/dev/null 2>&1
 
     if [ $? -ne 0 ] ; then
-        echo "Creating $USER_NAME user"
         useradd -rMN -g $USER_NAME $USER_NAME >/dev/null 2>&1
         
         if [ $? -ne 0 ] ; then
             echo "Error: Cannot create $USER_NAME user" >&2
             exit 1
+        else
+            echo "User $USER_NAME created"
         fi
     else
         echo "User $USER_NAME already exists"
@@ -217,16 +221,16 @@ else
 fi
 
 if [ -f "$INSTALL_PATH/bin/sealion-node" ] ; then
-    echo "Killing evil twin :-)"
+    echo "Killing evil twin..."
     rm -rf "$INSTALL_PATH/*"
 fi
 
 if [ -f "$SERVICE_FILE" ] ; then
-    echo "Stopping agent"
+    echo "Stopping agent..."
     "$SERVICE_FILE" stop
 fi
 
-echo "Copying files"
+echo "Copying files..."
 
 if [ $IS_UPDATE -eq 0 ] ; then
     cp -r agent/* "$INSTALL_PATH"
@@ -278,6 +282,6 @@ else
     echo "Sealion agent updated successfully"
 fi
 
-echo "Starting agent"
+echo "Starting agent..."
 "$SERVICE_FILE" start
 

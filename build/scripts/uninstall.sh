@@ -12,12 +12,12 @@ if [[ "$(id -u -n)" != "$USER_NAME" && $EUID -ne 0 ]] ; then
 fi
 
 if [ -f "etc/conf.d/sealion" ] ; then
-    echo "Stopping agent"
+    echo "Stopping agent..."
     etc/conf.d/sealion stop
 fi
 
 if [ -f "src/unregister.py" ] ; then
-    echo "Unregistering agent"
+    echo "Unregistering agent..."
     python src/unregister.py >/dev/null 2>&1
 
     if [ $? -ne 0 ] ; then
@@ -36,9 +36,11 @@ uninstall_service()
     RC6_PATH=`find /etc/ -type d -name rc6.d`
     INIT_D_PATH=`find /etc/ -type d -name init.d`
     SYMLINK_PATHS=( K K S S S S K )
+    RET=0
 
     if [[ -z $RC1_PATH || -z $RC2_PATH || -z $RC3_PATH || -z $RC4_PATH || -z $RC5_PATH || -z $RC6_PATH || -z $INIT_D_PATH ]] ; then
-            echo "Error: Could not locate init.d/rc folders" >&2
+        echo "Error: Could not locate init.d/rc folders" >&2
+        return 1
     else
         for (( i = 1 ; i < 7 ; i++ )) do
             VAR_NAME="RC"$i"_PATH"/${SYMLINK_PATHS[$i]}99sealion
@@ -46,6 +48,7 @@ uninstall_service()
 
             if [ $? -ne 0 ] ; then
                 echo "Error: Failed to remove $VAR_NAME file" >&2
+                RET=1
             fi
         done
 
@@ -53,12 +56,15 @@ uninstall_service()
         
         if [ $? -ne 0 ] ; then
             echo "Error: Failed to remove $INIT_D_PATH/sealion file" >&2
+            RET=1
         fi
     fi
+
+    return $RET
 }
 
 if [[ $EUID -ne 0 ]]; then
-    echo "Removing files except logs and uninstall.sh"
+    echo "Removing files except logs and uninstall.sh..."
     find var -mindepth 1 -maxdepth 1 -type d ! -name 'log' -exec rm -rf {} \;
     find . -mindepth 1 -maxdepth 1 -type d ! -name 'var' -exec rm -rf {} \;
 else
@@ -66,23 +72,26 @@ else
         id $USER_NAME >/dev/null 2>&1
 
         if [ $? -eq 0 ] ; then
-            echo "Removing $USER_NAME user"
             pkill -KILL -u $USER_NAME
             userdel $USER_NAME
+            echo "User $USER_NAME removed"
         fi
 
         id -g $USER_NAME >/dev/null 2>&1
 
         if [ $? -eq 0 ] ; then
-            echo "Removing $USER_NAME group"
             groupdel $USER_NAME
+            echo "Group $USER_NAME removed"
         fi
 
-        echo "Removing service"
         uninstall_service
+
+        if [ $? -ne 0 ] ; then
+            echo "Service removed"
+        fi  
     fi
 
-    echo "Removing files"
+    echo "Removing files..."
     cd /
     rm -rf "$BASEDIR"
 fi

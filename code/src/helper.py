@@ -176,7 +176,7 @@ class Config:
             else:
                 return 'Invalid config'
         elif config[1] == True and is_data == False:
-            self.file and _log.warn('Ignoring %s as it either missing or currupted' % self.file)
+            self.file and _log.warn('Ignoring %s as it is either missing or currupted' % self.file)
             
         self.lock.acquire()
         self.data = config[0]
