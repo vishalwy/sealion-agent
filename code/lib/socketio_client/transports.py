@@ -5,7 +5,12 @@ import requests
 import six
 import socket
 import time
-import websocket
+import sys
+
+if sys.version_info[0] == 2:
+    import websocket2 as websocket
+else:
+    import websocket3 as websocket
 
 try:
     from itertools import izip

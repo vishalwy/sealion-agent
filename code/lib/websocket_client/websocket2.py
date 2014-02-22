@@ -33,11 +33,7 @@ except ImportError:
 
     HAVE_SSL = False
 
-try:
-    from urlparse import urlparse
-except ImportError:
-    from urllib.parse import urlparse
-    
+from urlparse import urlparse
 import os
 import array
 import struct
@@ -206,7 +202,7 @@ def create_connection(url, timeout=None, **options):
     return websock
 
 _MAX_INTEGER = (1 << 32) -1
-_AVAILABLE_KEY_CHARS = [i for j in (range(0x21, 0x2f + 1), range(0x3a, 0x7e + 1)) for i in j]
+_AVAILABLE_KEY_CHARS = range(0x21, 0x2f + 1) + range(0x3a, 0x7e + 1)
 _MAX_CHAR_BYTE = (1<<8) -1
 
 # ref. Websocket gets an update, and it breaks stuff.
@@ -824,8 +820,11 @@ class WebSocketApp(object):
         self.sock.close()
 
     def _send_ping(self, interval):
-        while self.keep_running:
-            time.sleep(interval)
+        while True:
+            for i in range(interval):
+                time.sleep(1)
+                if not self.keep_running:
+                    return
             self.sock.ping()
 
     def run_forever(self, sockopt=None, sslopt=None, ping_interval=0):
@@ -848,6 +847,7 @@ class WebSocketApp(object):
 
         try:
             self.sock = WebSocket(self.get_mask_key, sockopt=sockopt, sslopt=sslopt)
+            self.sock.settimeout(default_timeout)
             self.sock.connect(self.url, header=self.header)
             self._callback(self.on_open)
 
@@ -865,7 +865,7 @@ class WebSocketApp(object):
             self._callback(self.on_error, e)
         finally:
             if thread:
-                thread.join()
+                self.keep_running = False
             self.sock.close()
             self._callback(self.on_close)
             self.sock = None
@@ -874,7 +874,7 @@ class WebSocketApp(object):
         if callback:
             try:
                 callback(self, *args)
-            except Exception as e:
+            except Exception, e:
                 logger.error(e)
                 if logger.isEnabledFor(logging.DEBUG):
                     _, _, tb = sys.exc_info()

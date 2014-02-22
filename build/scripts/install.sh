@@ -195,7 +195,7 @@ if [ "$ORG_TOKEN" != '' ] ; then
 
     if [ $? -ne 0 ] ; then
         echo "Creating $USER_NAME user"
-        useradd -r -g $USER_NAME $USER_NAME >/dev/null 2>&1
+        useradd -rMN -g $USER_NAME $USER_NAME >/dev/null 2>&1
         
         if [ $? -ne 0 ] ; then
             echo "Error: Cannot create $USER_NAME user" >&2

@@ -36,9 +36,9 @@ class Daemon(object):
             
         sys.stdout.flush()
         sys.stderr.flush()
-        si = file(self.stdin, 'r')
-        so = file(self.stdout, 'a+')
-        se = file(self.stderr, 'a+', 0)
+        si = open(self.stdin, 'r')
+        so = open(self.stdout, 'a+')
+        se = open(self.stderr, 'a+')
         os.dup2(si.fileno(), sys.stdin.fileno())
         os.dup2(so.fileno(), sys.stdout.fileno())
         os.dup2(se.fileno(), sys.stderr.fileno())
@@ -49,7 +49,9 @@ class Daemon(object):
         
         atexit.register(self.delete_pid)
         pid = str(os.getpid())
-        file(self.pidfile, 'w+').write('%s\n' % pid)
+        
+        with open(self.pidfile, 'w+') as f:
+            f.write('%s\n' % pid)
     
     def delete_pid(self):
         try:
@@ -109,12 +111,15 @@ class Daemon(object):
         return ret
     
     def get_pid(self):
+        f = None
+        
         try:
-            pf = file(self.pidfile, 'r')
-            pid = int(pf.read().strip())
-            pf.close()
+            f = open(self.pidfile, 'r')
+            pid = int(f.read().strip())
         except:
             pid = None
+        finally:
+            f and f.close()
 
         return pid
             

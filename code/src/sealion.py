@@ -131,6 +131,7 @@ class sealion(Daemon):
             user = pwd.getpwnam(self.user_name)
 
             if user.pw_uid != os.getuid():
+                os.setgroups([])
                 os.setgid(user.pw_gid)
                 os.setuid(user.pw_uid)
         except KeyError as e:
