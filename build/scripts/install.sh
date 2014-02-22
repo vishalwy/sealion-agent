@@ -143,12 +143,12 @@ check_dependency()
     if [ $? -ne 0 ] ; then
         echo "Error: Python package dependency check failed; $ret"
         rm -rf *.pyc
-        find . -type d -name '__pycache__' -exec rm -rf {} \;
+        find . -type d -name '__pycache__' -exec rm -rf {} \; >/dev/null 2>&1
         exit 1
     fi
 
     rm -rf *.pyc
-    find . -type d -name '__pycache__' -exec rm -rf {} \;
+    find . -type d -name '__pycache__' -exec rm -rf {} \; >/dev/null 2>&1
     cd ../../
 }
 

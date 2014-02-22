@@ -1,7 +1,6 @@
 import os
 import sys
 
-os.nice(19)
 exe_path = os.path.dirname(os.path.abspath(__file__))
 exe_path = exe_path[:-1] if exe_path[len(exe_path) - 1] == '/' else exe_path
 exe_path = exe_path[:exe_path.rfind('/') + 1]
@@ -76,6 +75,7 @@ for handler in logging.root.handlers:
     handler.setFormatter(formatter)
                
 def start(is_update_only_mode = False): 
+    os.nice(19)
     globals.is_update_only_mode = is_update_only_mode
     services.start()
 

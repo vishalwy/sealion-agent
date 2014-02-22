@@ -11,9 +11,9 @@ if [[ "$(id -u -n)" != "$USER_NAME" && $EUID -ne 0 ]] ; then
     exit 1
 fi
 
-if [ -f "etc/conf.d/sealion" ] ; then
+if [ -f "etc/init.d/sealion" ] ; then
     echo "Stopping agent..."
-    etc/conf.d/sealion stop
+    etc/init.d/sealion stop
 fi
 
 if [ -f "src/unregister.py" ] ; then
