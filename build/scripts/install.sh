@@ -77,9 +77,10 @@ done
 
 #check for python (min 2.6)
 PYTHON_OK=0
+PYTHON=$(readlink -f "$PYTHON")
 
-if [ -f $PYTHON ] ; then
-    case "$($PYTHON --version 2>&1)" in
+if [ -f "$PYTHON" ] ; then
+    case $("$PYTHON" --version 2>&1) in
         *" 3."*)
             PYTHON_OK=1
             ;;
@@ -137,7 +138,7 @@ install_service()
 check_dependency()
 {
     cd agent/lib
-    CODE=$(printf "import sys\nsys.path.append('websocket_client')\nsys.path.append('socketio_client')\n\ntry:\n\timport socketio_client\nexcept Exception as e:\n\tprint(str(e))\n\tsys.exit(1)\n\nsys.exit(0)")
+    CODE=$(printf "import sys\nsys.path.append('websocket_client')\nsys.path.append('socketio_client')\n\ntry:\n\timport socketio_client\n\timport sqlite3\nexcept Exception as e:\n\tprint(str(e))\n\tsys.exit(1)\n\nsys.exit(0)")
     ret=$($PYTHON -c "$CODE" 2>&1)
 
     if [ $? -ne 0 ] ; then

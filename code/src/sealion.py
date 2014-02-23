@@ -124,7 +124,7 @@ class sealion(Daemon):
             buff.value = proc_name.encode('utf-8')
             libc.prctl(15, byref(buff), 0, 0, 0)
         except:
-            pass
+            _log.error('Failed to set process name to %s' % proc_name)
         
     def initialize(self):        
         try:
