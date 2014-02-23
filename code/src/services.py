@@ -246,10 +246,6 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
                         Activity.reset_timeout()
                         Activity.get_finished_jobs()
                         break
-                    
-                    if self.globals.api.is_authenticated == True and self.globals.rtc.is_heartbeating() == False:
-                        _log.info('Socket-io is not beating; updating config')
-                        self.globals.api.get_config()
                 
                 self.stop_threads()
             

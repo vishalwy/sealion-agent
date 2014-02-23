@@ -338,4 +338,5 @@ def _prepare_http_session(kw):
     http_session.verify = kw.get('verify')
     http_session.cert = kw.get('cert')
     http_session.cookies.update(kw.get('cookies', {}))
+    http_session.stream = kw.get('stream', False)
     return http_session

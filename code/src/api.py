@@ -33,6 +33,7 @@ class Interface(requests.Session):
         self.stop_status = Status.SUCCESS
         self.is_authenticated = False
         self.updater = None
+        self.is_conn_err = False
             
     @staticmethod
     def is_success(response):
@@ -106,9 +107,14 @@ class Interface(requests.Session):
                 _log.error(str(e)) 
                 
             if response != None:
+                self.is_conn_err == True and _log.info('Reconnected')
+                self.is_conn_err = False
                 break
                 
             i += 1
+            
+        if response == None and self.is_authenticated == True:
+            self.is_conn_err = True
         
         return response
     

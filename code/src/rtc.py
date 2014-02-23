@@ -70,6 +70,7 @@ class Interface(ThreadEx):
         if len(requests.utils.get_environ_proxies(self.api.get_url())):
             _log.info('Proxy detected; forcing xhr-polling for socket-io')
             kwargs['transports'] = ['xhr-polling']
+            kwargs['stream'] = True
         
         _log.debug('Waiting for socket-io connection')
         self.sio = SocketIO(self.api.get_url(), **kwargs)
