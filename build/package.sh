@@ -82,18 +82,18 @@ mkdir -p $TARGET/$OUTPUT/agent
 
 generate_scripts()
 {
-    cp scripts/uninstall.sh $TARGET/$OUTPUT/agent/
+    cp res/scripts/uninstall.sh $TARGET/$OUTPUT/agent/
     chmod +x $TARGET/$OUTPUT/agent/uninstall.sh
     echo "Uninstaller generated"
-    cp scripts/monit.sh $TARGET/$OUTPUT/agent/bin/
+    cp res/scripts/monit.sh $TARGET/$OUTPUT/agent/bin/
     chmod +x $TARGET/$OUTPUT/agent/bin/monit.sh
     echo "Monit script generated"
-    cp scripts/sealion $TARGET/$OUTPUT/agent/etc/init.d
+    cp res/scripts/sealion $TARGET/$OUTPUT/agent/etc/init.d
     chmod +x $TARGET/$OUTPUT/agent/etc/init.d/sealion
     echo "Service script generated"
     INSTALLER=$TARGET/$OUTPUT/install.sh
     CURL_INSTALLER=$TARGET/curl-install.sh
-    cp scripts/install.sh $INSTALLER
+    cp res/scripts/install.sh $INSTALLER
     URL="$(echo "$API_URL" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
     ARGS="-i 's/\(^API\_URL=\)\(\"[^\"]\+\"\)/\1\"$URL\"/'"
     eval sed "$ARGS" $INSTALLER
@@ -104,7 +104,7 @@ generate_scripts()
     eval sed "$ARGS" $INSTALLER
     chmod +x $INSTALLER
     echo "Installer generated"
-    cp scripts/curl-install.sh $CURL_INSTALLER
+    cp res/scripts/curl-install.sh $CURL_INSTALLER
     ARGS="-i 's/\(^DOWNLOAD\_URL=\)\(\"[^\"]\+\"\)/\1\"$URL\"/'"
     eval sed "$ARGS" $CURL_INSTALLER    
     chmod +x $CURL_INSTALLER
@@ -112,8 +112,8 @@ generate_scripts()
 }
 
 find ../code/ -mindepth 1 -maxdepth 1 -type d ! -name 'etc' -exec cp -r {} $TARGET/$OUTPUT/agent \;
-cp ../code/* $TARGET/$OUTPUT/agent
-cp -r etc $TARGET/$OUTPUT/agent
+cp ../code/* $TARGET/$OUTPUT/agent >/dev/null 2>&1
+cp -r res/etc $TARGET/$OUTPUT/agent
 mkdir -p $TARGET/$OUTPUT/agent/etc/init.d
 mkdir -p $TARGET/$OUTPUT/agent/bin
 generate_scripts

@@ -138,7 +138,14 @@ install_service()
 check_dependency()
 {
     cd agent/lib
-    CODE=$(printf "import sys\nsys.path.append('websocket_client')\nsys.path.append('socketio_client')\n\ntry:\n\timport socketio_client\n\timport sqlite3\nexcept Exception as e:\n\tprint(str(e))\n\tsys.exit(1)\n\nsys.exit(0)")
+    MODULES=('socketio_client' 'sqlite3')
+    STMTS=
+
+    for (( i = 0 ; i < ${#MODULES[@]}; i++ )) ; do
+        STMTS="$STMTS\n\timport ${MODULES[$i]}"
+    done
+
+    CODE=$(printf "import sys\nsys.path.append('websocket_client')\nsys.path.append('socketio_client')\n\ntry:$STMTS\nexcept Exception as e:\n\tprint(str(e))\n\tsys.exit(1)\n\nsys.exit(0)")
     ret=$($PYTHON -c "$CODE" 2>&1)
 
     if [ $? -ne 0 ] ; then
