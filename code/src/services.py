@@ -13,66 +13,83 @@ import connection
 
 _log = logging.getLogger(__name__)
 
-class Job:
-    timestamp_lock = threading.RLock()
-    prev_time = int(time.time() * 1000)
-    
-    def __init__(self, activity_id, command):
-        self.activity_id = activity_id
-        self.command = command
-        self.timestamp = Job.get_timestamp()
-        self.is_timedout = False
+class JobStatus(Namespace):
+    NOT_RUNNING = 0
+    RUNNING = 1
+    TIMED_OUT = 2
+
+class Job:    
+    def __init__(self, activity, is_whitelisted):
+        self.activity = activity
+        self.is_whitelisted = is_whitelisted
+        self.status = JobStatus.NOT_RUNNING
+        self.timestamp = -1
         self.process = None
         self.output_file = None
     
-    @staticmethod
-    def get_timestamp():
-        Job.timestamp_lock.acquire()
-        t = int(time.time() * 1000)
-        
-        if t - Job.prev_time < 250:
-            time.sleep(0.250)
-            
-        Job.prev_time = t
-        Job.timestamp_lock.release()
-        return t
-    
     def start(self):
-        _log.debug('Executing activity(%s @ %d)' % (self.activity_id, self.timestamp))
-        self.output_file = tempfile.TemporaryFile()
-        self.process = subprocess.Popen(self.command, shell=True, stdout = self.output_file, stderr = self.output_file, preexec_fn = os.setpgrp)
+        self.timestamp = int(time.time() * 1000)
+        
+        if self.is_whitelisted == True:
+            _log.debug('Executing activity(%s @ %d)' % (self.activity['_id'], self.timestamp))
+            self.output_file = tempfile.TemporaryFile()
+            self.process = subprocess.Popen(self.activity['command'], shell=True, stdout = self.output_file, stderr = self.output_file, preexec_fn = os.setpgrp)
+            self.status = JobStatus.RUNNING
+        else:
+            _log.info('Activity %s is blocked by whitelist' % self.activity['_id'])
+            
+        return self
             
     def stop(self):
         try:
             os.killpg(self.process.pid, signal.SIGKILL)
-            self.is_timedout = True
+            os.waitpid(-1 * self.process.pid)
+            self.status = JobStatus.TIMED_OUT
             self.process.returncode = 0
             return True
         except:
             return False
+        
+    def get_status(self):
+        if self.status == JobStatus.RUNNING and self.process.poll() != None:
+            self.status = JobStatus.NOT_RUNNING
+
+            try:
+                os.waitpid(-1 * self.process.pid)
+            except:
+                pass
+            
+        return self.status
         
     def post_output(self):
         data = {'returnCode': 0, 'timestamp': self.timestamp}
         
         if self.process == None:
             data['data'] = 'Command blocked by whitelist.'
-        elif self.is_timedout == True:
+        elif self.get_status() == JobStatus.TIMED_OUT:
             data['data'] = 'Command exceeded timeout.'
         else:            
             self.output_file.seek(0, os.SEEK_SET)
             data['data'] = self.output_file.read(256 * 1024)
             data['returnCode'] = self.process.returncode
-            self.output_file.close()
-            data['data'] = data['data'] if data['data'] else 'No output'
             
-        _log.debug('Pushing activity(%s @ %d) to store' % (self.activity_id, self.timestamp))
-        Globals().store.push(self.activity_id, data)
+            if not data['data']:
+                data['data'] = 'No output produced'
+                _log.debug('No output/error found for activity(%s @ %d)' % (self.activity['_id'], self.timestamp))
+            
+        self.close_file()
+        _log.debug('Pushing activity(%s @ %d) to store' % (self.activity['_id'], self.timestamp))
+        Globals().store.push(self.activity['_id'], data)
         
+    def close_file(self):
+        self.output_file and self.output_file.close()
+        self.output_file = None
 
 class Activity(ThreadEx):
-    jobs_lock = threading.RLock()
     jobs = []
     timeout = -1
+    jobs_lock = threading.RLock()
+    prev_time = int(time.time() * 1000)
     
     def __init__(self, activity):
         ThreadEx.__init__(self)
@@ -88,30 +105,34 @@ class Activity(ThreadEx):
                 Activity.timeout = 30
                 
             Activity.timeout = int(Activity.timeout * 1000)
-            
-    @staticmethod
-    def reset_timeout():
-        _log.debug('Resetting activity timeout to -1')
-        Activity.timeout = -1
     
     @staticmethod
-    def put_job(job):
+    def add_job(job):
         Activity.jobs_lock.acquire()
-        Activity.jobs.append(job)
+        t = int(time.time() * 1000)
+        
+        if t - Activity.prev_time < 250:
+            time.sleep(0.250)
+            
+        Activity.prev_time = t
+        Activity.jobs.append(job.start())
         Activity.jobs_lock.release()
         
     @staticmethod
-    def get_finished_jobs():
+    def finish_jobs(activities = []):
         t = int(time.time() * 1000)
         finished_jobs = []
         running_jobs = []
         Activity.jobs_lock.acquire()
         
         for job in Activity.jobs:
-            if t - job.timestamp > Activity.timeout:
-                job.stop() and _log.info('Killed activity(%s @ %d) as it exceeded timeout' % (job.activity_id, job.timestamp))
-                
-            if job.process.poll() != None:
+            if activities == None or job.activity['_id'] in activities:
+                job.stop() and _log.info('Killed activity(%s @ %d)' % (job.activity['_id'], job.timestamp))
+                job.close_file()
+            elif t - job.timestamp > Activity.timeout:
+                job.stop() and _log.info('Killed activity(%s @ %d) as it exceeded timeout' % (job.activity['_id'], job.timestamp))
+            
+            if job.get_status() != JobStatus.RUNNING:
                 finished_jobs.append(job)
             else:
                 running_jobs.append(job)
@@ -142,7 +163,7 @@ class Activity(ThreadEx):
         _log.info('Starting up activity %s' % self.activity['_id'])                      
         
         while 1:
-            self.execute()
+            Activity.add_job(Job(self.activity, self.is_whitelisted))
             timeout = self.activity['interval']
             break_flag = False
             
@@ -158,17 +179,8 @@ class Activity(ThreadEx):
             if break_flag == True:
                 break
 
+        Activity.finish_jobs([self.activity['_id']])
         _log.info('Shutting down activity %s' % self.activity['_id'])
-        
-    def execute(self):
-        job = Job(self.activity['_id'], self.activity['command'])
-        
-        if self.is_whitelisted == False:
-            _log.info('Activity ' + job.activity_id + ' is blocked by whitelist')
-            job.post_output()
-        else:
-            job.start()
-            Activity.put_job(job)
         
     def stop(self):
         self.is_stop = True       
@@ -235,7 +247,7 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
                 while 1:             
                     finished_job_count = 0
                     
-                    for job in Activity.get_finished_jobs():
+                    for job in Activity.finish_jobs():
                         job.post_output()
                         finished_job_count += 1
                         
@@ -244,8 +256,7 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
                     
                     if self.globals.stop_event.is_set():
                         _log.debug('Controller received stop event')
-                        Activity.reset_timeout()
-                        Activity.get_finished_jobs()
+                        Activity.finish_jobs(None)
                         break
                 
                 self.stop_threads()

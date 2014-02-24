@@ -147,10 +147,12 @@ class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
     def manage_activities(self, old_activities = [], deleted_activity_ids = []):
         self.activities = self.activities or {}
         new_activities = self.config.agent.activities
+        start_count, update_count, stop_count = 0, 0, 0
         
         for activity_id in deleted_activity_ids:
             self.activities[activity_id].stop()
             del self.activities[activity_id]
+            stop_count += 1
             
         for activity in new_activities:
             activity_id = activity['_id']
@@ -162,8 +164,11 @@ class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
                     continue
                 
                 self.activities[activity_id].stop()
+                update_count += 1
+            else:
+                start_count += 1
                 
             self.activities[activity_id] = self.activity_type(activity)
             self.activities[activity_id].start()
-
-
+            
+        _log.info('%d started; %d updated; %d stopped' % (start_count, update_count, stop_count))

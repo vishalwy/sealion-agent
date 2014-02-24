@@ -10,7 +10,7 @@ import connection
 
 _log = logging.getLogger(__name__)
 
-class Status(EmptyClass):
+class Status(Namespace):
     SUCCESS = 0
     NOT_CONNECTED = 1
     NO_SERVICE = 2
