@@ -134,6 +134,7 @@ class sealion(Daemon):
                 os.setgroups([])
                 os.setgid(user.pw_gid)
                 os.setuid(user.pw_uid)
+                os.environ['HOME'] = '/'
         except KeyError as e:
             _log.error('Failed to find user named %s; %s' % (self.user_name, str(e)))
             sys.exit(0)
@@ -153,7 +154,6 @@ class sealion(Daemon):
             _log.error(str(e))
             sys.exit(1)
         
-        os.chdir(exe_path)
         import main
             
     def on_fork(self, cpid):        
