@@ -7,9 +7,14 @@ from constructs import *
 _log = logging.getLogger(__name__)
 
 class SocketIONamespace(BaseNamespace):
-    def on_connect(self):
+    def on_connect(self):        
         _log.info('Socket-io connected')
         self.rtc.update_heartbeat()
+        
+        if self.rtc.is_stop == True:
+            self.rtc.stop()
+            return
+        
         self.rtc.api.ping()
         self.rtc.is_disconnected and self.rtc.api.get_config()
         self.rtc.is_disconnected = False
