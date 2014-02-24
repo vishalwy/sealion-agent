@@ -74,7 +74,11 @@ class Utils(Namespace):
 
                 if Utils.sanitize_type(d[key], schema[key]['type'], is_delete_extra, 
                                         schema[key].get('regex'), schema[key].get('is_regex', False), file) == False:
-                    file and _log.warn('Ignoring config key "%s" in %s; value in improper format' % (key, file))
+                    if file:
+                        _log.warn('Ignoring config key "%s" in %s; value in improper format' % (key, file))
+                    else:
+                        _log.error('config key "%s" is in improper format' % key)
+                        
                     del d[key]
                     ret = 0 if is_optional == False else ret                
 
