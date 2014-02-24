@@ -77,7 +77,7 @@ done
 
 #check for python (min 2.6)
 PYTHON_OK=0
-PYTHON=$(readlink -f "$PYTHON" >/dev/null 2>&1)
+PYTHON=$(readlink -f "$PYTHON" 2>/dev/null)
 
 if [ $? -ne 0 ] ; then
     echo "Error: '$PYTHON' is not a valid python binary" >&2
@@ -165,7 +165,7 @@ check_dependency()
     cd ../../
 }
 
-INSTALL_PATH=$(readlink -m "$INSTALL_PATH" >/dev/null 2>&1)
+INSTALL_PATH=$(readlink -m "$INSTALL_PATH" 2>/dev/null)
 
 if [ $? -ne 0 ] ; then
     echo "Error: '$INSTALL_PATH' is not a valid directory" >&2
