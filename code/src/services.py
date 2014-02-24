@@ -63,6 +63,7 @@ class Job:
             data['data'] = self.output_file.read(256 * 1024)
             data['returnCode'] = self.process.returncode
             self.output_file.close()
+            data['data'] = data['data'] if data['data'] else 'No output'
             
         _log.debug('Pushing activity(%s @ %d) to store' % (self.activity_id, self.timestamp))
         Globals().store.push(self.activity_id, data)
