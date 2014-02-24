@@ -225,11 +225,12 @@ class Interface(requests.Session):
         
         return ret
     
-    def update_agent(self, exe_path):
+    def update_agent(self):
         if self.updater != None:
             return
         
-        self.updater = ThreadEx(target = self.download_file, args=(exe_path,))
+        from globals import Globals
+        self.updater = ThreadEx(target = self.download_file, args=(Globals().exe_path,))
         self.updater.start()
     
     def stop(self, stop_status = None):

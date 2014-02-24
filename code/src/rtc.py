@@ -29,32 +29,54 @@ class SocketIONamespace(BaseNamespace):
         self.rtc.update_heartbeat()
 
     def on_activity_updated(self, *args):
-        _log.info('Socket-io received  activity_updated event')
+        _log.info('Socket-io received activity_updated event')
         self.rtc.update_heartbeat()
         self.rtc.api.get_config()
 
     def on_activitylist_in_category_updated(self, *args):
-        _log.info('Socket-io received  activitylist_in_category_updated event')
+        _log.info('Socket-io received activitylist_in_category_updated event')
         self.rtc.update_heartbeat()
         self.rtc.api.get_config()
 
     def on_agent_removed(self, *args):
-        _log.info('Socket-io received  agent_removed event')
-        self.rtc.api.stop(self.rtc.api.status.NOT_FOUND)
+        _log.info('Socket-io received agent_removed event')
+        self.rtc.update_heartbeat()
+        
+        try:
+            (self.rtc.api.config.agent._id in args[0]['servers']) and self.rtc.api.stop(self.rtc.api.status.NOT_FOUND)
+        except:
+            pass    
 
     def on_org_token_resetted(self, *args):
-        _log.info('Socket-io received  org_token_resetted event')
+        _log.info('Socket-io received org_token_resetted event')
         self.rtc.api.stop()
 
     def on_server_category_changed(self, *args):
-        _log.info('Socket-io received  server_category_changed event')
+        _log.info('Socket-io received server_category_changed event')
         self.rtc.update_heartbeat()
-        self.rtc.api.get_config()
+        
+        try:
+            (self.rtc.api.config.agent._id in args[0]['servers']) and self.rtc.api.get_config()
+        except:
+            pass
 
     def on_activity_deleted(self, *args):
-        _log.info('Socket-io received  activity_deleted event')
+        _log.info('Socket-io received activity_deleted event')
         self.rtc.update_heartbeat()
-        self.rtc.api.get_config()
+        
+        try:
+            (args[0]['activity'] in self.rtc.api.config.agent.activities) and self.rtc.api.get_config()
+        except:
+            pass
+        
+    def on_upgrade_agent(self, *args):
+        _log.info('Socket-io received upgrade_agent event')
+        self.rtc.update_heartbeat()
+        
+        try:
+            args[0]['agentVersion'] != self.rtc.api.config.agent.agentVersion and self.rtc.api.update_agent()
+        except:
+            pass
         
 class Interface(ThreadEx):    
     def __init__(self, api):

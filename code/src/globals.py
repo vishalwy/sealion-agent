@@ -90,7 +90,7 @@ class AgentConfig(Config):
              
         if version and version != self.data['agentVersion']:
             del data['agentVersion']
-            globals.api.update_agent(globals.exe_path)
+            globals.api.update_agent()
             
         self.lock.acquire()
         old_activities = self.data['activities'] if ('activities' in self.data) else []
