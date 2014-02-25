@@ -65,16 +65,12 @@ class Job:
         data = None
         
         if self.process == None:
-            data = {'returnCode': 0, 'timestamp': self.timestamp}
-            data['data'] = 'Command blocked by whitelist.'
+            data = {'timestamp': self.timestamp, 'returnCode': 0, 'data': 'Command blocked by whitelist.'}
         elif self.get_status() == JobStatus.TIMED_OUT:
-            data = {'returnCode': 0, 'timestamp': self.timestamp}
-            data['data'] = 'Command exceeded timeout.'
+            data = {'timestamp': self.timestamp, 'returnCode': 0, 'data': 'Command exceeded timeout.'}
         elif self.output_file:            
             self.output_file.seek(0, os.SEEK_SET)
-            data['timestamp'] = self.timestamp
-            data['data'] = self.output_file.read(256 * 1024)
-            data['returnCode'] = self.process.returncode
+            data = {'timestamp': self.timestamp, 'returnCode': self.process.returncode, 'data': self.output_file.read(256 * 1024)}
             
             if not data['data']:
                 data['data'] = 'No output produced'
