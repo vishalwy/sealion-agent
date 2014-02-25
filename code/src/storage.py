@@ -201,9 +201,9 @@ class Sender(ThreadEx):
         
         return True
         
-    def wait(self):
+    def wait(self, is_perform_gc = False):
         if self.api.post_event.is_set() == False:
-            _log.debug('GC collected %d unreachables' % gc.collect())
+            is_perform_gc == True and _log.debug('GC collected %d unreachables' % gc.collect())
             timeout = self.ping_interval if self.api.is_authenticated else None
             _log.debug('Sender waiting for post event' + (' for %d seconds' % timeout if timeout else ''))
             self.api.post_event.wait(timeout)
@@ -258,25 +258,29 @@ class Sender(ThreadEx):
     def exe(self):
         _log.debug('Starting up sender')
         api_status = self.api.status
-        del_rows, del_activities, gc_counter, gc_threshold = [], [], 0, 2
+        del_rows, del_activities, gc_counter, gc_threshold, fetch_count = [], [], 0, 2, 0
         
         while 1:
-            if self.wait() == False:
+            if self.wait(True if gc_counter != 0 else False) == False:
                 break
                 
             try:
+                if self.api.post_event.is_set() == False and fetch_count > self.queue_max_size and self.store_available():
+                    raise Exception()
+                
                 item = self.queue.get(True, 5)
-                gc_counter = 1
+                gc_counter = 1 if gc_counter == 0 else gc_counter
+                fetch_count += 1
                 
                 if any(a for a in del_activities if a == item['activity']):
                     _log.debug('Discarding activity %s' % item['activity'])
                     continue
             except:
                 self.update_store(del_rows, del_activities)
-                del_rows, del_activities = [], []
+                del_rows, del_activities, fetch_count = [], [], 0
                 gc_counter = gc_counter + 1 if gc_counter else 0
                     
-                if gc_counter == gc_threshold:
+                if gc_counter >= gc_threshold:
                     _log.debug('GC collected %d unreachables' % gc.collect())
                     gc_counter = 0
                 

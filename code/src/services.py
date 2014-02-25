@@ -62,14 +62,17 @@ class Job:
         return self.status
         
     def post_output(self):
-        data = {'returnCode': 0, 'timestamp': self.timestamp}
+        data = None
         
         if self.process == None:
+            data = {'returnCode': 0, 'timestamp': self.timestamp}
             data['data'] = 'Command blocked by whitelist.'
         elif self.get_status() == JobStatus.TIMED_OUT:
+            data = {'returnCode': 0, 'timestamp': self.timestamp}
             data['data'] = 'Command exceeded timeout.'
-        else:            
+        elif self.output_file:            
             self.output_file.seek(0, os.SEEK_SET)
+            data['timestamp'] = self.timestamp
             data['data'] = self.output_file.read(256 * 1024)
             data['returnCode'] = self.process.returncode
             
@@ -78,8 +81,10 @@ class Job:
                 _log.debug('No output/error found for activity(%s @ %d)' % (self.activity['_id'], self.timestamp))
             
         self.close_file()
-        _log.debug('Pushing activity(%s @ %d) to store' % (self.activity['_id'], self.timestamp))
-        Globals().store.push(self.activity['_id'], data)
+        
+        if data:
+            _log.debug('Pushing activity(%s @ %d) to store' % (self.activity['_id'], self.timestamp))
+            Globals().store.push(self.activity['_id'], data)
         
     def close_file(self):
         self.output_file and self.output_file.close()
