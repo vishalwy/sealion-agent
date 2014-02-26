@@ -260,6 +260,7 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
                         Activity.finish_jobs(None)
                         break
                 
+                globals.api.logout()
                 self.stop_threads()
             
                 if self.handle_response(self.globals.api.stop_status) == False:
@@ -327,6 +328,5 @@ def start():
         
         if controller.is_stop == True:
             controller.join()
-            globals.api.logout()
             quit()
 

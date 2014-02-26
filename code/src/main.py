@@ -28,7 +28,7 @@ try:
     lf.setFormatter(formatter)
     logger.addHandler(lf)
 except Exception as e:
-    sys.stderr.write('Failed to open log file; ' + str(e))
+    sys.stderr.write('Failed to open log file; %s\n' % str(e))
     sys.exit(0)
     
 try:

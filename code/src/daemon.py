@@ -86,12 +86,12 @@ class Daemon(object):
                     try:
                         os.remove(self.pidfile)
                     except Exception as e:
-                        sys.stderr.write(str(e))
+                        sys.stderr.write(str(e) + '\n')
                         sys.exit(1)
                     
                 sys.stdout.write('%s stopped successfully\n' % self.__class__.__name__)
             else:
-                sys.stderr.write(err)
+                sys.stderr.write(err + '\n')
                 sys.exit(1)
 
     def restart(self):        

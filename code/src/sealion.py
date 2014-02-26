@@ -136,10 +136,10 @@ class sealion(Daemon):
                 os.setuid(user.pw_uid)
                 os.environ['HOME'] = '/'
         except KeyError as e:
-            _log.error('Failed to find user named %s; %s' % (self.user_name, str(e)))
+            sys.stderr.write('Failed to find user named %s; %s\n' % (self.user_name, str(e)))
             sys.exit(0)
         except Exception as e:
-            _log.error('Failed to change the group or user to %s; %s' % (self.user_name, str(e)))
+            sys.stderr.write('Failed to change the group or user to %s; %s\n' % (self.user_name, str(e)))
             sys.exit(0)
             
         try:
@@ -151,7 +151,7 @@ class sealion(Daemon):
             f = open(self.pidfile, 'w');
             f.close()
         except Exception as e:
-            _log.error(str(e))
+            sys.stderr.write(str(e) + '\n')
             sys.exit(1)
         
         import main

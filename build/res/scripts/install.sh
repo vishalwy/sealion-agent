@@ -241,7 +241,8 @@ fi
 
 if [ -f "$INSTALL_PATH/bin/sealion-node" ] ; then
     echo "Killing evil twin..."
-    rm -rf "$INSTALL_PATH/*"
+    kill -SIGKILL `pgrep -d ',' 'sealion-node'` >/dev/null 2>&1
+    find "$INSTALL_PATH" -mindepth 1 -maxdepth 1 -exec rm -rf {} \; >/dev/null 2>&1
 fi
 
 if [ -f "$SERVICE_FILE" ] ; then

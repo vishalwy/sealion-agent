@@ -90,15 +90,18 @@ class Interface(requests.Session):
                   
         return self.config.agent.apiUrl + path
     
-    def exec_method(self, method, retry_count = -1, retry_interval = 5, *args, **kwargs):
+    def exec_method(self, method, options = {}, *args, **kwargs):
         method = getattr(self, method)
+        retry_count = options.get('retry_count', -1)
+        retry_interval = options.get('retry_interval', 5)
+        is_ignore_stop_event = options.get('is_ignore_stop_event', False)
         response, i = None, 0
         
         while retry_count == -1 or i <= retry_count:                
             if i > 0:
                 self.stop_event.wait(retry_interval)
                 
-            if self.stop_event.is_set():
+            if is_ignore_stop_event == False and self.stop_event.is_set():
                 break
             
             try:
@@ -111,7 +114,7 @@ class Interface(requests.Session):
                 self.is_conn_err = False
                 break
                 
-            i += 1
+            i += 0 if retry_count == -1 else 1
             
         if response == None and self.is_authenticated == True:
             self.is_conn_err = True
@@ -121,9 +124,9 @@ class Interface(requests.Session):
     def ping(self):
         self.set_events(post_event = True)
     
-    def register(self, retry_count = -1, retry_interval = 5):
+    def register(self, **kwargs):
         data = self.config.agent.get_dict(['orgToken', 'name', 'category'])
-        response = self.exec_method('post', retry_count, retry_interval, self.get_url('agents'), data = data)    
+        response = self.exec_method('post', kwargs, self.get_url('agents'), data = data)    
         ret = self.status.SUCCESS
         
         if Interface.is_success(response):
@@ -136,7 +139,7 @@ class Interface(requests.Session):
         return ret
     
     def unregister(self):
-        response = self.exec_method('delete', 2, 5, self.get_url('orgs/%s/servers/%s' % (self.config.agent.orgToken, self.config.agent._id)))
+        response = self.exec_method('delete', {'retry_count': 2}, self.get_url('orgs/%s/servers/%s' % (self.config.agent.orgToken, self.config.agent._id)))
         ret = self.status.SUCCESS
         
         if Interface.is_success(response) == False:
@@ -144,10 +147,10 @@ class Interface(requests.Session):
             
         return ret
     
-    def authenticate(self, retry_count = -1, retry_interval = 5):
+    def authenticate(self, **kwargs):
         data = self.config.agent.get_dict(['orgToken', 'agentVersion'])
         data['timestamp'] = int(time.time() * 1000)
-        response = self.exec_method('post', retry_count, retry_interval, self.get_url('agents/' + self.config.agent._id + '/sessions'), data = data)    
+        response = self.exec_method('post', kwargs, self.get_url('agents/' + self.config.agent._id + '/sessions'), data = data)    
         ret = self.status.SUCCESS
         
         if Interface.is_success(response):
@@ -161,8 +164,8 @@ class Interface(requests.Session):
         
         return ret
             
-    def get_config(self, retry_count = -1, retry_interval = 5):
-        response = self.exec_method('get', retry_count, retry_interval, self.get_url('agents/1'))
+    def get_config(self):
+        response = self.exec_method('get', {}, self.get_url('agents/1'))
         ret = self.status.SUCCESS
         
         if Interface.is_success(response):
@@ -174,8 +177,8 @@ class Interface(requests.Session):
             
         return ret
             
-    def post_data(self, activity_id, data, retry_count = 0, retry_interval = 5):
-        response = self.exec_method('post', retry_count, retry_interval, self.get_url('agents/1/data/activities/' + activity_id), data = data)
+    def post_data(self, activity_id, data):
+        response = self.exec_method('post', {'retry_count': 0}, self.get_url('agents/1/data/activities/' + activity_id), data = data)
         ret = self.status.SUCCESS
         
         if Interface.is_success(response):
@@ -192,8 +195,7 @@ class Interface(requests.Session):
         if hasattr(self.config.agent, '_id') == False or self.is_authenticated == False:
             return ret
         
-        self.stop_event.clear()
-        response = self.exec_method('delete', 0, 0, self.get_url('agents/1/sessions/1'))
+        response = self.exec_method('delete', {'retry_count': 0, 'is_ignore_stop_event': True}, self.get_url('agents/1/sessions/1'))
         
         if Interface.is_success(response):
             _log.info('Logout successful')
@@ -203,7 +205,7 @@ class Interface(requests.Session):
         return ret
     
     def get_agent_version(self):
-        response = self.exec_method('get', 0, 0, self.get_url('agents/agentVersion'), params = {'agentVersion': self.config.agent.agentVersion})
+        response = self.exec_method('get', {'retry_count': 0}, self.get_url('agents/agentVersion'), params = {'agentVersion': self.config.agent.agentVersion})
         
         if Interface.is_success(response):
             ret = response.json()['agentVersion']
@@ -212,10 +214,10 @@ class Interface(requests.Session):
         
         return ret
     
-    def send_crash_report(self, data, retry_count = 3, retry_interval = 30):
+    def send_crash_report(self, data, **kwargs):
         orgToken, agentId = data['orgToken'], data['_id']
         del data['orgToken'], data['_id']
-        response = self.exec_method('post', retry_count, retry_interval, self.get_url('orgs/%s/agents/%s/crashreport' % (orgToken, agentId)), data = data)    
+        response = self.exec_method('post', {'retry_count': 0, 'retry_interval': 30}, self.get_url('orgs/%s/agents/%s/crashreport' % (orgToken, agentId)), data = data)    
         ret = self.status.SUCCESS
         
         if Interface.is_success(response):
