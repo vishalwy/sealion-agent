@@ -112,7 +112,6 @@ generate_scripts()
 }
 
 find ../code/ -mindepth 1 -maxdepth 1 -type d ! -name 'etc' -exec cp -r {} $TARGET/$OUTPUT/agent \;
-cp ../code/* $TARGET/$OUTPUT/agent >/dev/null 2>&1
 cp -r res/etc $TARGET/$OUTPUT/agent
 mkdir -p $TARGET/$OUTPUT/agent/etc/init.d
 mkdir -p $TARGET/$OUTPUT/agent/bin
