@@ -43,7 +43,10 @@ class SocketIONamespace(BaseNamespace):
         self.rtc.update_heartbeat()
         
         try:
-            (self.rtc.api.config.agent._id in args[0]['servers']) and self.rtc.api.stop(self.rtc.api.status.NOT_FOUND)
+            if args[0].get('servers'):
+                (self.rtc.api.config.agent._id in args[0]['servers']) and self.rtc.api.stop(self.rtc.api.status.NOT_FOUND)
+            else:
+                self.rtc.api.stop(self.rtc.api.status.NOT_FOUND)
         except:
             pass    
 
@@ -56,7 +59,10 @@ class SocketIONamespace(BaseNamespace):
         self.rtc.update_heartbeat()
         
         try:
-            (self.rtc.api.config.agent._id in args[0]['servers']) and self.rtc.api.get_config()
+            if args[0].get('servers'):
+                (self.rtc.api.config.agent._id in args[0]['servers']) and self.rtc.api.get_config()
+            else:
+                self.rtc.api.get_config()
         except:
             pass
 
