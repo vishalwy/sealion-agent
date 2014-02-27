@@ -151,7 +151,7 @@ class Interface(SingletonType('GlobalsMetaClass', (object, ), {})):
             stop_count += 1
             
         stop_count and self.store.clear_activities(deleted_activity_ids)
-        self.store.set_valid_activities(new_activities.keys())
+        self.store.set_valid_activities([activity['_id'] for activity in new_activities])
             
         for activity in new_activities:
             activity_id = activity['_id']

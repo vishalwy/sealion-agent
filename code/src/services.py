@@ -43,7 +43,7 @@ class Job:
     def stop(self):
         try:
             os.killpg(self.process.pid, signal.SIGKILL)
-            os.waitpid(-1 * self.process.pid)
+            os.waitpid(-1 * self.process.pid, os.WUNTRACED)
             self.status = JobStatus.TIMED_OUT
             self.process.returncode = 0
             return True
@@ -55,7 +55,7 @@ class Job:
             self.status = JobStatus.NOT_RUNNING
 
             try:
-                os.waitpid(-1 * self.process.pid)
+                os.waitpid(-1 * self.process.pid, os.WUNTRACED)
             except:
                 pass
             
@@ -94,6 +94,7 @@ class Activity(ThreadEx):
     
     def __init__(self, activity):
         ThreadEx.__init__(self)
+        self.daemon = True
         self.activity = activity;
         self.is_stop = False
         self.globals = Globals()
@@ -121,13 +122,13 @@ class Activity(ThreadEx):
         
     @staticmethod
     def finish_jobs(activities = []):
-        t = int(time.time() * 1000)
         finished_jobs = []
         running_jobs = []
         Activity.jobs_lock.acquire()
+        t = int(time.time() * 1000)
         
         for job in Activity.jobs:
-            if activities == None or job.activity['_id'] in activities:
+            if activities == None or (job.activity['_id'] in activities):
                 job.stop() and _log.info('Killed activity(%s @ %d)' % (job.activity['_id'], job.timestamp))
                 job.close_file()
             elif t - job.timestamp > Activity.timeout:
@@ -180,7 +181,7 @@ class Activity(ThreadEx):
             if break_flag == True:
                 break
 
-        Activity.finish_jobs([self.activity['_id']])
+        self.is_stop and Activity.finish_jobs([self.activity['_id']])
         _log.info('Shutting down activity %s' % self.activity['_id'])
         
     def stop(self):
@@ -219,8 +220,8 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
     def exe(self):
         _log.debug('Controller starting up')
         
-        if self.globals.is_update_only_mode == True:
-            while 1:
+        while 1:
+            if self.globals.is_update_only_mode == True:
                 version = self.globals.api.get_agent_version()
                 version_type = type(version)
 
@@ -233,36 +234,38 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
                 if self.globals.stop_event.is_set():
                     _log.debug('Controller received stop event')
                     break
-        else:
-            if self.handle_response(connection.Interface(self.globals).connect()) == False:
-                break
-
-            if self.globals.store.start() == False:
-                break
-
-            if len(self.globals.config.agent.activities) == 0:
-                self.globals.store.clear_offline_data()
-
-            self.globals.manage_activities();
-
-            while 1:             
-                finished_job_count = 0
-
-                for job in Activity.finish_jobs():
-                    job.post_output()
-                    finished_job_count += 1
-
-                finished_job_count and _log.debug('Fetched %d finished jobs', finished_job_count)
-                self.globals.stop_event.wait(5)
-
-                if self.globals.stop_event.is_set():
-                    _log.debug('Controller received stop event')
-                    Activity.finish_jobs(None)
+            else:
+                if self.handle_response(connection.Interface(self.globals).connect()) == False:
                     break
 
+                if self.globals.store.start() == False:
+                    break
+
+                if len(self.globals.config.agent.activities) == 0:
+                    self.globals.store.clear_offline_data()
+
+                self.globals.manage_activities();
+
+                while 1:             
+                    finished_job_count = 0
+
+                    for job in Activity.finish_jobs():
+                        job.post_output()
+                        finished_job_count += 1
+
+                    finished_job_count and _log.debug('Fetched %d finished jobs', finished_job_count)
+                    self.globals.stop_event.wait(5)
+
+                    if self.globals.stop_event.is_set():
+                        _log.debug('Controller received stop event')
+                        Activity.finish_jobs(None)
+                        break
+                        
+                break
+
         self.is_stop = True
-        self.globals.api.logout()
         self.stop_threads()
+
         _log.debug('Controller generating SIGALRM signal')
         signal.alarm(1)
         _log.debug('Controller shutting down')
@@ -275,6 +278,7 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
         _log.debug('Stopping all threads')
         self.globals.api.stop()
         self.globals.rtc.stop()
+        self.globals.api.logout()
         threads = threading.enumerate()
         curr_thread = threading.current_thread()
 

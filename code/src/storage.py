@@ -323,7 +323,7 @@ class Sender(ThreadEx):
         
     def is_valid_activity(self, activity_id):
         self.activities_lock.acquire()
-        is_valid = valid_activities == None or (activity_id in self.valid_activities)
+        is_valid = self.valid_activities == None or (activity_id in self.valid_activities)
         self.activities_lock.release()
         return is_valid
 
