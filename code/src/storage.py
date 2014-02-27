@@ -16,6 +16,8 @@ class OfflineStore(ThreadEx):
         self.conn = None
         self.conn_event = threading.Event()
         self.task_queue = queue.Queue()
+        self.is_bulk_insert = False
+        self.bulk_insert_rows = []
         
     def start(self):
         self.db_file = Utils.get_safe_path(self.db_file + ('%s.db' % self.config.agent.org))
@@ -40,6 +42,9 @@ class OfflineStore(ThreadEx):
         
     def clr(self):
         self.task_queue.put({'op': 'truncate', 'kwargs': {}})
+        
+    def set_bulk_insert(self, is_bulk_insert):
+        self.is_bulk_insert = is_bulk_insert
         
     def exe(self):
         _log.debug('Starting up offline store')
@@ -67,10 +72,29 @@ class OfflineStore(ThreadEx):
         while 1:
             task = self.task_queue.get()
             
-            if getattr(self, task['op'])(**task['kwargs']) == False:
+            if self.perform_task(task) == False:
                 break
                 
         _log.debug('Shutting down offline store')
+        
+    def perform_task(self, task):
+        is_insert = False
+            
+        if self.is_bulk_insert == True:
+            if task['op'] == 'insert':
+                self.bulk_insert_rows.append({'activity': task['kwargs']['activity'], 'data': task['kwargs']['activity']})
+                is_insert = True
+            elif task['op'] == 'insert_bulk':
+                self.bulk_insert_rows += task['kwargs']['rows']
+                is_insert = True
+                
+        if is_insert == False:
+            len(self.bulk_insert_rows) and getattr(self, 'insert_bulk')(**{'rows': self.bulk_insert_rows})
+            self.bulk_insert_rows = []
+        else:
+            return True
+
+        return getattr(self, task['op'])(**task['kwargs'])
         
     def setup_schema(self):
         is_existing_table = True
@@ -123,7 +147,7 @@ class OfflineStore(ThreadEx):
         
         return True
     
-    def insert_bulk(self, rows):
+    def insert_bulk(self, rows):        
         row_count = 0
         
         try:
@@ -131,7 +155,7 @@ class OfflineStore(ThreadEx):
                 activity = row['activity']
                 data = row['data']
                 self.cursor.execute('INSERT OR IGNORE INTO data VALUES(?, ?, ?, ?)', (activity, data['timestamp'], data['returnCode'], data['data']))
-                row_count += 1
+                row_count += self.cursor.rowcount
         
             self.conn.commit()
             _log.debug('Inserted %d rows to offline storage' % row_count)            
@@ -187,7 +211,7 @@ class OfflineStore(ThreadEx):
                 task = self.task_queue.get(False)
                 
                 if task['op'] != 'select' and task['op'] != 'close':
-                    getattr(self, task['op'])(**task['kwargs'])                        
+                    self.perform_task(task)
             except:
                 break
 
@@ -323,6 +347,7 @@ class Sender(ThreadEx):
                 
         self.update_store(del_rows, [])
         _log.debug('Sender cleaning up queue')
+        self.off_store.set_bulk_insert(True)
         rows = []
             
         while 1:

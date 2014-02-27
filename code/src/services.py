@@ -96,7 +96,6 @@ class Activity(ThreadEx):
     
     def __init__(self, activity):
         ThreadEx.__init__(self)
-        self.daemon = True
         self.activity = activity;
         self.is_stop = False
         self.globals = Globals()
