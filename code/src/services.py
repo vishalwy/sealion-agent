@@ -7,11 +7,13 @@ import signal
 import os
 import sys
 import tempfile
+from datetime import datetime
 from constructs import *
 from globals import Globals
 import connection
 
 _log = logging.getLogger(__name__)
+_metric = {'starting_time': 0, 'stopping_time': 0}
 
 class JobStatus(Namespace):
     NOT_RUNNING = 0
@@ -23,7 +25,7 @@ class Job:
         self.activity = activity
         self.is_whitelisted = is_whitelisted
         self.status = JobStatus.NOT_RUNNING
-        self.timestamp = -1
+        self.timestamp = 0
         self.process = None
         self.output_file = None
     
@@ -233,6 +235,7 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
 
                 if self.globals.stop_event.is_set():
                     _log.debug('Controller received stop event')
+                    _metric['stopping_time'] = time.time()
                     break
             else:
                 if self.handle_response(connection.Interface(self.globals).connect()) == False:
@@ -258,6 +261,7 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
 
                     if self.globals.stop_event.is_set():
                         _log.debug('Controller received stop event')
+                        _metric['stopping_time'] = time.time()
                         Activity.finish_jobs(None)
                         break
                         
@@ -279,6 +283,7 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
         self.globals.api.stop()
         self.globals.rtc.stop()
         self.globals.api.logout()
+        self.globals.api.close()
         threads = threading.enumerate()
         curr_thread = threading.current_thread()
 
@@ -299,12 +304,15 @@ def sig_handler(signum, frame):
     elif signum == signal.SIGALRM:
         _log.debug('Received SIGALRM signal')
         signal.alarm(0)
-    
-def quit(status = 0):
+        
+def stop(status = 0):
     _log.info('Agent shutting down with status code %d' % status)
+    _log.debug('Took %f seconds to shutdown' % (time.time() - _metric['stopping_time']))
+    _log.info('Ran for %s hours' % str(datetime.now() - datetime.fromtimestamp(_metric['starting_time'])))
     exit(status)
     
 def start():
+    _metric['starting_time'] = time.time()
     _log.info('Agent starting up')
     _log.info('Using python binary at %s' % sys.executable)
     _log.info('Python version : %s' % '.'.join([str(i) for i in sys.version_info]))
@@ -323,5 +331,7 @@ def start():
         
         if controller.is_stop == True:
             controller.join()
-            quit()
+            break
+
+    stop()
 

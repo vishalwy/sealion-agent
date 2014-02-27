@@ -78,6 +78,6 @@ def start(is_update_only_mode = False):
     os.nice(19)
     globals.is_update_only_mode = is_update_only_mode
     services.start()
-
+    
 if __name__ == "__main__":
     start()

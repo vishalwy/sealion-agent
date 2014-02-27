@@ -78,7 +78,7 @@ class Interface(requests.Session):
         if post_event == True and self.post_event.is_set() == False:
             _log.debug('Setting post event')
             self.post_event.set()
-        elif post_event == False and self.post_event.is_set() == True:
+        elif post_event == False and self.post_event.is_set() == True and self.stop_event.is_set() == False:
             _log.debug('Resetting post event')
             self.post_event.clear()
     
@@ -114,7 +114,7 @@ class Interface(requests.Session):
                 self.is_conn_err = False
                 break
                 
-            i += 0 if retry_count == -1 else 1
+            i += 0 if retry_count == -1 and i > 0 else 1
             
         if response == None and self.is_authenticated == True:
             self.is_conn_err = True
