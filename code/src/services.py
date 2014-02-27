@@ -219,58 +219,50 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
     def exe(self):
         _log.debug('Controller starting up')
         
-        while 1:
-            if self.globals.is_update_only_mode == True:
+        if self.globals.is_update_only_mode == True:
+            while 1:
                 version = self.globals.api.get_agent_version()
                 version_type = type(version)
-                
+
                 if (version_type is str or version_type is unicode) and version != self.globals.config.agent.agentVersion:
                     self.globals.api.update_agent()
-                
+
                 _log.debug('Controller waiting for stop event for %d seconds' % (5 * 60, ))
                 self.globals.stop_event.wait(5 * 60)
-                
+
                 if self.globals.stop_event.is_set():
                     _log.debug('Controller received stop event')
                     break
-            else:
-                if self.handle_response(connection.Interface(self.globals).connect()) == False:
-                    break
-                
-                if self.globals.store.start() == False:
-                    break
+        else:
+            if self.handle_response(connection.Interface(self.globals).connect()) == False:
+                break
 
-                if len(self.globals.config.agent.activities) == 0:
-                    self.globals.store.clear_offline_data()
+            if self.globals.store.start() == False:
+                break
 
-                self.globals.manage_activities();
-                
-                while 1:             
-                    finished_job_count = 0
-                    
-                    for job in Activity.finish_jobs():
-                        job.post_output()
-                        finished_job_count += 1
-                        
-                    finished_job_count and _log.debug('Fetched %d finished jobs', finished_job_count)
-                    self.globals.stop_event.wait(5)
-                    
-                    if self.globals.stop_event.is_set():
-                        _log.debug('Controller received stop event')
-                        Activity.finish_jobs(None)
-                        break
-                
-                self.stop_threads()
-            
-                if self.handle_response(self.globals.api.stop_status) == False:
+            if len(self.globals.config.agent.activities) == 0:
+                self.globals.store.clear_offline_data()
+
+            self.globals.manage_activities();
+
+            while 1:             
+                finished_job_count = 0
+
+                for job in Activity.finish_jobs():
+                    job.post_output()
+                    finished_job_count += 1
+
+                finished_job_count and _log.debug('Fetched %d finished jobs', finished_job_count)
+                self.globals.stop_event.wait(5)
+
+                if self.globals.stop_event.is_set():
+                    _log.debug('Controller received stop event')
+                    Activity.finish_jobs(None)
                     break
 
-                if self.is_stop == True:
-                    break
-
-                self.globals.reset_interfaces()
-        
         self.is_stop = True
+        self.globals.api.logout()
+        self.stop_threads()
         _log.debug('Controller generating SIGALRM signal')
         signal.alarm(1)
         _log.debug('Controller shutting down')
@@ -287,7 +279,7 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
         curr_thread = threading.current_thread()
 
         for thread in threads:
-            if thread.ident != curr_thread.ident and thread.ident != self.main_thread.ident:
+            if thread.ident != curr_thread.ident and thread.ident != self.main_thread.ident and thread.daemon != True:
                 _log.debug('Waiting for ' + str(thread))
                 thread.join()
 
@@ -327,6 +319,5 @@ def start():
         
         if controller.is_stop == True:
             controller.join()
-            globals.api.logout()
             quit()
 

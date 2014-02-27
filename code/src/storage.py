@@ -183,9 +183,11 @@ class Sender(ThreadEx):
         self.api = api
         self.off_store = off_store
         self.queue = queue.Queue(self.queue_max_size)
-        self.lock = threading.RLock()
+        self.off_store_lock = threading.RLock()
+        self.activities_lock = threading.RLock()
         self.store_data_available = True
         self.last_ping_time = int(time.time())
+        self.valid_activities = None
         
     def push(self, item):
         try:
@@ -219,7 +221,7 @@ class Sender(ThreadEx):
             self.off_store.rem(del_rows, del_activities)
             
     def store_available(self, is_available = None):
-        self.lock.acquire()
+        self.off_store_lock.acquire()
         
         if is_available == None:
             is_available = self.store_data_available
@@ -231,7 +233,7 @@ class Sender(ThreadEx):
                 _log.debug('Marking offline store not available')
                 self.store_data_available = False
             
-        self.lock.release()
+        self.off_store_lock.release()
         return is_available
     
     def store_get_callback(self, rows):
@@ -272,8 +274,8 @@ class Sender(ThreadEx):
                 gc_counter = 1 if gc_counter == 0 else gc_counter
                 fetch_count += 1
                 
-                if any(a for a in del_activities if a == item['activity']):
-                    _log.debug('Discarding activity %s' % item['activity'])
+                if (item['activity'] in del_activities) or self.is_valid_activity(item['activity']) == False:
+                    _log.debug('Discarding activity %s' % item['activity'])                    
                     continue
             except:
                 self.update_store(del_rows, del_activities)
@@ -293,12 +295,11 @@ class Sender(ThreadEx):
             status = self.api.post_data(item['activity'], item['data'])
                 
             if status == api_status.MISMATCH:
-                any(a for a in del_activities if a == item['activity']) == False and del_activities.append(item['activity'])
+                (item['activity'] in del_activities) or del_activities.append(item['activity'])
             elif (status == api_status.NOT_CONNECTED or status == api_status.NO_SERVICE):
                 row_id == None and self.off_store.put(item['activity'], item['data'], self.store_put_callback)
             else:
                 row_id and del_rows.append(row_id)
-                
                 
         self.update_store(del_rows, del_activities)
         _log.debug('Sender cleaning up queue')
@@ -314,6 +315,17 @@ class Sender(ThreadEx):
                 
         self.off_store.stop()
         _log.debug('Shutting down sender')
+        
+    def set_valid_activities(self, valid_activities):
+        self.activities_lock.acquire()
+        self.valid_activities = valid_activities[:]
+        self.activities_lock.release()
+        
+    def is_valid_activity(self, activity_id):
+        self.activities_lock.acquire()
+        is_valid = valid_activities == None or (activity_id in self.valid_activities)
+        self.activities_lock.release()
+        return is_valid
 
 class Interface:
     def __init__(self, api, db_path):
@@ -329,8 +341,18 @@ class Interface:
         return True
     
     def push(self, activity, data):
+        if self.api.stop_event.is_set():
+            return
+        
         if self.sender.push({'activity': activity, 'data': data}) == False:
             self.off_store.put(activity, data, self.sender.store_put_callback)
         
     def clear_offline_data(self):
         self.off_store.clr()
+        
+    def set_valid_activities(self, valid_activities):
+        self.sender.set_valid_activities(valid_activities)
+        
+    def clear_activities(self, activities):
+        self.off_store.rem([], activities)
+

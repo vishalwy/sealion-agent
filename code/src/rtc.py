@@ -90,6 +90,7 @@ class Interface(ThreadEx):
         self.api = api
         self.sio = None
         self.is_stop = False
+        self.daemon = True
         self.is_disconnected = False
         self.update_heartbeat()
         

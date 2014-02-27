@@ -105,7 +105,7 @@ class AgentConfig(Config):
         globals.manage_activities(old_activities, deleted_activity_ids)
         return ret
 
-class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
+class Interface(SingletonType('GlobalsMetaClass', (object, ), {})):
     def __init__(self):
         exe_path = os.path.dirname(os.path.abspath(__file__))
         exe_path = exe_path[:-1] if exe_path[len(exe_path) - 1] == '/' else exe_path
@@ -126,7 +126,11 @@ class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
         if ret != True:
             raise RuntimeError(ret)
         
-        self.reset_interfaces()
+        self.activities = None
+        self.stop_event = threading.Event()
+        self.api = api.Interface(self.config, self.stop_event)
+        self.reset_rtc_interface()
+        self.store = storage.Interface(self.api, self.db_path)
         
     def url(self, path = ''):
         return self.api.get_url(path);
@@ -135,14 +139,6 @@ class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
         self.rtc = None
         _log.debug('GC collected %d unreachables' % gc.collect())
         self.rtc = rtc.Interface(self.api)
-    
-    def reset_interfaces(self):
-        self.store = None
-        self.activities = None
-        self.stop_event = threading.Event()
-        self.api = api.Interface(self.config, self.stop_event)
-        self.reset_rtc_interface()
-        self.store = storage.Interface(self.api, self.db_path)
         
     def manage_activities(self, old_activities = [], deleted_activity_ids = []):
         self.activities = self.activities or {}
@@ -153,6 +149,9 @@ class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
             self.activities[activity_id].stop()
             del self.activities[activity_id]
             stop_count += 1
+            
+        stop_count and self.store.clear_activities(deleted_activity_ids)
+        self.store.set_valid_activities(new_activities.keys())
             
         for activity in new_activities:
             activity_id = activity['_id']
@@ -172,3 +171,5 @@ class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
             self.activities[activity_id].start()
             
         _log.info('%d started; %d updated; %d stopped' % (start_count, update_count, stop_count))
+
+Globals = Interface
