@@ -29,6 +29,9 @@ class OfflineStore(ThreadEx):
     def put(self, activity, data, callback = None):
         self.task_queue.put({'op': 'insert', 'kwargs': {'activity': activity, 'data': data, 'callback': callback}})
         
+    def put_bulk(self, rows):
+        self.task_queue.put({'op': 'insert_bulk', 'kwargs': {'rows': rows}})
+        
     def get(self, limit, callback):
         self.task_queue.put({'op': 'select', 'kwargs': {'limit': limit, 'callback': callback}})
         
@@ -115,6 +118,23 @@ class OfflineStore(ThreadEx):
             self.conn.commit()
             _log.debug('Inserted activity(%s @ %d) to offline storage' % (activity, data['timestamp']))
             callback and callback()
+        except Exception as e:
+            _log.error('Failed to insert row to offline storage; ' + str(e))
+        
+        return True
+    
+    def insert_bulk(self, rows):
+        row_count = 0
+        
+        try:
+            for row in rows:
+                activity = row['activity']
+                data = row['data']
+                self.cursor.execute('INSERT OR IGNORE INTO data VALUES(?, ?, ?, ?)', (activity, data['timestamp'], data['returnCode'], data['data']))
+                row_count += 1
+        
+            self.conn.commit()
+            _log.debug('Inserted %d rows to offline storage' % row_count)            
         except Exception as e:
             _log.error('Failed to insert rows to offline storage; ' + str(e))
         
@@ -303,16 +323,16 @@ class Sender(ThreadEx):
                 
         self.update_store(del_rows, [])
         _log.debug('Sender cleaning up queue')
+        rows = []
             
         while 1:
             try:
                 item = self.queue.get(False)
-                
-                if item.get('row_id') == None and self.is_valid_activity(item['activity']):
-                    self.off_store.put(item['activity'], item['data'])
+                item.get('row_id') == None and rows.append(item)
             except:
                 break
                 
+        len(rows) and self.off_store.put_bulk(rows)
         self.off_store.stop()
         _log.debug('Shutting down sender')
         
