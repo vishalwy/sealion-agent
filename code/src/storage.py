@@ -260,7 +260,7 @@ class Sender(ThreadEx):
     def exe(self):
         _log.debug('Starting up sender')
         api_status = self.api.status
-        del_rows, del_activities, gc_counter, gc_threshold, fetch_count = [], [], 0, 2, 0
+        del_rows, gc_counter, gc_threshold, fetch_count = [], 0, 2, 0
         
         while 1:
             if self.wait(True if gc_counter != 0 else False) == False:
@@ -274,12 +274,12 @@ class Sender(ThreadEx):
                 gc_counter = 1 if gc_counter == 0 else gc_counter
                 fetch_count += 1
                 
-                if (item['activity'] in del_activities) or self.is_valid_activity(item['activity']) == False:
+                if self.is_valid_activity(item['activity']) == False:
                     _log.debug('Discarding activity %s' % item['activity'])                    
                     continue
             except:
-                self.update_store(del_rows, del_activities)
-                del_rows, del_activities, fetch_count = [], [], 0
+                self.update_store(del_rows, [])
+                del_rows, fetch_count = [], 0
                 gc_counter = gc_counter + 1 if gc_counter else 0
                     
                 if gc_counter >= gc_threshold:
@@ -295,20 +295,20 @@ class Sender(ThreadEx):
             status = self.api.post_data(item['activity'], item['data'])
                 
             if status == api_status.MISMATCH:
-                (item['activity'] in del_activities) or del_activities.append(item['activity'])
+                self.api.get_config()
             elif (status == api_status.NOT_CONNECTED or status == api_status.NO_SERVICE):
                 row_id == None and self.off_store.put(item['activity'], item['data'], self.store_put_callback)
             else:
                 row_id and del_rows.append(row_id)
                 
-        self.update_store(del_rows, del_activities)
+        self.update_store(del_rows, [])
         _log.debug('Sender cleaning up queue')
             
         while 1:
             try:
                 item = self.queue.get(False)
                 
-                if item.get('row_id') == None:
+                if item.get('row_id') == None and self.is_valid_activity(item['activity']):
                     self.off_store.put(item['activity'], item['data'])
             except:
                 break
