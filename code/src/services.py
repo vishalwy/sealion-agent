@@ -264,6 +264,7 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
                         Activity.finish_jobs(None)
                         break
                         
+                self.handle_response(self.globals.api.stop_status)
                 break
 
         self.is_stop = True
