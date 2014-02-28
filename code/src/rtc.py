@@ -3,20 +3,26 @@ import time
 import requests
 from socketio_client import SocketIO, BaseNamespace
 from constructs import *
+from globals import Globals
+from api import API
 
 _log = logging.getLogger(__name__)
 
 class SocketIONamespace(BaseNamespace):
+    def initialize(self):
+        self.globals = Globals()
+        self.api = API()
+    
     def on_connect(self):        
         _log.info('Socket-io connected')
         self.rtc.update_heartbeat()
         
-        if self.rtc.is_stop == True:
+        if self.rtc.is_stop == True or self.globals.stop_event.is_set():
             self.rtc.stop()
             return
         
-        self.rtc.api.ping()
-        self.rtc.is_disconnected and self.rtc.api.get_config()
+        self.api.ping()
+        self.rtc.is_disconnected and self.api.get_config()
         self.rtc.is_disconnected = False
         
     def on_disconnect(self):
@@ -31,12 +37,12 @@ class SocketIONamespace(BaseNamespace):
     def on_activity_updated(self, *args):
         _log.info('Socket-io received activity_updated event')
         self.rtc.update_heartbeat()
-        self.rtc.api.get_config()
+        self.api.get_config()
 
     def on_activitylist_in_category_updated(self, *args):
         _log.info('Socket-io received activitylist_in_category_updated event')
         self.rtc.update_heartbeat()
-        self.rtc.api.get_config()
+        self.api.get_config()
 
     def on_agent_removed(self, *args):
         _log.info('Socket-io received agent_removed event')
@@ -44,15 +50,15 @@ class SocketIONamespace(BaseNamespace):
         
         try:
             if args[0].get('servers'):
-                (self.rtc.api.config.agent._id in args[0]['servers']) and self.rtc.api.stop(self.rtc.api.status.NOT_FOUND)
+                (self.globals.config.agent._id in args[0]['servers']) and self.api.stop(self.api.status.NOT_FOUND)
             else:
-                self.rtc.api.stop(self.rtc.api.status.NOT_FOUND)
+                self.api.stop(self.api.status.NOT_FOUND)
         except:
             pass    
 
     def on_org_token_resetted(self, *args):
         _log.info('Socket-io received org_token_resetted event')
-        self.rtc.api.stop()
+        self.api.stop()
 
     def on_server_category_changed(self, *args):
         _log.info('Socket-io received server_category_changed event')
@@ -60,9 +66,9 @@ class SocketIONamespace(BaseNamespace):
         
         try:
             if args[0].get('servers'):
-                (self.rtc.api.config.agent._id in args[0]['servers']) and self.rtc.api.get_config()
+                (self.globals.config.agent._id in args[0]['servers']) and self.api.get_config()
             else:
-                self.rtc.api.get_config()
+                self.api.get_config()
         except:
             pass
 
@@ -71,7 +77,7 @@ class SocketIONamespace(BaseNamespace):
         self.rtc.update_heartbeat()
         
         try:
-            (args[0]['activity'] in self.rtc.api.config.agent.activities) and self.rtc.api.get_config()
+            (args[0]['activity'] in self.globals.config.agent.activities) and self.api.get_config()
         except:
             pass
         
@@ -80,14 +86,14 @@ class SocketIONamespace(BaseNamespace):
         self.rtc.update_heartbeat()
         
         try:
-            args[0]['agentVersion'] != self.rtc.api.config.agent.agentVersion and self.rtc.api.update_agent()
+            args[0]['agentVersion'] != self.globals.config.agent.agentVersion and self.api.update_agent()
         except:
             pass
         
 class Interface(ThreadEx):    
-    def __init__(self, api):
+    def __init__(self):
         ThreadEx.__init__(self)
-        self.api = api
+        self.api = API()
         self.sio = None
         self.is_stop = False
         self.daemon = True
@@ -142,7 +148,7 @@ class Interface(ThreadEx):
             except Exception as e:
                 _log.debug(str(e))
             
-            if self.is_stop == True:
+            if self.is_stop == True or self.globals.stop_event.is_set():
                 break
                 
             self.connect()

@@ -243,7 +243,7 @@ class Interface(SingletonType('APIMetaClass', (object, ), {}), requests.Session)
         Interface.print_error(message, response)    
         
         if response == None:
-            is_ignore_status == False and self.set_events(post_event = False)
+            is_ignore_status == False and self.globals.stop_event.is_set() == False and self.set_events(post_event = False)
             return self.status.NOT_CONNECTED
         
         status = response.status_code
