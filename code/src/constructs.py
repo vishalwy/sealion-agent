@@ -67,6 +67,45 @@ class ThreadEx(threading.Thread):
     def exe(self):
         pass
     
-
+class EventDispatcher():
+    def __init__(self):
+        self.events = {}
         
+    def bind(self, event, callback):
+        self.events[event] = self.events.get(event, [])
+        
+        if (callback in self.events[event]) == False:
+            self.events[event].append(callback)
+            return True
+        
+        return False
+    
+    def unbind(self, event, *args):
+        callbacks = self.events.get(event)
+        
+        if callbacks == None:
+            return 0
+        
+        callback_count = len(callbacks)
+        
+        for arg in args:
+            if arg in callbacks:
+                callbacks.remove(arg)
+                callback_count -= 1
+                
+        if callback_count == 0: 
+            del self.events[event]
+            
+        return callback_count
+    
+    def trigger(self, event, *args, **kwargs):
+        callbacks = self.events.get(event, [])
+        callback_count = 0
+        
+        for callback in callbacks:
+            callback(event, *args, **kwargs)
+            callback_count += 1
+            
+        return callback_count
+
     

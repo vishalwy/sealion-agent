@@ -1,12 +1,12 @@
 import sys
 import logging
 import requests
-import threading
 import tempfile
 import subprocess
 import time
 from constructs import *
 import connection
+from globals import Globals
 
 _log = logging.getLogger(__name__)
 
@@ -22,18 +22,17 @@ class Status(Namespace):
     SESSION_CONFLICT = 8
     UNKNOWN = -1
 
-class Interface(requests.Session):    
+class Interface(SingletonType('APIMetaClass', (object, ), {}), requests.Session):    
     status = Status
     
-    def __init__(self, config, stop_event, *args, **kwargs):
-        super(Interface, self).__init__(*args, **kwargs)
-        self.config = config
-        self.stop_event = stop_event
-        self.post_event = threading.Event()
+    def __init__(self, *args, **kwargs):
+        requests.Session.__init__(*args, **kwargs)
+        self.globals = Globals()
         self.stop_status = Status.SUCCESS
         self.is_authenticated = False
         self.updater = None
         self.is_conn_err = False
+        self.globals.event_dispatcher.bind('update_agent', self.update_agent)
             
     @staticmethod
     def is_success(response):
@@ -68,19 +67,19 @@ class Interface(requests.Session):
         return False
     
     def set_events(self, stop_event = None, post_event = None):
-        if stop_event == True and self.stop_event.is_set() == False:
+        if stop_event == True and self.globals.stop_event.is_set() == False:
             _log.debug('Setting stop event')
-            self.stop_event.set()
-        elif stop_event == False and self.stop_event.is_set() == True:
+            self.globals.stop_event.set()
+        elif stop_event == False and self.globals.stop_event.is_set() == True:
             _log.debug('Resetting stop event')
-            self.stop_event.clear()
+            self.globals.stop_event.clear()
         
-        if post_event == True and self.post_event.is_set() == False:
+        if post_event == True and self.globals.post_event.is_set() == False:
             _log.debug('Setting post event')
-            self.post_event.set()
-        elif post_event == False and self.post_event.is_set() == True and self.stop_event.is_set() == False:
+            self.globals.post_event.set()
+        elif post_event == False and self.globals.post_event.is_set() == True and self.globals.stop_event.is_set() == False:
             _log.debug('Resetting post event')
-            self.post_event.clear()
+            self.globals.post_event.clear()
     
     def get_url(self, path = ''):
         path.strip()
@@ -88,7 +87,7 @@ class Interface(requests.Session):
         if len(path):
             path = path if path[0] == '/' else ('/' + path)
                   
-        return self.config.agent.apiUrl + path
+        return self.globals.config.agent.apiUrl + path
     
     def exec_method(self, method, options = {}, *args, **kwargs):
         method = getattr(self, method)
@@ -99,9 +98,9 @@ class Interface(requests.Session):
         
         while retry_count == -1 or i <= retry_count:                
             if i > 0:
-                self.stop_event.wait(retry_interval)
+                self.globals.stop_event.wait(retry_interval)
                 
-            if is_ignore_stop_event == False and self.stop_event.is_set():
+            if is_ignore_stop_event == False and self.globals.stop_event.is_set():
                 break
             
             try:
@@ -125,21 +124,21 @@ class Interface(requests.Session):
         self.set_events(post_event = True)
     
     def register(self, **kwargs):
-        data = self.config.agent.get_dict(['orgToken', 'name', 'category'])
+        data = self.globals.config.agent.get_dict(['orgToken', 'name', 'category'])
         response = self.exec_method('post', kwargs, self.get_url('agents'), data = data)    
         ret = self.status.SUCCESS
         
         if Interface.is_success(response):
             _log.info('Registration successful')
-            self.config.agent.update(response.json())
-            self.config.agent.save()
+            self.globals.config.agent.update(response.json())
+            self.globals.config.agent.save()
         else:
             ret = self.error('Failed to register agent', response)
         
         return ret
     
     def unregister(self):
-        response = self.exec_method('delete', {'retry_count': 2}, self.get_url('orgs/%s/servers/%s' % (self.config.agent.orgToken, self.config.agent._id)))
+        response = self.exec_method('delete', {'retry_count': 2}, self.get_url('orgs/%s/servers/%s' % (self.globals.config.agent.orgToken, self.globals.config.agent._id)))
         ret = self.status.SUCCESS
         
         if Interface.is_success(response) == False:
@@ -148,15 +147,15 @@ class Interface(requests.Session):
         return ret
     
     def authenticate(self, **kwargs):
-        data = self.config.agent.get_dict(['orgToken', 'agentVersion'])
+        data = self.globals.config.agent.get_dict(['orgToken', 'agentVersion'])
         data['timestamp'] = int(time.time() * 1000)
-        response = self.exec_method('post', kwargs, self.get_url('agents/' + self.config.agent._id + '/sessions'), data = data)    
+        response = self.exec_method('post', kwargs, self.get_url('agents/' + self.globals.config.agent._id + '/sessions'), data = data)    
         ret = self.status.SUCCESS
         
         if Interface.is_success(response):
             _log.info('Authentication successful')
-            self.config.agent.update(response.json())
-            self.config.agent.save()
+            self.globals.config.agent.update(response.json())
+            self.globals.config.agent.save()
             self.is_authenticated = True
             self.set_events(post_event = True)
         else:
@@ -170,8 +169,8 @@ class Interface(requests.Session):
         
         if Interface.is_success(response):
             _log.info('Config updation successful')
-            self.config.agent.update(response.json())
-            self.config.agent.save()
+            self.globals.config.agent.update(response.json())
+            self.globals.config.agent.save()
         else:
             ret = self.error('Failed to get config', response)
             
@@ -192,7 +191,7 @@ class Interface(requests.Session):
     def logout(self):
         ret = self.status.SUCCESS
         
-        if hasattr(self.config.agent, '_id') == False or self.is_authenticated == False:
+        if hasattr(self.globals.config.agent, '_id') == False or self.is_authenticated == False:
             return ret
         
         response = self.exec_method('delete', {'retry_count': 0, 'is_ignore_stop_event': True}, self.get_url('agents/1/sessions/1'))
@@ -205,7 +204,7 @@ class Interface(requests.Session):
         return ret
     
     def get_agent_version(self):
-        response = self.exec_method('get', {'retry_count': 0}, self.get_url('agents/agentVersion'), params = {'agentVersion': self.config.agent.agentVersion})
+        response = self.exec_method('get', {'retry_count': 0}, self.get_url('agents/agentVersion'), params = {'agentVersion': self.globals.config.agent.agentVersion})
         
         if Interface.is_success(response):
             ret = response.json()['agentVersion']
@@ -231,8 +230,7 @@ class Interface(requests.Session):
         if self.updater != None:
             return
         
-        from globals import Globals
-        self.updater = ThreadEx(target = self.download_file, args=(Globals().exe_path,))
+        self.updater = ThreadEx(target = self.download_file)
         self.updater.start()
     
     def stop(self, stop_status = None):
@@ -285,19 +283,18 @@ class Interface(requests.Session):
         
         return self.status.UNKNOWN
     
-    def download_file(self, exe_path):
-        url = self.config.agent.updateUrl
+    def download_file(self):
+        exe_path = self.globals.exe_path
+        url = self.globals.config.agent.updateUrl
         temp_dir = tempfile.mkdtemp()
         temp_dir = temp_dir[:-1] if temp_dir[len(temp_dir) - 1] == '/' else temp_dir
         filename = '%s/%s' % (temp_dir, url.split('/')[-1])
         _log.info('Update found; downloading to %s' % filename)
-        f = None
+        f = open(filename, 'wb')
+        response = self.exec_method('get', {}, url, stream = True)
         
-        try:
-            f = open(filename, 'wb')
-            response = requests.get(url, stream = True)
-        except Exception as e:
-            _log.error('Failed to download the update %s' % str(e))
+        if Interface.is_success(response) == False:
+            self.error('Failed to download the update', response, False)
             f and f.close()
             self.updater = None
             return
@@ -306,7 +303,7 @@ class Interface(requests.Session):
         
         try:
             for chunk in response.iter_content(chunk_size = 1024):
-                if self.stop_event.is_set():
+                if self.globals.stop_event.is_set():
                     _log.info('Updater received stop event')
                     break
 
@@ -329,10 +326,12 @@ class Interface(requests.Session):
         
         _log.debug('Extracting %s to %s' % (filename, temp_dir))
         
-        if subprocess.call(['tar', '-xf', filename, '--directory=%s' % temp_dir]):
+        if subprocess.call(['tar', '-xf', "%s" % filename, '--directory=%s' % temp_dir]):
             _log.error('Failed to extract update %s' % filename)
             self.updater = None
             return
             
         _log.info('Installing update')
         subprocess.Popen('"%(temp_dir)s/sealion-agent/install.sh" -i "%(exe_path)s" -p "%(executable)s" && rm -rf "%(temp_dir)s"' % {'temp_dir': temp_dir, 'exe_path': exe_path, 'executable': sys.executable}, shell=True)
+
+API = Interface

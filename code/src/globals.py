@@ -1,10 +1,6 @@
 import threading
 import os
-import gc
 import logging
-import api
-import rtc
-import storage
 from helper import Utils, Config
 from constructs import *
 
@@ -90,7 +86,7 @@ class AgentConfig(Config):
              
         if version and version != self.data['agentVersion']:
             del data['agentVersion']
-            globals.api.update_agent()
+            globals.event_dispatcher.trigger('update_agent')
             
         self.lock.acquire()
         old_activities = self.data['activities'] if ('activities' in self.data) else []
@@ -115,7 +111,6 @@ class Interface(SingletonType('GlobalsMetaClass', (object, ), {})):
         self.config = EmptyClass()
         self.config.sealion = SealionConfig(Utils.get_safe_path(self.exe_path + 'etc/config.json'))
         self.config.agent = AgentConfig(Utils.get_safe_path(self.exe_path + 'etc/agent.json'))
-        self.APIStatus = api.Status
         ret = self.config.sealion.set()
         
         if ret != True:
@@ -128,17 +123,8 @@ class Interface(SingletonType('GlobalsMetaClass', (object, ), {})):
         
         self.activities = None
         self.stop_event = threading.Event()
-        self.api = api.Interface(self.config, self.stop_event)
-        self.reset_rtc_interface()
-        self.store = storage.Interface(self.api, self.db_path)
-        
-    def url(self, path = ''):
-        return self.api.get_url(path);
-    
-    def reset_rtc_interface(self):
-        self.rtc = None
-        _log.debug('GC collected %d unreachables' % gc.collect())
-        self.rtc = rtc.Interface(self.api)
+        self.post_event = threading.Event()
+        self.event_dispatcher = EventDispatcher()
         
     def manage_activities(self, old_activities = [], deleted_activity_ids = []):
         self.activities = self.activities or {}

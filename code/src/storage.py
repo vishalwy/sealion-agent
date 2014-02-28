@@ -5,14 +5,16 @@ import gc
 import sqlite3 as sqlite
 from constructs import *
 from helper import Utils
+from globals import Globals
+from api import API
 
 _log = logging.getLogger(__name__)
 
 class OfflineStore(ThreadEx):    
-    def __init__(self, db_path, config):
+    def __init__(self):
         ThreadEx.__init__(self)
-        self.db_file = db_path
-        self.config = config
+        self.globals = Globals()
+        self.db_file = self.globals.db_path
         self.conn = None
         self.conn_event = threading.Event()
         self.task_queue = queue.Queue()
@@ -20,7 +22,7 @@ class OfflineStore(ThreadEx):
         self.bulk_insert_rows = []
         
     def start(self):
-        self.db_file = Utils.get_safe_path(self.db_file + ('%s.db' % self.config.agent.org))
+        self.db_file = Utils.get_safe_path(self.db_file + ('%s.db' % self.globals.config.agent.org))
         ThreadEx.start(self)
         self.conn_event.wait()            
         return True if self.conn else False
@@ -222,9 +224,10 @@ class Sender(ThreadEx):
     queue_max_size = 100
     ping_interval = 10
     
-    def __init__(self, api, off_store):
+    def __init__(self, off_store):
         ThreadEx.__init__(self)
-        self.api = api
+        self.globals = Globals()
+        self.api = API()
         self.off_store = off_store
         self.queue = queue.Queue(self.queue_max_size)
         self.off_store_lock = threading.RLock()
@@ -248,13 +251,13 @@ class Sender(ThreadEx):
         return True
         
     def wait(self, is_perform_gc = False):
-        if self.api.post_event.is_set() == False:
+        if self.globals.post_event.is_set() == False:
             is_perform_gc == True and _log.debug('GC collected %d unreachables' % gc.collect())
             timeout = self.ping_interval if self.api.is_authenticated else None
             _log.debug('Sender waiting for post event' + (' for %d seconds' % timeout if timeout else ''))
-            self.api.post_event.wait(timeout)
+            self.globals.post_event.wait(timeout)
         
-        if self.api.stop_event.is_set():
+        if self.globals.stop_event.is_set():
             _log.debug('Sender received stop event')
             return False
         
@@ -311,7 +314,7 @@ class Sender(ThreadEx):
                 break
                 
             try:
-                if self.api.post_event.is_set() == False and fetch_count > self.queue_max_size and self.store_available():
+                if self.globals.post_event.is_set() == False and fetch_count > self.queue_max_size and self.store_available():
                     raise Exception()
                 
                 item = self.queue.get(True, 5)
@@ -373,10 +376,10 @@ class Sender(ThreadEx):
         return is_valid
 
 class Interface:
-    def __init__(self, api, db_path):
-        self.api = api
-        self.off_store = OfflineStore(db_path, api.config)
-        self.sender = Sender(api, self.off_store)
+    def __init__(self):
+        self.globals = Globals()
+        self.off_store = OfflineStore()
+        self.sender = Sender(self.off_store)
         
     def start(self):        
         if self.off_store.start() == False:
@@ -386,7 +389,7 @@ class Interface:
         return True
     
     def push(self, activity, data):
-        if self.api.stop_event.is_set():
+        if self.globals.stop_event.is_set():
             return
         
         if self.sender.push({'activity': activity, 'data': data}) == False:
@@ -401,3 +404,4 @@ class Interface:
     def clear_activities(self, activities):
         self.off_store.rem([], activities)
 
+Storage = Interface
