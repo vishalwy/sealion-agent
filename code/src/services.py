@@ -8,7 +8,8 @@ import os
 import sys
 import tempfile
 import api
-from globals import Globals
+import storage
+import globals
 import connection
 from datetime import datetime
 from constructs import *
@@ -99,7 +100,7 @@ class Activity(ThreadEx):
         ThreadEx.__init__(self)
         self.activity = activity;
         self.is_stop = False
-        self.globals = Globals()
+        self.globals = globals.Interface()
         self.is_whitelisted = self.is_in_whitelist()
         
         if Activity.timeout == -1:
@@ -192,8 +193,9 @@ class Activity(ThreadEx):
 class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx):    
     def __init__(self):
         ThreadEx.__init__(self)
-        self.globals = Globals()
+        self.globals = globals.Interface()
         self.api = api.Interface()
+        self.store = storage.Interface()
         self.is_stop = False
         self.main_thread = threading.current_thread()
         self.activities = {}
@@ -240,22 +242,23 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
                     _metric['stopping_time'] = time.time()
                     break
             else:
-                if self.handle_response(connection.Interface(self.globals).connect()) == False:
+                if self.handle_response(connection.Interface().connect()) == False:
                     break
 
-                if self.globals.store.start() == False:
+                if self.store.start() == False:
                     break
 
                 if len(self.globals.config.agent.activities) == 0:
-                    self.globals.store.clear_offline_data()
+                    self.store.clear_offline_data()
 
-                self.globals.manage_activities();
+                self.manage_activities();
+                self.globals.event_dispatcher.bind('manage_activities', self.manage_activities)
 
                 while 1:             
                     finished_job_count = 0
 
                     for job in Activity.finish_jobs():
-                        job.post_output()
+                        job.post_output(self.store)
                         finished_job_count += 1
 
                     finished_job_count and _log.debug('Fetched %d finished jobs', finished_job_count)
@@ -284,7 +287,7 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
     def stop_threads(self):
         _log.debug('Stopping all threads')
         self.api.stop()
-        self.globals.rtc.stop()
+        connection.Interface.stop_rtc()
         self.api.logout()
         self.api.close()
         threads = threading.enumerate()
@@ -296,7 +299,7 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
                 thread.join()
                 
     def manage_activities(self, old_activities = [], deleted_activity_ids = []):
-        new_activities = self.config.agent.activities
+        new_activities = self.globals.config.agent.activities
         start_count, update_count, stop_count = 0, 0, 0
         
         for activity_id in deleted_activity_ids:
@@ -321,7 +324,7 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
             else:
                 start_count += 1
                 
-            self.activities[activity_id] = self.activity_type(activity)
+            self.activities[activity_id] = Activity(activity)
             self.activities[activity_id].start()
             
         _log.info('%d started; %d updated; %d stopped' % (start_count, update_count, stop_count))
@@ -350,9 +353,7 @@ def start():
     _log.info('Agent starting up')
     _log.info('Using python binary at %s' % sys.executable)
     _log.info('Python version : %s' % '.'.join([str(i) for i in sys.version_info]))
-    globals = Globals()
-    _log.info('Agent version  : %s' % globals.config.agent.agentVersion)
-    globals.activity_type = Activity
+    _log.info('Agent version  : %s' % globals.Interface().config.agent.agentVersion)
     controller = Controller()
     signal.signal(signal.SIGALRM, sig_handler)
     signal.signal(signal.SIGTERM, sig_handler)

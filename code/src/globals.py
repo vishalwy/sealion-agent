@@ -92,13 +92,9 @@ class AgentConfig(helper.Config):
         old_activities = self.data['activities'] if ('activities' in self.data) else []
         ret = helper.Config.update(self, data)
         new_activities = self.data['activities'] if ('activities' in self.data) else []
-        self.lock.release()
-        
-        if globals.activities == None:
-            return ret
-        
+        self.lock.release()        
         deleted_activity_ids = self.get_deleted_activities(old_activities, new_activities)
-        globals.manage_activities(old_activities, deleted_activity_ids)
+        globals.event_dispatcher.trigger('manage_activities', old_activities, deleted_activity_ids)
         return ret
 
 class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):

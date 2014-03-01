@@ -375,7 +375,7 @@ class Sender(ThreadEx):
         self.activities_lock.release()
         return is_valid
 
-class Interface:
+class Storage:
     def __init__(self):
         self.globals = globals.Interface()
         self.off_store = OfflineStore()
@@ -404,4 +404,4 @@ class Interface:
     def clear_activities(self, activities):
         self.off_store.rem([], activities)
 
-Storage = Interface
+Interface = Storage
