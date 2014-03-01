@@ -9,12 +9,12 @@ sys.path.insert(0, exe_path + 'src')
 sys.path.insert(0, exe_path + 'lib')
 
 try:
-    from globals import Globals
-    globals = Globals()
+    from api import API
+    api = API()
 except:
     sys.exit(0)
 
-globals.api.ping()
-status = globals.api.unregister()
-sys.exit(0 if globals.api.is_not_connected(status) == False else 1)
+api.ping()
+status = api.unregister()
+sys.exit(0 if api.is_not_connected(status) == False else 1)
 

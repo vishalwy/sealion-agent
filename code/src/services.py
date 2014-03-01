@@ -7,10 +7,11 @@ import signal
 import os
 import sys
 import tempfile
-from datetime import datetime
-from constructs import *
+import api
 from globals import Globals
 import connection
+from datetime import datetime
+from constructs import *
 
 _log = logging.getLogger(__name__)
 _metric = {'starting_time': 0, 'stopping_time': 0}
@@ -63,7 +64,7 @@ class Job:
             
         return self.status
         
-    def post_output(self):
+    def post_output(self, store):
         data = None
         
         if self.process == None:
@@ -82,7 +83,7 @@ class Job:
         
         if data:
             _log.debug('Pushing activity(%s @ %d) to store' % (self.activity['_id'], self.timestamp))
-            Globals().store.push(self.activity['_id'], data)
+            store.push(self.activity['_id'], data)
         
     def close_file(self):
         self.output_file and self.output_file.close()
@@ -192,28 +193,30 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
     def __init__(self):
         ThreadEx.__init__(self)
         self.globals = Globals()
+        self.api = api.Interface()
         self.is_stop = False
         self.main_thread = threading.current_thread()
+        self.activities = {}
     
     def handle_response(self, status):
         _log.debug('Handling response status %d' % status)
         
-        if status == self.globals.APIStatus.SUCCESS:
+        if status == self.api.status.SUCCESS:
             return True
-        elif self.globals.api.is_not_connected(status):
+        elif self.api.is_not_connected(status):
             _log.info('Failed to connect')
-        elif status == self.globals.APIStatus.NOT_FOUND:           
+        elif status == self.api.status.NOT_FOUND:           
             try:
                 _log.info('Uninstalling agent')
                 subprocess.Popen([self.globals.exe_path + 'uninstall.sh'])
             except:
                 _log.error('Failed to open uninstall script')
                 
-        elif status == self.globals.APIStatus.UNAUTHERIZED:
+        elif status == self.api.status.UNAUTHERIZED:
             _log.error('Agent unautherized to connect')
-        elif status == self.globals.APIStatus.BAD_REQUEST:
+        elif status == self.api.status.BAD_REQUEST:
             _log.error('Server marked the request as bad')
-        elif status == self.globals.APIStatus.SESSION_CONFLICT:
+        elif status == self.api.status.SESSION_CONFLICT:
             _log.error('Agent session conflict')
 
         return False
@@ -223,11 +226,11 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
         
         while 1:
             if self.globals.is_update_only_mode == True:
-                version = self.globals.api.get_agent_version()
+                version = self.api.get_agent_version()
                 version_type = type(version)
 
                 if (version_type is str or version_type is unicode) and version != self.globals.config.agent.agentVersion:
-                    self.globals.api.update_agent()
+                    self.api.update_agent()
 
                 _log.debug('Controller waiting for stop event for %d seconds' % (5 * 60, ))
                 self.globals.stop_event.wait(5 * 60)
@@ -264,7 +267,7 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
                         Activity.finish_jobs(None)
                         break
                         
-                self.handle_response(self.globals.api.stop_status)
+                self.handle_response(self.api.stop_status)
                 break
 
         self.is_stop = True
@@ -276,14 +279,14 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
             
     def stop(self):
         self.is_stop = True
-        self.globals.api.stop()
+        self.api.stop()
         
     def stop_threads(self):
         _log.debug('Stopping all threads')
-        self.globals.api.stop()
+        self.api.stop()
         self.globals.rtc.stop()
-        self.globals.api.logout()
-        self.globals.api.close()
+        self.api.logout()
+        self.api.close()
         threads = threading.enumerate()
         curr_thread = threading.current_thread()
 
@@ -291,6 +294,37 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
             if thread.ident != curr_thread.ident and thread.ident != self.main_thread.ident and thread.daemon != True:
                 _log.debug('Waiting for ' + str(thread))
                 thread.join()
+                
+    def manage_activities(self, old_activities = [], deleted_activity_ids = []):
+        new_activities = self.config.agent.activities
+        start_count, update_count, stop_count = 0, 0, 0
+        
+        for activity_id in deleted_activity_ids:
+            self.activities[activity_id].stop()
+            del self.activities[activity_id]
+            stop_count += 1
+            
+        stop_count and self.store.clear_activities(deleted_activity_ids)
+        self.store.set_valid_activities([activity['_id'] for activity in new_activities])
+            
+        for activity in new_activities:
+            activity_id = activity['_id']
+            
+            if (activity_id in self.activities):
+                t = [old_activity for old_activity in old_activities if old_activity['_id'] == activity_id]
+                
+                if len(t) and t[0]['interval'] == activity['interval'] and t[0]['command'] == activity['command']:
+                    continue
+                
+                self.activities[activity_id].stop()
+                update_count += 1
+            else:
+                start_count += 1
+                
+            self.activities[activity_id] = self.activity_type(activity)
+            self.activities[activity_id].start()
+            
+        _log.info('%d started; %d updated; %d stopped' % (start_count, update_count, stop_count))
 
 def sig_handler(signum, frame):    
     if signum == signal.SIGTERM:

@@ -1,14 +1,14 @@
 import threading
 import os
 import logging
-from helper import Utils, Config
+import helper
 from constructs import *
 
 _log = logging.getLogger(__name__)
 
-class SealionConfig(Config):
+class SealionConfig(helper.Config):
     def __init__(self, file):
-        Config.__init__(self)
+        helper.Config.__init__(self)
         self.file = file
         self.schema = {
             'whitelist': {'type': ['str,unicode'], 'optional': True, 'is_regex': True},
@@ -27,7 +27,7 @@ class SealionConfig(Config):
         }
         
     def set(self, data = None):
-        ret = Config.set(self, data)
+        ret = helper.Config.set(self, data)
         variables = self.data['env'] if ('env' in self.data) else []
         
         for i in range(0, len(variables)):
@@ -36,9 +36,9 @@ class SealionConfig(Config):
             
         return ret        
         
-class AgentConfig(Config):
+class AgentConfig(helper.Config):
     def __init__(self, file):
-        Config.__init__(self)
+        helper.Config.__init__(self)
         self.file = file
         self.schema = {
             'orgToken': {'type': 'str,unicode', 'depends': ['name'], 'regex': '^[a-zA-Z0-9\-]{36}$'},
@@ -90,7 +90,7 @@ class AgentConfig(Config):
             
         self.lock.acquire()
         old_activities = self.data['activities'] if ('activities' in self.data) else []
-        ret = Config.update(self, data)
+        ret = helper.Config.update(self, data)
         new_activities = self.data['activities'] if ('activities' in self.data) else []
         self.lock.release()
         
@@ -101,16 +101,16 @@ class AgentConfig(Config):
         globals.manage_activities(old_activities, deleted_activity_ids)
         return ret
 
-class Interface(SingletonType('GlobalsMetaClass', (object, ), {})):
+class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
     def __init__(self):
         exe_path = os.path.dirname(os.path.abspath(__file__))
         exe_path = exe_path[:-1] if exe_path[len(exe_path) - 1] == '/' else exe_path
         self.exe_path = exe_path[:exe_path.rfind('/') + 1]
-        self.db_path = Utils.get_safe_path(self.exe_path + 'var/db/')
+        self.db_path = helper.Utils.get_safe_path(self.exe_path + 'var/db/')
         self.is_update_only_mode = False
         self.config = EmptyClass()
-        self.config.sealion = SealionConfig(Utils.get_safe_path(self.exe_path + 'etc/config.json'))
-        self.config.agent = AgentConfig(Utils.get_safe_path(self.exe_path + 'etc/agent.json'))
+        self.config.sealion = SealionConfig(helper.Utils.get_safe_path(self.exe_path + 'etc/config.json'))
+        self.config.agent = AgentConfig(helper.Utils.get_safe_path(self.exe_path + 'etc/agent.json'))
         ret = self.config.sealion.set()
         
         if ret != True:
@@ -125,37 +125,5 @@ class Interface(SingletonType('GlobalsMetaClass', (object, ), {})):
         self.stop_event = threading.Event()
         self.post_event = threading.Event()
         self.event_dispatcher = EventDispatcher()
-        
-    def manage_activities(self, old_activities = [], deleted_activity_ids = []):
-        self.activities = self.activities or {}
-        new_activities = self.config.agent.activities
-        start_count, update_count, stop_count = 0, 0, 0
-        
-        for activity_id in deleted_activity_ids:
-            self.activities[activity_id].stop()
-            del self.activities[activity_id]
-            stop_count += 1
-            
-        stop_count and self.store.clear_activities(deleted_activity_ids)
-        self.store.set_valid_activities([activity['_id'] for activity in new_activities])
-            
-        for activity in new_activities:
-            activity_id = activity['_id']
-            
-            if (activity_id in self.activities):
-                t = [old_activity for old_activity in old_activities if old_activity['_id'] == activity_id]
-                
-                if len(t) and t[0]['interval'] == activity['interval'] and t[0]['command'] == activity['command']:
-                    continue
-                
-                self.activities[activity_id].stop()
-                update_count += 1
-            else:
-                start_count += 1
-                
-            self.activities[activity_id] = self.activity_type(activity)
-            self.activities[activity_id].start()
-            
-        _log.info('%d started; %d updated; %d stopped' % (start_count, update_count, stop_count))
 
-Globals = Interface
+Interface = Globals

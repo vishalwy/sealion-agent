@@ -1,16 +1,16 @@
 import logging
+import globals
+import api
+import rtc
 from constructs import *
-from globals import Globals
-from api import API
-from rtc import RTC
 
 _log = logging.getLogger(__name__)
 
-class Interface(ThreadEx):    
+class Connection(ThreadEx):    
     def __init__(self):
         ThreadEx.__init__(self)
-        self.globals = Globals()
-        self.api = API()
+        self.globals = globals.Interface()
+        self.api = api.Interface()
     
     def exe(self):
         _log.debug('Starting up connection')
@@ -19,7 +19,7 @@ class Interface(ThreadEx):
     
     def attempt(self, retry_count = -1, retry_interval = 5):
         status = self.api.authenticate(retry_count = retry_count, retry_interval = retry_interval)
-        status == self.api.status.SUCCESS and RTC().connect().start()
+        status == self.api.status.SUCCESS and rtc.Interface().connect().start()
         return status            
         
     def connect(self):        
@@ -38,15 +38,21 @@ class Interface(ThreadEx):
         
         self.api.is_authenticated = False
         _log.info('Reauthenticating')
-        threads = threading.enumerate()
+        rtc_thread = Connection.stop_rtc()
         
-        for thread in threads:
-            if isinstance(thread, RTC):
-                thread.stop()
-                _log.info('Waiting for socket-io to disconnect')
-                thread.join()
-                break
+        if rtc_thread:
+            _log.info('Waiting for socket-io to disconnect')
+            rtc_thread.join()
                 
         self.start()
         
-Connection = Interface
+    @staticmethod
+    def stop_rtc():
+        for thread in threading.enumerate():
+            if isinstance(thread, rtc.Interface):
+                thread.stop()
+                return thread
+        
+        return None
+        
+Interface = Connection

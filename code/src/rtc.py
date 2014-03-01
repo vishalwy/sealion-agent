@@ -1,17 +1,17 @@
 import logging
 import time
 import requests
+import globals
+import api
 from socketio_client import SocketIO, BaseNamespace
 from constructs import *
-from globals import Globals
-from api import API
 
 _log = logging.getLogger(__name__)
 
 class SocketIONamespace(BaseNamespace):
     def initialize(self):
-        self.globals = Globals()
-        self.api = API()
+        self.globals = globals.Interface()
+        self.api = api.Interface()
     
     def on_connect(self):        
         _log.info('Socket-io connected')
@@ -90,10 +90,10 @@ class SocketIONamespace(BaseNamespace):
         except:
             pass
         
-class Interface(ThreadEx):    
+class RTC(ThreadEx):    
     def __init__(self):
         ThreadEx.__init__(self)
-        self.api = API()
+        self.api = api.Interface()
         self.sio = None
         self.is_stop = False
         self.daemon = True
@@ -154,3 +154,5 @@ class Interface(ThreadEx):
             self.connect()
         
         _log.debug('Shutting down socket-io')
+
+Interface = RTC

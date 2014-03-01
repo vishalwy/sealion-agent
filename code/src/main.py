@@ -13,6 +13,7 @@ import logging
 import logging.handlers
 import helper
 import services
+import api
 from globals import Globals
 
 _log = logging.getLogger(__name__)
@@ -33,6 +34,7 @@ except Exception as e:
     
 try:
     globals = Globals()
+    api = api.Interface()
 except RuntimeError as e:
     _log.error(str(e))
     sys.exit(0)
@@ -66,7 +68,7 @@ for handler in logging.root.handlers:
         handler.addFilter(LoggingList(*logging_list))
         
 if hasattr(globals.config.agent, '_id') == False:   
-    if globals.api.register(retry_count = 2, retry_interval = 10) != globals.APIStatus.SUCCESS:
+    if api.register(retry_count = 2, retry_interval = 10) != api.status.SUCCESS:
         sys.exit(0)
         
 logger.setLevel(logging_level)

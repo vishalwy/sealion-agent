@@ -76,21 +76,23 @@ class sealion(Daemon):
         _log.debug('Crash dump sender starting up')        
         crash_dump_timeout = (self.monit_interval * self.crash_dump_threshold) + 10
         from globals import Globals
+        from api import API
         globals = Globals()
+        api = API()
         path = self.crash_dump_path
         _log.debug('Crash dump sender waiting for stop event for %d seconds', crash_dump_timeout)
-        globals.api.stop_event.wait(crash_dump_timeout)
+        globals.stop_event.wait(crash_dump_timeout)
         
         try:
             for file in os.listdir(path):
                 file_name = path + file
 
                 if os.path.isfile(file_name):
-                    status = globals.APIStatus.UNKNOWN
+                    status = api.status.UNKNOWN
                     report = None
 
                     while 1:
-                        if globals.api.stop_event.is_set():
+                        if globals.stop_event.is_set():
                             break
 
                         report = report if report else self.read_dump(file_name)
@@ -98,16 +100,16 @@ class sealion(Daemon):
                         if report == None:
                             break
 
-                        status = globals.api.send_crash_report(report)
+                        status = api.send_crash_report(report)
 
                         if api.is_not_connected(status) == False:                        
                             _log.info('Removing crash dump %s' % file_name)
                             os.remove(file_name)
                             break
 
-                        globals.api.stop_event.wait(30)
+                        globals.stop_event.wait(30)
 
-                if globals.api.stop_event.is_set():
+                if globals.stop_event.is_set():
                     break
         except:
             pass
@@ -123,8 +125,8 @@ class sealion(Daemon):
             buff = create_string_buffer(len(proc_name) + 1)
             buff.value = proc_name.encode('utf-8')
             libc.prctl(15, byref(buff), 0, 0, 0)
-        except:
-            _log.error('Failed to set process name to %s' % proc_name)
+        except Exception as e:
+            _log.error('Failed to set process name; %s' % str(e))
         
     def initialize(self):        
         try:

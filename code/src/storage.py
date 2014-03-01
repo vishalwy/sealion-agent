@@ -2,18 +2,18 @@ import logging
 import threading
 import time
 import gc
-import sqlite3 as sqlite
+import sqlite3
+import helper
+import globals
+import api
 from constructs import *
-from helper import Utils
-from globals import Globals
-from api import API
 
 _log = logging.getLogger(__name__)
 
 class OfflineStore(ThreadEx):    
     def __init__(self):
         ThreadEx.__init__(self)
-        self.globals = Globals()
+        self.globals = globals.Interface()
         self.db_file = self.globals.db_path
         self.conn = None
         self.conn_event = threading.Event()
@@ -22,7 +22,7 @@ class OfflineStore(ThreadEx):
         self.bulk_insert_rows = []
         
     def start(self):
-        self.db_file = Utils.get_safe_path(self.db_file + ('%s.db' % self.globals.config.agent.org))
+        self.db_file = helper.Utils.get_safe_path(self.db_file + ('%s.db' % self.globals.config.agent.org))
         ThreadEx.start(self)
         self.conn_event.wait()            
         return True if self.conn else False
@@ -52,7 +52,7 @@ class OfflineStore(ThreadEx):
         _log.debug('Starting up offline store')
         
         try:
-            self.conn = sqlite.connect(self.db_file)
+            self.conn = sqlite3.connect(self.db_file)
             _log.debug('Created offline storage at ' + self.db_file)
         except Exception as e:
             _log.error('Failed to create offline storage at ' + self.db_file + '; ' + str(e))
@@ -226,8 +226,8 @@ class Sender(ThreadEx):
     
     def __init__(self, off_store):
         ThreadEx.__init__(self)
-        self.globals = Globals()
-        self.api = API()
+        self.globals = globals.Interface()
+        self.api = api.Interface()
         self.off_store = off_store
         self.queue = queue.Queue(self.queue_max_size)
         self.off_store_lock = threading.RLock()
@@ -377,7 +377,7 @@ class Sender(ThreadEx):
 
 class Interface:
     def __init__(self):
-        self.globals = Globals()
+        self.globals = globals.Interface()
         self.off_store = OfflineStore()
         self.sender = Sender(self.off_store)
         

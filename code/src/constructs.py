@@ -70,20 +70,26 @@ class ThreadEx(threading.Thread):
 class EventDispatcher():
     def __init__(self):
         self.events = {}
+        self.lock = threading.RLock()
         
     def bind(self, event, callback):
+        self.lock.acquire()
         self.events[event] = self.events.get(event, [])
         
         if (callback in self.events[event]) == False:
             self.events[event].append(callback)
+            self.lock.release()
             return True
         
+        self.lock.release()
         return False
     
     def unbind(self, event, *args):
+        self.lock.acquire()
         callbacks = self.events.get(event)
         
         if callbacks == None:
+            self.lock.release()
             return 0
         
         callback_count = len(callbacks)
@@ -96,9 +102,11 @@ class EventDispatcher():
         if callback_count == 0: 
             del self.events[event]
             
+        self.lock.release()
         return callback_count
     
     def trigger(self, event, *args, **kwargs):
+        self.lock.acquire()
         callbacks = self.events.get(event, [])
         callback_count = 0
         
@@ -106,6 +114,7 @@ class EventDispatcher():
             callback(event, *args, **kwargs)
             callback_count += 1
             
+        self.lock.release()
         return callback_count
 
     

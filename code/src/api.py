@@ -4,9 +4,9 @@ import requests
 import tempfile
 import subprocess
 import time
-from constructs import *
 import connection
-from globals import Globals
+import globals
+from constructs import *
 
 _log = logging.getLogger(__name__)
 
@@ -22,13 +22,13 @@ class Status(Namespace):
     SESSION_CONFLICT = 8
     UNKNOWN = -1
 
-class Interface(SingletonType('APIMetaClass', (object, ), {}), requests.Session):    
+class API(SingletonType('APIMetaClass', (object, ), {}), requests.Session):    
     status = Status
     
     def __init__(self, *args, **kwargs):
         requests.Session.__init__(*args, **kwargs)
-        self.globals = Globals()
-        self.stop_status = Status.SUCCESS
+        self.globals = globals.Interface()
+        self.stop_status = self.status.SUCCESS
         self.is_authenticated = False
         self.updater = None
         self.is_conn_err = False
@@ -128,7 +128,7 @@ class Interface(SingletonType('APIMetaClass', (object, ), {}), requests.Session)
         response = self.exec_method('post', kwargs, self.get_url('agents'), data = data)    
         ret = self.status.SUCCESS
         
-        if Interface.is_success(response):
+        if API.is_success(response):
             _log.info('Registration successful')
             self.globals.config.agent.update(response.json())
             self.globals.config.agent.save()
@@ -141,7 +141,7 @@ class Interface(SingletonType('APIMetaClass', (object, ), {}), requests.Session)
         response = self.exec_method('delete', {'retry_count': 2}, self.get_url('orgs/%s/servers/%s' % (self.globals.config.agent.orgToken, self.globals.config.agent._id)))
         ret = self.status.SUCCESS
         
-        if Interface.is_success(response) == False:
+        if API.is_success(response) == False:
             ret = self.error('Failed to register agent', response)
             
         return ret
@@ -152,7 +152,7 @@ class Interface(SingletonType('APIMetaClass', (object, ), {}), requests.Session)
         response = self.exec_method('post', kwargs, self.get_url('agents/' + self.globals.config.agent._id + '/sessions'), data = data)    
         ret = self.status.SUCCESS
         
-        if Interface.is_success(response):
+        if API.is_success(response):
             _log.info('Authentication successful')
             self.globals.config.agent.update(response.json())
             self.globals.config.agent.save()
@@ -167,7 +167,7 @@ class Interface(SingletonType('APIMetaClass', (object, ), {}), requests.Session)
         response = self.exec_method('get', {}, self.get_url('agents/1'))
         ret = self.status.SUCCESS
         
-        if Interface.is_success(response):
+        if API.is_success(response):
             _log.info('Config updation successful')
             self.globals.config.agent.update(response.json())
             self.globals.config.agent.save()
@@ -180,7 +180,7 @@ class Interface(SingletonType('APIMetaClass', (object, ), {}), requests.Session)
         response = self.exec_method('post', {'retry_count': 0}, self.get_url('agents/1/data/activities/' + activity_id), data = data)
         ret = self.status.SUCCESS
         
-        if Interface.is_success(response):
+        if API.is_success(response):
             self.set_events(post_event = True)
             _log.debug('Sent activity(%s @ %d)' % (activity_id, data['timestamp']))
         else:
@@ -196,7 +196,7 @@ class Interface(SingletonType('APIMetaClass', (object, ), {}), requests.Session)
         
         response = self.exec_method('delete', {'retry_count': 0, 'is_ignore_stop_event': True}, self.get_url('agents/1/sessions/1'))
         
-        if Interface.is_success(response):
+        if API.is_success(response):
             _log.info('Logout successful')
         else:
             ret = self.error('Failed to logout agent', response)
@@ -206,7 +206,7 @@ class Interface(SingletonType('APIMetaClass', (object, ), {}), requests.Session)
     def get_agent_version(self):
         response = self.exec_method('get', {'retry_count': 0}, self.get_url('agents/agentVersion'), params = {'agentVersion': self.globals.config.agent.agentVersion})
         
-        if Interface.is_success(response):
+        if API.is_success(response):
             ret = response.json()['agentVersion']
         else:
             ret = self.error('Failed to get agent version', response, True)
@@ -219,7 +219,7 @@ class Interface(SingletonType('APIMetaClass', (object, ), {}), requests.Session)
         response = self.exec_method('post', {'retry_count': 0, 'retry_interval': 30}, self.get_url('orgs/%s/agents/%s/crashreport' % (orgToken, agentId)), data = data)    
         ret = self.status.SUCCESS
         
-        if Interface.is_success(response):
+        if API.is_success(response):
             _log.info('Sent crash dump @ ' + data['timestamp'])
         else:
             ret = self.error('Failed to send crash dump', response, True)
@@ -230,7 +230,7 @@ class Interface(SingletonType('APIMetaClass', (object, ), {}), requests.Session)
         if self.updater != None:
             return
         
-        self.updater = ThreadEx(target = self.download_file)
+        self.updater = ThreadEx(target = self.download_update)
         self.updater.start()
     
     def stop(self, stop_status = None):
@@ -240,7 +240,7 @@ class Interface(SingletonType('APIMetaClass', (object, ), {}), requests.Session)
             self.stop_status = stop_status
     
     def error(self, message, response, is_ignore_status = False):        
-        Interface.print_error(message, response)    
+        API.print_error(message, response)    
         
         if response == None:
             is_ignore_status == False and self.globals.stop_event.is_set() == False and self.set_events(post_event = False)
@@ -264,7 +264,7 @@ class Interface(SingletonType('APIMetaClass', (object, ), {}), requests.Session)
                 return self.status.MISMATCH
             else:
                 if is_ignore_status == False:
-                    if code == 200001 and self.stop_status == Status.SUCCESS:
+                    if code == 200001 and self.stop_status == self.status.SUCCESS:
                         self.set_events(post_event = False)
                         connection.Interface().reconnect()
                     else:
@@ -283,7 +283,7 @@ class Interface(SingletonType('APIMetaClass', (object, ), {}), requests.Session)
         
         return self.status.UNKNOWN
     
-    def download_file(self):
+    def download_update(self):
         exe_path = self.globals.exe_path
         url = self.globals.config.agent.updateUrl
         temp_dir = tempfile.mkdtemp()
@@ -293,7 +293,7 @@ class Interface(SingletonType('APIMetaClass', (object, ), {}), requests.Session)
         f = open(filename, 'wb')
         response = self.exec_method('get', {}, url, stream = True)
         
-        if Interface.is_success(response) == False:
+        if API.is_success(response) == False:
             self.error('Failed to download the update', response, False)
             f and f.close()
             self.updater = None
@@ -334,4 +334,4 @@ class Interface(SingletonType('APIMetaClass', (object, ), {}), requests.Session)
         _log.info('Installing update')
         subprocess.Popen('"%(temp_dir)s/sealion-agent/install.sh" -i "%(exe_path)s" -p "%(executable)s" && rm -rf "%(temp_dir)s"' % {'temp_dir': temp_dir, 'exe_path': exe_path, 'executable': sys.executable}, shell=True)
 
-API = Interface
+Interface = API
