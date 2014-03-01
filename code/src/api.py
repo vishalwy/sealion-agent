@@ -26,7 +26,7 @@ class API(SingletonType('APIMetaClass', (object, ), {}), requests.Session):
     status = Status
     
     def __init__(self, *args, **kwargs):
-        requests.Session.__init__(*args, **kwargs)
+        requests.Session.__init__(self, *args, **kwargs)
         self.globals = globals.Interface()
         self.stop_status = self.status.SUCCESS
         self.is_authenticated = False
