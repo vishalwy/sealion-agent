@@ -148,7 +148,7 @@ class RTC(ThreadEx):
             except Exception as e:
                 _log.debug(str(e))
             
-            if self.is_stop == True or self.globals.stop_event.is_set():
+            if self.is_stop == True or globals.Interface().stop_event.is_set():
                 break
                 
             self.connect()
