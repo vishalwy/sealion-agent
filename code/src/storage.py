@@ -364,9 +364,9 @@ class Sender(ThreadEx):
         _log.debug('Shutting down sender')
         
     def is_valid_activity(self, activity_id):
-        activity = None
-        self.globals.event_dispatcher.trigger('get_activity', activity_id, lambda x: activity == x)
-        return activity != None
+        ret = Object(value = None)
+        self.globals.event_dispatcher.trigger('get_activity', activity_id, lambda x: [True, setattr(ret, 'value', x)][0])
+        return ret.value != None
 
 class Storage:
     def __init__(self):
