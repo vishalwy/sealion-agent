@@ -74,47 +74,53 @@ class EventDispatcher():
         
     def bind(self, event, callback):
         self.lock.acquire()
-        self.events[event] = self.events.get(event, [])
         
-        if (callback in self.events[event]) == False:
-            self.events[event].append(callback)
+        try:
+            self.events[event] = self.events.get(event, [])
+
+            if (callback in self.events[event]) == False:
+                self.events[event].append(callback)
+                return True
+        finally:
             self.lock.release()
-            return True
         
-        self.lock.release()
         return False
     
     def unbind(self, event, *args):
         self.lock.acquire()
-        callbacks = self.events.get(event)
         
-        if callbacks == None:
+        try:
+            callbacks = self.events.get(event)
+
+            if callbacks == None:
+                return 0
+
+            callback_count = len(callbacks)
+
+            for arg in args:
+                if arg in callbacks:
+                    callbacks.remove(arg)
+                    callback_count -= 1
+
+            if callback_count == 0: 
+                del self.events[event]
+        finally:
             self.lock.release()
-            return 0
-        
-        callback_count = len(callbacks)
-        
-        for arg in args:
-            if arg in callbacks:
-                callbacks.remove(arg)
-                callback_count -= 1
-                
-        if callback_count == 0: 
-            del self.events[event]
             
-        self.lock.release()
         return callback_count
     
     def trigger(self, event, *args, **kwargs):
         self.lock.acquire()
-        callbacks = self.events.get(event, [])
-        callback_count = 0
         
-        for callback in callbacks:
-            callback(event, *args, **kwargs)
-            callback_count += 1
+        try:
+            callbacks = self.events.get(event, [])
+            callback_count = 0
+        
+            for callback in callbacks:
+                callback(event, *args, **kwargs)
+                callback_count += 1
+        finally:
+            self.lock.release()
             
-        self.lock.release()
         return callback_count
 
-    

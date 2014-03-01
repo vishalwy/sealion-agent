@@ -364,7 +364,7 @@ class Sender(ThreadEx):
         _log.debug('Shutting down sender')
         
     def is_valid_activity(self, activity_id):
-        ret = Object(value = None)
+        ret = EmptyClass()
         self.globals.event_dispatcher.trigger('get_activity', activity_id, lambda x: [True, setattr(ret, 'value', x)][0])
         return ret.value != None
 

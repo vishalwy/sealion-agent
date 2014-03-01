@@ -226,7 +226,7 @@ class API(SingletonType('APIMetaClass', (object, ), {}), requests.Session):
         
         return ret
     
-    def update_agent(self):
+    def update_agent(self, event = None):
         if self.updater != None:
             return
         

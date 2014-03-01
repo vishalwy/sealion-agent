@@ -301,13 +301,13 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
                 _log.debug('Waiting for ' + str(thread))
                 thread.join()
                 
-    def get_activity(self, activity, callback):
+    def get_activity(self, event, activity, callback):
         self.activities_lock.acquire()
         ret = self.activities.get(activity)
         self.activities_lock.release()
         callback(ret)
                 
-    def manage_activities(self, old_activities = [], deleted_activity_ids = []):
+    def manage_activities(self, event = None, old_activities = [], deleted_activity_ids = []):
         new_activities = self.globals.config.agent.activities
         start_count, update_count, stop_count = 0, 0, 0
         self.activities_lock.acquire()
