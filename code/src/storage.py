@@ -306,7 +306,7 @@ class Sender(ThreadEx):
     def exe(self):
         _log.debug('Starting up sender')
         api_status = self.api.status
-        del_rows, gc_counter, gc_threshold, fetch_count = [], 0, 2, 0
+        del_rows, gc_counter, gc_threshold, fetch_count, validate_count = [], 0, 2, 0, 0
         
         while 1:
             if self.wait(True if gc_counter != 0 else False) == False:
@@ -319,8 +319,9 @@ class Sender(ThreadEx):
                 item = self.queue.get(True, 5)
                 gc_counter = 1 if gc_counter == 0 else gc_counter
                 fetch_count += 1
+                validate_count = max(validate_count - 1, 0)
                 
-                if self.is_valid_activity(item['activity']) == False:
+                if validate_count and self.is_valid_activity(item['activity']) == False:
                     _log.debug('Discarding activity %s' % item['activity'])                    
                     continue
             except:
@@ -342,6 +343,7 @@ class Sender(ThreadEx):
                 
             if status == api_status.MISMATCH:
                 self.api.get_config()
+                validate_count = self.queue.qsize() + 5
             elif (status == api_status.NOT_CONNECTED or status == api_status.NO_SERVICE):
                 row_id == None and self.off_store.put(item['activity'], item['data'], self.store_put_callback)
             else:
