@@ -231,7 +231,6 @@ class Sender(ThreadEx):
         self.off_store = off_store
         self.queue = queue.Queue(self.queue_max_size)
         self.off_store_lock = threading.RLock()
-        self.activities_lock = threading.RLock()
         self.store_data_available = True
         self.last_ping_time = int(time.time())
         self.valid_activities = None
@@ -364,16 +363,10 @@ class Sender(ThreadEx):
         self.off_store.stop()
         _log.debug('Shutting down sender')
         
-    def set_valid_activities(self, valid_activities):
-        self.activities_lock.acquire()
-        self.valid_activities = valid_activities[:]
-        self.activities_lock.release()
-        
     def is_valid_activity(self, activity_id):
-        self.activities_lock.acquire()
-        is_valid = self.valid_activities == None or (activity_id in self.valid_activities)
-        self.activities_lock.release()
-        return is_valid
+        activity = None
+        self.globals.event_dispatcher.trigger('get_activity', activity_id, lambda x: activity == x)
+        return activity != None
 
 class Storage:
     def __init__(self):
@@ -397,9 +390,6 @@ class Storage:
         
     def clear_offline_data(self):
         self.off_store.clr()
-        
-    def set_valid_activities(self, valid_activities):
-        self.sender.set_valid_activities(valid_activities)
         
     def clear_activities(self, activities):
         self.off_store.rem([], activities)

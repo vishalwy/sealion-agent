@@ -199,6 +199,7 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
         self.is_stop = False
         self.main_thread = threading.current_thread()
         self.activities = {}
+        self.activities_lock = threading.RLock()
     
     def handle_response(self, status):
         _log.debug('Handling response status %d' % status)
@@ -247,6 +248,8 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
 
                 if self.store.start() == False:
                     break
+                    
+                self.globals.event_dispatcher.bind('get_activity', self.get_activity)
 
                 if len(self.globals.config.agent.activities) == 0:
                     self.store.clear_offline_data()
@@ -298,9 +301,16 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
                 _log.debug('Waiting for ' + str(thread))
                 thread.join()
                 
+    def get_activity(self, activity, callback):
+        self.activities_lock.acquire()
+        ret = self.activities.get(activity)
+        self.activities_lock.release()
+        callback(ret)
+                
     def manage_activities(self, old_activities = [], deleted_activity_ids = []):
         new_activities = self.globals.config.agent.activities
         start_count, update_count, stop_count = 0, 0, 0
+        self.activities_lock.acquire()
         
         for activity_id in deleted_activity_ids:
             self.activities[activity_id].stop()
@@ -308,7 +318,6 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
             stop_count += 1
             
         stop_count and self.store.clear_activities(deleted_activity_ids)
-        self.store.set_valid_activities([activity['_id'] for activity in new_activities])
             
         for activity in new_activities:
             activity_id = activity['_id']
@@ -326,7 +335,8 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
                 
             self.activities[activity_id] = Activity(activity)
             self.activities[activity_id].start()
-            
+        
+        self.activities_lock.release()
         _log.info('%d started; %d updated; %d stopped' % (start_count, update_count, stop_count))
 
 def sig_handler(signum, frame):    
