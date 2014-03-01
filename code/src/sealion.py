@@ -80,7 +80,7 @@ class sealion(Daemon):
         globals = Globals()
         api = API()
         path = self.crash_dump_path
-        _log.debug('Crash dump sender waiting for stop event for %d seconds', crash_dump_timeout)
+        _log.debug('Crash dump sender waiting for stop event for %d seconds' % crash_dump_timeout)
         globals.stop_event.wait(crash_dump_timeout)
         
         try:

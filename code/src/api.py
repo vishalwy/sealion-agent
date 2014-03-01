@@ -220,7 +220,7 @@ class API(SingletonType('APIMetaClass', (object, ), {}), requests.Session):
         ret = self.status.SUCCESS
         
         if API.is_success(response):
-            _log.info('Sent crash dump @ ' + data['timestamp'])
+            _log.info('Sent crash dump @ %d' % data['timestamp'])
         else:
             ret = self.error('Failed to send crash dump', response, True)
         
@@ -294,7 +294,7 @@ class API(SingletonType('APIMetaClass', (object, ), {}), requests.Session):
         response = self.exec_method('get', {}, url, stream = True)
         
         if API.is_success(response) == False:
-            self.error('Failed to download the update', response, False)
+            self.error('Failed to download the update', response, True)
             f and f.close()
             self.updater = None
             return

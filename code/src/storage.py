@@ -53,9 +53,9 @@ class OfflineStore(ThreadEx):
         
         try:
             self.conn = sqlite3.connect(self.db_file)
-            _log.debug('Created offline storage at ' + self.db_file)
+            _log.debug('Created offline storage at %s' % self.db_file)
         except Exception as e:
-            _log.error('Failed to create offline storage at ' + self.db_file + '; ' + str(e))
+            _log.error('Failed to create offline storage at %s; %s' % (self.db_file, str(e)))
             _log.debug('Shutting down offline store')
             self.conn_event.set()
             return
@@ -63,7 +63,7 @@ class OfflineStore(ThreadEx):
         self.cursor = self.conn.cursor()
         
         if self.setup_schema() == False:
-            _log.error('Schema mismatch in offline storage at ' + self.db_file)
+            _log.error('Schema mismatch in offline storage at %s' % self.db_file)
             self.close_db()
             _log.debug('Shutting down offline store')
             self.conn_event.set()
@@ -145,7 +145,7 @@ class OfflineStore(ThreadEx):
             _log.debug('Inserted activity(%s @ %d) to offline storage' % (activity, data['timestamp']))
             callback and callback()
         except Exception as e:
-            _log.error('Failed to insert row to offline storage; ' + str(e))
+            _log.error('Failed to insert row to offline storage; %s' % str(e))
         
         return True
     
@@ -162,7 +162,7 @@ class OfflineStore(ThreadEx):
             self.conn.commit()
             _log.debug('Inserted %d rows to offline storage' % row_count)            
         except Exception as e:
-            _log.error('Failed to insert rows to offline storage; ' + str(e))
+            _log.error('Failed to insert rows to offline storage; %s' % str(e))
         
         return True
     
@@ -170,7 +170,7 @@ class OfflineStore(ThreadEx):
         try:
             rows = self.cursor.execute('SELECT ROWID, * FROM data ORDER BY timestamp LIMIT %d' % limit)
         except Exception as e:
-            _log.error('Failed to retreive rows from offline storage; ' + str(e))
+            _log.error('Failed to retreive rows from offline storage; %s' % str(e))
             return True
         
         rows = self.cursor.fetchall()
@@ -183,9 +183,9 @@ class OfflineStore(ThreadEx):
             format = (','.join('?' * len(row_ids)), ','.join('?' * len(activities)))
             self.cursor.execute('DELETE FROM data WHERE ROWID IN (%s) OR activity IN (%s)' % format, row_ids + activities)
             self.conn.commit()
-            _log.debug('Deleted ' + str(self.cursor.rowcount) + ' records from offline storage')
+            _log.debug('Deleted %d records from offline storage' % self.cursor.rowcount)
         except Exception as e:
-            _log.error('Failed to delete rows from offline storage; ' + str(e))
+            _log.error('Failed to delete rows from offline storage; %s' % str(e))
         
         return True
     
@@ -195,12 +195,12 @@ class OfflineStore(ThreadEx):
             self.conn.commit()
             _log.debug('Deleting all records from offline storage')
         except Exception as e:
-            _log.error('Failed to truncate offline storage; ' + str(e))
+            _log.error('Failed to truncate offline storage; %s' % str(e))
         
         return True
     
     def close_db(self):
-        _log.debug('Closing offline storage at ' + self.db_file)
+        _log.debug('Closing offline storage at %s' % self.db_file)
         self.conn.close()
         self.conn = None
     
@@ -253,7 +253,7 @@ class Sender(ThreadEx):
         if self.globals.post_event.is_set() == False:
             is_perform_gc == True and _log.debug('GC collected %d unreachables' % gc.collect())
             timeout = self.ping_interval if self.api.is_authenticated else None
-            _log.debug('Sender waiting for post event' + (' for %d seconds' % timeout if timeout else ''))
+            _log.debug('Sender waiting for post event %s' % (' for %d seconds' % timeout if timeout else ''))
             self.globals.post_event.wait(timeout)
         
         if self.globals.stop_event.is_set():
@@ -297,7 +297,7 @@ class Sender(ThreadEx):
                 
             i += 1
         
-        i and _log.debug('Pushed %d rows to sender from offline storage' % i)
+        _log.debug('Pushed %d rows to sender from offline storage' % i)
         self.store_available(i != row_count or self.queue_max_size == row_count)
         
     def store_put_callback(self):

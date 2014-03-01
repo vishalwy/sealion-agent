@@ -264,7 +264,7 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
                         job.post_output(self.store)
                         finished_job_count += 1
 
-                    finished_job_count and _log.debug('Fetched %d finished jobs', finished_job_count)
+                    _log.debug('Fetched %d finished jobs' % finished_job_count)
                     self.globals.stop_event.wait(5)
 
                     if self.globals.stop_event.is_set():
@@ -298,7 +298,7 @@ class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx)
 
         for thread in threads:
             if thread.ident != curr_thread.ident and thread.ident != self.main_thread.ident and thread.daemon != True:
-                _log.debug('Waiting for ' + str(thread))
+                _log.debug('Waiting for %s' % str(thread))
                 thread.join()
                 
     def get_activity(self, event, activity, callback):
