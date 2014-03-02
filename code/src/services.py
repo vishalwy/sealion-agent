@@ -192,7 +192,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
             if cur_activity:
                 details = cur_activity['details']
                 
-                if details['interval'] != activity['interval'] and details['command'] != activity['command']:
+                if details['interval'] != activity['interval'] or details['command'] != activity['command']:
                     cur_activity['is_whitelisted'] = self.is_in_whitelist(activity['command'])
                     cur_activity['next_exec_timestamp'] = t
                     update_count += 1
