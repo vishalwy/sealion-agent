@@ -107,6 +107,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
         self.queue = queue.Queue()
         self.sleep_interval = 5
         self.store = store
+        self.consumer_count = 0
 
         try:
             self.timeout = self.globals.config.sealion.commandTimeout
@@ -214,20 +215,22 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
             
         stop_count and self.store.clear_activities(deleted_activity_ids)
         self.activities_lock.release()
+        temp = min(16, self.consumer_count + start_count)
         
-        if start_count or update_count:
+        while self.consumer_count < temp:
+            self.consumer_count += 1
+            JobConsumer(str(self.consumer_count)).start()
+        
+        if start_count + update_count > 0:
             self.schedule_activities()
         
         _log.info('%d started; %d updated; %d stopped' % (start_count, update_count, stop_count))
-
+        
     def exe(self):
         _log.debug('Starting up job producer')
         
         self.set_activities();
         self.globals.event_dispatcher.bind('set_activities', self.set_activities)
-        
-        for i in range(10):
-            JobConsumer(str(i + 1)).start()
         
         while 1:
             self.schedule_activities()
@@ -242,11 +245,10 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
 
     def stop_consumers(self):
         _log.debug('Stopping job consumers')
-        threads = threading.enumerate()
-
-        for thread in threads:
-            if isinstance(thread, JobConsumer):
-                self.queue.put(None)
+        
+        while self.consumer_count > 0:
+            self.queue.put(None)
+            self.consumer_count -= 1
                 
     def get_activity(self, event, activity, callback):
         self.activities_lock.acquire()
