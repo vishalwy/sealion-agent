@@ -12,7 +12,7 @@ sys.path.insert(0, exe_path + 'lib')
 import logging
 import logging.handlers
 import helper
-import services
+import controller
 import api
 from globals import Globals
 
@@ -79,7 +79,7 @@ for handler in logging.root.handlers:
 def start(is_update_only_mode = False): 
     os.nice(19)
     globals.is_update_only_mode = is_update_only_mode
-    services.start()
+    controller.start()
     
 if __name__ == "__main__":
     start()

@@ -61,22 +61,6 @@ class AgentConfig(helper.Config):
             'org': {'type': 'str,unicode', 'depends': ['orgToken', '_id', 'agentVersion'], 'regex': '^[a-zA-Z0-9]{24}$', 'optional': True}
         }
         
-    def get_deleted_activities(self, old_activities, new_activities):
-        deleted_activities = []
-        
-        for old_activity in old_activities:
-            activity = old_activity['_id']
-            
-            for new_activity in new_activities:
-                if new_activity['_id'] == activity:
-                    activity = None
-                    break
-                    
-            if activity != None:
-                deleted_activities.append(activity)
-                
-        return deleted_activities
-        
     def update(self, data):   
         if ('category' in data):
             del data['category']
@@ -88,13 +72,8 @@ class AgentConfig(helper.Config):
             del data['agentVersion']
             globals.event_dispatcher.trigger('update_agent')
             
-        self.lock.acquire()
-        old_activities = self.data['activities'] if ('activities' in self.data) else []
         ret = helper.Config.update(self, data)
-        new_activities = self.data['activities'] if ('activities' in self.data) else []
-        self.lock.release()        
-        deleted_activity_ids = self.get_deleted_activities(old_activities, new_activities)
-        globals.event_dispatcher.trigger('manage_activities', old_activities, deleted_activity_ids)
+        globals.event_dispatcher.trigger('set_activities')
         return ret
 
 class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
