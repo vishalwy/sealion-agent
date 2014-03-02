@@ -17,6 +17,8 @@ class JobStatus(Namespace):
     TIMED_OUT = 2
 
 class Job:
+    timestamp_lock = threading.RLock()
+    
     def __init__(self, activity, store):
         self.activity = activity
         self.status = JobStatus.NOT_RUNNING
@@ -26,9 +28,16 @@ class Job:
         self.exec_timestamp = activity['next_exec_timestamp']
         self.details = self.activity['details']
         self.store = store
+        
+    def get_timestamp(self):
+        Job.timestamp_lock.acquire()
+        t = int(time.time() * 1000)
+        time.sleep(0.001)
+        Job.timestamp_lock.release()
+        return t
 
     def start(self):
-        self.timestamp = int(time.time() * 1000)
+        self.timestamp = self.get_timestamp()
 
         if self.activity['is_whitelisted'] == True:
             _log.debug('Executing activity(%s @ %d)' % (self.details['_id'], self.timestamp))
@@ -163,6 +172,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (object, ), {}), ThreadE
                 activity['next_exec_timestamp'] = activity['next_exec_timestamp'] + (activity['details']['interval'] * 1000)
 
         jobs = sorted(jobs, key = lambda job: job.exec_timestamp)
+        len(jobs) and _log.info('Scheduling %d activities', len(jobs))
 
         for job in jobs:
             self.queue.put(job)
@@ -204,27 +214,34 @@ class JobProducer(SingletonType('JobProducerMetaClass', (object, ), {}), ThreadE
             
         stop_count and self.store.clear_activities(deleted_activity_ids)
         self.activities_lock.release()
+        
+        if start_count or update_count:
+            self.schedule_activities()
+        
         _log.info('%d started; %d updated; %d stopped' % (start_count, update_count, stop_count))
 
     def exe(self):
+        _log.debug('Starting up job producer')
+        
         self.set_activities();
         self.globals.event_dispatcher.bind('set_activities', self.set_activities)
-        consumer_count = 10
         
-        while consumer_count:
-            JobConsumer().start()
-            consumer_count -= 1
+        for i in range(10):
+            JobConsumer(str(i + 1)).start()
         
         while 1:
             self.schedule_activities()
             self.globals.stop_event.wait(self.sleep_interval)
 
             if self.globals.stop_event.is_set():
+                _log.debug('Job producer received stop event')
                 break
 
         self.stop_consumers()
+        _log.debug('Shutting down job producer')
 
     def stop_consumers(self):
+        _log.debug('Stopping job consumers')
         threads = threading.enumerate()
 
         for thread in threads:
@@ -238,19 +255,24 @@ class JobProducer(SingletonType('JobProducerMetaClass', (object, ), {}), ThreadE
         callback(ret)
 
 class JobConsumer(ThreadEx):
-    def __init__(self):
+    def __init__(self, name):
         ThreadEx.__init__(self)
         self.job_producer = JobProducer()
         self.globals = globals.Interface()
+        self.name = name
 
     def exe(self):
+        _log.debug('Starting up job consumer %s' % self.name)
+        
         while 1:
             job = self.job_producer.queue.get()
 
-            if job == None or self.globals.stop_event.is_set():
+            if self.globals.stop_event.is_set():
+                _log.debug('Job consumer %s received stop event' % self.name)
                 break
 
-            t = int(time.time() * 1000)
-            job.exec_timestamp - t > 0 and time.sleep(job.exec_timestamp - t)
-            self.job_producer.add_job(job)
-            time.sleep(0.250)
+            if job:
+                time.sleep(max(0.250, job.exec_timestamp - int(time.time() * 1000)))
+                self.job_producer.add_job(job)
+            
+        _log.debug('Shutting down job consumer %s' % self.name)
