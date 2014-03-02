@@ -96,7 +96,7 @@ class Job:
         self.output_file = None
 
         
-class JobProducer(SingletonType('JobProducerMetaClass', (object, ), {}), ThreadEx):
+class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
     def __init__(self, store):
         ThreadEx.__init__(self)
         self.globals = globals.Interface()

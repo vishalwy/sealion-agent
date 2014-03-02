@@ -15,7 +15,7 @@ from constructs import *
 _log = logging.getLogger(__name__)
 _metric = {'starting_time': 0, 'stopping_time': 0}
 
-class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx):    
+class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):    
     def __init__(self):
         ThreadEx.__init__(self)
         self.globals = globals.Interface()

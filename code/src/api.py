@@ -22,7 +22,7 @@ class Status(Namespace):
     SESSION_CONFLICT = 8
     UNKNOWN = -1
 
-class API(SingletonType('APIMetaClass', (object, ), {}), requests.Session):    
+class API(SingletonType('APIMetaClass', (requests.Session, ), {})):    
     status = Status
     
     def __init__(self, *args, **kwargs):
