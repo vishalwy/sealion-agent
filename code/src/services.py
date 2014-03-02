@@ -5,45 +5,41 @@ import subprocess
 import re
 import signal
 import os
-import sys
 import tempfile
-import api
-import storage
 import globals
-import connection
-from datetime import datetime
 from constructs import *
 
 _log = logging.getLogger(__name__)
-_metric = {'starting_time': 0, 'stopping_time': 0}
 
 class JobStatus(Namespace):
     NOT_RUNNING = 0
     RUNNING = 1
     TIMED_OUT = 2
 
-class Job:    
-    def __init__(self, activity, is_whitelisted):
+class Job:
+    def __init__(self, activity, store):
         self.activity = activity
-        self.is_whitelisted = is_whitelisted
         self.status = JobStatus.NOT_RUNNING
         self.timestamp = 0
         self.process = None
         self.output_file = None
-    
+        self.exec_timestamp = activity['next_exec_timestamp']
+        self.details = self.activity['details']
+        self.store = store
+
     def start(self):
         self.timestamp = int(time.time() * 1000)
-        
-        if self.is_whitelisted == True:
-            _log.debug('Executing activity(%s @ %d)' % (self.activity['_id'], self.timestamp))
+
+        if self.activity['is_whitelisted'] == True:
+            _log.debug('Executing activity(%s @ %d)' % (self.details['_id'], self.timestamp))
             self.output_file = tempfile.TemporaryFile()
-            self.process = subprocess.Popen(self.activity['command'], shell=True, stdout = self.output_file, stderr = self.output_file, preexec_fn = os.setpgrp)
+            self.process = subprocess.Popen(self.details['command'], shell=True, stdout = self.output_file, stderr = self.output_file, preexec_fn = os.setpgrp)
             self.status = JobStatus.RUNNING
         else:
-            _log.info('Activity %s is blocked by whitelist' % self.activity['_id'])
-            
+            _log.info('Activity %s is blocked by whitelist' % self.details['_id'])
+
         return self
-            
+
     def stop(self):
         try:
             os.killpg(self.process.pid, signal.SIGKILL)
@@ -53,7 +49,7 @@ class Job:
             return True
         except:
             return False
-        
+
     def get_status(self):
         if self.status == JobStatus.RUNNING and self.process.poll() != None:
             self.status = JobStatus.NOT_RUNNING
@@ -62,94 +58,58 @@ class Job:
                 os.waitpid(-1 * self.process.pid, os.WUNTRACED)
             except:
                 pass
-            
+
         return self.status
-        
-    def post_output(self, store):
+
+    def post_output(self):
         data = None
-        
+
         if self.process == None:
             data = {'timestamp': self.timestamp, 'returnCode': 0, 'data': 'Command blocked by whitelist.'}
         elif self.get_status() == JobStatus.TIMED_OUT:
             data = {'timestamp': self.timestamp, 'returnCode': 0, 'data': 'Command exceeded timeout.'}
-        elif self.output_file:            
+        elif self.output_file:
             self.output_file.seek(0, os.SEEK_SET)
             data = {'timestamp': self.timestamp, 'returnCode': self.process.returncode, 'data': self.output_file.read(256 * 1024)}
-            
+
             if not data['data']:
                 data['data'] = 'No output produced'
-                _log.debug('No output/error found for activity(%s @ %d)' % (self.activity['_id'], self.timestamp))
-            
+                _log.debug('No output/error found for activity(%s @ %d)' % (self.details['_id'], self.timestamp))
+
         self.close_file()
-        
+
         if data:
-            _log.debug('Pushing activity(%s @ %d) to store' % (self.activity['_id'], self.timestamp))
-            store.push(self.activity['_id'], data)
-        
+            _log.debug('Pushing activity(%s @ %d) to store' % (self.details['_id'], self.timestamp))
+            self.store.push(self.details['_id'], data)
+
     def close_file(self):
         self.output_file and self.output_file.close()
         self.output_file = None
 
-class Activity(ThreadEx):
-    jobs = []
-    timeout = -1
-    jobs_lock = threading.RLock()
-    prev_time = int(time.time() * 1000)
-    
-    def __init__(self, activity):
-        ThreadEx.__init__(self)
-        self.activity = activity;
-        self.is_stop = False
+        
+class JobProducer(SingletonType('JobProducerMetaClass', (object, ), {}), ThreadEx):
+    def __init__(self):
+        ThreadEx.__init__(self, store)
         self.globals = globals.Interface()
-        self.is_whitelisted = self.is_in_whitelist()
-        
-        if Activity.timeout == -1:
-            try:
-                Activity.timeout = self.globals.config.sealion.commandTimeout
-            except:
-                Activity.timeout = 30
-                
-            Activity.timeout = int(Activity.timeout * 1000)
-    
-    @staticmethod
-    def add_job(job):
-        Activity.jobs_lock.acquire()
-        t = int(time.time() * 1000)
-        
-        if t - Activity.prev_time < 250:
-            time.sleep(0.250)
-            
-        Activity.prev_time = t
-        Activity.jobs.append(job.start())
-        Activity.jobs_lock.release()
-        
-    @staticmethod
-    def finish_jobs(activities = []):
-        finished_jobs = []
-        running_jobs = []
-        Activity.jobs_lock.acquire()
-        t = int(time.time() * 1000)
-        
-        for job in Activity.jobs:
-            if activities == None or (job.activity['_id'] in activities):
-                job.stop() and _log.info('Killed activity(%s @ %d)' % (job.activity['_id'], job.timestamp))
-                job.close_file()
-            elif t - job.timestamp > Activity.timeout:
-                job.stop() and _log.info('Killed activity(%s @ %d) as it exceeded timeout' % (job.activity['_id'], job.timestamp))
-            
-            if job.get_status() != JobStatus.RUNNING:
-                finished_jobs.append(job)
-            else:
-                running_jobs.append(job)
-        
-        Activity.jobs = running_jobs
-        Activity.jobs_lock.release()
-        return finished_jobs
-        
-    def is_in_whitelist(self):
+        self.jobs = []
+        self.jobs_lock = threading.RLock()
+        self.activities_lock = threading.RLock()
+        self.activities = {}
+        self.queue = queue.Queue()
+        self.sleep_interval = 5
+        self.store = store
+
+        try:
+            self.timeout = self.globals.config.sealion.commandTimeout
+        except:
+            self.timeout = 30
+
+        self.timeout = int(self.timeout * 1000)
+        self.globals.event_dispatcher.bind('get_activity', self.get_activity)
+
+    def is_in_whitelist(self, command):
         whitelist = []
         is_whitelisted = True
-        command = self.activity['command']
 
         if hasattr(self.globals.config.sealion, 'whitelist'):
             whitelist = self.globals.config.sealion.whitelist
@@ -161,222 +121,134 @@ class Activity(ThreadEx):
                 if re.match(whitelist[i], command):
                     is_whitelisted = True
                     break
-                    
+
         return is_whitelisted
-
-    def exe(self):
-        _log.info('Starting up activity %s' % self.activity['_id'])                      
-        
-        while 1:
-            Activity.add_job(Job(self.activity, self.is_whitelisted))
-            timeout = self.activity['interval']
-            break_flag = False
-            
-            while timeout > 0:
-                if self.globals.stop_event.is_set() or self.is_stop == True:
-                    _log.debug('Activity %s received stop event' % self.activity['_id'])
-                    break_flag = True
-                    break
-                
-                time.sleep(min(2, timeout))
-                timeout -= 2
-                
-            if break_flag == True:
-                break
-
-        self.is_stop and Activity.finish_jobs([self.activity['_id']])
-        _log.info('Shutting down activity %s' % self.activity['_id'])
-        
-    def stop(self):
-        self.is_stop = True       
-
-class Controller(SingletonType('ControllerMetaClass', (object, ), {}), ThreadEx):    
-    def __init__(self):
-        ThreadEx.__init__(self)
-        self.globals = globals.Interface()
-        self.api = api.Interface()
-        self.store = storage.Interface()
-        self.is_stop = False
-        self.main_thread = threading.current_thread()
-        self.activities = {}
-        self.activities_lock = threading.RLock()
     
-    def handle_response(self, status):
-        _log.debug('Handling response status %d' % status)
-        
-        if status == self.api.status.SUCCESS:
-            return True
-        elif self.api.is_not_connected(status):
-            _log.info('Failed to connect')
-        elif status == self.api.status.NOT_FOUND:           
-            try:
-                _log.info('Uninstalling agent')
-                subprocess.Popen([self.globals.exe_path + 'uninstall.sh'])
-            except:
-                _log.error('Failed to open uninstall script')
-                
-        elif status == self.api.status.UNAUTHERIZED:
-            _log.error('Agent unautherized to connect')
-        elif status == self.api.status.BAD_REQUEST:
-            _log.error('Server marked the request as bad')
-        elif status == self.api.status.SESSION_CONFLICT:
-            _log.error('Agent session conflict')
+    def add_job(self, job):
+        self.jobs_lock.acquire()
+        self.jobs.append(job.start())
+        self.jobs_lock.release()
 
-        return False
+    def finish_jobs(self, activities = []):
+        finished_jobs = []
+        running_jobs = []
+        self.jobs_lock.acquire()
+        t = int(time.time() * 1000)
+
+        for job in self.jobs:
+            if activities == None or (job.details['_id'] in activities):
+                job.stop() and _log.info('Killed activity(%s @ %d)' % (job.details['_id'], job.timestamp))
+                job.close_file()
+            elif t - job.timestamp > self.timeout:
+                job.stop() and _log.info('Killed activity(%s @ %d) as it exceeded timeout' % (job.details['_id'], job.timestamp))
+
+            if job.get_status() != JobStatus.RUNNING:
+                finished_jobs.append(job)
+            else:
+                running_jobs.append(job)
+
+        self.jobs = running_jobs
+        self.jobs_lock.release()
+        return finished_jobs
+
+    def schedule_activities(self):
+        self.activities_lock.acquire()
+        t, jobs = int(time.time() * 1000), []
+
+        for activity_id in self.activities:
+            activity = self.activities[activity_id]
+
+            if activity['next_exec_timestamp'] <= t + self.sleep_interval:                
+                jobs.append(Job(activity, self.store))
+                activity['next_exec_timestamp'] = activity['next_exec_timestamp'] + (activity['details']['interval'] * 1000)
+
+        jobs = sorted(jobs, key = lambda job: job.exec_timestamp)
+
+        for job in jobs:
+            self.queue.put(job)
+
+        self.activities_lock.release()
         
+    def set_activities(self, event = None):
+        activities = self.globals.config.agent.activities
+        start_count, update_count, stop_count, activity_ids = 0, 0, 0, []
+        self.activities_lock.acquire()        
+        t = int(time.time() * 1000)
+        
+        for activity in activities:
+            activity_id = activity['_id']
+            cur_activity = self.activities.get(activity_id)
+            
+            if cur_activity:
+                details = cur_activity['details']
+                
+                if details['interval'] != activity['interval'] and details['command'] != activity['command']:
+                    cur_activity['is_whitelisted'] = self.is_in_whitelist(activity['command'])
+                    cur_activity['next_exec_timestamp'] = t
+                    update_count += 1
+            else:              
+                self.activities[activity_id] = {
+                    'details': activity,
+                    'is_whitelisted': self.is_in_whitelist(activity['command']),
+                    'next_exec_timestamp': t
+                }
+                start_count += 1
+                
+            activity_ids.append(activity_id)
+            
+        deleted_activity_ids = [activity_id for activity_id in self.activities if (activity_id in activity_ids) == False]
+        
+        for activity_id in deleted_activity_ids:
+            del self.activities[activity_id]
+            stop_count += 1
+            
+        stop_count and self.store.clear_activities(deleted_activity_ids)
+        self.activities_lock.release()
+        _log.info('%d started; %d updated; %d stopped' % (start_count, update_count, stop_count))
+
     def exe(self):
-        _log.debug('Controller starting up')
+        self.set_activities();
+        self.globals.event_dispatcher.bind('set_activities', self.set_activities)
+        consumer_count = 10
+        
+        while consumer_count:
+            JobConsumer().start()
+            consumer_count -= 1
         
         while 1:
-            if self.globals.is_update_only_mode == True:
-                version = self.api.get_agent_version()
-                version_type = type(version)
+            self.schedule_activities()
+            self.globals.stop_event.wait(self.sleep_interval)
 
-                if (version_type is str or version_type is unicode) and version != self.globals.config.agent.agentVersion:
-                    self.api.update_agent()
-
-                _log.debug('Controller waiting for stop event for %d seconds' % (5 * 60, ))
-                self.globals.stop_event.wait(5 * 60)
-
-                if self.globals.stop_event.is_set():
-                    _log.debug('Controller received stop event')
-                    _metric['stopping_time'] = time.time()
-                    break
-            else:
-                if self.handle_response(connection.Interface().connect()) == False:
-                    break
-
-                if self.store.start() == False:
-                    break
-                    
-                self.globals.event_dispatcher.bind('get_activity', self.get_activity)
-
-                if len(self.globals.config.agent.activities) == 0:
-                    self.store.clear_offline_data()
-
-                self.manage_activities();
-                self.globals.event_dispatcher.bind('manage_activities', self.manage_activities)
-
-                while 1:             
-                    finished_job_count = 0
-
-                    for job in Activity.finish_jobs():
-                        job.post_output(self.store)
-                        finished_job_count += 1
-
-                    _log.debug('Fetched %d finished jobs' % finished_job_count)
-                    self.globals.stop_event.wait(5)
-
-                    if self.globals.stop_event.is_set():
-                        _log.debug('Controller received stop event')
-                        _metric['stopping_time'] = time.time()
-                        Activity.finish_jobs(None)
-                        break
-                        
-                self.handle_response(self.api.stop_status)
+            if self.globals.stop_event.is_set():
                 break
 
-        self.is_stop = True
-        self.stop_threads()
+        self.stop_consumers()
 
-        _log.debug('Controller generating SIGALRM signal')
-        signal.alarm(1)
-        _log.debug('Controller shutting down')
-            
-    def stop(self):
-        self.is_stop = True
-        self.api.stop()
-        
-    def stop_threads(self):
-        _log.debug('Stopping all threads')
-        self.api.stop()
-        connection.Interface.stop_rtc()
-        self.api.logout()
-        self.api.close()
+    def stop_consumers(self):
         threads = threading.enumerate()
-        curr_thread = threading.current_thread()
 
         for thread in threads:
-            if thread.ident != curr_thread.ident and thread.ident != self.main_thread.ident and thread.daemon != True:
-                _log.debug('Waiting for %s' % str(thread))
-                thread.join()
+            if isinstance(thread, JobConsumer):
+                self.job_queue.put(None)
                 
     def get_activity(self, event, activity, callback):
         self.activities_lock.acquire()
         ret = self.activities.get(activity)
         self.activities_lock.release()
         callback(ret)
-                
-    def manage_activities(self, event = None, old_activities = [], deleted_activity_ids = []):
-        new_activities = self.globals.config.agent.activities
-        start_count, update_count, stop_count = 0, 0, 0
-        self.activities_lock.acquire()
-        
-        for activity_id in deleted_activity_ids:
-            self.activities[activity_id].stop()
-            del self.activities[activity_id]
-            stop_count += 1
-            
-        stop_count and self.store.clear_activities(deleted_activity_ids)
-            
-        for activity in new_activities:
-            activity_id = activity['_id']
-            
-            if (activity_id in self.activities):
-                t = [old_activity for old_activity in old_activities if old_activity['_id'] == activity_id]
-                
-                if len(t) and t[0]['interval'] == activity['interval'] and t[0]['command'] == activity['command']:
-                    continue
-                
-                self.activities[activity_id].stop()
-                update_count += 1
-            else:
-                start_count += 1
-                
-            self.activities[activity_id] = Activity(activity)
-            self.activities[activity_id].start()
-        
-        self.activities_lock.release()
-        _log.info('%d started; %d updated; %d stopped' % (start_count, update_count, stop_count))
 
-def sig_handler(signum, frame):    
-    if signum == signal.SIGTERM:
-        _log.info('Received SIGTERM signal')
-        signal.signal(signal.SIGTERM, signal.SIG_IGN)
-        Controller().stop()
-    elif signum == signal.SIGINT:
-        _log.info('Received SIGINT signal')
-        signal.signal(signal.SIGINT, signal.SIG_IGN)
-        Controller().stop()
-    elif signum == signal.SIGALRM:
-        _log.debug('Received SIGALRM signal')
-        signal.alarm(0)
-        
-def stop(status = 0):
-    _log.info('Agent shutting down with status code %d' % status)
-    _log.debug('Took %f seconds to shutdown' % (time.time() - _metric['stopping_time']))
-    _log.info('Ran for %s hours' % str(datetime.now() - datetime.fromtimestamp(_metric['starting_time'])))
-    exit(status)
-    
-def start():
-    _metric['starting_time'] = time.time()
-    _log.info('Agent starting up')
-    _log.info('Using python binary at %s' % sys.executable)
-    _log.info('Python version : %s' % '.'.join([str(i) for i in sys.version_info]))
-    _log.info('Agent version  : %s' % globals.Interface().config.agent.agentVersion)
-    controller = Controller()
-    signal.signal(signal.SIGALRM, sig_handler)
-    signal.signal(signal.SIGTERM, sig_handler)
-    signal.signal(signal.SIGINT, sig_handler)
-    controller.start()
-    
-    while 1:
-        _log.debug('Waiting for signals SIGALRM or SIGTERM or SIGINT')
-        signal.pause()
-        
-        if controller.is_stop == True:
-            controller.join()
-            break
+class JobConsumer(ThreadEx):
+    def __init__(self):
+        ThreadEx.__init__(self)
+        self.job_producer = JobProducer()
+        self.globals = globals.Interface()
 
-    stop()
+    def exe(self):
+        while 1:
+            job = self.job_producer.queue.get()
 
+            if self.globals.stop_event.is_set():
+                break
+
+            self.job_producer.add_job(job)
+            sleep(0.250)
