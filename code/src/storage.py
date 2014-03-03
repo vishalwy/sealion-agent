@@ -168,7 +168,7 @@ class OfflineStore(ThreadEx):
     
     def select(self, limit, callback):        
         try:
-            rows = self.cursor.execute('SELECT ROWID, * FROM data ORDER BY timestamp LIMIT %d' % limit)
+            rows = self.cursor.execute('SELECT ROWID, * FROM data ORDER BY timestamp DESC LIMIT %d' % limit)
         except Exception as e:
             _log.error('Failed to retreive rows from offline storage; %s' % str(e))
             return True

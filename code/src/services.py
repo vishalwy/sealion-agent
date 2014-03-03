@@ -96,7 +96,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
         self.globals = globals.Interface()
         self.jobs = []
         self.jobs_lock = threading.RLock()
-        self.activities_lock = threading.RLock()
+        self.activities_lock = threading.Lock()
         self.activities = {}
         self.queue = queue.Queue()
         self.sleep_interval = 5
@@ -195,6 +195,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
                 details = cur_activity['details']
                 
                 if details['interval'] != activity['interval'] or details['command'] != activity['command']:
+                    cur_activity['details'] = activity
                     cur_activity['is_whitelisted'] = self.is_in_whitelist(activity['command'])
                     cur_activity['next_exec_timestamp'] = t
                     update_count += 1
