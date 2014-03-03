@@ -240,7 +240,7 @@ else
 fi
 
 if [ -f "$INSTALL_PATH/bin/sealion-node" ] ; then
-    echo "Killing evil twin..."
+    echo "Removing sealion-node"
     kill -SIGKILL `pgrep -d ',' 'sealion-node'` >/dev/null 2>&1
     find "$INSTALL_PATH" -mindepth 1 -maxdepth 1 -exec rm -rf {} \; >/dev/null 2>&1
 fi
