@@ -219,10 +219,12 @@ class OfflineStore(ThreadEx):
 
         self.close_db()
         return False
-    
+   
 class Sender(ThreadEx):   
     queue_max_size = 100
     ping_interval = 10
+    gc_counter = 0
+    gc_threshold = 2
     
     def __init__(self, off_store):
         ThreadEx.__init__(self)
@@ -230,8 +232,6 @@ class Sender(ThreadEx):
         self.api = api.Interface()
         self.off_store = off_store
         self.queue = queue.Queue(self.queue_max_size)
-        self.off_store_lock = threading.RLock()
-        self.store_data_available = True
         self.last_ping_time = int(time.time())
         self.valid_activities = None
         
@@ -249,9 +249,10 @@ class Sender(ThreadEx):
         
         return True
         
-    def wait(self, is_perform_gc = False):
+    def wait(self):
         if self.globals.post_event.is_set() == False:
-            is_perform_gc == True and _log.debug('GC collected %d unreachables' % gc.collect())
+            Sender.gc_counter and _log.debug('GC collected %d unreachables' % gc.collect())
+            Sender.gc_counter = 0
             timeout = self.ping_interval if self.api.is_authenticated else None
             _log.debug('Sender waiting for post event %s' % (' for %d seconds' % timeout if timeout else ''))
             self.globals.post_event.wait(timeout)
@@ -281,27 +282,42 @@ class Sender(ThreadEx):
             
         self.off_store_lock.release()
         return is_available
-    
-    def store_get_callback(self, rows):
-        row_count, i = len(rows), 0
-        
-        while i < row_count:            
-            data = {
-                'timestamp': rows[i][2],
-                'returnCode': rows[i][3],
-                'data': rows[i][4]
-            }
-            
-            if self.push({'row_id': rows[i][0], 'activity': rows[i][1], 'data': data}) == False:
-                break
-                
-            i += 1
-        
-        _log.debug('Pushed %d rows to sender from offline storage' % i)
-        self.store_available(i != row_count or self.queue_max_size == row_count)
         
     def store_put_callback(self):
         self.store_available(True)
+        
+    def exe(self):
+        _log.debug('Starting up sender')
+        
+        while 1:
+            if self.wait() == False:
+                break
+                
+            try:
+                item = self.queue.get(True, 5)
+                Sender.gc_counter = 1 if Sender.gc_counter == 0 else Sender.gc_counter 
+                self.validate_count = max(self.validate_count - 1, 0)
+                
+                if self.validate_count and self.is_valid_activity(item['activity']) == False:
+                    _log.debug('Discarding activity %s' % item['activity'])                    
+                    continue
+            except:
+                Sender.gc_counter = Sender.gc_counter + 1 if Sender.gc_counter else 0
+                    
+                if Sender.gc_counter >= Sender.gc_threshold:
+                    _log.debug('GC collected %d unreachables' % gc.collect())
+                    Sender.gc_counter = 0
+                    
+                self.on_queue_empty()
+                continue
+                
+            self.post_data(item)
+                
+        self.update_store(del_rows, [])
+        _log.debug('Shutting down sender')
+        
+    def on_queue_empty(self):
+        pass
         
     def exe(self):
         _log.debug('Starting up sender')
@@ -369,6 +385,86 @@ class Sender(ThreadEx):
         ret = EmptyClass()
         self.globals.event_dispatcher.trigger('get_activity', activity_id, lambda x: [True, setattr(ret, 'value', x)][0])
         return ret.value != None
+    
+    def post_data(self, item):
+        row_id, api_status = item.get('row_id'), self.api.status
+        status = self.api.post_data(item['activity'], item['data'])
+
+        if status == api_status.MISMATCH:
+            self.api.get_config()
+        elif (status == api_status.NOT_CONNECTED or status == api_status.NO_SERVICE):
+            row_id == None and self.off_store.put(item['activity'], item['data'], self.store_put_callback)
+        else:
+            row_id and del_rows.append(row_id)
+            
+class RealtimeSender(Sender):
+    def __init__(self, off_store):
+        Sender.__init__(self, off_store)
+        self.off_store_lock = threading.RLock()
+        self.store_data_available = True
+    
+    def exe(self):
+        _log.debug('Starting up sender')
+        gc_counter, gc_threshold = 0, 2
+        
+        while 1:
+            if self.wait() == False:
+                break
+                
+            try:
+                item = self.queue.get(True, 5)
+                gc_counter = 1 if gc_counter == 0 else gc_counter
+                self.validate_count = max(self.validate_count - 1, 0)
+                
+                if self.validate_count and self.is_valid_activity(item['activity']) == False:
+                    _log.debug('Discarding activity %s' % item['activity'])                    
+                    continue
+            except:
+                gc_counter = gc_counter + 1 if gc_counter else 0
+                    
+                if gc_counter >= gc_threshold:
+                    _log.debug('GC collected %d unreachables' % gc.collect())
+                    gc_counter = 0
+                
+                if self.store_available():
+                    self.off_store.get(self.queue_max_size, self.store_get_callback)
+                
+                continue
+                
+            self.post_data(item)
+                
+        self.update_store(del_rows, [])
+        _log.debug('Shutting down sender')
+    
+class HistoricSender(Sender):
+    def __init__(self, off_store):
+        Sender.__init__(self, off_store)
+        self.off_store_lock = threading.RLock()
+        self.store_data_available = True
+        
+    def on_queue_empty(self):
+        self.update_store(del_rows, [])
+        
+        if self.store_available():
+            self.off_store.get(self.queue_max_size, self.store_get_callback)
+        
+    def store_get_callback(self, rows):
+        row_count, i = len(rows), 0
+        
+        while i < row_count:            
+            data = {
+                'timestamp': rows[i][2],
+                'returnCode': rows[i][3],
+                'data': rows[i][4]
+            }
+            
+            if self.push({'row_id': rows[i][0], 'activity': rows[i][1], 'data': data}) == False:
+                break
+                
+            i += 1
+        
+        _log.debug('Pushed %d rows to sender from offline storage' % i)
+        Sender.store_available(i != row_count or self.queue_max_size == row_count)
 
 class Storage:
     def __init__(self):
@@ -388,7 +484,7 @@ class Storage:
             return
         
         if self.sender.push({'activity': activity, 'data': data}) == False:
-            self.off_store.put(activity, data, self.sender.store_put_callback)
+            self.off_store.put(activity, data, Sender.store_put_callback)
         
     def clear_offline_data(self):
         self.off_store.clr()
