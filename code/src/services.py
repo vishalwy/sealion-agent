@@ -28,16 +28,9 @@ class Job:
         self.exec_timestamp = activity['next_exec_timestamp']
         self.details = self.activity['details']
         self.store = store
-        
-    def get_timestamp(self):
-        Job.timestamp_lock.acquire()
-        t = int(time.time() * 1000)
-        time.sleep(0.001)
-        Job.timestamp_lock.release()
-        return t
 
     def start(self):
-        self.timestamp = self.get_timestamp()
+        self.timestamp = int(time.time() * 1000)
 
         if self.activity['is_whitelisted'] == True:
             _log.debug('Executing activity(%s @ %d)' % (self.details['_id'], self.timestamp))
@@ -99,6 +92,7 @@ class Job:
 class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
     def __init__(self, store):
         ThreadEx.__init__(self)
+        self.prev_time = int(time.time() * 1000)
         self.globals = globals.Interface()
         self.jobs = []
         self.jobs_lock = threading.RLock()
@@ -136,6 +130,12 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
     
     def add_job(self, job):
         self.jobs_lock.acquire()
+        t = int(time.time() * 1000)
+        
+        if t - self.prev_time < 250:
+            time.sleep(0.250)
+            
+        self.prev_time = t
         self.jobs.append(job.start())
         self.jobs_lock.release()
 
@@ -268,13 +268,14 @@ class JobConsumer(ThreadEx):
         
         while 1:
             job = self.job_producer.queue.get()
+            t = int(time.time() * 1000)
 
             if self.globals.stop_event.is_set():
                 _log.debug('Job consumer %s received stop event' % self.name)
                 break
 
             if job:
-                time.sleep(max(0.250, job.exec_timestamp - int(time.time() * 1000)))
+                job.exec_timestamp - t > 0 and time.sleep(t)
                 self.job_producer.add_job(job)
             
         _log.debug('Shutting down job consumer %s' % self.name)
