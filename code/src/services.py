@@ -92,7 +92,7 @@ class Job:
 class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
     def __init__(self, store):
         ThreadEx.__init__(self)
-        self.prev_time = int(time.time() * 1000)
+        self.prev_time = time.time()
         self.globals = globals.Interface()
         self.jobs = []
         self.jobs_lock = threading.RLock()
@@ -130,9 +130,9 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
     
     def add_job(self, job):
         self.jobs_lock.acquire()
-        t = int(time.time() * 1000)
+        t = time.time()
         
-        if t - self.prev_time < 250:
+        if t - self.prev_time < 0.250:
             time.sleep(0.250)
             
         self.prev_time = t
@@ -163,14 +163,15 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
 
     def schedule_activities(self):
         self.activities_lock.acquire()
-        t, jobs = int(time.time() * 1000), []
+        t, jobs = time.time(), []
 
         for activity_id in self.activities:
             activity = self.activities[activity_id]
+            next_exec_timestamp = activity['next_exec_timestamp']
 
-            if activity['next_exec_timestamp'] <= t + self.sleep_interval:                
+            if next_exec_timestamp <= t + self.sleep_interval:                
                 jobs.append(Job(activity, self.store))
-                activity['next_exec_timestamp'] = activity['next_exec_timestamp'] + (activity['details']['interval'] * 1000)
+                activity['next_exec_timestamp'] = next_exec_timestamp + activity['details']['interval']
 
         jobs = sorted(jobs, key = lambda job: job.exec_timestamp)
         len(jobs) and _log.info('Scheduling %d activities', len(jobs))
@@ -184,7 +185,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
         activities = self.globals.config.agent.activities
         start_count, update_count, stop_count, activity_ids = 0, 0, 0, []
         self.activities_lock.acquire()        
-        t = int(time.time() * 1000)
+        t = time.time()
         
         for activity in activities:
             activity_id = activity['_id']
@@ -197,6 +198,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
                     cur_activity['is_whitelisted'] = self.is_in_whitelist(activity['command'])
                     cur_activity['next_exec_timestamp'] = t
                     update_count += 1
+                    t += 0.250
             else:              
                 self.activities[activity_id] = {
                     'details': activity,
@@ -204,6 +206,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
                     'next_exec_timestamp': t
                 }
                 start_count += 1
+                t += 0.250
                 
             activity_ids.append(activity_id)
             
@@ -268,14 +271,14 @@ class JobConsumer(ThreadEx):
         
         while 1:
             job = self.job_producer.queue.get()
-            t = int(time.time() * 1000)
 
             if self.globals.stop_event.is_set():
                 _log.debug('Job consumer %s received stop event' % self.name)
                 break
 
             if job:
-                job.exec_timestamp - t > 0 and time.sleep(t)
+                t = time.time()
+                job.exec_timestamp - t > 0 and time.sleep(job.exec_timestamp - t)
                 self.job_producer.add_job(job)
             
         _log.debug('Shutting down job consumer %s' % self.name)
