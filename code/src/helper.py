@@ -17,7 +17,7 @@ class Utils(Namespace):
             return Utils.sanitize_dict(d, schema, is_delete_extra, file)
         elif d_type_name == 'list' and schema_type_name == 'list':
             for i in range(0, len(d)):
-                if Utils.sanitize_type(d[i], schema[0], is_delete_extra, regex, file) == False:
+                if Utils.sanitize_type(d[i], schema[0], is_delete_extra, regex, is_regex, file) == False:
                     return False
                 
             return True

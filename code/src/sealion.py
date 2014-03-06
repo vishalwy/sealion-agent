@@ -88,7 +88,6 @@ class sealion(Daemon):
                 file_name = path + file
 
                 if os.path.isfile(file_name):
-                    status = api.status.UNKNOWN
                     report = None
 
                     while 1:
@@ -100,9 +99,7 @@ class sealion(Daemon):
                         if report == None:
                             break
 
-                        status = api.send_crash_report(report)
-
-                        if api.is_not_connected(status) == False:                        
+                        if api.send_crash_report(report) == api.status.SUCCESS:                        
                             _log.info('Removing crash dump %s' % file_name)
                             os.remove(file_name)
                             break
@@ -176,7 +173,7 @@ class sealion(Daemon):
         except:
             return 0
         
-        return len(files) >= 4
+        return len(files) >= 5
         
     def exception_hook(self, type, value, tb):
         if type != SystemExit:
