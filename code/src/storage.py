@@ -236,7 +236,6 @@ class Sender(ThreadEx):
         self.queue = queue.Queue(self.queue_max_size)
         self.last_ping_time = int(time.time())
         self.valid_activities = None
-        self.is_stop = False
         
     def push(self, item):
         try:
@@ -260,7 +259,7 @@ class Sender(ThreadEx):
             _log.debug('Sender waiting for post event %s' % (' for %d seconds' % timeout if timeout else ''))
             self.globals.post_event.wait(timeout)
         
-        if self.is_stop == True:
+        if self.globals.stop_event.is_set() == True:
             _log.debug('Sender received stop event')
             return False
         
@@ -282,10 +281,6 @@ class Sender(ThreadEx):
             
         Sender.off_store_lock.release()
         return is_available
-        
-    @staticmethod
-    def store_put_callback():
-        Sender.store_available(True)
         
     def exe(self):
         _log.debug('Starting up sender')
@@ -322,9 +317,6 @@ class Sender(ThreadEx):
         self.globals.event_dispatcher.trigger('get_activity', activity_id, lambda x: [True, setattr(ret, 'value', x)][0])
         return ret.value != None
     
-    def stop(self):
-        self.is_stop = True
-    
     def queue_empty(self):
         pass
     
@@ -342,7 +334,7 @@ class RealtimeSender(Sender):
         if status == api_status.MISMATCH:
             self.api.get_config()
         elif (status == api_status.NOT_CONNECTED or status == api_status.NO_SERVICE):
-            self.off_store.put(item['activity'], item['data'], Sender.store_put_callback)
+            self.off_store.put(item['activity'], item['data'], self.store_put_callback)
             
     def cleanup(self):
         self.off_store.set_bulk_insert(True)
@@ -355,6 +347,10 @@ class RealtimeSender(Sender):
                 break
                 
         len(rows) and self.off_store.put_bulk(rows)
+        self.off_store.stop()
+        
+    def store_put_callback(self):
+        Sender.store_available(True)
     
 class HistoricSender(Sender):
     def __init__(self, off_store):
@@ -416,17 +412,12 @@ class Storage:
         self.historic_sender.start()
         return True
     
-    def stop(self):
-        self.realtime_sender.stop()
-        self.historic_sender.stop()
-        self.off_store.stop()
-    
     def push(self, activity, data):
         if self.globals.stop_event.is_set():
             return
         
         if self.realtime_sender.push({'activity': activity, 'data': data}) == False:
-            self.off_store.put(activity, data, Sender.store_put_callback)
+            self.off_store.put(activity, data, self.realtime_sender.store_put_callback)
         
     def clear_offline_data(self):
         self.off_store.clr()
