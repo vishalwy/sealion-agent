@@ -265,10 +265,6 @@ class Sender(ThreadEx):
             return False
         
         return True
-    
-    def update_store(self, del_rows, del_activities):
-        if len(del_rows) or len(del_activities):
-            self.off_store.rem(del_rows, del_activities)
             
     @staticmethod
     def store_available(is_available = None):
@@ -367,8 +363,9 @@ class HistoricSender(Sender):
         self.queue_max_size = 50
         
     def queue_empty(self):
-        self.update_store(self.del_rows, [])
-        self.del_rows = []
+        if len(self.del_rows):
+            self.off_store.rem(self.del_rows, [])
+            self.del_rows = []
         
         if Sender.store_available():
             self.off_store.get(self.queue_max_size, self.store_get_callback)
@@ -402,7 +399,7 @@ class HistoricSender(Sender):
             self.del_rows.append(row_id)
             
     def cleanup(self):
-        self.update_store(self.del_rows, [])        
+        len(self.del_rows) and self.off_store.rem(self.del_rows, [])
 
 class Storage:
     def __init__(self):
