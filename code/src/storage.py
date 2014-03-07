@@ -225,8 +225,8 @@ class Sender(ThreadEx):
     ping_interval = 10
     gc_counter = 0
     gc_threshold = 2
-    self.off_store_lock = threading.RLock()
-    self.store_data_available = True
+    off_store_lock = threading.RLock()
+    store_data_available = True
     
     def __init__(self, off_store):
         ThreadEx.__init__(self)
