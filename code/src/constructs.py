@@ -59,7 +59,9 @@ class ThreadEx(threading.Thread):
         
     def run(self):        
         try:
+            _log.debug('Starting up %s' % self.__class__.__name__)
             (self.orig_target if self.orig_target else self.exe)(*self.orig_args, **self.orig_kwargs)
+            _log.debug('Shutting down %s' % self.__class__.__name__)
         except:
             type, value, tb = sys.exc_info()
             sys.excepthook(type, value, tb)

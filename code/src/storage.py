@@ -48,15 +48,12 @@ class OfflineStore(ThreadEx):
     def set_bulk_insert(self, is_bulk_insert):
         self.is_bulk_insert = is_bulk_insert
         
-    def exe(self):
-        _log.debug('Starting up offline store')
-        
+    def exe(self):        
         try:
             self.conn = sqlite3.connect(self.db_file)
             _log.debug('Created offline storage at %s' % self.db_file)
         except Exception as e:
             _log.error('Failed to create offline storage at %s; %s' % (self.db_file, str(e)))
-            _log.debug('Shutting down offline store')
             self.conn_event.set()
             return
             
@@ -65,7 +62,6 @@ class OfflineStore(ThreadEx):
         if self.setup_schema() == False:
             _log.error('Schema mismatch in offline storage at %s' % self.db_file)
             self.close_db()
-            _log.debug('Shutting down offline store')
             self.conn_event.set()
             return
         
@@ -76,8 +72,6 @@ class OfflineStore(ThreadEx):
             
             if self.perform_task(task) == False:
                 break
-                
-        _log.debug('Shutting down offline store')
         
     def perform_task(self, task):
         is_insert = False
@@ -282,9 +276,7 @@ class Sender(ThreadEx):
         Sender.off_store_lock.release()
         return is_available
         
-    def exe(self):
-        _log.debug('Starting up sender')
-        
+    def exe(self):       
         while 1:
             if self.wait() == False:
                 break
@@ -310,7 +302,6 @@ class Sender(ThreadEx):
             self.post_data(item)
                 
         self.cleanup()
-        _log.debug('Shutting down sender')
         
     def is_valid_activity(self, activity_id):
         ret = EmptyClass()

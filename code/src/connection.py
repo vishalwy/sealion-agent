@@ -13,9 +13,7 @@ class Connection(ThreadEx):
         self.api = api.Interface()
     
     def exe(self):
-        _log.debug('Starting up connection')
         self.attempt(retry_interval = 10)
-        _log.debug('Shutting down connection')
     
     def attempt(self, retry_count = -1, retry_interval = 5):
         status = self.api.authenticate(retry_count = retry_count, retry_interval = retry_interval)

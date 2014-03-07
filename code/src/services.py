@@ -230,9 +230,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
         
         _log.info('%d started; %d updated; %d stopped' % (start_count, update_count, stop_count))
         
-    def exe(self):
-        _log.debug('Starting up job producer')
-        
+    def exe(self):        
         self.set_activities();
         self.globals.event_dispatcher.bind('set_activities', self.set_activities)
         
@@ -245,7 +243,6 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
                 break
 
         self.stop_consumers()
-        _log.debug('Shutting down job producer')
 
     def stop_consumers(self):
         _log.debug('Stopping job consumers')
@@ -267,9 +264,7 @@ class JobConsumer(ThreadEx):
         self.globals = globals.Interface()
         self.name = name
 
-    def exe(self):
-        _log.debug('Starting up job consumer %s' % self.name)
-        
+    def exe(self):       
         while 1:
             job = self.job_producer.queue.get()
 
@@ -281,5 +276,3 @@ class JobConsumer(ThreadEx):
                 t = time.time()
                 job.exec_timestamp - t > 0 and time.sleep(job.exec_timestamp - t)
                 self.job_producer.add_job(job)
-            
-        _log.debug('Shutting down job consumer %s' % self.name)

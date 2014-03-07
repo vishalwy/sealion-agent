@@ -73,7 +73,6 @@ class sealion(Daemon):
         return report
     
     def send_crash_dumps(self):        
-        _log.debug('Crash dump sender starting up')        
         crash_dump_timeout = (self.monit_interval * self.crash_dump_threshold) + 10
         from globals import Globals
         from api import API
@@ -110,8 +109,6 @@ class sealion(Daemon):
                     break
         except:
             pass
-                
-        _log.debug('Crash dump sender shutting down')
     
     def set_procname(self, proc_name = None):
         proc_name = proc_name if proc_name else self.__class__.__name__

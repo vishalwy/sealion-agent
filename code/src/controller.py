@@ -48,9 +48,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
 
         return False
         
-    def exe(self):
-        _log.debug('Controller starting up')
-        
+    def exe(self):        
         while 1:
             if self.globals.is_update_only_mode == True:
                 version = self.api.get_agent_version()
@@ -105,7 +103,6 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
 
         _log.debug('Controller generating SIGALRM signal')
         signal.alarm(1)
-        _log.debug('Controller shutting down')
             
     def stop(self):
         self.is_stop = True

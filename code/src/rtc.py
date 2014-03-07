@@ -139,9 +139,7 @@ class RTC(ThreadEx):
         self.update_heartbeat()
         return is_beating
 
-    def exe(self):       
-        _log.debug('Starting up socket-io')
-        
+    def exe(self):               
         while 1:
             try:
                 self.sio.wait()
@@ -152,7 +150,5 @@ class RTC(ThreadEx):
                 break
                 
             self.connect()
-        
-        _log.debug('Shutting down socket-io')
 
 Interface = RTC
