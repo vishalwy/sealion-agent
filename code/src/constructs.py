@@ -7,6 +7,7 @@ except ImportError:
     import Queue as t
     
 queue = t
+_log = logging.getLogger(__name__)
 
 class EmptyClass:
     pass
