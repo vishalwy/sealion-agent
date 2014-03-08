@@ -304,7 +304,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         try:
             for chunk in response.iter_content(chunk_size = 1024):
                 if self.globals.stop_event.is_set():
-                    _log.info('Updater received stop event')
+                    _log.info('%s received stop event' % self.name)
                     break
 
                 if chunk:

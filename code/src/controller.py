@@ -57,11 +57,11 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                 if (version_type is str or version_type is unicode) and version != self.globals.config.agent.agentVersion:
                     self.api.update_agent()
 
-                _log.debug('Controller waiting for stop event for %d seconds' % (5 * 60, ))
+                _log.debug('%s waiting for stop event for %d seconds' % (self.name, 5 * 60, ))
                 self.globals.stop_event.wait(5 * 60)
 
                 if self.globals.stop_event.is_set():
-                    _log.debug('Controller received stop event')
+                    _log.debug('%s received stop event', self.name)
                     _metric['stopping_time'] = time.time()
                     break
             else:
@@ -90,7 +90,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                     self.globals.stop_event.wait(5)
 
                     if self.globals.stop_event.is_set():
-                        _log.debug('Controller received stop event')
+                        _log.debug('%s received stop event', self.name)
                         _metric['stopping_time'] = time.time()
                         job_producer.finish_jobs(None)
                         break
@@ -101,7 +101,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         self.is_stop = True
         self.stop_threads()
 
-        _log.debug('Controller generating SIGALRM signal')
+        _log.debug('%s generating SIGALRM signal', self.name)
         signal.alarm(1)
             
     def stop(self):

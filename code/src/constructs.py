@@ -55,15 +55,14 @@ class ThreadEx(threading.Thread):
         self.orig_args = args
         self.orig_kwargs = kwargs
         target = self.run if target else target
+        name = name if name else self.__class__.__name__
         threading.Thread.__init__(self, group, target, name)
         
     def run(self):        
-        name = self.name if self.name else self.__class__.__name__ 
-        
         try:
-            _log.debug('Starting up %s' % name)
+            _log.debug('Starting up %s' % self.name)
             (self.orig_target if self.orig_target else self.exe)(*self.orig_args, **self.orig_kwargs)
-            _log.debug('Shutting down %s' % name)
+            _log.debug('Shutting down %s' % self.name)
         except:
             type, value, tb = sys.exc_info()
             sys.excepthook(type, value, tb)

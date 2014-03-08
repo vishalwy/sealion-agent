@@ -223,7 +223,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
         
         while self.consumer_count < temp:
             self.consumer_count += 1
-            JobConsumer(str(self.consumer_count)).start()
+            JobConsumer(self.consumer_count).start()
         
         if start_count + update_count > 0:
             self.schedule_activities()
@@ -239,7 +239,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
             self.globals.stop_event.wait(self.sleep_interval)
 
             if self.globals.stop_event.is_set():
-                _log.debug('Job producer received stop event')
+                _log.debug('%s received stop event' % self.name)
                 break
 
         self.stop_consumers()
@@ -258,18 +258,18 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
         callback(ret)
 
 class JobConsumer(ThreadEx):
-    def __init__(self, name):
+    def __init__(self, id):
         ThreadEx.__init__(self)
         self.job_producer = JobProducer()
         self.globals = globals.Interface()
-        self.name = name
+        self.name = '%s-%d' % (self.__class__.__name__, id)
 
     def exe(self):       
         while 1:
             job = self.job_producer.queue.get()
 
             if self.globals.stop_event.is_set():
-                _log.debug('Job consumer %s received stop event' % self.name)
+                _log.debug('%s received stop event' % self.name)
                 break
 
             if job:

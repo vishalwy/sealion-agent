@@ -39,7 +39,7 @@ class Connection(ThreadEx):
         rtc_thread = Connection.stop_rtc()
         
         if rtc_thread:
-            _log.info('Waiting for socket-io to disconnect')
+            _log.info('Waiting for SocketIO to disconnect')
             rtc_thread.join()
                 
         self.start()
