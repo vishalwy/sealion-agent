@@ -81,7 +81,7 @@ class Job:
         self.close_file()
 
         if data:
-            _log.debug('Pushing activity(%s @ %d) to store' % (self.details['_id'], self.timestamp))
+            _log.debug('Pushing activity(%s @ %d) to %s' % (self.details['_id'], self.timestamp, self.store.__class__.__name__))
             self.store.push(self.details['_id'], data)
 
     def close_file(self):
