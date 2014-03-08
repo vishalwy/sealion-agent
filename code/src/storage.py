@@ -219,6 +219,7 @@ class Sender(ThreadEx):
     ping_interval = 10
     gc_counter = 0
     gc_threshold = 2
+    gc_counter_lock = threading.RLock()
     off_store_lock = threading.RLock()
     store_data_available = True
     
@@ -230,6 +231,7 @@ class Sender(ThreadEx):
         self.queue = queue.Queue(self.queue_max_size)
         self.last_ping_time = int(time.time())
         self.valid_activities = None
+        self.validate_count = 0
         
     def push(self, item):
         try:
@@ -283,19 +285,23 @@ class Sender(ThreadEx):
                 
             try:
                 item = self.queue.get(True, 5)
+                gc_counter_lock.acquire()
                 Sender.gc_counter = 1 if Sender.gc_counter == 0 else Sender.gc_counter 
+                gc_counter_lock.release()                
                 self.validate_count = max(self.validate_count - 1, 0)
                 
                 if self.validate_count and self.is_valid_activity(item['activity']) == False:
                     _log.debug('Discarding activity %s' % item['activity'])                    
                     continue
             except:
+                gc_counter_lock.acquire()
                 Sender.gc_counter = Sender.gc_counter + 1 if Sender.gc_counter else 0
                     
                 if Sender.gc_counter >= Sender.gc_threshold:
                     _log.debug('GC collected %d unreachables' % gc.collect())
                     Sender.gc_counter = 0
-                    
+                
+                gc_counter_lock.release()
                 self.queue_empty()
                 continue
                 
@@ -323,6 +329,7 @@ class RealtimeSender(Sender):
         status = self.api.post_data(item['activity'], item['data'])
 
         if status == api_status.MISMATCH:
+            self.validate_count = self.queue.qsize() + 1
             self.api.get_config()
         elif (status == api_status.NOT_CONNECTED or status == api_status.NO_SERVICE):
             self.off_store.put(item['activity'], item['data'], self.store_put_callback)
@@ -380,6 +387,7 @@ class HistoricSender(Sender):
         status = self.api.post_data(item['activity'], item['data'])
 
         if status == api_status.MISMATCH:
+            self.validate_count = self.queue.qsize() + 1
             self.api.get_config()
         
         if (status != api_status.NOT_CONNECTED and status != api_status.NO_SERVICE):
