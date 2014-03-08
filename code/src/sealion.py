@@ -193,7 +193,7 @@ class sealion(Daemon):
             is_update_only_mode = True
         
         from constructs import ThreadEx
-        ThreadEx(target = self.send_crash_dumps).start()
+        ThreadEx(target = self.send_crash_dumps, name = 'CrashDumpSender').start()
         import main
         main.start(is_update_only_mode)
             

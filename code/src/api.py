@@ -230,7 +230,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         if self.updater != None:
             return
         
-        self.updater = ThreadEx(target = self.download_update)
+        self.updater = ThreadEx(target = self.download_update, name = 'Updater')
         self.updater.start()
     
     def stop(self, stop_status = None):
