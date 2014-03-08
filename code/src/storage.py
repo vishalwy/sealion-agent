@@ -285,23 +285,23 @@ class Sender(ThreadEx):
                 
             try:
                 item = self.queue.get(True, 5)
-                gc_counter_lock.acquire()
+                Sender.gc_counter_lock.acquire()
                 Sender.gc_counter = 1 if Sender.gc_counter == 0 else Sender.gc_counter 
-                gc_counter_lock.release()                
+                Sender.gc_counter_lock.release()                
                 self.validate_count = max(self.validate_count - 1, 0)
                 
                 if self.validate_count and self.is_valid_activity(item['activity']) == False:
                     _log.debug('Discarding activity %s' % item['activity'])                    
                     continue
             except:
-                gc_counter_lock.acquire()
+                Sender.gc_counter_lock.acquire()
                 Sender.gc_counter = Sender.gc_counter + 1 if Sender.gc_counter else 0
                     
                 if Sender.gc_counter >= Sender.gc_threshold:
                     _log.debug('GC collected %d unreachables' % gc.collect())
                     Sender.gc_counter = 0
                 
-                gc_counter_lock.release()
+                Sender.gc_counter_lock.release()
                 self.queue_empty()
                 continue
                 
