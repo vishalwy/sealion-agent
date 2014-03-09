@@ -20,6 +20,8 @@ class OfflineStore(ThreadEx):
         self.task_queue = queue.Queue()
         self.is_bulk_insert = False
         self.bulk_insert_rows = []
+        self.select_max_timestamp = int(time.time() * 1000)
+        self.select_timestamp_lock = threading.RLock()
         
     def start(self):
         self.db_file = helper.Utils.get_safe_path(self.db_file + ('%s.db' % self.globals.config.agent.org))
@@ -47,6 +49,18 @@ class OfflineStore(ThreadEx):
         
     def set_bulk_insert(self, is_bulk_insert):
         self.is_bulk_insert = is_bulk_insert
+        
+    def select_timestamp(self, timestamp = None):
+        select_timestamp_lock.acquire()
+        
+        if timestamp:
+            timestamp = timestamp if timestamp > self.select_max_timestamp else self.select_max_timestamp
+            self.select_max_timestamp = timestamp
+        else:
+            timestamp = self.select_max_timestamp
+        
+        select_timestamp_lock.release()
+        return timestamp
         
     def exe(self):        
         try:
@@ -162,14 +176,16 @@ class OfflineStore(ThreadEx):
     
     def select(self, limit, callback):        
         try:
-            rows = self.cursor.execute('SELECT ROWID, * FROM data ORDER BY timestamp DESC LIMIT %d' % limit)
+            self.cursor.execute('SELECT ROWID, * FROM data WHERE timestamp <= %d ORDER BY timestamp LIMIT %d' % (self.select_timestamp(), limit))
+            rows = self.cursor.fetchall()
+            self.cursor.execute('SELECT COUNT(*) FROM data')
+            num_rows = self.cursor.fetchone()[0]
         except Exception as e:
             _log.error('Failed to retreive rows from %s; %s' % (self.name, str(e)))
             return True
         
-        rows = self.cursor.fetchall()
         _log.debug('Retreived %d rows from %s' % (len(rows), self.name))
-        callback(rows)
+        callback(rows, num_rows)
         return True
             
     def delete(self, row_ids = [], activities = []):
@@ -260,6 +276,10 @@ class Sender(ThreadEx):
             return False
         
         return True
+    
+    @staticmethod
+    def store_put_callback():
+        Sender.store_available(True)
             
     @staticmethod
     def store_available(is_available = None):
@@ -326,13 +346,17 @@ class Sender(ThreadEx):
 class RealtimeSender(Sender):        
     def post_data(self, item):
         api_status = self.api.status
+        self.off_store.select_timestamp(item['data']['timestamp'])
         status = self.api.post_data(item['activity'], item['data'])
 
         if status == api_status.MISMATCH:
             self.validate_count = self.queue.qsize() + 1
             self.api.get_config()
         elif (status == api_status.NOT_CONNECTED or status == api_status.NO_SERVICE):
-            self.off_store.put(item['activity'], item['data'], self.store_put_callback)
+            self.off_store.put(item['activity'], item['data'], Sender.store_put_callback)
+            
+    def queue_empty(self):
+        self.off_store.select_timestamp(int(time.time() * 1000))
             
     def cleanup(self):
         self.off_store.set_bulk_insert(True)
@@ -346,9 +370,6 @@ class RealtimeSender(Sender):
                 
         len(rows) and self.off_store.put_bulk(rows)
         self.off_store.stop()
-        
-    def store_put_callback(self):
-        Sender.store_available(True)
     
 class HistoricSender(Sender):
     def __init__(self, off_store):
@@ -364,7 +385,7 @@ class HistoricSender(Sender):
         if Sender.store_available():
             self.off_store.get(self.queue_max_size, self.store_get_callback)
         
-    def store_get_callback(self, rows):
+    def store_get_callback(self, rows, num_rows):
         row_count, i = len(rows), 0
         
         while i < row_count:            
@@ -380,7 +401,7 @@ class HistoricSender(Sender):
             i += 1
         
         _log.debug('Pushed %d rows to %s from %s' % (i, self.name, self.off_store.__class__.__name__))
-        Sender.store_available(i != row_count or self.queue_max_size == row_count)
+        Sender.store_available(i != num_rows)
         
     def post_data(self, item):
         row_id, api_status = item.get('row_id'), self.api.status
@@ -416,7 +437,7 @@ class Storage:
             return
         
         if self.realtime_sender.push({'activity': activity, 'data': data}) == False:
-            self.off_store.put(activity, data, self.realtime_sender.store_put_callback)
+            self.off_store.put(activity, data, Sender.store_put_callback)
         
     def clear_offline_data(self):
         self.off_store.clr()
