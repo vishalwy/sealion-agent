@@ -51,7 +51,7 @@ class OfflineStore(ThreadEx):
         self.is_bulk_insert = is_bulk_insert
         
     def select_timestamp(self, timestamp = None):
-        select_timestamp_lock.acquire()
+        self.select_timestamp_lock.acquire()
         
         if timestamp:
             timestamp = timestamp if timestamp > self.select_max_timestamp else self.select_max_timestamp
@@ -59,7 +59,7 @@ class OfflineStore(ThreadEx):
         else:
             timestamp = self.select_max_timestamp
         
-        select_timestamp_lock.release()
+        self.select_timestamp_lock.release()
         return timestamp
         
     def exe(self):        
