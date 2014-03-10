@@ -288,8 +288,10 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
                 args = (self.status.SESSION_CONFLICT,)
                 ret = self.status.SESSION_CONFLICT
                 
-        is_ignore_status == False and self.set_events(post_event = post_event)
-        exec_func and exec_func(*args)
+        if is_ignore_status == False:
+            self.set_events(post_event = post_event)
+            exec_func and exec_func(*args)
+            
         return ret
     
     def download_update(self):
