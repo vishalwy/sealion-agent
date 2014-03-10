@@ -198,14 +198,16 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
                     cur_activity['details'] = activity
                     cur_activity['is_whitelisted'] = self.is_in_whitelist(activity['command'])
                     cur_activity['next_exec_timestamp'] = t
+                    _log.info('Updating activity %s' % activity_id)
                     update_count += 1
                     t += 0.250
-            else:              
+            else:
                 self.activities[activity_id] = {
                     'details': activity,
                     'is_whitelisted': self.is_in_whitelist(activity['command']),
                     'next_exec_timestamp': t
                 }
+                _log.info('Starting activity %s' % activity_id)
                 start_count += 1
                 t += 0.250
                 
@@ -214,6 +216,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
         deleted_activity_ids = [activity_id for activity_id in self.activities if (activity_id in activity_ids) == False]
         
         for activity_id in deleted_activity_ids:
+            _log.info('Stopping activity %s' % activity_id)
             del self.activities[activity_id]
             stop_count += 1
             
