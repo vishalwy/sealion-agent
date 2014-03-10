@@ -1,4 +1,5 @@
 import logging
+import threading
 import globals
 import api
 import rtc
@@ -31,7 +32,7 @@ class Connection(ThreadEx):
         return status
     
     def reconnect(self):
-        if self.api.is_authenticated == False:
+        if self.api.is_authenticated == False or isinstance(threading.current_thread(), rtc.Interface):
             return
         
         self.api.is_authenticated = False
