@@ -150,6 +150,7 @@ class sealion(Daemon):
             sys.stderr.write(str(e) + '\n')
             sys.exit(1)
         
+        sys.excepthook = self.exception_hook
         import main
             
     def on_fork(self, cpid):        
@@ -185,7 +186,6 @@ class sealion(Daemon):
     
     def run(self):     
         self.set_procname('%s' % self.__class__.__name__ )
-        sys.excepthook = self.exception_hook
         is_update_only_mode = False
         
         if self.is_crash_loop() == True:
