@@ -248,7 +248,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
             is_ignore_status == False and self.globals.stop_event.is_set() == False and self.set_events(post_event = False)
             return self.status.NOT_CONNECTED
         
-        status = response.status_code
+        status, ret, post_event, exec_func, args = response.status_code, self.status.UNKNOWN, True, None, ()
         
         try:
             code = response.json()['code']
@@ -256,34 +256,41 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
             code = 0
             
         if status >= 500:
-            is_ignore_status == False and self.set_events(post_event = False)
-            return self.status.NO_SERVICE
+            post_event = False
+            ret = self.status.NO_SERVICE
         elif status == 400:
-            is_ignore_status == False and self.stop()
-            return self.status.BAD_REQUEST
+            post_event = None
+            exec_func = self.stop
+            ret = self.status.BAD_REQUEST
         elif status == 401:
             if code == 200004:
-                return self.status.MISMATCH
+                ret = self.status.MISMATCH
             else:
-                if is_ignore_status == False:
-                    if code == 200001 and self.stop_status == self.status.SUCCESS:
-                        self.set_events(post_event = False)
-                        connection.Interface().reconnect()
-                    else:
-                        self.stop()
+                if code == 200001 and self.stop_status == self.status.SUCCESS:
+                    post_event = False
+                    exec_func = connection.Interface().reconnect
+                else:
+                    post_event = None
+                    exec_func = self.stop
                     
-                return self.status.UNAUTHERIZED
+                ret = self.status.UNAUTHERIZED
         elif status == 404:
-            is_ignore_status == False and self.stop(self.status.NOT_FOUND)
-            return self.status.NOT_FOUND
+            post_event = None
+            exec_func = self.stop
+            args = (self.status.NOT_FOUND,)
+            ret = self.status.NOT_FOUND
         elif status == 409:
             if code == 204011:
-                return self.status.DATA_CONFLICT
+                ret = self.status.DATA_CONFLICT
             else:
-                is_ignore_status == False and self.stop(self.status.SESSION_CONFLICT)
-                return self.status.SESSION_CONFLICT
-        
-        return self.status.UNKNOWN
+                post_event = None
+                exec_func = self.stop
+                args = (self.status.SESSION_CONFLICT,)
+                ret = self.status.SESSION_CONFLICT
+                
+        is_ignore_status == False and self.set_events(post_event = post_event)
+        exec_func and exec_func(*args)
+        return ret
     
     def download_update(self):
         exe_path = self.globals.exe_path

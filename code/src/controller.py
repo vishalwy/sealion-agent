@@ -62,7 +62,6 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
 
                 if self.globals.stop_event.is_set():
                     _log.debug('%s received stop event', self.name)
-                    _metric['stopping_time'] = time.time()
                     break
             else:
                 if self.handle_response(connection.Interface().connect()) == False:
@@ -98,6 +97,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                 self.handle_response(self.api.stop_status)
                 break
 
+        _metric['stopping_time'] = _metric['stopping_time'] if _metric['stopping_time'] else time.time()
         self.is_stop = True
         self.stop_threads()
 

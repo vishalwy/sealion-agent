@@ -231,8 +231,6 @@ class OfflineStore(ThreadEx):
         return False
    
 class Sender(ThreadEx):   
-    queue_max_size = 100
-    ping_interval = 10
     off_store_lock = threading.RLock()
     store_data_available = True
     
@@ -241,10 +239,12 @@ class Sender(ThreadEx):
         self.globals = globals.Interface()
         self.api = api.Interface()
         self.off_store = off_store
-        self.queue = queue.Queue(self.queue_max_size)
-        self.last_ping_time = int(time.time())
+        self.queue_max_size = 100
+        self.ping_interval = 10
         self.valid_activities = None
         self.validate_count = 0
+        self.queue = queue.Queue(self.queue_max_size)
+        self.last_ping_time = int(time.time())
         
     def push(self, item):
         try:
@@ -404,6 +404,8 @@ class HistoricSender(Sender):
         
         if (status != api_status.NOT_CONNECTED and status != api_status.NO_SERVICE):
             self.del_rows.append(row_id)
+        else:
+            Sender.store_available(True)
             
     def cleanup(self):
         len(self.del_rows) and self.off_store.rem(self.del_rows, [])
