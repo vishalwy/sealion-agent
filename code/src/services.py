@@ -265,7 +265,7 @@ class JobConsumer(ThreadEx):
         ThreadEx.__init__(self)
         self.job_producer = JobProducer()
         self.globals = globals.Interface()
-        self.name = '%s-%d' % (self.__class__.__name__, id)
+        self.name = '%s-%02d' % (self.__class__.__name__, id)
 
     def exe(self):       
         while 1:
