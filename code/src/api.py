@@ -171,6 +171,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
             _log.info('Config updation successful')
             self.globals.config.agent.update(response.json())
             self.globals.config.agent.save()
+            self.set_events(post_event = True)
         else:
             ret = self.error('Failed to get config', response)
             
@@ -181,8 +182,8 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         ret = self.status.SUCCESS
         
         if API.is_success(response):
-            self.set_events(post_event = True)
             _log.debug('Sent activity(%s @ %d)' % (activity_id, data['timestamp']))
+            self.set_events(post_event = True)
         else:
             ret = self.error('Failed to send activity(%s @ %d)' % (activity_id, data['timestamp']), response)
             
@@ -221,6 +222,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         
         if API.is_success(response):
             _log.info('Sent crash dump @ %d' % data['timestamp'])
+            self.set_events(post_event = True)
         else:
             ret = self.error('Failed to send crash dump', response, True)
         
