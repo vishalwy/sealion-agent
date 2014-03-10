@@ -179,13 +179,13 @@ class OfflineStore(ThreadEx):
             self.cursor.execute('SELECT ROWID, * FROM data WHERE timestamp <= %d ORDER BY timestamp LIMIT %d' % (self.select_timestamp(), limit))
             rows = self.cursor.fetchall()
             self.cursor.execute('SELECT COUNT(*) FROM data')
-            num_rows = self.cursor.fetchone()[0]
+            total_rows = self.cursor.fetchone()[0]
         except Exception as e:
             _log.error('Failed to retreive rows from %s; %s' % (self.name, str(e)))
             return True
         
         _log.debug('Retreived %d rows from %s' % (len(rows), self.name))
-        callback(rows, num_rows)
+        callback(rows, total_rows)
         return True
             
     def delete(self, row_ids = [], activities = []):
@@ -233,9 +233,6 @@ class OfflineStore(ThreadEx):
 class Sender(ThreadEx):   
     queue_max_size = 100
     ping_interval = 10
-    gc_counter = 0
-    gc_threshold = 2
-    gc_counter_lock = threading.RLock()
     off_store_lock = threading.RLock()
     store_data_available = True
     
@@ -265,8 +262,6 @@ class Sender(ThreadEx):
         
     def wait(self):
         if self.globals.post_event.is_set() == False:
-            Sender.gc_counter and _log.debug('GC collected %d unreachables' % gc.collect())
-            Sender.gc_counter = 0
             timeout = self.ping_interval if self.api.is_authenticated else None
             _log.debug('%s waiting for post event %s' % (self.name, ' for %d seconds' % timeout if timeout else ''))
             self.globals.post_event.wait(timeout)
@@ -299,29 +294,25 @@ class Sender(ThreadEx):
         return is_available
         
     def exe(self):       
+        is_perform_gc = False
+        
         while 1:
             if self.wait() == False:
                 break
                 
             try:
                 item = self.queue.get(True, 5)
-                Sender.gc_counter_lock.acquire()
-                Sender.gc_counter = 1 if Sender.gc_counter == 0 else Sender.gc_counter 
-                Sender.gc_counter_lock.release()                
+                is_perform_gc = True
                 self.validate_count = max(self.validate_count - 1, 0)
                 
                 if self.validate_count and self.is_valid_activity(item['activity']) == False:
                     _log.debug('Discarding activity %s' % item['activity'])                    
                     continue
             except:
-                Sender.gc_counter_lock.acquire()
-                Sender.gc_counter = Sender.gc_counter + 1 if Sender.gc_counter else 0
-                    
-                if Sender.gc_counter >= Sender.gc_threshold:
+                if is_perform_gc == True:
                     _log.debug('GC collected %d unreachables' % gc.collect())
-                    Sender.gc_counter = 0
+                    is_perform_gc = False
                 
-                Sender.gc_counter_lock.release()
                 self.queue_empty()
                 continue
                 
@@ -385,7 +376,7 @@ class HistoricSender(Sender):
         if Sender.store_available():
             self.off_store.get(self.queue_max_size, self.store_get_callback)
         
-    def store_get_callback(self, rows, num_rows):
+    def store_get_callback(self, rows, total_rows):
         row_count, i = len(rows), 0
         
         while i < row_count:            
@@ -401,7 +392,7 @@ class HistoricSender(Sender):
             i += 1
         
         _log.debug('Pushed %d rows to %s from %s' % (i, self.name, self.off_store.__class__.__name__))
-        Sender.store_available(i != num_rows)
+        Sender.store_available(i != total_rows)
         
     def post_data(self, item):
         row_id, api_status = item.get('row_id'), self.api.status

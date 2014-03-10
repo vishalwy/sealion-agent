@@ -133,7 +133,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
         t = time.time()
         
         if t - self.prev_time < 0.250:
-            time.sleep(0.250)
+            time.sleep(0.250 - (t - self.prev_time))
             
         self.prev_time = t
         self.jobs.append(job.start())

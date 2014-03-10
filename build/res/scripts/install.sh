@@ -30,6 +30,7 @@ PYTHON=$(which python)
 IS_UPDATE=1
 DEFAULT_INSTALL_PATH="/usr/local/sealion-agent"
 INSTALL_AS_SERVICE=1
+SEALION_NODE_FOUND=0
 USAGE="Usage: $0 {-o <org token> [-c <category name>] [-H <host name>] [-x <https proxy>] [-p <python binary>] | -h}"
 
 #setup variables
@@ -243,6 +244,7 @@ if [ -f "$INSTALL_PATH/bin/sealion-node" ] ; then
     echo "Removing sealion-node"
     kill -SIGKILL `pgrep -d ',' 'sealion-node'` >/dev/null 2>&1
     find "$INSTALL_PATH" -mindepth 1 -maxdepth 1 -exec rm -rf {} \; >/dev/null 2>&1
+    SEALION_NODE_FOUND=1
 fi
 
 if [ -f "$SERVICE_FILE" ] ; then
@@ -253,6 +255,7 @@ fi
 echo "Copying files..."
 
 if [ $IS_UPDATE -eq 0 ] ; then
+    SEALION_NODE_FOUND=0
     cp -r agent/* "$INSTALL_PATH"
     CONFIG="\"orgToken\": \"$ORG_TOKEN\", \"apiUrl\": \"$API_URL\", \"updateUrl\": \"$UPDATE_URL\", \"agentVersion\": \"$VERSION\", \"name\": \"$HOST_NAME\""
     TEMP_VAR=""
@@ -300,6 +303,10 @@ else
     update_agent_config "apiUrl" $API_URL
     update_agent_config "updateUrl" $UPDATE_URL
     echo "Sealion agent updated successfully"
+fi
+
+if [ $SEALION_NODE_FOUND -eq 1 ] ; then
+    ln -sf "$SERVICE_FILE" "$INSTALL_PATH/etc/sealion"
 fi
 
 echo "Starting agent..."
