@@ -222,11 +222,8 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
             
         stop_count and self.store.clear_activities(deleted_activity_ids)
         self.activities_lock.release()
-        temp = min(16, self.consumer_count + start_count)
-        
-        while self.consumer_count < temp:
-            self.consumer_count += 1
-            JobConsumer(self.consumer_count).start()
+        self.start_consumers(len(activity_ids))    
+        self.stop_consumers(len(activity_ids))
         
         if start_count + update_count > 0:
             self.schedule_activities()
@@ -246,11 +243,19 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
                 break
 
         self.stop_consumers()
-
-    def stop_consumers(self):
-        _log.debug('Stopping job consumers')
         
-        while self.consumer_count > 0:
+    def start_consumers(self, count = 16):
+        count = min(16, count)
+        count - self.consumer_count > 0 and _log.info('Starting %d job consumers' % (count - self.consumer_count))
+        
+        while self.consumer_count < count:
+            self.consumer_count += 1
+            JobConsumer().start()
+
+    def stop_consumers(self, count = 0):
+        self.consumer_count - count > 0 and _log.info('Stopping %d job consumers' % (self.consumer_count - count))
+        
+        while self.consumer_count > count:
             self.queue.put(None)
             self.consumer_count -= 1
                 
@@ -261,21 +266,23 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
         callback(ret)
 
 class JobConsumer(ThreadEx):
-    def __init__(self, id):
+    unique_id = 1
+    
+    def __init__(self):
         ThreadEx.__init__(self)
         self.job_producer = JobProducer()
         self.globals = globals.Interface()
-        self.name = '%s-%02d' % (self.__class__.__name__, id)
+        self.name = '%s-%d' % (self.__class__.__name__, JobConsumer.unique_id)
+        JobConsumer.unique_id += 1
 
     def exe(self):       
         while 1:
             job = self.job_producer.queue.get()
 
-            if self.globals.stop_event.is_set():
+            if self.globals.stop_event.is_set() or job == None:
                 _log.debug('%s received stop event' % self.name)
                 break
 
-            if job:
-                t = time.time()
-                job.exec_timestamp - t > 0 and time.sleep(job.exec_timestamp - t)
-                self.job_producer.add_job(job)
+            t = time.time()
+            job.exec_timestamp - t > 0 and time.sleep(job.exec_timestamp - t)
+            self.job_producer.add_job(job)
