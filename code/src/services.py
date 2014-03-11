@@ -220,7 +220,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
             del self.activities[activity_id]
             stop_count += 1
             
-        stop_count and self.store.clear_activities(deleted_activity_ids)
+        self.store.clear_offline_data(activity_ids)
         self.activities_lock.release()
         self.start_consumers(len(activity_ids))    
         self.stop_consumers(len(activity_ids))

@@ -44,8 +44,8 @@ class OfflineStore(ThreadEx):
     def rem(self, row_ids, activities):
         self.task_queue.put({'op': 'delete', 'kwargs': {'row_ids': row_ids, 'activities': activities}})
         
-    def clr(self):
-        self.task_queue.put({'op': 'truncate', 'kwargs': {}})
+    def clr(self, exclude_activities = []):
+        self.task_queue.put({'op': 'truncate', 'kwargs': {'exclude_activities': exclude_activities}})
         
     def set_bulk_insert(self, is_bulk_insert):
         self.is_bulk_insert = is_bulk_insert
@@ -53,13 +53,15 @@ class OfflineStore(ThreadEx):
     def select_timestamp(self, timestamp = None):
         self.select_timestamp_lock.acquire()
         
-        if timestamp:
-            timestamp = timestamp if timestamp > self.select_max_timestamp else self.select_max_timestamp
-            self.select_max_timestamp = timestamp
-        else:
-            timestamp = self.select_max_timestamp
-        
-        self.select_timestamp_lock.release()
+        try:
+            if timestamp:
+                timestamp = timestamp if timestamp > self.select_max_timestamp else self.select_max_timestamp
+                self.select_max_timestamp = timestamp
+            else:
+                timestamp = self.select_max_timestamp
+        finally:
+            self.select_timestamp_lock.release()
+            
         return timestamp
         
     def exe(self):        
@@ -176,7 +178,8 @@ class OfflineStore(ThreadEx):
     
     def select(self, limit, callback):        
         try:
-            self.cursor.execute('SELECT ROWID, * FROM data WHERE timestamp <= %d ORDER BY timestamp LIMIT %d' % (self.select_timestamp(), limit))
+            timestamp = self.select_timestamp()
+            self.cursor.execute('SELECT ROWID, * FROM data WHERE timestamp <= %d ORDER BY timestamp LIMIT %d' % (timestamp, limit))
             rows = self.cursor.fetchall()
             self.cursor.execute('SELECT COUNT(*) FROM data')
             total_rows = self.cursor.fetchone()[0]
@@ -185,6 +188,7 @@ class OfflineStore(ThreadEx):
             return True
         
         _log.debug('Retreived %d rows from %s' % (len(rows), self.name))
+        _log.debug('Total %d rows in %s' % (total_rows, self.name))
         callback(rows, total_rows)
         return True
             
@@ -199,13 +203,13 @@ class OfflineStore(ThreadEx):
         
         return True
     
-    def truncate(self):
+    def truncate(self, exclude_activities = []):
         try:
-            self.cursor.execute('DELETE FROM data')
+            self.cursor.execute('DELETE FROM data WHERE activity NOT IN (%s)' % ','.join('?' * len(exclude_activities)), exclude_activities)
             self.conn.commit()
-            _log.debug('Deleting all records from %s' % self.name)
+            _log.debug('Deleted %d records from %s' % (self.cursor.rowcount, self.name))
         except Exception as e:
-            _log.error('Failed to truncate %s; %s' % (self.name, str(e)))
+            _log.error('Failed to delete rows from %s; %s' % (self.name, str(e)))
         
         return True
     
@@ -241,8 +245,6 @@ class Sender(ThreadEx):
         self.off_store = off_store
         self.queue_max_size = 100
         self.ping_interval = 10
-        self.valid_activities = None
-        self.validate_count = 0
         self.queue = queue.Queue(self.queue_max_size)
         self.last_ping_time = int(time.time())
         
@@ -303,9 +305,8 @@ class Sender(ThreadEx):
             try:
                 item = self.queue.get(True, 5)
                 is_perform_gc = True
-                self.validate_count = max(self.validate_count - 1, 0)
                 
-                if self.validate_count and self.is_valid_activity(item['activity']) == False:
+                if self.is_valid_activity(item['activity']) == False:
                     _log.debug('Discarding activity %s' % item['activity'])                    
                     continue
             except:
@@ -341,7 +342,6 @@ class RealtimeSender(Sender):
         status = self.api.post_data(item['activity'], item['data'])
 
         if status == api_status.MISMATCH:
-            self.validate_count = self.queue.qsize() + 1
             self.api.get_config()
         elif (status == api_status.NOT_CONNECTED or status == api_status.NO_SERVICE):
             self.off_store.put(item['activity'], item['data'], Sender.store_put_callback)
@@ -399,7 +399,6 @@ class HistoricSender(Sender):
         status = self.api.post_data(item['activity'], item['data'])
 
         if status == api_status.MISMATCH:
-            self.validate_count = self.queue.qsize() + 1
             self.api.get_config()
         
         if (status != api_status.NOT_CONNECTED and status != api_status.NO_SERVICE):
@@ -432,10 +431,7 @@ class Storage:
         if self.realtime_sender.push({'activity': activity, 'data': data}) == False:
             self.off_store.put(activity, data, Sender.store_put_callback)
         
-    def clear_offline_data(self):
-        self.off_store.clr()
-        
-    def clear_activities(self, activities):
-        self.off_store.rem([], activities)
+    def clear_offline_data(self, exclude_activities = []):
+        self.off_store.clr(exclude_activities)
 
 Interface = Storage

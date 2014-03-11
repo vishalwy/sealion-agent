@@ -71,9 +71,6 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
 
                 if store.start() == False:
                     break
-
-                if len(self.globals.config.agent.activities) == 0:
-                    store.clear_offline_data()
                     
                 job_producer = services.JobProducer(store)
                 job_producer.start()
