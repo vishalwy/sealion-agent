@@ -66,11 +66,13 @@ while getopts :i:o:c:H:x:p:h OPT ; do
             PYTHON=$OPTARG
             ;;
         \?)
-            echo "Invalid option -$OPTARG" >&2
+            echo "Invalid option '-$OPTARG'" >&2
+            echo $USAGE
             exit 126
             ;;
         :)
-            echo "Option -$OPTARG requires an argument." >&2
+            echo "Option '-$OPTARG' requires an argument." >&2
+            echo $USAGE
             exit 125
             ;;
     esac

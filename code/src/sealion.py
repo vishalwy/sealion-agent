@@ -203,6 +203,7 @@ def sig_handler(signum, frame):
     
 signal.signal(signal.SIGINT, sig_handler)
 daemon = sealion(exe_path + 'var/run/sealion.pid')
+is_print_usage = False
 
 if len(sys.argv) == 2:
     if sys.argv[1] == 'start':
@@ -214,8 +215,12 @@ if len(sys.argv) == 2:
     elif sys.argv[1] == 'status':
         daemon.status()
     else:
-        sys.stdout.write("Unknown command; Usage: %s start|stop|restart|status\n" % daemon.__class__.__name__)    
+        sys.stderr.write('Unknown command \'%s\'\n' % sys.argv[1])    
+        is_print_usage = True
 else:
-    sys.stdout.write("Usage: %s start|stop|restart|status\n" % daemon.__class__.__name__)
+    is_print_usage = True
+    
+if is_print_usage == True:
+    sys.stdout.write('Usage: %s start|stop|restart|status\n' % daemon.__class__.__name__)
     
 sys.exit(0)
