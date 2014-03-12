@@ -90,6 +90,11 @@ class SocketIONamespace(BaseNamespace):
         except:
             pass
         
+    def on_logout(self, *args):
+        _log.info('SocketIO received logout event')
+        self.rtc.update_heartbeat()
+        self.api.stop(self.api.status.SESSION_CONFLICT)
+        
 class RTC(ThreadEx):    
     def __init__(self):
         ThreadEx.__init__(self)
