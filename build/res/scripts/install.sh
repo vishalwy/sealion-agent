@@ -6,16 +6,6 @@ if [ "`uname -s`" != "Linux" ] ; then
     exit 1
 fi
 
-#check for kernel version (min 2.6)
-eval $(uname -r | awk -F'.' '{printf("KERNEL_VERSION=%s KERNEL_MAJOR=%s\n", $1, $2)}')
-
-if [ $KERNEL_VERSION -le 2 ] ; then
-    if [[ $KERNEL_VERSION -eq 1 || $KERNEL_MAJOR -lt 6 ]] ; then
-        echo "Error: SeaLion agent requires kernel 2.6 or above" >&2
-        exit 1
-    fi
-fi
-
 #config variables
 API_URL="<api-url>"
 UPDATE_URL="<agent-download-url>"
