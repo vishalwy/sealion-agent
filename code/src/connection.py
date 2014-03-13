@@ -25,7 +25,7 @@ class Connection(ThreadEx):
         status = self.attempt(2)
         
         if self.api.is_not_connected(status) and hasattr(self.globals.config.agent, 'activities') and hasattr(self.globals.config.agent, 'org'):
-            _log.info('Running commands in offline mode')
+            _log.info('Running in offline mode.')
             self.start()
             status = self.api.status.SUCCESS
             
@@ -36,11 +36,11 @@ class Connection(ThreadEx):
             return
         
         self.api.is_authenticated = False
-        _log.info('Reauthenticating')
+        _log.info('Reauthenticating.')
         rtc_thread = Connection.stop_rtc()
         
         if rtc_thread:
-            _log.info('Waiting for SocketIO to disconnect')
+            _log.info('Waiting for SocketIO to disconnect.')
             rtc_thread.join()
                 
         self.start()

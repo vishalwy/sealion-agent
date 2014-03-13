@@ -26,21 +26,21 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         self.activities_lock = threading.RLock()
     
     def handle_response(self, status):
-        _log.debug('Handling response status %d' % status)
+        _log.debug('Handling response status %d.' % status)
         
         if status == self.api.status.SUCCESS:
             return True
         elif self.api.is_not_connected(status):
-            _log.info('Failed to connect')
+            _log.info('Failed to establish connection.')
         elif status == self.api.status.NOT_FOUND:           
             try:
-                _log.info('Uninstalling agent')
+                _log.info('Uninstalling agent.')
                 subprocess.Popen([self.globals.exe_path + 'uninstall.sh'])
             except:
-                _log.error('Failed to open uninstall script')
+                _log.error('Failed to open uninstall script.')
                 
         elif status == self.api.status.UNAUTHERIZED:
-            _log.error('Agent unautherized to connect')
+            _log.error('Agent unauthorized to connect')
         elif status == self.api.status.BAD_REQUEST:
             _log.error('Server marked the request as bad')
         elif status == self.api.status.SESSION_CONFLICT:
@@ -57,11 +57,11 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                 if (version_type is str or version_type is unicode) and version != self.globals.config.agent.agentVersion:
                     self.api.update_agent()
 
-                _log.debug('%s waiting for stop event for %d seconds' % (self.name, 5 * 60, ))
+                _log.debug('%s waiting for stop event for %d seconds.' % (self.name, 5 * 60, ))
                 self.globals.stop_event.wait(5 * 60)
 
                 if self.globals.stop_event.is_set():
-                    _log.debug('%s received stop event', self.name)
+                    _log.debug('%s received stop event.', self.name)
                     break
             else:
                 if self.handle_response(connection.Interface().connect()) == False:
@@ -82,11 +82,11 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                         job.post_output()
                         finished_job_count += 1
 
-                    finished_job_count and _log.info('Fetched %d finished jobs' % finished_job_count)
+                    finished_job_count and _log.info('Finished execution of %d activities.' % finished_job_count)
                     self.globals.stop_event.wait(5)
 
                     if self.globals.stop_event.is_set():
-                        _log.debug('%s received stop event', self.name)
+                        _log.debug('%s received stop event.', self.name)
                         _metric['stopping_time'] = time.time()
                         job_producer.finish_jobs(None)
                         break
@@ -98,7 +98,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         self.is_stop = True
         self.stop_threads()
 
-        _log.debug('%s generating SIGALRM signal', self.name)
+        _log.debug('%s generating SIGALRM', self.name)
         signal.alarm(1)
             
     def stop(self):
@@ -106,7 +106,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         self.api.stop()
         
     def stop_threads(self):
-        _log.debug('Stopping all threads')
+        _log.debug('Stopping all threads.')
         self.api.stop()
         connection.Interface.stop_rtc()
         self.api.logout()
@@ -116,34 +116,34 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
 
         for thread in threads:
             if thread.ident != curr_thread.ident and thread.ident != self.main_thread.ident and thread.daemon != True:
-                _log.debug('Waiting for %s' % str(thread))
+                _log.debug('Waiting for %s.' % str(thread))
                 thread.join()
 
 def sig_handler(signum, frame):    
     if signum == signal.SIGTERM:
-        _log.info('Received SIGTERM signal')
+        _log.info('Received SIGTERM')
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
         Controller().stop()
     elif signum == signal.SIGINT:
-        _log.info('Received SIGINT signal')
+        _log.info('Received SIGINT')
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         Controller().stop()
     elif signum == signal.SIGALRM:
-        _log.debug('Received SIGALRM signal')
+        _log.debug('Received SIGALRM')
         signal.alarm(0)
         
 def stop(status = 0):
-    _log.info('Agent shutting down with status code %d' % status)
-    _log.debug('Took %f seconds to shutdown' % (time.time() - _metric['stopping_time']))
-    _log.info('Ran for %s hours' % str(datetime.now() - datetime.fromtimestamp(_metric['starting_time'])))
+    _log.info('Agent shutting down with status code %d.' % status)
+    _log.debug('Took %f seconds to shutdown.' % (time.time() - _metric['stopping_time']))
+    _log.info('Ran for %s hours.' % str(datetime.now() - datetime.fromtimestamp(_metric['starting_time'])))
     exit(status)
     
 def start():
     _metric['starting_time'] = time.time()
-    _log.info('Agent starting up')
-    _log.info('Using python binary at %s' % sys.executable)
-    _log.info('Python version : %s' % '.'.join([str(i) for i in sys.version_info]))
-    _log.info('Agent version  : %s' % globals.Interface().config.agent.agentVersion)
+    _log.info('Agent starting up.')
+    _log.info('Using python binary at %s.' % sys.executable)
+    _log.info('Python version : %s.' % '.'.join([str(i) for i in sys.version_info]))
+    _log.info('Agent version  : %s.' % globals.Interface().config.agent.agentVersion)
     controller = Controller()
     signal.signal(signal.SIGALRM, sig_handler)
     signal.signal(signal.SIGTERM, sig_handler)

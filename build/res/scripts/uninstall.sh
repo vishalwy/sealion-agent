@@ -7,7 +7,7 @@ USER_NAME="sealion"
 cd "$BASEDIR"
 
 if [[ "$(id -u -n)" != "$USER_NAME" && $EUID -ne 0 ]] ; then
-    echo "Error: You need to run this as either root or $USER_NAME user" >&2
+    echo "Error: You need to run this script as either root or $USER_NAME" >&2
     exit 1
 fi
 
@@ -21,7 +21,7 @@ if [ -f "src/unregister.py" ] ; then
     python src/unregister.py >/dev/null 2>&1
 
     if [ $? -ne 0 ] ; then
-        echo "Error: Failed to unregister agent" >&2
+        echo "Error: Failed to unregister agent." >&2
         exit 1
     fi
 fi
@@ -47,7 +47,7 @@ uninstall_service()
             rm -f $VAR_NAME
 
             if [ $? -ne 0 ] ; then
-                echo "Error: Failed to remove $VAR_NAME file" >&2
+                echo "Error: Failed to remove $VAR_NAME file." >&2
                 RET=1
             fi
         done
@@ -55,7 +55,7 @@ uninstall_service()
         rm -f $INIT_D_PATH/sealion
         
         if [ $? -ne 0 ] ; then
-            echo "Error: Failed to remove $INIT_D_PATH/sealion file" >&2
+            echo "Error: Failed to remove $INIT_D_PATH/sealion file." >&2
             RET=1
         fi
     fi
@@ -64,7 +64,7 @@ uninstall_service()
 }
 
 if [[ $EUID -ne 0 ]]; then
-    echo "Removing files except logs and uninstall.sh..."
+    echo "Removing files except logs and uninstall.sh."
     find var -mindepth 1 -maxdepth 1 -type d ! -name 'log' -exec rm -rf {} \;
     find . -mindepth 1 -maxdepth 1 -type d ! -name 'var' -exec rm -rf {} \;
 else
@@ -74,20 +74,20 @@ else
         if [ $? -eq 0 ] ; then
             pkill -KILL -u $USER_NAME
             userdel $USER_NAME
-            echo "User $USER_NAME removed"
+            echo "User $USER_NAME removed."
         fi
 
         id -g $USER_NAME >/dev/null 2>&1
 
         if [ $? -eq 0 ] ; then
             groupdel $USER_NAME
-            echo "Group $USER_NAME removed"
+            echo "Group $USER_NAME removed."
         fi
 
         uninstall_service
 
         if [ $? -ne 0 ] ; then
-            echo "Service removed"
+            echo "Service sealion removed."
         fi  
     fi
 
@@ -96,4 +96,4 @@ else
     rm -rf "$BASEDIR"
 fi
 
-echo "Sealion agent uninstalled successfully"
+echo "Sealion agent uninstalled successfully."

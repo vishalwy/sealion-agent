@@ -109,7 +109,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
                 _log.error(str(e)) 
                 
             if response != None:
-                self.is_conn_err == True and _log.info('Reconnected')
+                self.is_conn_err == True and _log.info('Network connection established.')
                 self.is_conn_err = False
                 break
                 
@@ -129,7 +129,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         ret = self.status.SUCCESS
         
         if API.is_success(response):
-            _log.info('Registration successful')
+            _log.info('Registration successful.')
             self.globals.config.agent.update(response.json())
             self.globals.config.agent.save()
         else:
@@ -153,13 +153,13 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         ret = self.status.SUCCESS
         
         if API.is_success(response):
-            _log.info('Authentication successful')
+            _log.info('Authentication successful.')
             self.globals.config.agent.update(response.json())
             self.globals.config.agent.save()
             self.is_authenticated = True
             self.set_events(post_event = True)
         else:
-            ret = self.error('Failed to authenticate agent', response)
+            ret = self.error('Authentication failed. ', response)
         
         return ret
             
@@ -168,12 +168,12 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         ret = self.status.SUCCESS
         
         if API.is_success(response):
-            _log.info('Config updation successful')
+            _log.info('Config updation successful. ')
             self.globals.config.agent.update(response.json())
             self.globals.config.agent.save()
             self.set_events(post_event = True)
         else:
-            ret = self.error('Failed to get config', response)
+            ret = self.error('Config updation failed. ', response)
             
         return ret
             
@@ -182,10 +182,10 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         ret = self.status.SUCCESS
         
         if API.is_success(response):
-            _log.debug('Sent activity(%s @ %d)' % (activity_id, data['timestamp']))
+            _log.debug('Sent activity (%s @ %d)' % (activity_id, data['timestamp']))
             self.set_events(post_event = True)
         else:
-            ret = self.error('Failed to send activity(%s @ %d)' % (activity_id, data['timestamp']), response)
+            ret = self.error('Failed to send activity (%s @ %d)' % (activity_id, data['timestamp']), response)
             
         return ret
     
@@ -198,9 +198,9 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         response = self.exec_method('delete', {'retry_count': 0, 'is_ignore_stop_event': True}, self.get_url('agents/1/sessions/1'))
         
         if API.is_success(response):
-            _log.info('Logout successful')
+            _log.info('Logout successful.')
         else:
-            ret = self.error('Failed to logout agent', response)
+            ret = self.error('Logout failed. ', response)
 
         return ret
     
@@ -210,7 +210,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         if API.is_success(response):
             ret = response.json()['agentVersion']
         else:
-            ret = self.error('Failed to get agent version', response, True)
+            ret = self.error('Failed to get agent version ', response, True)
         
         return ret
     
@@ -224,7 +224,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
             _log.info('Sent crash dump @ %d' % data['timestamp'])
             self.set_events(post_event = True)
         else:
-            ret = self.error('Failed to send crash dump', response, True)
+            ret = self.error('Failed to send crash dump ', response, True)
         
         return ret
     
@@ -300,7 +300,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         temp_dir = tempfile.mkdtemp()
         temp_dir = temp_dir[:-1] if temp_dir[len(temp_dir) - 1] == '/' else temp_dir
         filename = '%s/%s' % (temp_dir, url.split('/')[-1])
-        _log.info('Update found; downloading to %s' % filename)
+        _log.info('Update found; Downloading update to %s' % filename)
         f = open(filename, 'wb')
         response = self.exec_method('get', {}, url, stream = True)
         
@@ -331,18 +331,18 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         if is_completed == True:
             _log.info('Update succesfully downloaded to %s' % filename)
         else:
-            _log.info('Aborted downloading update')
+            _log.info('Downloading update aborted.')
             self.updater = None
             return
         
         _log.debug('Extracting %s to %s' % (filename, temp_dir))
         
         if subprocess.call(['tar', '-xf', "%s" % filename, '--directory=%s' % temp_dir]):
-            _log.error('Failed to extract update %s' % filename)
+            _log.error('Failed to extract update from  %s' % filename)
             self.updater = None
             return
             
-        _log.info('Installing update')
+        _log.info('Installing the update.')
         subprocess.Popen('"%(temp_dir)s/sealion-agent/install.sh" -i "%(exe_path)s" -p "%(executable)s" && rm -rf "%(temp_dir)s"' % {'temp_dir': temp_dir, 'exe_path': exe_path, 'executable': sys.executable}, shell=True)
 
 Interface = API

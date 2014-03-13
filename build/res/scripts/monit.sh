@@ -23,7 +23,7 @@ while true ; do
     fi
 
     if [ ! -d "/proc/$PID" ] ; then
-        echo $(date +"%Y-%m-%d %T,000 CRITICAL ERROR - sealion got terminated; resurrecting") >>$LOG_FILE
+        echo $(date +"%Y-%m-%d %T,000 CRITICAL ERROR - sealion got terminated; Resurrecting.") >>$LOG_FILE
         $SERVICE_FILE start
         exit 0
     fi

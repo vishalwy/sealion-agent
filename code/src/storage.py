@@ -152,7 +152,7 @@ class OfflineStore(ThreadEx):
         try:
             self.cursor.execute('INSERT INTO data VALUES(?, ?, ?, ?)', (activity, data['timestamp'], data['returnCode'], data['data']))
             self.conn.commit()
-            _log.debug('Inserted activity(%s @ %d) to %s' % (activity, data['timestamp'], self.name))
+            _log.debug('Inserted activity (%s @ %d) to %s' % (activity, data['timestamp'], self.name))
             callback and callback()
         except Exception as e:
             _log.error('Failed to insert row to %s; %s' % (self.name, str(e)))
@@ -286,10 +286,10 @@ class Sender(ThreadEx):
             is_available = Sender.store_data_available
         else:
             if is_available == True and Sender.store_data_available == False:
-                _log.debug('Marking OfflineStore available')
+                _log.debug('Marking OfflineStore as available.')
                 Sender.store_data_available = True
             elif is_available == False and Sender.store_data_available == True:
-                _log.debug('Marking OfflineStore not available')
+                _log.debug('Marking OfflineStore as not available')
                 Sender.store_data_available = False
             
         Sender.off_store_lock.release()

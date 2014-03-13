@@ -79,7 +79,7 @@ class sealion(Daemon):
         globals = Globals()
         api = API()
         path = self.crash_dump_path
-        _log.debug('CrashDumpSender waiting for stop event for %d seconds' % crash_dump_timeout)
+        _log.debug('CrashDumpSender waiting for stop event for %d seconds.' % crash_dump_timeout)
         globals.stop_event.wait(crash_dump_timeout)
         
         try:
@@ -99,7 +99,7 @@ class sealion(Daemon):
                             break
 
                         if api.send_crash_report(report) == api.status.SUCCESS:                        
-                            _log.info('Removing crash dump %s' % file_name)
+                            _log.info('Removing crash dump %s.' % file_name)
                             os.remove(file_name)
                             break
 
@@ -157,7 +157,7 @@ class sealion(Daemon):
         try:
             subprocess.Popen([exe_path + 'bin/monit.sh', str(cpid), str(self.monit_interval)])
         except:
-            _log.error('Failed to open monitoring script')
+            _log.error('Failed to open monitoring script.')
             
         sys.exit(0)
         
@@ -180,7 +180,7 @@ class sealion(Daemon):
             if dump_file:
                 _log.error('%s crashed. Dump file saved at %s' % (self.__class__.__name__, dump_file))
             else:
-                _log.error('%s crashed. Failed to save dump file' % self.__class__.__name__)
+                _log.error('%s crashed. Failed to save dump file.' % self.__class__.__name__)
             
             os._exit(1)
     
@@ -189,7 +189,7 @@ class sealion(Daemon):
         is_update_only_mode = False
         
         if self.is_crash_loop() == True:
-            _log.info('Crash loop detected; starting agent in update only mode')
+            _log.info('Crash loop detected; Starting agent in update-only mode')
             is_update_only_mode = True
         
         from constructs import ThreadEx

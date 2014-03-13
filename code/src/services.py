@@ -38,7 +38,7 @@ class Job:
             self.process = subprocess.Popen(self.details['command'], shell=True, stdout = self.output_file, stderr = self.output_file, preexec_fn = os.setpgrp)
             self.status = JobStatus.RUNNING
         else:
-            _log.info('Activity %s is blocked by whitelist' % self.details['_id'])
+            _log.info('Activity %s is blocked by whitelist.' % self.details['_id'])
 
         return self
 
@@ -76,12 +76,12 @@ class Job:
 
             if not data['data']:
                 data['data'] = 'No output produced'
-                _log.debug('No output/error found for activity(%s @ %d)' % (self.details['_id'], self.timestamp))
+                _log.debug('No output/error found for activity (%s @ %d)' % (self.details['_id'], self.timestamp))
 
         self.close_file()
 
         if data:
-            _log.debug('Pushing activity(%s @ %d) to %s' % (self.details['_id'], self.timestamp, self.store.__class__.__name__))
+            _log.debug('Pushing activity (%s @ %d) to %s' % (self.details['_id'], self.timestamp, self.store.__class__.__name__))
             self.store.push(self.details['_id'], data)
 
     def close_file(self):
@@ -147,10 +147,10 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
 
         for job in self.jobs:
             if activities == None or (job.details['_id'] in activities):
-                job.stop() and _log.info('Killed activity(%s @ %d)' % (job.details['_id'], job.timestamp))
+                job.stop() and _log.info('Killed activity (%s @ %d)' % (job.details['_id'], job.timestamp))
                 job.close_file()
             elif t - job.timestamp > self.timeout:
-                job.stop() and _log.info('Killed activity(%s @ %d) as it exceeded timeout' % (job.details['_id'], job.timestamp))
+                job.stop() and _log.info('Killed activity (%s @ %d) as it exceeded timeout' % (job.details['_id'], job.timestamp))
 
             if job.get_status() != JobStatus.RUNNING:
                 finished_jobs.append(job)
@@ -239,7 +239,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
             self.globals.stop_event.wait(self.sleep_interval)
 
             if self.globals.stop_event.is_set():
-                _log.debug('%s received stop event' % self.name)
+                _log.debug('%s received stop event.' % self.name)
                 break
 
         self.stop_consumers()

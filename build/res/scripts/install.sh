@@ -114,7 +114,7 @@ install_service()
     SYMLINK_PATHS=(K K S S S S K)
 
     if [[ -z $RC1_PATH || -z $RC2_PATH || -z $RC3_PATH || -z $RC4_PATH || -z $RC5_PATH || -z $RC6_PATH || -z $INIT_D_PATH ]] ; then
-        echo "Error: Cannot create service. Could not locate init.d/rc directories" >&2
+        echo "Error: Cannot create service seealion. Could not locate init.d/rc directories." >&2
         return 1
     fi
     

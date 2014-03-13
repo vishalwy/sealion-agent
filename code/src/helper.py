@@ -57,7 +57,7 @@ class Utils(Namespace):
 
             for i in range(0, len(keys)):
                 if (keys[i] in schema) == False:
-                    file and _log.warn('Ignoring config key "%s" in %s; unknown key' % (keys[i], file))
+                    file and _log.warn('Ignoring config key "%s" in %s as it is unknown.' % (keys[i], file))
                     del d[keys[i]]
                     continue
 
@@ -75,9 +75,9 @@ class Utils(Namespace):
                 if Utils.sanitize_type(d[key], schema[key]['type'], is_delete_extra, 
                                         schema[key].get('regex'), schema[key].get('is_regex', False), file) == False:
                     if file:
-                        _log.warn('Ignoring config key "%s" in %s; value in improper format' % (key, file))
+                        _log.warn('Ignoring config key "%s" in %s as value is in improper format.' % (key, file))
                     else:
-                        _log.error('config key "%s" is in improper format' % key)
+                        _log.error('Config key "%s" is in improper format.' % key)
                         
                     del d[key]
                     ret = 0 if is_optional == False else ret                
@@ -88,7 +88,7 @@ class Utils(Namespace):
             for i in range(0, len(depends)):
                 if (depends[i] in d) == False:
                     if (depends_check_keys[j]) in d:
-                        file and _log.warn('Ignoring config key "%s" in %s; failed dependency' % (depends_check_keys[j], file))
+                        file and _log.warn('Ignoring config key "%s" in %s as it failed dependency.' % (depends_check_keys[j], file))
                         del d[depends_check_keys[j]]
                         
                     break
@@ -176,11 +176,11 @@ class Config:
         
         if Utils.sanitize_dict(config[0], self.schema, True, self.file if is_data == False else None) == False:
             if is_data == False:
-                return self.file + ' is either missing or currupted'
+                return self.file + ' is either missing or corrupted'
             else:
                 return 'Invalid config'
         elif config[1] == True and is_data == False:
-            self.file and _log.warn('Ignoring %s as it is either missing or currupted' % self.file)
+            self.file and _log.warn('Ignoring %s as it is either missing or corrupted' % self.file)
             
         self.lock.acquire()
         self.data = config[0]
