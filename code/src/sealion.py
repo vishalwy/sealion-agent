@@ -18,7 +18,7 @@ from daemon import Daemon
 
 _log = logging.getLogger(__name__)
 
-class sealion(Daemon):
+class sealiond(Daemon):
     user_name = 'sealion'
     monit_interval = 60
     crash_dump_threshold = 5

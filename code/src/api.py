@@ -18,7 +18,7 @@ class Status(Namespace):
     MISMATCH = 4
     BAD_REQUEST = 5
     NOT_FOUND = 6
-    UNAUTHERIZED = 7
+    UNAUTHORIZED = 7
     SESSION_CONFLICT = 8
     UNKNOWN = -1
 
@@ -273,7 +273,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
                     post_event = None
                     exec_func = self.stop
                     
-                ret = self.status.UNAUTHERIZED
+                ret = self.status.UNAUTHORIZED
         elif status == 404:
             post_event = None
             exec_func = self.stop
