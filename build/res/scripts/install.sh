@@ -17,10 +17,11 @@ BASEDIR=$(dirname "$BASEDIR")
 BASEDIR=${BASEDIR%/}
 USER_NAME="sealion"
 PYTHON=$(which python)
-IS_UPDATE=1
 DEFAULT_INSTALL_PATH="/usr/local/sealion-agent"
 INSTALL_AS_SERVICE=1
 SEALION_NODE_FOUND=0
+IGNORE_ORG_TOKEN=0
+UPDATING_NODE_AGENT=0
 USAGE="Usage: $0 {-o <org token> [-c <category name>] [-H <host name>] [-x <https proxy>] [-p <python binary>] | -h}"
 
 #setup variables
@@ -31,13 +32,15 @@ HOST_NAME=$(hostname)
 PROXY=$https_proxy
 NO_PROXY=$no_proxy
 
-while getopts :i:o:c:H:x:p:h OPT ; do
+while getopts :i:o:c:H:x:p:a:v:h OPT ; do
     case "$OPT" in
         i)
             INSTALL_PATH=$OPTARG
             ;;
         o)
-            ORG_TOKEN=$OPTARG
+            if [ $IGNORE_ORG_TOKEN -eq 0 ] ; then
+                ORG_TOKEN=$OPTARG
+            fi
             ;;
         c)
             CATEGORY=$OPTARG
@@ -54,6 +57,12 @@ while getopts :i:o:c:H:x:p:h OPT ; do
             ;;
         p)
             PYTHON=$OPTARG
+            ;;
+        a)
+            IGNORE_ORG_TOKEN=1
+            ;;
+        v)
+            IGNORE_ORG_TOKEN=1
             ;;
         \?)
             echo "Invalid option '-$OPTARG'" >&2
@@ -158,6 +167,41 @@ check_dependency()
     cd ../../
 }
 
+migrate_node_agent_config()
+{
+    
+}
+
+setup_config()
+{
+    CONFIG="\"orgToken\": \"$ORG_TOKEN\", \"apiUrl\": \"$API_URL\", \"updateUrl\": \"$UPDATE_URL\", \"agentVersion\": \"$VERSION\", \"name\": \"$HOST_NAME\""
+    TEMP_VAR=""
+
+    if [ "$CATEGORY" != "" ] ; then
+        CONFIG="$CONFIG, \"category\": \"$CATEGORY\""
+    fi
+        
+    echo "{$CONFIG}" >"$INSTALL_PATH/etc/agent.json"
+
+    if [ "$PROXY" != "" ] ; then
+        PROXY="$(echo "$PROXY" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
+        ARGS="-i 's/\(\"env\"\s*:\s*\[\)/\1{\"https\_proxy\": \"$PROXY\"}/'"
+        eval sed "$ARGS" "\"$INSTALL_PATH/etc/config.json\""
+        TEMP_VAR=", "
+    fi
+
+    if [ "$NO_PROXY" != "" ] ; then
+        NO_PROXY="$(echo "$NO_PROXY" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
+        ARGS="-i 's/\(\"env\"\s*:\s*\[\)/\1{\"no\_proxy\": \"$NO_PROXY\"}$TEMP_VAR/'"
+        eval sed "$ARGS" "\"$INSTALL_PATH/etc/config.json\""
+    fi
+
+    PYTHON="$(echo "$PYTHON" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
+    ARGS="-i 's/python/\"$PYTHON\"/'"
+    eval sed "$ARGS" "\"$INSTALL_PATH/etc/init.d/sealion\""
+    eval sed "$ARGS" "\"$INSTALL_PATH/uninstall.sh\""
+}
+
 INSTALL_PATH=$(readlink -m "$INSTALL_PATH" 2>/dev/null)
 
 if [ $? -ne 0 ] ; then
@@ -175,13 +219,16 @@ fi
 
 SERVICE_FILE="$INSTALL_PATH/etc/init.d/sealion"
 
+if [ -f "$INSTALL_PATH/bin/sealion-node" ] ; then
+    SEALION_NODE_FOUND=1
+fi
+
 if [ "$ORG_TOKEN" != '' ] ; then
     if [[ $EUID -ne 0 ]]; then
         echo "Error: You need to run this as root user" >&2
         exit 1
     fi
 
-    IS_UPDATE=0
     mkdir -p "$INSTALL_PATH"
 
     if [ $? -ne 0 ] ; then
@@ -226,17 +273,20 @@ else
         exit 1
     fi
 
-    if [ ! -f "$SERVICE_FILE" ] ; then
+    if [[ ! -f "$SERVICE_FILE" && $SEALION_NODE_FOUND -eq 0 ]] ; then
         echo "Error: '$INSTALL_PATH' is not a valid sealion install directory" >&2
         exit 1
     fi
 fi
 
-if [ -f "$INSTALL_PATH/bin/sealion-node" ] ; then
+if [ $SEALION_NODE_FOUND -eq 1 ] ; then
+    if [ "$ORG_TOKEN" == '' ] ; then
+        migrate_node_agent_config
+    fi
+
     echo "Removing sealion-node"
     kill -SIGKILL `pgrep -d ',' 'sealion-node'` >/dev/null 2>&1
     find "$INSTALL_PATH" -mindepth 1 -maxdepth 1 -exec rm -rf {} \; >/dev/null 2>&1
-    SEALION_NODE_FOUND=1
 fi
 
 if [ -f "$SERVICE_FILE" ] ; then
@@ -246,35 +296,9 @@ fi
 
 echo "Copying files..."
 
-if [ $IS_UPDATE -eq 0 ] ; then
-    SEALION_NODE_FOUND=0
+if [ "$ORG_TOKEN" != '' ] ; then
     cp -r agent/* "$INSTALL_PATH"
-    CONFIG="\"orgToken\": \"$ORG_TOKEN\", \"apiUrl\": \"$API_URL\", \"updateUrl\": \"$UPDATE_URL\", \"agentVersion\": \"$VERSION\", \"name\": \"$HOST_NAME\""
-    TEMP_VAR=""
-
-    if [ "$CATEGORY" != "" ] ; then
-        CONFIG="$CONFIG, \"category\": \"$CATEGORY\""
-    fi
-        
-    echo "{$CONFIG}" >"$INSTALL_PATH/etc/agent.json"
-
-    if [ "$PROXY" != "" ] ; then
-        PROXY="$(echo "$PROXY" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
-        ARGS="-i 's/\(\"env\"\s*:\s*\[\)/\1{\"https\_proxy\": \"$PROXY\"}/'"
-        eval sed "$ARGS" "\"$INSTALL_PATH/etc/config.json\""
-        TEMP_VAR=", "
-    fi
-
-    if [ "$NO_PROXY" != "" ] ; then
-        NO_PROXY="$(echo "$NO_PROXY" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
-        ARGS="-i 's/\(\"env\"\s*:\s*\[\)/\1{\"no\_proxy\": \"$NO_PROXY\"}$TEMP_VAR/'"
-        eval sed "$ARGS" "\"$INSTALL_PATH/etc/config.json\""
-    fi
-
-    PYTHON="$(echo "$PYTHON" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
-    ARGS="-i 's/python/\"$PYTHON\"/'"
-    eval sed "$ARGS" "\"$INSTALL_PATH/etc/init.d/sealion\""
-    eval sed "$ARGS" "\"$INSTALL_PATH/uninstall.sh\""
+    setup_config
     chown -R $USER_NAME:$USER_NAME "$INSTALL_PATH"
     echo "Sealion agent installed successfully"    
 
@@ -290,15 +314,18 @@ if [ $IS_UPDATE -eq 0 ] ; then
         echo "Use '$SERVICE_FILE' to control sealion"
     fi
 else
-    find agent/ -mindepth 1 -maxdepth 1 -type d ! -name 'etc' -exec cp -r {} "$INSTALL_PATH" \;
-    update_agent_config "agentVersion" $VERSION
-    update_agent_config "apiUrl" $API_URL
-    update_agent_config "updateUrl" $UPDATE_URL
-    echo "Sealion agent updated successfully"
-fi
+    if [ $SEALION_NODE_FOUND -eq 1 ] ; then
+        cp -r agent/* "$INSTALL_PATH"
+        setup_config
+        ln -sf "$SERVICE_FILE" "$INSTALL_PATH/etc/sealion"
+    else
+        find agent/ -mindepth 1 -maxdepth 1 -type d ! -name 'etc' -exec cp -r {} "$INSTALL_PATH" \;
+        update_agent_config "agentVersion" $VERSION
+        update_agent_config "apiUrl" $API_URL
+        update_agent_config "updateUrl" $UPDATE_URL
+    fi
 
-if [ $SEALION_NODE_FOUND -eq 1 ] ; then
-    ln -sf "$SERVICE_FILE" "$INSTALL_PATH/etc/sealion"
+    echo "Sealion agent updated successfully"
 fi
 
 echo "Starting agent..."
