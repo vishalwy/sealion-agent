@@ -1,9 +1,18 @@
 #!/bin/bash
 
+#script error codes
+SCRIPT_ERR_SUCCESS=0
+SCRIPT_ERR_INCOMPATIBLE_PLATFORM=1
+SCRIPT_ERR_INVALID_USAGE=2
+SCRIPT_ERR_INVALID_PYTHON=3
+SCRIPT_ERR_INCOMPATIBLE_PYTHON=4
+SCRIPT_ERR_FAILED_DEPENDENCY=5
+SCRIPT_ERR_FAILED_SETUP=6
+
 #check platform compatibility
 if [ "`uname -s`" != "Linux" ] ; then
     echo 'Error: SeaLion agent works on Linux only' >&2
-    exit 1
+    exit SCRIPT_ERR_INCOMPATIBLE_PLATFORM
 fi
 
 #config variables
@@ -20,14 +29,14 @@ PYTHON=$(which python)
 DEFAULT_INSTALL_PATH="/usr/local/sealion-agent"
 INSTALL_AS_SERVICE=1
 SEALION_NODE_FOUND=0
-IGNORE_ORG_TOKEN=0
-UPDATING_NODE_AGENT=0
+UPDATE_AGENT=0
 USAGE="Usage: $0 {-o <org token> [-c <category name>] [-H <host name>] [-x <https proxy>] [-p <python binary>] | -h}"
 
 #setup variables
 INSTALL_PATH=$DEFAULT_INSTALL_PATH
 ORG_TOKEN=
 CATEGORY=
+AGENT_ID=
 HOST_NAME=$(hostname)
 PROXY=$https_proxy
 NO_PROXY=$no_proxy
@@ -38,16 +47,14 @@ while getopts :i:o:c:H:x:p:a:v:h OPT ; do
             INSTALL_PATH=$OPTARG
             ;;
         o)
-            if [ $IGNORE_ORG_TOKEN -eq 0 ] ; then
-                ORG_TOKEN=$OPTARG
-            fi
+            ORG_TOKEN=$OPTARG
             ;;
         c)
             CATEGORY=$OPTARG
             ;;
         h)
             echo $USAGE
-            exit 0
+            exit SCRIPT_ERR_SUCCESS
             ;;
         H)
             HOST_NAME=$OPTARG
@@ -59,23 +66,27 @@ while getopts :i:o:c:H:x:p:a:v:h OPT ; do
             PYTHON=$OPTARG
             ;;
         a)
-            IGNORE_ORG_TOKEN=1
-            ;;
-        v)
-            IGNORE_ORG_TOKEN=1
+            AGENT_ID=$OPTARG
+            UPDATE_AGENT=1
             ;;
         \?)
             echo "Invalid option '-$OPTARG'" >&2
             echo $USAGE
-            exit 126
+            exit SCRIPT_ERR_INVALID_USAGE
             ;;
         :)
             echo "Option '-$OPTARG' requires an argument." >&2
             echo $USAGE
-            exit 125
+            exit SCRIPT_ERR_INVALID_USAGE
             ;;
     esac
 done
+
+if [ "$ORG_TOKEN" == '' ] ; then
+    echo "Missing option '-o'" >&2
+    echo $USAGE
+    exit SCRIPT_ERR_INVALID_USAGE
+fi
 
 #check for python (min 2.6)
 PYTHON_OK=0
@@ -83,7 +94,7 @@ PYTHON=$(readlink -f "$PYTHON" 2>/dev/null)
 
 if [ $? -ne 0 ] ; then
     echo "Error: '$PYTHON' is not a valid python binary" >&2
-    exit 1
+    exit SCRIPT_ERR_INVALID_PYTHON
 fi
 
 if [ -f "$PYTHON" ] ; then
@@ -102,7 +113,7 @@ fi
 
 if [ $PYTHON_OK -eq 0 ] ; then
     echo "Error: SeaLion agent requires python version 2.6 or above" >&2
-    exit 1
+    exit SCRIPT_ERR_INCOMPATIBLE_PYTHON
 fi
 
 update_agent_config()
@@ -159,7 +170,7 @@ check_dependency()
         echo "Error: Python package dependency check failed; $ret"
         rm -rf *.pyc
         find . -type d -name '__pycache__' -exec rm -rf {} \; >/dev/null 2>&1
-        exit 1
+        exit SCRIPT_ERR_FAILED_DEPENDENCY
     fi
 
     rm -rf *.pyc
@@ -169,7 +180,11 @@ check_dependency()
 
 migrate_node_agent_config()
 {
+    TEMP=$(cat "$INSTALL_PATH/etc/config/proxy.json" 2>/dev/null | grep "\"http\_proxy\"\s*:\s*\"\([^\"]*\)\"" -o | sed 's/.*"http\_proxy"\s*:\s*"\([^"]*\)".*/\1/')
     
+    if [ "$TEMP" != "" ] ; then
+        PROXY=$TEMP
+    fi
 }
 
 setup_config()
@@ -179,6 +194,10 @@ setup_config()
 
     if [ "$CATEGORY" != "" ] ; then
         CONFIG="$CONFIG, \"category\": \"$CATEGORY\""
+    fi
+
+    if [ "$AGENT_ID" != "" ] ; then
+        CONFIG="$CONFIG, \"_id\": \"$AGENT_ID\""
     fi
         
     echo "{$CONFIG}" >"$INSTALL_PATH/etc/agent.json"
@@ -206,7 +225,7 @@ INSTALL_PATH=$(readlink -m "$INSTALL_PATH" 2>/dev/null)
 
 if [ $? -ne 0 ] ; then
     echo "Error: '$INSTALL_PATH' is not a valid directory" >&2
-    exit 1
+    exit SCRIPT_ERR_INVALID_USAGE
 fi
 
 INSTALL_PATH=${INSTALL_PATH%/}
@@ -223,17 +242,17 @@ if [ -f "$INSTALL_PATH/bin/sealion-node" ] ; then
     SEALION_NODE_FOUND=1
 fi
 
-if [ "$ORG_TOKEN" != '' ] ; then
+if [ $UPDATE_AGENT -eq 0 ] ; then
     if [[ $EUID -ne 0 ]]; then
         echo "Error: You need to run this as root user" >&2
-        exit 1
+        exit SCRIPT_ERR_INVALID_USAGE
     fi
 
     mkdir -p "$INSTALL_PATH"
 
     if [ $? -ne 0 ] ; then
         echo "Error: Cannot create installation directory at '$INSTALL_PATH'" >&2
-        exit 118
+        exit SCRIPT_ERR_FAILED_SETUP
     else
         echo "Install directory created at '$INSTALL_PATH'"
     fi
@@ -245,7 +264,7 @@ if [ "$ORG_TOKEN" != '' ] ; then
         
         if [ $? -ne 0 ] ; then
             echo "Error: Cannot create $USER_NAME group" >&2
-            exit 1
+            exit SCRIPT_ERR_FAILED_SETUP
         else
             echo "Group $USER_NAME created"
         fi
@@ -260,7 +279,7 @@ if [ "$ORG_TOKEN" != '' ] ; then
         
         if [ $? -ne 0 ] ; then
             echo "Error: Cannot create $USER_NAME user" >&2
-            exit 1
+            exit SCRIPT_ERR_FAILED_SETUP
         else
             echo "User $USER_NAME created"
         fi
@@ -270,17 +289,17 @@ if [ "$ORG_TOKEN" != '' ] ; then
 else
     if [ "$(id -u -n)" != "$USER_NAME" ] ; then
         echo "Error: You need to run this as $USER_NAME user" >&2
-        exit 1
+        exit SCRIPT_ERR_INVALID_USAGE
     fi
 
     if [[ ! -f "$SERVICE_FILE" && $SEALION_NODE_FOUND -eq 0 ]] ; then
         echo "Error: '$INSTALL_PATH' is not a valid sealion install directory" >&2
-        exit 1
+        exit SCRIPT_ERR_INVALID_USAGE
     fi
 fi
 
 if [ $SEALION_NODE_FOUND -eq 1 ] ; then
-    if [ "$ORG_TOKEN" == '' ] ; then
+    if [ $UPDATE_AGENT -eq 1 ] ; then
         migrate_node_agent_config
     fi
 
@@ -296,7 +315,7 @@ fi
 
 echo "Copying files..."
 
-if [ "$ORG_TOKEN" != '' ] ; then
+if [ $UPDATE_AGENT -eq 0 ] ; then
     cp -r agent/* "$INSTALL_PATH"
     setup_config
     chown -R $USER_NAME:$USER_NAME "$INSTALL_PATH"
@@ -331,3 +350,4 @@ fi
 echo "Starting agent..."
 "$SERVICE_FILE" start
 
+exit SCRIPT_ERR_SUCCESS
