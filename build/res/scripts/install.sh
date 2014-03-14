@@ -1,9 +1,18 @@
 #!/bin/bash
 
+#script error codes
+SCRIPT_ERR_SUCCESS=0
+SCRIPT_ERR_INCOMPATIBLE_PLATFORM=1
+SCRIPT_ERR_INVALID_USAGE=2
+SCRIPT_ERR_INVALID_PYTHON=3
+SCRIPT_ERR_INCOMPATIBLE_PYTHON=4
+SCRIPT_ERR_FAILED_DEPENDENCY=5
+SCRIPT_ERR_FAILED_SETUP=6
+
 #check platform compatibility
 if [ "`uname -s`" != "Linux" ] ; then
     echo 'Error: SeaLion agent works on Linux only' >&2
-    exit 1
+    exit $SCRIPT_ERR_INCOMPATIBLE_PLATFORM
 fi
 
 #config variables
@@ -17,21 +26,22 @@ BASEDIR=$(dirname "$BASEDIR")
 BASEDIR=${BASEDIR%/}
 USER_NAME="sealion"
 PYTHON=$(which python)
-IS_UPDATE=1
 DEFAULT_INSTALL_PATH="/usr/local/sealion-agent"
 INSTALL_AS_SERVICE=1
 SEALION_NODE_FOUND=0
+UPDATE_AGENT=0
 USAGE="Usage: $0 {-o <org token> [-c <category name>] [-H <host name>] [-x <https proxy>] [-p <python binary>] | -h}"
 
 #setup variables
 INSTALL_PATH=$DEFAULT_INSTALL_PATH
 ORG_TOKEN=
 CATEGORY=
+AGENT_ID=
 HOST_NAME=$(hostname)
 PROXY=$https_proxy
 NO_PROXY=$no_proxy
 
-while getopts :i:o:c:H:x:p:h OPT ; do
+while getopts :i:o:c:H:x:p:a:v:h OPT ; do
     case "$OPT" in
         i)
             INSTALL_PATH=$OPTARG
@@ -44,7 +54,7 @@ while getopts :i:o:c:H:x:p:h OPT ; do
             ;;
         h)
             echo $USAGE
-            exit 0
+            exit $SCRIPT_ERR_SUCCESS
             ;;
         H)
             HOST_NAME=$OPTARG
@@ -55,18 +65,28 @@ while getopts :i:o:c:H:x:p:h OPT ; do
         p)
             PYTHON=$OPTARG
             ;;
+        a)
+            AGENT_ID=$OPTARG
+            UPDATE_AGENT=1
+            ;;
         \?)
             echo "Invalid option '-$OPTARG'" >&2
             echo $USAGE
-            exit 126
+            exit $SCRIPT_ERR_INVALID_USAGE
             ;;
         :)
             echo "Option '-$OPTARG' requires an argument." >&2
             echo $USAGE
-            exit 125
+            exit $SCRIPT_ERR_INVALID_USAGE
             ;;
     esac
 done
+
+if [ "$ORG_TOKEN" == '' ] ; then
+    echo "Missing option '-o'" >&2
+    echo $USAGE
+    exit $SCRIPT_ERR_INVALID_USAGE
+fi
 
 #check for python (min 2.6)
 PYTHON_OK=0
@@ -74,7 +94,7 @@ PYTHON=$(readlink -f "$PYTHON" 2>/dev/null)
 
 if [ $? -ne 0 ] ; then
     echo "Error: '$PYTHON' is not a valid python binary" >&2
-    exit 1
+    exit $SCRIPT_ERR_INVALID_PYTHON
 fi
 
 if [ -f "$PYTHON" ] ; then
@@ -93,7 +113,7 @@ fi
 
 if [ $PYTHON_OK -eq 0 ] ; then
     echo "Error: SeaLion agent requires python version 2.6 or above" >&2
-    exit 1
+    exit $SCRIPT_ERR_INCOMPATIBLE_PYTHON
 fi
 
 update_agent_config()
@@ -150,7 +170,7 @@ check_dependency()
         echo "Error: Python package dependency check failed; $ret"
         rm -rf *.pyc
         find . -type d -name '__pycache__' -exec rm -rf {} \; >/dev/null 2>&1
-        exit 1
+        exit $SCRIPT_ERR_FAILED_DEPENDENCY
     fi
 
     rm -rf *.pyc
@@ -158,102 +178,26 @@ check_dependency()
     cd ../../
 }
 
-INSTALL_PATH=$(readlink -m "$INSTALL_PATH" 2>/dev/null)
-
-if [ $? -ne 0 ] ; then
-    echo "Error: '$INSTALL_PATH' is not a valid directory" >&2
-    exit 1
-fi
-
-INSTALL_PATH=${INSTALL_PATH%/}
-cd "$BASEDIR"
-check_dependency
-
-if [ "$INSTALL_PATH" != "$DEFAULT_INSTALL_PATH" ] ; then
-    INSTALL_AS_SERVICE=0
-fi
-
-SERVICE_FILE="$INSTALL_PATH/etc/init.d/sealion"
-
-if [ "$ORG_TOKEN" != '' ] ; then
-    if [[ $EUID -ne 0 ]]; then
-        echo "Error: You need to run this as root user" >&2
-        exit 1
+migrate_node_agent_config()
+{
+    TEMP=$(cat "$INSTALL_PATH/etc/config/proxy.json" 2>/dev/null | grep "\"http\_proxy\"\s*:\s*\"\([^\"]*\)\"" -o | sed 's/.*"http\_proxy"\s*:\s*"\([^"]*\)".*/\1/')
+    
+    if [ "$TEMP" != "" ] ; then
+        PROXY=$TEMP
     fi
+}
 
-    IS_UPDATE=0
-    mkdir -p "$INSTALL_PATH"
-
-    if [ $? -ne 0 ] ; then
-        echo "Error: Cannot create installation directory at '$INSTALL_PATH'" >&2
-        exit 118
-    else
-        echo "Install directory created at '$INSTALL_PATH'"
-    fi
-
-    id -g $USER_NAME >/dev/null 2>&1
-
-    if [ $? -ne 0 ] ; then
-        groupadd -r $USER_NAME >/dev/null 2>&1
-        
-        if [ $? -ne 0 ] ; then
-            echo "Error: Cannot create $USER_NAME group" >&2
-            exit 1
-        else
-            echo "Group $USER_NAME created"
-        fi
-    else
-        echo "Group $USER_NAME already exists"
-    fi
-
-    id $USER_NAME >/dev/null 2>&1
-
-    if [ $? -ne 0 ] ; then
-        useradd -rMN -g $USER_NAME $USER_NAME >/dev/null 2>&1
-        
-        if [ $? -ne 0 ] ; then
-            echo "Error: Cannot create $USER_NAME user" >&2
-            exit 1
-        else
-            echo "User $USER_NAME created"
-        fi
-    else
-        echo "User $USER_NAME already exists"
-    fi
-else
-    if [ "$(id -u -n)" != "$USER_NAME" ] ; then
-        echo "Error: You need to run this as $USER_NAME user" >&2
-        exit 1
-    fi
-
-    if [ ! -f "$SERVICE_FILE" ] ; then
-        echo "Error: '$INSTALL_PATH' is not a valid sealion install directory" >&2
-        exit 1
-    fi
-fi
-
-if [ -f "$INSTALL_PATH/bin/sealion-node" ] ; then
-    echo "Removing sealion-node"
-    kill -SIGKILL `pgrep -d ',' 'sealion-node'` >/dev/null 2>&1
-    find "$INSTALL_PATH" -mindepth 1 -maxdepth 1 -exec rm -rf {} \; >/dev/null 2>&1
-    SEALION_NODE_FOUND=1
-fi
-
-if [ -f "$SERVICE_FILE" ] ; then
-    echo "Stopping agent..."
-    "$SERVICE_FILE" stop
-fi
-
-echo "Copying files..."
-
-if [ $IS_UPDATE -eq 0 ] ; then
-    SEALION_NODE_FOUND=0
-    cp -r agent/* "$INSTALL_PATH"
+setup_config()
+{
     CONFIG="\"orgToken\": \"$ORG_TOKEN\", \"apiUrl\": \"$API_URL\", \"updateUrl\": \"$UPDATE_URL\", \"agentVersion\": \"$VERSION\", \"name\": \"$HOST_NAME\""
     TEMP_VAR=""
 
     if [ "$CATEGORY" != "" ] ; then
         CONFIG="$CONFIG, \"category\": \"$CATEGORY\""
+    fi
+
+    if [ "$AGENT_ID" != "" ] ; then
+        CONFIG="$CONFIG, \"_id\": \"$AGENT_ID\""
     fi
         
     echo "{$CONFIG}" >"$INSTALL_PATH/etc/agent.json"
@@ -275,6 +219,105 @@ if [ $IS_UPDATE -eq 0 ] ; then
     ARGS="-i 's/python/\"$PYTHON\"/'"
     eval sed "$ARGS" "\"$INSTALL_PATH/etc/init.d/sealion\""
     eval sed "$ARGS" "\"$INSTALL_PATH/uninstall.sh\""
+}
+
+INSTALL_PATH=$(readlink -m "$INSTALL_PATH" 2>/dev/null)
+
+if [ $? -ne 0 ] ; then
+    echo "Error: '$INSTALL_PATH' is not a valid directory" >&2
+    exit $SCRIPT_ERR_INVALID_USAGE
+fi
+
+INSTALL_PATH=${INSTALL_PATH%/}
+cd "$BASEDIR"
+check_dependency
+
+if [ "$INSTALL_PATH" != "$DEFAULT_INSTALL_PATH" ] ; then
+    INSTALL_AS_SERVICE=0
+fi
+
+SERVICE_FILE="$INSTALL_PATH/etc/init.d/sealion"
+
+if [ -f "$INSTALL_PATH/bin/sealion-node" ] ; then
+    SEALION_NODE_FOUND=1
+fi
+
+if [ $UPDATE_AGENT -eq 0 ] ; then
+    if [[ $EUID -ne 0 ]]; then
+        echo "Error: You need to run this as root user" >&2
+        exit $SCRIPT_ERR_INVALID_USAGE
+    fi
+
+    mkdir -p "$INSTALL_PATH"
+
+    if [ $? -ne 0 ] ; then
+        echo "Error: Cannot create installation directory at '$INSTALL_PATH'" >&2
+        exit $SCRIPT_ERR_FAILED_SETUP
+    else
+        echo "Install directory created at '$INSTALL_PATH'"
+    fi
+
+    id -g $USER_NAME >/dev/null 2>&1
+
+    if [ $? -ne 0 ] ; then
+        groupadd -r $USER_NAME >/dev/null 2>&1
+        
+        if [ $? -ne 0 ] ; then
+            echo "Error: Cannot create $USER_NAME group" >&2
+            exit $SCRIPT_ERR_FAILED_SETUP
+        else
+            echo "Group $USER_NAME created"
+        fi
+    else
+        echo "Group $USER_NAME already exists"
+    fi
+
+    id $USER_NAME >/dev/null 2>&1
+
+    if [ $? -ne 0 ] ; then
+        useradd -rMN -g $USER_NAME $USER_NAME >/dev/null 2>&1
+        
+        if [ $? -ne 0 ] ; then
+            echo "Error: Cannot create $USER_NAME user" >&2
+            exit $SCRIPT_ERR_FAILED_SETUP
+        else
+            echo "User $USER_NAME created"
+        fi
+    else
+        echo "User $USER_NAME already exists"
+    fi
+else
+    if [ "$(id -u -n)" != "$USER_NAME" ] ; then
+        echo "Error: You need to run this as $USER_NAME user" >&2
+        exit $SCRIPT_ERR_INVALID_USAGE
+    fi
+
+    if [[ ! -f "$SERVICE_FILE" && $SEALION_NODE_FOUND -eq 0 ]] ; then
+        echo "Error: '$INSTALL_PATH' is not a valid sealion install directory" >&2
+        exit $SCRIPT_ERR_INVALID_USAGE
+    fi
+fi
+
+if [ $SEALION_NODE_FOUND -eq 1 ] ; then
+    if [ $UPDATE_AGENT -eq 1 ] ; then
+        migrate_node_agent_config
+    fi
+
+    echo "Removing sealion-node"
+    kill -SIGKILL `pgrep -d ',' 'sealion-node'` >/dev/null 2>&1
+    find "$INSTALL_PATH" -mindepth 1 -maxdepth 1 -exec rm -rf {} \; >/dev/null 2>&1
+fi
+
+if [ -f "$SERVICE_FILE" ] ; then
+    echo "Stopping agent..."
+    "$SERVICE_FILE" stop
+fi
+
+echo "Copying files..."
+
+if [ $UPDATE_AGENT -eq 0 ] ; then
+    cp -r agent/* "$INSTALL_PATH"
+    setup_config
     chown -R $USER_NAME:$USER_NAME "$INSTALL_PATH"
     echo "Sealion agent installed successfully"    
 
@@ -290,17 +333,21 @@ if [ $IS_UPDATE -eq 0 ] ; then
         echo "Use '$SERVICE_FILE' to control sealion"
     fi
 else
-    find agent/ -mindepth 1 -maxdepth 1 -type d ! -name 'etc' -exec cp -r {} "$INSTALL_PATH" \;
-    update_agent_config "agentVersion" $VERSION
-    update_agent_config "apiUrl" $API_URL
-    update_agent_config "updateUrl" $UPDATE_URL
-    echo "Sealion agent updated successfully"
-fi
+    if [ $SEALION_NODE_FOUND -eq 1 ] ; then
+        cp -r agent/* "$INSTALL_PATH"
+        setup_config
+        ln -sf "$SERVICE_FILE" "$INSTALL_PATH/etc/sealion"
+    else
+        find agent/ -mindepth 1 -maxdepth 1 -type d ! -name 'etc' -exec cp -r {} "$INSTALL_PATH" \;
+        update_agent_config "agentVersion" $VERSION
+        update_agent_config "apiUrl" $API_URL
+        update_agent_config "updateUrl" $UPDATE_URL
+    fi
 
-if [ $SEALION_NODE_FOUND -eq 1 ] ; then
-    ln -sf "$SERVICE_FILE" "$INSTALL_PATH/etc/sealion"
+    echo "Sealion agent updated successfully"
 fi
 
 echo "Starting agent..."
 "$SERVICE_FILE" start
 
+exit $SCRIPT_ERR_SUCCESS

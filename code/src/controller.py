@@ -39,7 +39,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
             except:
                 _log.error('Failed to open uninstall script.')
                 
-        elif status == self.api.status.UNAUTHERIZED:
+        elif status == self.api.status.UNAUTHORIZED:
             _log.error('Agent unauthorized to connect')
         elif status == self.api.status.BAD_REQUEST:
             _log.error('Server marked the request as bad')
