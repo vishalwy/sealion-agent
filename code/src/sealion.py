@@ -132,10 +132,10 @@ class sealion(Daemon):
                 os.setuid(user.pw_uid)
                 os.environ['HOME'] = '/'
         except KeyError as e:
-            sys.stderr.write('Failed to find user named %s; %s\n' % (self.user_name, str(e)))
+            sys.stderr.write('Failed to find user %s.; %s\n' % (self.user_name, str(e)))
             sys.exit(0)
         except Exception as e:
-            sys.stderr.write('Failed to change the group or user to %s; %s\n' % (self.user_name, str(e)))
+            sys.stderr.write('Failed to change the group or user to %s.; %s\n' % (self.user_name, str(e)))
             sys.exit(0)
             
         try:
@@ -215,7 +215,7 @@ if len(sys.argv) == 2:
     elif sys.argv[1] == 'status':
         daemon.status()
     else:
-        sys.stderr.write('Unknown command \'%s\'\n' % sys.argv[1])    
+        sys.stderr.write('Invalid Usage: \'%s\'\n' % sys.argv[1])    
         is_print_usage = True
 else:
     is_print_usage = True

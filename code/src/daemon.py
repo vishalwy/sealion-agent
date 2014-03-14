@@ -19,10 +19,10 @@ class Daemon(object):
             pid = os.fork() 
             
             if pid > 0:
-                sys.stdout.write('%s started successfully\n' % self.__class__.__name__)
+                sys.stdout.write('%s started successfully.\n' % self.__class__.__name__)
                 sys.exit(0)
         except OSError as e: 
-            sys.stderr.write('Failed to daemonize: %d (%s)\n' % (e.errno, e.strerror))
+            sys.stderr.write('Failed to daemonize sealion: %d (%s)\n' % (e.errno, e.strerror))
      
         os.chdir("/")
         os.setsid() 
@@ -31,7 +31,7 @@ class Daemon(object):
         try: 
             pid = os.fork()  
         except OSError as e: 
-            sys.stderr.write('Failed to daemonize: %d (%s)\n' % (e.errno, e.strerror))
+            sys.stderr.write('Failed to daemonize sealion: %d (%s)\n' % (e.errno, e.strerror))
             sys.exit(1) 
             
         sys.stdout.flush()
@@ -61,7 +61,7 @@ class Daemon(object):
 
     def start(self):
         if self.status(True):
-            sys.stdout.write('%s is already running\n' % self.__class__.__name__)
+            sys.stdout.write('%s is already running.\n' % self.__class__.__name__)
             sys.exit(1)            
         
         self.daemonize()
@@ -69,7 +69,7 @@ class Daemon(object):
 
     def stop(self):
         if self.status(True) == False:
-            sys.stdout.write('%s is not running\n' % self.__class__.__name__)
+            sys.stdout.write('%s is not running.\n' % self.__class__.__name__)
             return
         
         pid = self.get_pid()
@@ -89,7 +89,7 @@ class Daemon(object):
                         sys.stderr.write(str(e) + '\n')
                         sys.exit(1)
                     
-                sys.stdout.write('%s stopped successfully\n' % self.__class__.__name__)
+                sys.stdout.write('%s stopped successfully.\n' % self.__class__.__name__)
             else:
                 sys.stderr.write(err + '\n')
                 sys.exit(1)
@@ -103,9 +103,9 @@ class Daemon(object):
         pid = self.get_pid()
     
         if pid and os.path.exists('/proc/%d' % pid):
-            query == False and sys.stdout.write('%s is running\n' % self.__class__.__name__)
+            query == False and sys.stdout.write('%s is running.\n' % self.__class__.__name__)
         else:
-            query == False and sys.stdout.write('%s is not running\n' % self.__class__.__name__)
+            query == False and sys.stdout.write('%s is not running.\n' % self.__class__.__name__)
             ret = False
             
         return ret
