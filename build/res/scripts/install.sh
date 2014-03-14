@@ -12,7 +12,7 @@ SCRIPT_ERR_FAILED_SETUP=6
 #check platform compatibility
 if [ "`uname -s`" != "Linux" ] ; then
     echo 'Error: SeaLion agent works on Linux only' >&2
-    exit SCRIPT_ERR_INCOMPATIBLE_PLATFORM
+    exit $SCRIPT_ERR_INCOMPATIBLE_PLATFORM
 fi
 
 #config variables
@@ -54,7 +54,7 @@ while getopts :i:o:c:H:x:p:a:v:h OPT ; do
             ;;
         h)
             echo $USAGE
-            exit SCRIPT_ERR_SUCCESS
+            exit $SCRIPT_ERR_SUCCESS
             ;;
         H)
             HOST_NAME=$OPTARG
@@ -72,12 +72,12 @@ while getopts :i:o:c:H:x:p:a:v:h OPT ; do
         \?)
             echo "Invalid option '-$OPTARG'" >&2
             echo $USAGE
-            exit SCRIPT_ERR_INVALID_USAGE
+            exit $SCRIPT_ERR_INVALID_USAGE
             ;;
         :)
             echo "Option '-$OPTARG' requires an argument." >&2
             echo $USAGE
-            exit SCRIPT_ERR_INVALID_USAGE
+            exit $SCRIPT_ERR_INVALID_USAGE
             ;;
     esac
 done
@@ -85,7 +85,7 @@ done
 if [ "$ORG_TOKEN" == '' ] ; then
     echo "Missing option '-o'" >&2
     echo $USAGE
-    exit SCRIPT_ERR_INVALID_USAGE
+    exit $SCRIPT_ERR_INVALID_USAGE
 fi
 
 #check for python (min 2.6)
@@ -94,7 +94,7 @@ PYTHON=$(readlink -f "$PYTHON" 2>/dev/null)
 
 if [ $? -ne 0 ] ; then
     echo "Error: '$PYTHON' is not a valid python binary" >&2
-    exit SCRIPT_ERR_INVALID_PYTHON
+    exit $SCRIPT_ERR_INVALID_PYTHON
 fi
 
 if [ -f "$PYTHON" ] ; then
@@ -113,7 +113,7 @@ fi
 
 if [ $PYTHON_OK -eq 0 ] ; then
     echo "Error: SeaLion agent requires python version 2.6 or above" >&2
-    exit SCRIPT_ERR_INCOMPATIBLE_PYTHON
+    exit $SCRIPT_ERR_INCOMPATIBLE_PYTHON
 fi
 
 update_agent_config()
@@ -170,7 +170,7 @@ check_dependency()
         echo "Error: Python package dependency check failed; $ret"
         rm -rf *.pyc
         find . -type d -name '__pycache__' -exec rm -rf {} \; >/dev/null 2>&1
-        exit SCRIPT_ERR_FAILED_DEPENDENCY
+        exit $SCRIPT_ERR_FAILED_DEPENDENCY
     fi
 
     rm -rf *.pyc
@@ -225,7 +225,7 @@ INSTALL_PATH=$(readlink -m "$INSTALL_PATH" 2>/dev/null)
 
 if [ $? -ne 0 ] ; then
     echo "Error: '$INSTALL_PATH' is not a valid directory" >&2
-    exit SCRIPT_ERR_INVALID_USAGE
+    exit $SCRIPT_ERR_INVALID_USAGE
 fi
 
 INSTALL_PATH=${INSTALL_PATH%/}
@@ -245,14 +245,14 @@ fi
 if [ $UPDATE_AGENT -eq 0 ] ; then
     if [[ $EUID -ne 0 ]]; then
         echo "Error: You need to run this as root user" >&2
-        exit SCRIPT_ERR_INVALID_USAGE
+        exit $SCRIPT_ERR_INVALID_USAGE
     fi
 
     mkdir -p "$INSTALL_PATH"
 
     if [ $? -ne 0 ] ; then
         echo "Error: Cannot create installation directory at '$INSTALL_PATH'" >&2
-        exit SCRIPT_ERR_FAILED_SETUP
+        exit $SCRIPT_ERR_FAILED_SETUP
     else
         echo "Install directory created at '$INSTALL_PATH'"
     fi
@@ -264,7 +264,7 @@ if [ $UPDATE_AGENT -eq 0 ] ; then
         
         if [ $? -ne 0 ] ; then
             echo "Error: Cannot create $USER_NAME group" >&2
-            exit SCRIPT_ERR_FAILED_SETUP
+            exit $SCRIPT_ERR_FAILED_SETUP
         else
             echo "Group $USER_NAME created"
         fi
@@ -279,7 +279,7 @@ if [ $UPDATE_AGENT -eq 0 ] ; then
         
         if [ $? -ne 0 ] ; then
             echo "Error: Cannot create $USER_NAME user" >&2
-            exit SCRIPT_ERR_FAILED_SETUP
+            exit $SCRIPT_ERR_FAILED_SETUP
         else
             echo "User $USER_NAME created"
         fi
@@ -289,12 +289,12 @@ if [ $UPDATE_AGENT -eq 0 ] ; then
 else
     if [ "$(id -u -n)" != "$USER_NAME" ] ; then
         echo "Error: You need to run this as $USER_NAME user" >&2
-        exit SCRIPT_ERR_INVALID_USAGE
+        exit $SCRIPT_ERR_INVALID_USAGE
     fi
 
     if [[ ! -f "$SERVICE_FILE" && $SEALION_NODE_FOUND -eq 0 ]] ; then
         echo "Error: '$INSTALL_PATH' is not a valid sealion install directory" >&2
-        exit SCRIPT_ERR_INVALID_USAGE
+        exit $SCRIPT_ERR_INVALID_USAGE
     fi
 fi
 
@@ -350,4 +350,4 @@ fi
 echo "Starting agent..."
 "$SERVICE_FILE" start
 
-exit SCRIPT_ERR_SUCCESS
+exit $SCRIPT_ERR_SUCCESS
