@@ -9,12 +9,6 @@ SCRIPT_ERR_INCOMPATIBLE_PYTHON=4
 SCRIPT_ERR_FAILED_DEPENDENCY=5
 SCRIPT_ERR_FAILED_SETUP=6
 
-#check platform compatibility
-if [ "`uname -s`" != "Linux" ] ; then
-    echo 'Error: SeaLion agent works on Linux only' >&2
-    exit $SCRIPT_ERR_INCOMPATIBLE_PLATFORM
-fi
-
 #config variables
 API_URL="<api-url>"
 UPDATE_URL="<agent-download-url>"
@@ -86,6 +80,12 @@ if [ "$ORG_TOKEN" == '' ] ; then
     echo "Missing option '-o'" >&2
     echo $USAGE
     exit $SCRIPT_ERR_INVALID_USAGE
+fi
+
+#check platform compatibility
+if [ "`uname -s`" != "Linux" ] ; then
+    echo 'Error: SeaLion agent works on Linux only' >&2
+    exit $SCRIPT_ERR_INCOMPATIBLE_PLATFORM
 fi
 
 #check for python (min 2.6)
