@@ -105,6 +105,10 @@ generate_scripts()
     chmod +x $INSTALLER
     echo "Installer generated"
     cp res/scripts/curl-install.sh $CURL_INSTALLER
+    URL="$(echo "$API_URL" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
+    ARGS="-i 's/\(^API\_URL=\)\(\"[^\"]\+\"\)/\1\"$URL\"/'"
+    eval sed "$ARGS" $CURL_INSTALLER
+    URL="$(echo "$UPDATE_URL" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
     ARGS="-i 's/\(^DOWNLOAD\_URL=\)\(\"[^\"]\+\"\)/\1\"$URL\"/'"
     eval sed "$ARGS" $CURL_INSTALLER    
     chmod +x $CURL_INSTALLER
