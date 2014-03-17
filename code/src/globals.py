@@ -58,7 +58,8 @@ class AgentConfig(helper.Config):
                 'optional': True
             },
             'updateUrl': {'type': 'str,unicode', 'regex': '^.+$'},
-            'org': {'type': 'str,unicode', 'depends': ['orgToken', '_id', 'agentVersion'], 'regex': '^[a-zA-Z0-9]{24}$', 'optional': True}
+            'org': {'type': 'str,unicode', 'depends': ['orgToken', '_id', 'agentVersion'], 'regex': '^[a-zA-Z0-9]{24}$', 'optional': True},
+            'ref': {'type': 'str,unicode', 'depends': ['orgToken', 'agentVersion'], 'regex': 'curl|tarball', 'optional': True}
         }
         
     def update(self, data):   

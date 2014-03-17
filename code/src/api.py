@@ -124,7 +124,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         self.set_events(post_event = True)
     
     def register(self, **kwargs):
-        data = self.globals.config.agent.get_dict(['orgToken', 'name', 'category'])
+        data = self.globals.config.agent.get_dict(['orgToken', 'name', 'category', ('ref', 'tarball')])
         response = self.exec_method('post', kwargs, self.get_url('agents'), data = data)    
         ret = self.status.SUCCESS
         

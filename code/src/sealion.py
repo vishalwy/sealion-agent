@@ -156,9 +156,9 @@ class sealiond(Daemon):
     def on_fork(self, cpid):        
         try:
             subprocess.Popen([exe_path + 'bin/monit.sh', str(cpid), str(self.monit_interval)])
-        except:
-            _log.error('Failed to open monitoring script.')
-            
+        except Exception as e:
+            _log.error('Failed to open monitoring script; %s' % str(e))
+
         sys.exit(0)
         
     def is_crash_loop(self):

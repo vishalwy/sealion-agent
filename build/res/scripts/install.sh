@@ -34,8 +34,9 @@ AGENT_ID=
 HOST_NAME=$(hostname)
 PROXY=$https_proxy
 NO_PROXY=$no_proxy
+REF="tarball"
 
-while getopts :i:o:c:H:x:p:a:v:h OPT ; do
+while getopts :i:o:c:H:x:p:a:r:v:h OPT ; do
     case "$OPT" in
         i)
             INSTALL_PATH=$OPTARG
@@ -62,6 +63,9 @@ while getopts :i:o:c:H:x:p:a:v:h OPT ; do
         a)
             AGENT_ID=$OPTARG
             UPDATE_AGENT=1
+            ;;
+        r)
+            REF=$OPTARG
             ;;
         \?)
             echo "Invalid option '-$OPTARG'" >&2
@@ -189,7 +193,7 @@ migrate_node_agent_config()
 
 setup_config()
 {
-    CONFIG="\"orgToken\": \"$ORG_TOKEN\", \"apiUrl\": \"$API_URL\", \"updateUrl\": \"$UPDATE_URL\", \"agentVersion\": \"$VERSION\", \"name\": \"$HOST_NAME\""
+    CONFIG="\"orgToken\": \"$ORG_TOKEN\", \"apiUrl\": \"$API_URL\", \"updateUrl\": \"$UPDATE_URL\", \"agentVersion\": \"$VERSION\", \"name\": \"$HOST_NAME\", \"ref\": \"$REF\""
     TEMP_VAR=""
 
     if [ "$CATEGORY" != "" ] ; then
