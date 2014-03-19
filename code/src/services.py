@@ -93,7 +93,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
     def __init__(self, store):
         ThreadEx.__init__(self)
         self.prev_time = time.time()
-        self.globals = globals.Interface()
+        self.globals = globals.Globals()
         self.jobs = []
         self.jobs_lock = threading.RLock()
         self.activities_lock = threading.Lock()
@@ -271,7 +271,7 @@ class JobConsumer(ThreadEx):
     def __init__(self):
         ThreadEx.__init__(self)
         self.job_producer = JobProducer()
-        self.globals = globals.Interface()
+        self.globals = globals.Globals()
         self.name = '%s-%d' % (self.__class__.__name__, JobConsumer.unique_id)
         JobConsumer.unique_id += 1
 

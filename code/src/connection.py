@@ -10,15 +10,15 @@ _log = logging.getLogger(__name__)
 class Connection(ThreadEx):    
     def __init__(self):
         ThreadEx.__init__(self)
-        self.globals = globals.Interface()
-        self.api = api.Interface()
+        self.globals = globals.Globals()
+        self.api = api.API()
     
     def exe(self):
         self.attempt(retry_interval = 10)
     
     def attempt(self, retry_count = -1, retry_interval = 5):
         status = self.api.authenticate(retry_count = retry_count, retry_interval = retry_interval)
-        status == self.api.status.SUCCESS and rtc.Interface().connect().start()
+        status == self.api.status.SUCCESS and rtc.RTC().connect().start()
         return status            
         
     def connect(self):        
@@ -32,7 +32,7 @@ class Connection(ThreadEx):
         return status
     
     def reconnect(self):
-        if self.api.is_authenticated == False or isinstance(threading.current_thread(), rtc.Interface):
+        if self.api.is_authenticated == False or isinstance(threading.current_thread(), rtc.RTC):
             return
         
         self.api.is_authenticated = False
@@ -48,10 +48,9 @@ class Connection(ThreadEx):
     @staticmethod
     def stop_rtc():
         for thread in threading.enumerate():
-            if isinstance(thread, rtc.Interface):
+            if isinstance(thread, rtc.RTC):
                 thread.stop()
                 return thread
         
         return None
-        
-Interface = Connection
+

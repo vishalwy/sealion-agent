@@ -27,7 +27,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
     
     def __init__(self, *args, **kwargs):
         requests.Session.__init__(self, *args, **kwargs)
-        self.globals = globals.Interface()
+        self.globals = globals.Globals()
         self.stop_status = self.status.SUCCESS
         self.is_authenticated = False
         self.updater = None
@@ -268,7 +268,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
             else:
                 if code == 200001 and self.stop_status == self.status.SUCCESS:
                     post_event = False
-                    exec_func = connection.Interface().reconnect
+                    exec_func = connection.Connection().reconnect
                 else:
                     post_event = None
                     exec_func = self.stop
@@ -352,4 +352,3 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         }
         subprocess.Popen('"%(temp_dir)s/sealion-agent/install.sh" -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" && rm -rf "%(temp_dir)s"' % format_spec, shell=True)
 
-Interface = API

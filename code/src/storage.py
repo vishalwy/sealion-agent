@@ -13,7 +13,7 @@ _log = logging.getLogger(__name__)
 class OfflineStore(ThreadEx):    
     def __init__(self):
         ThreadEx.__init__(self)
-        self.globals = globals.Interface()
+        self.globals = globals.Globals()
         self.db_file = self.globals.db_path
         self.conn = None
         self.conn_event = threading.Event()
@@ -240,8 +240,8 @@ class Sender(ThreadEx):
     
     def __init__(self, off_store):
         ThreadEx.__init__(self)
-        self.globals = globals.Interface()
-        self.api = api.Interface()
+        self.globals = globals.Globals()
+        self.api = api.API()
         self.off_store = off_store
         self.queue_max_size = 100
         self.ping_interval = 10
@@ -411,7 +411,7 @@ class HistoricSender(Sender):
 
 class Storage:
     def __init__(self):
-        self.globals = globals.Interface()
+        self.globals = globals.Globals()
         self.off_store = OfflineStore()
         self.realtime_sender = RealtimeSender(self.off_store)
         self.historic_sender = HistoricSender(self.off_store)
@@ -434,4 +434,3 @@ class Storage:
     def clear_offline_data(self, exclude_activities = []):
         self.off_store.clr(exclude_activities)
 
-Interface = Storage

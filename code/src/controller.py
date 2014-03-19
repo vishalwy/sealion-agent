@@ -18,8 +18,8 @@ _metric = {'starting_time': 0, 'stopping_time': 0}
 class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):    
     def __init__(self):
         ThreadEx.__init__(self)
-        self.globals = globals.Interface()
-        self.api = api.Interface()
+        self.globals = globals.Globals()
+        self.api = api.API()
         self.is_stop = False
         self.main_thread = threading.current_thread()
         self.activities = {}
@@ -64,10 +64,10 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                     _log.debug('%s received stop event.', self.name)
                     break
             else:
-                if self.handle_response(connection.Interface().connect()) == False:
+                if self.handle_response(connection.Connection().connect()) == False:
                     break
                     
-                store = storage.Interface()
+                store = storage.Storage()
 
                 if store.start() == False:
                     break
@@ -108,7 +108,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
     def stop_threads(self):
         _log.debug('Stopping all threads.')
         self.api.stop()
-        connection.Interface.stop_rtc()
+        connection.Connection.stop_rtc()
         self.api.logout()
         self.api.close()
         threads = threading.enumerate()
@@ -143,7 +143,7 @@ def start():
     _log.info('Agent starting up.')
     _log.info('Using python binary at %s.' % sys.executable)
     _log.info('Python version : %s.' % '.'.join([str(i) for i in sys.version_info]))
-    _log.info('Agent version  : %s.' % globals.Interface().config.agent.agentVersion)
+    _log.info('Agent version  : %s.' % globals.Globals().config.agent.agentVersion)
     controller = Controller()
     signal.signal(signal.SIGALRM, sig_handler)
     signal.signal(signal.SIGTERM, sig_handler)

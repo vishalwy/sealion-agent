@@ -101,5 +101,3 @@ class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
         self.stop_event = threading.Event()
         self.post_event = threading.Event()
         self.event_dispatcher = EventDispatcher()
-
-Interface = Globals

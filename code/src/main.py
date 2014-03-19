@@ -34,7 +34,7 @@ except Exception as e:
     
 try:
     globals = Globals()
-    api = api.Interface()
+    api = api.API()
 except RuntimeError as e:
     _log.error(str(e))
     sys.exit(0)
