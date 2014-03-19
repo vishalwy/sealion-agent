@@ -1,3 +1,8 @@
+__copyright__ = '(c) Webyog, Inc'
+__author__ = 'Vishal P.R'
+__license__ = 'GPL'
+__email__ = 'support@sealion.com'
+
 import sys
 import logging
 import requests
@@ -27,7 +32,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
     
     def __init__(self, *args, **kwargs):
         requests.Session.__init__(self, *args, **kwargs)
-        self.globals = globals.Interface()
+        self.globals = globals.Globals()
         self.stop_status = self.status.SUCCESS
         self.is_authenticated = False
         self.updater = None
@@ -124,7 +129,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         self.set_events(post_event = True)
     
     def register(self, **kwargs):
-        data = self.globals.config.agent.get_dict(['orgToken', 'name', 'category'])
+        data = self.globals.config.agent.get_dict(['orgToken', 'name', 'category', ('ref', 'tarball')])
         response = self.exec_method('post', kwargs, self.get_url('agents'), data = data)    
         ret = self.status.SUCCESS
         
@@ -217,7 +222,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
     def send_crash_report(self, data, **kwargs):
         orgToken, agentId = data['orgToken'], data['_id']
         del data['orgToken'], data['_id']
-        response = self.exec_method('post', {'retry_count': 0, 'retry_interval': 30}, self.get_url('orgs/%s/agents/%s/crashreport' % (orgToken, agentId)), data = data)    
+        response = self.exec_method('post', {'retry_count': 0}, self.get_url('orgs/%s/agents/%s/crashreport' % (orgToken, agentId)), data = data)    
         ret = self.status.SUCCESS
         
         if API.is_success(response):
@@ -268,7 +273,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
             else:
                 if code == 200001 and self.stop_status == self.status.SUCCESS:
                     post_event = False
-                    exec_func = connection.Interface().reconnect
+                    exec_func = connection.Connection().reconnect
                 else:
                     post_event = None
                     exec_func = self.stop
@@ -352,4 +357,3 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         }
         subprocess.Popen('"%(temp_dir)s/sealion-agent/install.sh" -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" && rm -rf "%(temp_dir)s"' % format_spec, shell=True)
 
-Interface = API

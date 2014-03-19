@@ -1,5 +1,11 @@
+__copyright__ = '(c) Webyog, Inc'
+__author__ = 'Vishal P.R'
+__license__ = 'GPL'
+__email__ = 'support@sealion.com'
+
 import logging
 import threading
+import os
 import time
 import subprocess
 import signal
@@ -18,8 +24,8 @@ _metric = {'starting_time': 0, 'stopping_time': 0}
 class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):    
     def __init__(self):
         ThreadEx.__init__(self)
-        self.globals = globals.Interface()
-        self.api = api.Interface()
+        self.globals = globals.Globals()
+        self.api = api.API()
         self.is_stop = False
         self.main_thread = threading.current_thread()
         self.activities = {}
@@ -64,10 +70,10 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                     _log.debug('%s received stop event.', self.name)
                     break
             else:
-                if self.handle_response(connection.Interface().connect()) == False:
+                if self.handle_response(connection.Connection().connect()) == False:
                     break
                     
-                store = storage.Interface()
+                store = storage.Storage()
 
                 if store.start() == False:
                     break
@@ -108,7 +114,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
     def stop_threads(self):
         _log.debug('Stopping all threads.')
         self.api.stop()
-        connection.Interface.stop_rtc()
+        connection.Connection.stop_rtc()
         self.api.logout()
         self.api.close()
         threads = threading.enumerate()
@@ -132,18 +138,26 @@ def sig_handler(signum, frame):
         _log.debug('Received SIGALRM')
         signal.alarm(0)
         
-def stop(status = 0):
-    _log.info('Agent shutting down with status code %d.' % status)
-    _log.debug('Took %f seconds to shutdown.' % (time.time() - _metric['stopping_time']))
-    _log.info('Ran for %s hours.' % str(datetime.now() - datetime.fromtimestamp(_metric['starting_time'])))
-    exit(status)
+def stop():
+    status = globals.Globals().stop_status
+    
+    if status == 0:
+        _log.info('Agent shutting down with status code %d.' % status)
+        _log.debug('Took %f seconds to shutdown.' % (time.time() - _metric['stopping_time']))
+        _log.info('Ran for %s hours.' % str(datetime.now() - datetime.fromtimestamp(_metric['starting_time'])))
+        exit(status)
+    else:
+        _log.info('Agent terminating with status code %d.' % status)
+        _log.debug('Took %f seconds to terminate.' % (time.time() - _metric['stopping_time']))
+        _log.info('Ran for %s hours.' % str(datetime.now() - datetime.fromtimestamp(_metric['starting_time'])))
+        os._exit(status)
     
 def start():
     _metric['starting_time'] = time.time()
     _log.info('Agent starting up.')
     _log.info('Using python binary at %s.' % sys.executable)
     _log.info('Python version : %s.' % '.'.join([str(i) for i in sys.version_info]))
-    _log.info('Agent version  : %s.' % globals.Interface().config.agent.agentVersion)
+    _log.info('Agent version  : %s.' % globals.Globals().config.agent.agentVersion)
     controller = Controller()
     signal.signal(signal.SIGALRM, sig_handler)
     signal.signal(signal.SIGTERM, sig_handler)

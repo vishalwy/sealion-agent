@@ -1,3 +1,8 @@
+__copyright__ = '(c) Webyog, Inc'
+__author__ = 'Vishal P.R'
+__license__ = 'GPL'
+__email__ = 'support@sealion.com'
+
 import logging
 import os
 import sys
@@ -18,9 +23,9 @@ from daemon import Daemon
 
 _log = logging.getLogger(__name__)
 
-class sealiond(Daemon):
+class sealion(Daemon):
     user_name = 'sealion'
-    monit_interval = 60
+    monit_interval = 30
     crash_dump_threshold = 5
     
     @property
@@ -30,14 +35,15 @@ class sealiond(Daemon):
     def save_dump(self, type, value, tb):
         from globals import Globals
         globals = Globals()
-        path = self.crash_dump_path + ('sealion_%d.dmp' % int(time.time() * 1000))
+        timestamp = int(time.time() * 1000)
+        path = self.crash_dump_path + ('sealion_%d.dmp' % timestamp)
         dir = os.path.dirname(path)
         f = None
         
         try:
             os.path.isdir(dir) or os.makedirs(dir)            
             report = {
-                'timestamp': int(time.time() * 1000),
+                'timestamp': timestamp,
                 'stack': ''.join(traceback.format_exception(type, value, tb))
             }
             
@@ -97,13 +103,13 @@ class sealiond(Daemon):
 
                         if report == None:
                             break
-
-                        if api.send_crash_report(report) == api.status.SUCCESS:                        
+                            
+                        if api.is_not_connected(api.send_crash_report(report)) == False:                        
                             _log.info('Removing crash dump %s.' % file_name)
                             os.remove(file_name)
                             break
 
-                        globals.stop_event.wait(30)
+                        globals.stop_event.wait(10)
 
                 if globals.stop_event.is_set():
                     break
@@ -156,9 +162,9 @@ class sealiond(Daemon):
     def on_fork(self, cpid):        
         try:
             subprocess.Popen([exe_path + 'bin/monit.sh', str(cpid), str(self.monit_interval)])
-        except:
-            _log.error('Failed to open monitoring script.')
-            
+        except Exception as e:
+            _log.error('Failed to open monitoring script; %s' % str(e))
+
         sys.exit(0)
         
     def is_crash_loop(self):
@@ -185,7 +191,7 @@ class sealiond(Daemon):
             os._exit(1)
     
     def run(self):     
-        self.set_procname('%s' % self.__class__.__name__ )
+        self.set_procname('sealiond')
         is_update_only_mode = False
         
         if self.is_crash_loop() == True:
@@ -202,7 +208,7 @@ def sig_handler(signum, frame):
         exit(2)
     
 signal.signal(signal.SIGINT, sig_handler)
-daemon = sealiond(exe_path + 'var/run/sealion.pid')
+daemon = sealion(exe_path + 'var/run/sealion.pid')
 is_print_usage = False
 
 if len(sys.argv) == 2:

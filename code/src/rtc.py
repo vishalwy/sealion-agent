@@ -1,3 +1,8 @@
+__copyright__ = '(c) Webyog, Inc'
+__author__ = 'Vishal P.R'
+__license__ = 'GPL'
+__email__ = 'support@sealion.com'
+
 import logging
 import time
 import requests
@@ -10,8 +15,8 @@ _log = logging.getLogger(__name__)
 
 class SocketIONamespace(BaseNamespace):
     def initialize(self):
-        self.globals = globals.Interface()
-        self.api = api.Interface()
+        self.globals = globals.Globals()
+        self.api = api.API()
     
     def on_connect(self):        
         _log.info('SocketIO connected.')
@@ -98,7 +103,7 @@ class SocketIONamespace(BaseNamespace):
 class RTC(ThreadEx):    
     def __init__(self):
         ThreadEx.__init__(self)
-        self.api = api.Interface()
+        self.api = api.API()
         self.sio = None
         self.is_stop = False
         self.daemon = True
@@ -151,9 +156,8 @@ class RTC(ThreadEx):
             except Exception as e:
                 _log.debug(str(e))
             
-            if self.is_stop == True or globals.Interface().stop_event.is_set():
+            if self.is_stop == True or globals.Globals().stop_event.is_set():
                 break
                 
             self.connect()
 
-Interface = RTC

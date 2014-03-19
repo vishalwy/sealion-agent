@@ -2,18 +2,12 @@
 
 #script error codes
 SCRIPT_ERR_SUCCESS=0
-SCRIPT_ERR_INCOMPATIBLE_PLATFORM=1
-SCRIPT_ERR_INVALID_USAGE=2
-SCRIPT_ERR_INVALID_PYTHON=3
-SCRIPT_ERR_INCOMPATIBLE_PYTHON=4
-SCRIPT_ERR_FAILED_DEPENDENCY=5
+SCRIPT_ERR_INVALID_PYTHON=1
+SCRIPT_ERR_INCOMPATIBLE_PYTHON=2
+SCRIPT_ERR_FAILED_DEPENDENCY=3
+SCRIPT_ERR_INCOMPATIBLE_PLATFORM=4
+SCRIPT_ERR_INVALID_USAGE=5
 SCRIPT_ERR_FAILED_SETUP=6
-
-#check platform compatibility
-if [ "`uname -s`" != "Linux" ] ; then
-    echo 'Error: SeaLion agent works on Linux only' >&2
-    exit $SCRIPT_ERR_INCOMPATIBLE_PLATFORM
-fi
 
 #config variables
 API_URL="<api-url>"
@@ -40,8 +34,9 @@ AGENT_ID=
 HOST_NAME=$(hostname)
 PROXY=$https_proxy
 NO_PROXY=$no_proxy
+REF="tarball"
 
-while getopts :i:o:c:H:x:p:a:v:h OPT ; do
+while getopts :i:o:c:H:x:p:a:r:v:h OPT ; do
     case "$OPT" in
         i)
             INSTALL_PATH=$OPTARG
@@ -69,6 +64,9 @@ while getopts :i:o:c:H:x:p:a:v:h OPT ; do
             AGENT_ID=$OPTARG
             UPDATE_AGENT=1
             ;;
+        r)
+            REF=$OPTARG
+            ;;
         \?)
             echo "Invalid option '-$OPTARG'" >&2
             echo $USAGE
@@ -86,6 +84,12 @@ if [ "$ORG_TOKEN" == '' ] ; then
     echo "Missing option '-o'" >&2
     echo $USAGE
     exit $SCRIPT_ERR_INVALID_USAGE
+fi
+
+#check platform compatibility
+if [ "`uname -s`" != "Linux" ] ; then
+    echo 'Error: SeaLion agent works on Linux only' >&2
+    exit $SCRIPT_ERR_INCOMPATIBLE_PLATFORM
 fi
 
 #check for python (min 2.6)
@@ -189,7 +193,7 @@ migrate_node_agent_config()
 
 setup_config()
 {
-    CONFIG="\"orgToken\": \"$ORG_TOKEN\", \"apiUrl\": \"$API_URL\", \"updateUrl\": \"$UPDATE_URL\", \"agentVersion\": \"$VERSION\", \"name\": \"$HOST_NAME\""
+    CONFIG="\"orgToken\": \"$ORG_TOKEN\", \"apiUrl\": \"$API_URL\", \"updateUrl\": \"$UPDATE_URL\", \"agentVersion\": \"$VERSION\", \"name\": \"$HOST_NAME\", \"ref\": \"$REF\""
     TEMP_VAR=""
 
     if [ "$CATEGORY" != "" ] ; then

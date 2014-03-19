@@ -1,3 +1,8 @@
+__copyright__ = '(c) Webyog, Inc'
+__author__ = 'Vishal P.R'
+__license__ = 'GPL'
+__email__ = 'support@sealion.com'
+
 import threading
 import os
 import logging
@@ -58,7 +63,8 @@ class AgentConfig(helper.Config):
                 'optional': True
             },
             'updateUrl': {'type': 'str,unicode', 'regex': '^.+$'},
-            'org': {'type': 'str,unicode', 'depends': ['orgToken', '_id', 'agentVersion'], 'regex': '^[a-zA-Z0-9]{24}$', 'optional': True}
+            'org': {'type': 'str,unicode', 'depends': ['orgToken', '_id', 'agentVersion'], 'regex': '^[a-zA-Z0-9]{24}$', 'optional': True},
+            'ref': {'type': 'str,unicode', 'depends': ['orgToken', 'agentVersion'], 'regex': 'curl|tarball', 'optional': True}
         }
         
     def update(self, data):   
@@ -78,6 +84,7 @@ class AgentConfig(helper.Config):
 
 class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
     def __init__(self):
+        self.stop_status = 0
         exe_path = os.path.dirname(os.path.abspath(__file__))
         exe_path = exe_path[:-1] if exe_path[len(exe_path) - 1] == '/' else exe_path
         self.exe_path = exe_path[:exe_path.rfind('/') + 1]
@@ -100,5 +107,3 @@ class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
         self.stop_event = threading.Event()
         self.post_event = threading.Event()
         self.event_dispatcher = EventDispatcher()
-
-Interface = Globals
