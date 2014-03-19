@@ -18,7 +18,7 @@ from daemon import Daemon
 
 _log = logging.getLogger(__name__)
 
-class sealiond(Daemon):
+class sealion(Daemon):
     user_name = 'sealion'
     monit_interval = 60
     crash_dump_threshold = 5
@@ -186,7 +186,7 @@ class sealiond(Daemon):
             os._exit(1)
     
     def run(self):     
-        self.set_procname('%s' % self.__class__.__name__ )
+        self.set_procname('sealiond')
         is_update_only_mode = False
         
         if self.is_crash_loop() == True:
@@ -203,7 +203,7 @@ def sig_handler(signum, frame):
         exit(2)
     
 signal.signal(signal.SIGINT, sig_handler)
-daemon = sealiond(exe_path + 'var/run/sealion.pid')
+daemon = sealion(exe_path + 'var/run/sealion.pid')
 is_print_usage = False
 
 if len(sys.argv) == 2:
