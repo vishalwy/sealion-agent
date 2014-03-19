@@ -1,5 +1,11 @@
+__copyright__ = '(c) Webyog, Inc'
+__author__ = 'Vishal P.R'
+__license__ = 'GPL'
+__email__ = 'support@sealion.com'
+
 import logging
 import threading
+import time
 import globals
 import api
 import rtc
@@ -41,7 +47,18 @@ class Connection(ThreadEx):
         
         if rtc_thread:
             _log.info('Waiting for SocketIO to disconnect.')
-            rtc_thread.join()
+            
+            for i in range(0, 4):
+                if rtc_thread.is_alive() == False:
+                    break
+                    
+                time.sleep(5)
+            
+            if i > 3:
+                _log.info('SocketIO not responding; self terminating.')
+                self.globals.stop_status = 1
+                self.api.stop()
+                return
                 
         self.start()
         

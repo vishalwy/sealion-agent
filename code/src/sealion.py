@@ -1,3 +1,8 @@
+__copyright__ = '(c) Webyog, Inc'
+__author__ = 'Vishal P.R'
+__license__ = 'GPL'
+__email__ = 'support@sealion.com'
+
 import logging
 import os
 import sys
@@ -20,7 +25,7 @@ _log = logging.getLogger(__name__)
 
 class sealion(Daemon):
     user_name = 'sealion'
-    monit_interval = 60
+    monit_interval = 30
     crash_dump_threshold = 5
     
     @property

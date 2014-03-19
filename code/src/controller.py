@@ -1,5 +1,11 @@
+__copyright__ = '(c) Webyog, Inc'
+__author__ = 'Vishal P.R'
+__license__ = 'GPL'
+__email__ = 'support@sealion.com'
+
 import logging
 import threading
+import os
 import time
 import subprocess
 import signal
@@ -132,11 +138,19 @@ def sig_handler(signum, frame):
         _log.debug('Received SIGALRM')
         signal.alarm(0)
         
-def stop(status = 0):
-    _log.info('Agent shutting down with status code %d.' % status)
-    _log.debug('Took %f seconds to shutdown.' % (time.time() - _metric['stopping_time']))
-    _log.info('Ran for %s hours.' % str(datetime.now() - datetime.fromtimestamp(_metric['starting_time'])))
-    exit(status)
+def stop():
+    status = globals.Globals().stop_status
+    
+    if status == 0:
+        _log.info('Agent shutting down with status code %d.' % status)
+        _log.debug('Took %f seconds to shutdown.' % (time.time() - _metric['stopping_time']))
+        _log.info('Ran for %s hours.' % str(datetime.now() - datetime.fromtimestamp(_metric['starting_time'])))
+        exit(status)
+    else:
+        _log.info('Agent terminating with status code %d.' % status)
+        _log.debug('Took %f seconds to terminate.' % (time.time() - _metric['stopping_time']))
+        _log.info('Ran for %s hours.' % str(datetime.now() - datetime.fromtimestamp(_metric['starting_time'])))
+        os._exit(status)
     
 def start():
     _metric['starting_time'] = time.time()
