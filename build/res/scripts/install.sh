@@ -354,4 +354,4 @@ fi
 echo "Starting agent..."
 "$SERVICE_FILE" start
 
-exit $SCRIPT_ERR_SUCCESS
+exit $?

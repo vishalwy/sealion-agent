@@ -99,7 +99,8 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         retry_count = options.get('retry_count', -1)
         retry_interval = options.get('retry_interval', 5)
         is_ignore_stop_event = options.get('is_ignore_stop_event', False)
-        response, i = None, 0
+        is_return_exception = options.get('is_return_exception', False)
+        response, i, exception = None, 0, None
         
         while retry_count == -1 or i <= retry_count:                
             if i > 0:
@@ -111,7 +112,8 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
             try:
                 response = method(timeout = 10, *args, **kwargs)
             except Exception as e:
-                _log.error(str(e)) 
+                _log.error(str(e))
+                exception = e
                 
             if response != None and response.status_code < 500:
                 self.is_conn_err == True and _log.info('Network connection established')
@@ -123,10 +125,23 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         if response == None and self.is_authenticated == True:
             self.is_conn_err = True
         
-        return response
+        return response if is_return_exception == False else (response, exception)
     
-    def ping(self):
-        self.set_events(post_event = True)
+    def ping(self, is_ping_server = False):
+        response = None
+        
+        if is_ping_server == False:
+            self.set_events(post_event = True)
+        else:
+            response = self.exec_method('get', {'retry_count': 0, 'is_return_exception': True}, self.get_url())
+            
+            if response[0] != None and response[0].status_code < 500:
+                _log.debug('Ping server successful')
+                self.is_authenticated and self.set_events(post_event = True)
+            else:
+                API.print_error('Failed to ping server', response[0])
+            
+        return response
     
     def register(self, **kwargs):
         data = self.globals.config.agent.get_dict(['orgToken', 'name', 'category', ('ref', 'tarball')])
