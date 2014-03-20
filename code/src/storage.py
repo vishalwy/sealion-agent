@@ -348,7 +348,7 @@ class RealtimeSender(Sender):
 
         if status == api_status.MISMATCH:
             self.api.get_config()
-        elif (status == api_status.NOT_CONNECTED or status == api_status.NO_SERVICE):
+        elif (status == api_status.NOT_CONNECTED or status == api_status.NO_SERVICE or status == api_status.UNAUTHORIZED):
             self.off_store.put(item['activity'], item['data'], Sender.store_put_callback)
             
     def queue_empty(self):
@@ -406,7 +406,7 @@ class HistoricSender(Sender):
         if status == api_status.MISMATCH:
             self.api.get_config()
         
-        if (status != api_status.NOT_CONNECTED and status != api_status.NO_SERVICE):
+        if (status != api_status.NOT_CONNECTED and status != api_status.NO_SERVICE and status != api_status.UNAUTHORIZED):
             self.del_rows.append(row_id)
         else:
             Sender.store_available(True)
