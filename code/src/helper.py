@@ -80,9 +80,9 @@ class Utils(Namespace):
                 if Utils.sanitize_type(d[key], schema[key]['type'], is_delete_extra, 
                                         schema[key].get('regex'), schema[key].get('is_regex', False), file) == False:
                     if file:
-                        _log.warn('Ignoring config key "%s" in %s as value is in improper format.' % (key, file))
+                        _log.warn('Ignoring config key "%s" in %s as value is in improper format' % (key, file))
                     else:
-                        _log.error('Config key "%s" is in improper format.' % key)
+                        _log.error('Config key "%s" is in improper format' % key)
                         
                     del d[key]
                     ret = 0 if is_optional == False else ret                
@@ -93,7 +93,7 @@ class Utils(Namespace):
             for i in range(0, len(depends)):
                 if (depends[i] in d) == False:
                     if (depends_check_keys[j]) in d:
-                        file and _log.warn('Ignoring config key "%s" in %s as it failed dependency.' % (depends_check_keys[j], file))
+                        file and _log.warn('Ignoring config key "%s" in %s as it failed dependency' % (depends_check_keys[j], file))
                         del d[depends_check_keys[j]]
                         
                     break

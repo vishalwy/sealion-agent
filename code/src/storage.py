@@ -291,7 +291,7 @@ class Sender(ThreadEx):
             is_available = Sender.store_data_available
         else:
             if is_available == True and Sender.store_data_available == False:
-                _log.debug('Marking OfflineStore as available.')
+                _log.debug('Marking OfflineStore as available')
                 Sender.store_data_available = True
             elif is_available == False and Sender.store_data_available == True:
                 _log.debug('Marking OfflineStore as not available')

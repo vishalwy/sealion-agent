@@ -114,7 +114,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
                 _log.error(str(e)) 
                 
             if response != None and response.status_code < 500:
-                self.is_conn_err == True and _log.info('Network connection established.')
+                self.is_conn_err == True and _log.info('Network connection established')
                 self.is_conn_err = False
                 break
                 
@@ -134,7 +134,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         ret = self.status.SUCCESS
         
         if API.is_success(response):
-            _log.info('Registration successful.')
+            _log.info('Registration successful')
             self.globals.config.agent.update(response.json())
             self.globals.config.agent.save()
         else:
@@ -158,7 +158,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         ret = self.status.SUCCESS
         
         if API.is_success(response):
-            _log.info('Authentication successful.')
+            _log.info('Authentication successful')
             self.globals.config.agent.update(response.json())
             self.globals.config.agent.save()
             self.is_authenticated = True
@@ -173,7 +173,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         ret = self.status.SUCCESS
         
         if API.is_success(response):
-            _log.info('Config updation successful. ')
+            _log.info('Config updation successful')
             self.globals.config.agent.update(response.json())
             self.globals.config.agent.save()
             self.set_events(post_event = True)
@@ -203,7 +203,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         response = self.exec_method('delete', {'retry_count': 0, 'is_ignore_stop_event': True}, self.get_url('agents/1/sessions/1'))
         
         if API.is_success(response):
-            _log.info('Logout successful.')
+            _log.info('Logout successful')
         else:
             ret = self.error('Logout failed. ', response)
 
@@ -336,7 +336,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         if is_completed == True:
             _log.info('Update succesfully downloaded to %s' % filename)
         else:
-            _log.info('Downloading update aborted.')
+            _log.info('Downloading update aborted')
             self.updater = None
             return
         
@@ -347,7 +347,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
             self.updater = None
             return
             
-        _log.info('Installing the update.')
+        _log.info('Installing the update')
         format_spec = {
             'temp_dir': temp_dir, 
             'exe_path': exe_path, 

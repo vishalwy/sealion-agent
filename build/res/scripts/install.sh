@@ -24,7 +24,7 @@ DEFAULT_INSTALL_PATH="/usr/local/sealion-agent"
 INSTALL_AS_SERVICE=1
 SEALION_NODE_FOUND=0
 UPDATE_AGENT=0
-USAGE="Usage: $0 {-o <org token> [-c <category name>] [-H <host name>] [-x <https proxy>] [-p <python binary>] | -h}"
+USAGE="Usage: $0 {-o <Organization token> [-c <Category name>] [-H <Host name>] [-x <Https proxy>] [-p <Python binary>] | -h for Help}"
 
 #setup variables
 INSTALL_PATH=$DEFAULT_INSTALL_PATH
@@ -73,7 +73,7 @@ while getopts :i:o:c:H:x:p:a:r:v:h OPT ; do
             exit $SCRIPT_ERR_INVALID_USAGE
             ;;
         :)
-            echo "Option '-$OPTARG' requires an argument." >&2
+            echo "Option '-$OPTARG' requires an argument" >&2
             echo $USAGE
             exit $SCRIPT_ERR_INVALID_USAGE
             ;;
@@ -138,7 +138,7 @@ install_service()
     SYMLINK_PATHS=(K K S S S S K)
 
     if [[ -z $RC1_PATH || -z $RC2_PATH || -z $RC3_PATH || -z $RC4_PATH || -z $RC5_PATH || -z $RC6_PATH || -z $INIT_D_PATH ]] ; then
-        echo "Error: Cannot create service seealion. Could not locate init.d/rc directories." >&2
+        echo "Error: Cannot create service sealion. Could not locate init.d/rc directories." >&2
         return 1
     fi
     
@@ -149,7 +149,7 @@ install_service()
         ln -sf "$SERVICE_FILE" ${!VAR_NAME}/${SYMLINK_PATHS[$i]}99sealion
         
         if [ $? -ne 0 ] ; then
-            echo "Error: Cannot create service. Unable to update init.d files" >&2
+            echo "Error: Cannot create service sealion. Unable to update init.d files." >&2
             return 1
         fi
     done
@@ -248,7 +248,7 @@ fi
 
 if [ $UPDATE_AGENT -eq 0 ] ; then
     if [[ $EUID -ne 0 ]]; then
-        echo "Error: You need to run this as root user" >&2
+        echo "Error: You need to run this as root" >&2
         exit $SCRIPT_ERR_INVALID_USAGE
     fi
 
@@ -282,7 +282,7 @@ if [ $UPDATE_AGENT -eq 0 ] ; then
         useradd -rMN -g $USER_NAME $USER_NAME >/dev/null 2>&1
         
         if [ $? -ne 0 ] ; then
-            echo "Error: Cannot create $USER_NAME user" >&2
+            echo "Error: Cannot create user $USER_NAME" >&2
             exit $SCRIPT_ERR_FAILED_SETUP
         else
             echo "User $USER_NAME created"
@@ -297,7 +297,7 @@ else
     fi
 
     if [[ ! -f "$SERVICE_FILE" && $SEALION_NODE_FOUND -eq 0 ]] ; then
-        echo "Error: '$INSTALL_PATH' is not a valid sealion install directory" >&2
+        echo "Error: '$INSTALL_PATH' is not a valid sealion installation directory" >&2
         exit $SCRIPT_ERR_INVALID_USAGE
     fi
 fi

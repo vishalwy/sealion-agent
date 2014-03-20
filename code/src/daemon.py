@@ -27,7 +27,7 @@ class Daemon(object):
                 sys.stdout.write('%s started successfully\n' % self.__class__.__name__)
                 sys.exit(0)
         except OSError as e: 
-            sys.stderr.write('Failed to daemonize: %d (%s)\n' % (e.errno, e.strerror))
+            sys.stderr.write('Failed to daemonize sealion: %d (%s)\n' % (e.errno, e.strerror))
      
         os.chdir("/")
         os.setsid() 
@@ -36,7 +36,7 @@ class Daemon(object):
         try: 
             pid = os.fork()  
         except OSError as e: 
-            sys.stderr.write('Failed to daemonize: %d (%s)\n' % (e.errno, e.strerror))
+            sys.stderr.write('Failed to daemonize sealion: %d (%s)\n' % (e.errno, e.strerror))
             sys.exit(1) 
             
         sys.stdout.flush()
