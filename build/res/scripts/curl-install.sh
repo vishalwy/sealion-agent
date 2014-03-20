@@ -47,7 +47,7 @@ fi
 $TMP_FILE_PATH/sealion-agent/install.sh "$@" -r curl
 RET=$?
 
-if [[ "$AGENT_ID" != "" && $RET -gt 0 && $RET -lt 4 ]] ; then
+if [[ "$AGENT_ID" != "" && $RET -ne 0 ]] ; then
     RET=`curl -s PROXY -w "%{http_code}" -H "Content-Type: application/json" -X PUT -d "{\"reason\":\"$RET\"}"  "$API_URL/orgs/$ORG_TOKEN/agents/$AGENT_ID/updatefail" >/dev/null 2>&1`
     rm -rf $TMP_FILE_PATH
     exit 123

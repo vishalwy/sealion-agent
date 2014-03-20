@@ -168,10 +168,10 @@ check_dependency()
     done
 
     CODE=$(printf "import sys\nsys.path.append('websocket_client')\nsys.path.append('socketio_client')\n\ntry:$STMTS\nexcept Exception as e:\n\tprint(str(e))\n\tsys.exit(1)\n\nsys.exit(0)")
-    ret=$($PYTHON -c "$CODE" 2>&1)
+    RET=$($PYTHON -c "$CODE" 2>&1)
 
     if [ $? -ne 0 ] ; then
-        echo "Error: Python package dependency check failed; $ret"
+        echo "Error: Python package dependency check failed; $RET"
         rm -rf *.pyc
         find . -type d -name '__pycache__' -exec rm -rf {} \; >/dev/null 2>&1
         exit $SCRIPT_ERR_FAILED_DEPENDENCY
@@ -353,5 +353,11 @@ fi
 
 echo "Starting agent..."
 "$SERVICE_FILE" start
+RET=$?
 
-exit $?
+if [ $RET -eq 0 ] ; then
+    URL="$(echo "$API_URL" | sed 's/api-//')"
+    echo "Please continue at $URL"
+fi
+
+exit $RET
