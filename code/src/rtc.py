@@ -5,6 +5,7 @@ __email__ = 'support@sealion.com'
 
 import logging
 import time
+import gc
 import requests
 import globals
 import api
@@ -124,13 +125,17 @@ class RTC(ThreadEx):
         kwargs = {
             'Namespace': SocketIONamespace,
             'cookies': self.api.cookies,
-            'hooks': {'response': self.on_response}
+            'hooks': {'response': self.on_response},
+            'stream': True
         }
+        
+        if self.sio != None:
+            self.sio = None
+            _log.debug('GC collected %d unreachables' % gc.collect())
         
         if len(requests.utils.get_environ_proxies(self.api.get_url())):
             _log.info('Proxy detected; Forcing xhr-polling for SocketIO')
             kwargs['transports'] = ['xhr-polling']
-            kwargs['stream'] = True
         
         _log.debug('Waiting for SocketIO connection')
         
