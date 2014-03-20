@@ -253,6 +253,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
             return
         
         self.updater = ThreadEx(target = self.download_update, name = 'Updater')
+        self.updater.daemon = True
         self.updater.start()
     
     def stop(self, stop_status = None):
@@ -371,4 +372,6 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
             'agent_id': self.globals.config.agent._id
         }
         subprocess.Popen('"%(temp_dir)s/sealion-agent/install.sh" -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" && rm -rf "%(temp_dir)s"' % format_spec, shell=True)
+        time.sleep(120)
+        self.updater = None
 
