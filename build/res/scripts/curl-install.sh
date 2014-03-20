@@ -31,7 +31,7 @@ echo "Downloading agent installer..."
 curl -s $PROXY $DOWNLOAD_URL -o $TMP_FILE_NAME >/dev/null 2>&1
 
 if [ $? -ne 0 ] ; then
-    echo "Error: Failed to download agent installer." >&2
+    echo "Error: Failed to download agent installer" >&2
     rm -rf $TMP_FILE_PATH
     exit 117
 fi
@@ -39,7 +39,7 @@ fi
 tar -xf $TMP_FILE_NAME --directory="$TMP_FILE_PATH" >/dev/null 2>&1
 
 if [ $? -ne 0 ] ; then
-    echo "Error: Failed to extract files." >&2
+    echo "Error: Failed to extract files" >&2
     rm -rf $TMP_FILE_PATH
     exit 1
 fi

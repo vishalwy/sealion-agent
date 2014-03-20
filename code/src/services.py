@@ -43,7 +43,7 @@ class Job:
             self.process = subprocess.Popen(self.details['command'], shell=True, stdout = self.output_file, stderr = self.output_file, preexec_fn = os.setpgrp)
             self.status = JobStatus.RUNNING
         else:
-            _log.info('Activity %s is blocked by whitelist.' % self.details['_id'])
+            _log.info('Activity %s is blocked by whitelist' % self.details['_id'])
 
         return self
 
@@ -244,7 +244,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
             self.globals.stop_event.wait(self.sleep_interval)
 
             if self.globals.stop_event.is_set():
-                _log.debug('%s received stop event.' % self.name)
+                _log.debug('%s received stop event' % self.name)
                 break
 
         self.stop_consumers()

@@ -85,7 +85,7 @@ class sealion(Daemon):
         globals = Globals()
         api = API()
         path = self.crash_dump_path
-        _log.debug('CrashDumpSender waiting for stop event for %d seconds.' % crash_dump_timeout)
+        _log.debug('CrashDumpSender waiting for stop event for %d seconds' % crash_dump_timeout)
         globals.stop_event.wait(crash_dump_timeout)
         
         try:
@@ -105,7 +105,7 @@ class sealion(Daemon):
                             break
                             
                         if api.is_not_connected(api.send_crash_report(report)) == False:                        
-                            _log.info('Removing crash dump %s.' % file_name)
+                            _log.info('Removing crash dump %s' % file_name)
                             os.remove(file_name)
                             break
 
@@ -138,10 +138,10 @@ class sealion(Daemon):
                 os.setuid(user.pw_uid)
                 os.environ['HOME'] = '/'
         except KeyError as e:
-            sys.stderr.write('Failed to find user %s.; %s\n' % (self.user_name, str(e)))
+            sys.stderr.write('Failed to find user %s; %s\n' % (self.user_name, str(e)))
             sys.exit(0)
         except Exception as e:
-            sys.stderr.write('Failed to change the group or user to %s.; %s\n' % (self.user_name, str(e)))
+            sys.stderr.write('Failed to change the group or user to %s; %s\n' % (self.user_name, str(e)))
             sys.exit(0)
             
         try:
@@ -186,7 +186,7 @@ class sealion(Daemon):
             if dump_file:
                 _log.error('%s crashed. Dump file saved at %s' % (self.__class__.__name__, dump_file))
             else:
-                _log.error('%s crashed. Failed to save dump file.' % self.__class__.__name__)
+                _log.error('%s crashed. Failed to save dump file' % self.__class__.__name__)
             
             os._exit(1)
     

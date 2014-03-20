@@ -19,7 +19,7 @@ class SocketIONamespace(BaseNamespace):
         self.api = api.API()
     
     def on_connect(self):        
-        _log.info('SocketIO connected.')
+        _log.info('SocketIO connected')
         self.rtc.update_heartbeat()
         
         if self.rtc.is_stop == True or self.globals.stop_event.is_set():
@@ -31,26 +31,26 @@ class SocketIONamespace(BaseNamespace):
         self.rtc.is_disconnected = False
         
     def on_disconnect(self):
-        _log.info('SocketIO disconnected.')
+        _log.info('SocketIO disconnected')
         self.rtc.update_heartbeat()
         self.rtc.is_disconnected = True
         
     def on_heartbeat(self):
-        _log.debug('SocketIO heartbeat.')
+        _log.debug('SocketIO heartbeat')
         self.rtc.update_heartbeat()
 
     def on_activity_updated(self, *args):
-        _log.info('SocketIO received Activity Updated event.')
+        _log.info('SocketIO received Activity Updated event')
         self.rtc.update_heartbeat()
         self.api.get_config()
 
     def on_activitylist_in_category_updated(self, *args):
-        _log.info('SocketIO received Activity list Updated event.')
+        _log.info('SocketIO received Activity list Updated event')
         self.rtc.update_heartbeat()
         self.api.get_config()
 
     def on_agent_removed(self, *args):
-        _log.info('SocketIO received Agent Removed event.')
+        _log.info('SocketIO received Agent Removed event')
         self.rtc.update_heartbeat()
         
         try:
@@ -62,11 +62,11 @@ class SocketIONamespace(BaseNamespace):
             pass    
 
     def on_org_token_resetted(self, *args):
-        _log.info('SocketIO received Organization Token Reset event.')
+        _log.info('SocketIO received Organization Token Reset event')
         self.api.stop()
 
     def on_server_category_changed(self, *args):
-        _log.info('SocketIO received Category Changed event.')
+        _log.info('SocketIO received Category Changed event')
         self.rtc.update_heartbeat()
         
         try:
@@ -78,7 +78,7 @@ class SocketIONamespace(BaseNamespace):
             pass
 
     def on_activity_deleted(self, *args):
-        _log.info('SocketIO received Activity Deleted event.')
+        _log.info('SocketIO received Activity Deleted event')
         self.rtc.update_heartbeat()
         
         try:
@@ -87,7 +87,7 @@ class SocketIONamespace(BaseNamespace):
             pass
         
     def on_upgrade_agent(self, *args):
-        _log.info('SocketIO received Upgrade Agent event.')
+        _log.info('SocketIO received Upgrade Agent event')
         self.rtc.update_heartbeat()
         
         try:
@@ -96,7 +96,7 @@ class SocketIONamespace(BaseNamespace):
             pass
         
     def on_logout(self, *args):
-        _log.info('SocketIO received Logout event.')
+        _log.info('SocketIO received Logout event')
         self.rtc.update_heartbeat()
         self.api.stop(self.api.status.SESSION_CONFLICT)
         
@@ -118,11 +118,11 @@ class RTC(ThreadEx):
         }
         
         if len(requests.utils.get_environ_proxies(self.api.get_url())):
-            _log.info('Proxy detected; Forcing xhr-polling for SocketIO.')
+            _log.info('Proxy detected; Forcing xhr-polling for SocketIO')
             kwargs['transports'] = ['xhr-polling']
             kwargs['stream'] = True
         
-        _log.debug('Waiting for SocketIO connection.')
+        _log.debug('Waiting for SocketIO connection')
         self.sio = SocketIO(self.api.get_url(), **kwargs)
         return self
     
@@ -130,7 +130,7 @@ class RTC(ThreadEx):
         self.is_stop = True
         
         if self.sio != None:
-            _log.debug('Disconnecting SocketIO.')
+            _log.debug('Disconnecting SocketIO')
             
             try:
                 self.sio.disconnect()
