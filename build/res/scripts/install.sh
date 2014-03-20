@@ -7,7 +7,9 @@ SCRIPT_ERR_INCOMPATIBLE_PYTHON=2
 SCRIPT_ERR_FAILED_DEPENDENCY=3
 SCRIPT_ERR_INCOMPATIBLE_PLATFORM=4
 SCRIPT_ERR_INVALID_USAGE=5
-SCRIPT_ERR_FAILED_SETUP=6
+SCRIPT_ERR_FAILED_DIR_CREATE=6
+SCRIPT_ERR_FAILED_GROUP_CREATE=7
+SCRIPT_ERR_FAILED_USER_CREATE=8
 
 #config variables
 API_URL="<api-url>"
@@ -256,7 +258,7 @@ if [ $UPDATE_AGENT -eq 0 ] ; then
 
     if [ $? -ne 0 ] ; then
         echo "Error: Cannot create installation directory at '$INSTALL_PATH'" >&2
-        exit $SCRIPT_ERR_FAILED_SETUP
+        exit $SCRIPT_ERR_FAILED_DIR_CREATE
     else
         echo "Install directory created at '$INSTALL_PATH'"
     fi
@@ -268,7 +270,7 @@ if [ $UPDATE_AGENT -eq 0 ] ; then
         
         if [ $? -ne 0 ] ; then
             echo "Error: Cannot create $USER_NAME group" >&2
-            exit $SCRIPT_ERR_FAILED_SETUP
+            exit $SCRIPT_ERR_FAILED_GROUP_CREATE
         else
             echo "Group $USER_NAME created"
         fi
@@ -283,7 +285,7 @@ if [ $UPDATE_AGENT -eq 0 ] ; then
         
         if [ $? -ne 0 ] ; then
             echo "Error: Cannot create user $USER_NAME" >&2
-            exit $SCRIPT_ERR_FAILED_SETUP
+            exit $SCRIPT_ERR_FAILED_USER_CREATE
         else
             echo "User $USER_NAME created"
         fi
