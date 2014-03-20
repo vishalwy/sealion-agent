@@ -9,6 +9,7 @@ import time
 import atexit
 import signal
 import os.path
+import exit_status
 
 class Daemon(object):
     def __init__(self, pidfile, stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
@@ -25,9 +26,10 @@ class Daemon(object):
             
             if pid > 0:
                 sys.stdout.write('%s started successfully\n' % self.__class__.__name__)
-                sys.exit(0)
+                sys.exit(exit_status.AGENT_ERR_SUCCESS)
         except OSError as e: 
             sys.stderr.write('Failed to daemonize sealion: %d (%s)\n' % (e.errno, e.strerror))
+            sys.exit(exit_status.AGENT_ERR_DAEMONIZE_1)
      
         os.chdir("/")
         os.setsid() 
@@ -37,7 +39,7 @@ class Daemon(object):
             pid = os.fork()  
         except OSError as e: 
             sys.stderr.write('Failed to daemonize sealion: %d (%s)\n' % (e.errno, e.strerror))
-            sys.exit(1) 
+            sys.exit(exit_status.AGENT_ERR_DAEMONIZE_2) 
             
         sys.stdout.flush()
         sys.stderr.flush()
@@ -50,7 +52,7 @@ class Daemon(object):
         
         if pid > 0:
             self.on_fork(pid)
-            sys.exit(0)
+            sys.exit(exit_status.AGENT_ERR_SUCCESS)
         
         atexit.register(self.delete_pid)
         pid = str(os.getpid())
@@ -67,7 +69,7 @@ class Daemon(object):
     def start(self):
         if self.status(True):
             sys.stdout.write('%s is already running\n' % self.__class__.__name__)
-            sys.exit(1)            
+            sys.exit(exit_status.AGENT_ERR_ALREADY_RUNNING)            
         
         self.daemonize()
         self.run()
@@ -92,12 +94,12 @@ class Daemon(object):
                         os.remove(self.pidfile)
                     except Exception as e:
                         sys.stderr.write(str(e) + '\n')
-                        sys.exit(1)
+                        sys.exit(exit_status.AGENT_ERR_FAILED_PID_FILE)
                     
                 sys.stdout.write('%s stopped successfully\n' % self.__class__.__name__)
             else:
                 sys.stderr.write(err + '\n')
-                sys.exit(1)
+                sys.exit(exit_status.AGENT_ERR_FAILED_TERMINATE)
 
     def restart(self):        
         self.stop()

@@ -15,6 +15,7 @@ import storage
 import globals
 import connection
 import services
+import exit_status
 from datetime import datetime
 from constructs import *
 
@@ -141,11 +142,11 @@ def sig_handler(signum, frame):
 def stop():
     status = globals.Globals().stop_status
     
-    if status == 0:
+    if status != exit_status.AGENT_ERR_TERMINATE:
         _log.info('Agent shutting down with status code %d.' % status)
         _log.debug('Took %f seconds to shutdown.' % (time.time() - _metric['stopping_time']))
         _log.info('Ran for %s hours.' % str(datetime.now() - datetime.fromtimestamp(_metric['starting_time'])))
-        exit(status)
+        sys.exit(status)
     else:
         _log.info('Agent terminating with status code %d.' % status)
         _log.debug('Took %f seconds to terminate.' % (time.time() - _metric['stopping_time']))

@@ -5,6 +5,8 @@ __email__ = 'support@sealion.com'
 
 import os
 import sys
+import logging
+import logging.handlers
 
 exe_path = os.path.dirname(os.path.abspath(__file__))
 exe_path = exe_path[:-1] if exe_path[len(exe_path) - 1] == '/' else exe_path
@@ -14,11 +16,10 @@ sys.path.insert(0, exe_path + 'lib/websocket_client')
 sys.path.insert(0, exe_path + 'src')
 sys.path.insert(0, exe_path + 'lib')
 
-import logging
-import logging.handlers
 import helper
 import controller
 import api
+import exit_status
 from globals import Globals
 
 _log = logging.getLogger(__name__)
@@ -35,14 +36,14 @@ try:
     logger.addHandler(lf)
 except Exception as e:
     sys.stderr.write('Failed to open the log file; %s\n' % str(e))
-    sys.exit(0)
+    sys.exit(exit_status.AGENT_ERR_FAILED_OPEN_LOG)
     
 try:
     globals = Globals()
     api = api.API()
 except RuntimeError as e:
     _log.error(str(e))
-    sys.exit(0)
+    sys.exit(exit_status.AGENT_ERR_FAILED_INITIALIZE)
     
 class LoggingList(logging.Filter):
     def __init__(self, *logs):
@@ -74,7 +75,7 @@ for handler in logging.root.handlers:
         
 if hasattr(globals.config.agent, '_id') == False:   
     if api.register(retry_count = 2, retry_interval = 10) != api.status.SUCCESS:
-        sys.exit(0)
+        sys.exit(exit_status.AGENT_ERR_FAILED_REGISTER)
         
 logger.setLevel(logging_level)
 

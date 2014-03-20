@@ -9,6 +9,7 @@ import time
 import globals
 import api
 import rtc
+import exit_status
 from constructs import *
 
 _log = logging.getLogger(__name__)
@@ -65,7 +66,7 @@ class Connection(ThreadEx):
             
             if count > 3:
                 _log.info('SocketIO not responding. Self terminating service.')
-                self.globals.stop_status = 1
+                self.globals.stop_status = exit_status.AGENT_ERR_TERMINATE
                 self.api.stop()
                 return
                 

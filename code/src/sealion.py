@@ -19,6 +19,7 @@ exe_path = exe_path[:exe_path.rfind('/') + 1]
 sys.path.insert(0, exe_path + 'src') 
 sys.path.insert(0, exe_path)
 
+import exit_status
 from daemon import Daemon
 
 _log = logging.getLogger(__name__)
@@ -139,10 +140,10 @@ class sealion(Daemon):
                 os.environ['HOME'] = '/'
         except KeyError as e:
             sys.stderr.write('Failed to find user %s; %s\n' % (self.user_name, str(e)))
-            sys.exit(0)
+            sys.exit(exit_status.AGENT_ERR_FAILED_FIND_USER)
         except Exception as e:
             sys.stderr.write('Failed to change the group or user to %s; %s\n' % (self.user_name, str(e)))
-            sys.exit(0)
+            sys.exit(exit_status.AGENT_ERR_FAILED_CHANGE_GROUP_OR_USER)
             
         try:
             dir = os.path.dirname(self.pidfile)
@@ -154,7 +155,7 @@ class sealion(Daemon):
             f.close()
         except Exception as e:
             sys.stderr.write(str(e) + '\n')
-            sys.exit(1)
+            sys.exit(exit_status.AGENT_ERR_FAILED_PID_FILE)
         
         sys.excepthook = self.exception_hook
         import main
@@ -164,8 +165,6 @@ class sealion(Daemon):
             subprocess.Popen([exe_path + 'bin/monit.sh', str(cpid), str(self.monit_interval)])
         except Exception as e:
             _log.error('Failed to open monitoring script; %s' % str(e))
-
-        sys.exit(0)
         
     def is_crash_loop(self):
         t = int(time.time())
@@ -188,7 +187,7 @@ class sealion(Daemon):
             else:
                 _log.error('%s crashed. Failed to save dump file' % self.__class__.__name__)
             
-            os._exit(1)
+            os._exit(exit_status.AGENT_ERR_TERMINATE)
     
     def run(self):     
         self.set_procname('sealiond')
@@ -205,7 +204,7 @@ class sealion(Daemon):
             
 def sig_handler(signum, frame):    
     if signum == signal.SIGINT:
-        exit(2)
+        sys.exit(exit_status.AGENT_ERR_SUCCESS)
     
 signal.signal(signal.SIGINT, sig_handler)
 daemon = sealion(exe_path + 'var/run/sealion.pid')
@@ -229,4 +228,4 @@ else:
 if is_print_usage == True:
     sys.stdout.write('Usage: %s start|stop|restart|status\n' % daemon.__class__.__name__)
     
-sys.exit(0)
+sys.exit(exit_status.AGENT_ERR_SUCCESS)

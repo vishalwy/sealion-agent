@@ -13,13 +13,15 @@ sys.path.insert(0, exe_path + 'lib/websocket_client')
 sys.path.insert(0, exe_path + 'src')
 sys.path.insert(0, exe_path + 'lib')
 
+import exit_status
+
 try:
     from api import API
     api = API()
 except:
-    sys.exit(0)
+    sys.exit(exit_status.AGENT_ERR_SUCCESS)
 
 api.ping()
 status = api.unregister()
-sys.exit(0 if api.is_not_connected(status) == False else 1)
+sys.exit(exit_status.AGENT_ERR_SUCCESS if api.is_not_connected(status) == False else exit_status.AGENT_ERR_FAILED_UNREGISTER)
 
