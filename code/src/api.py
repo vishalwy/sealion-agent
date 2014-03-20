@@ -113,7 +113,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
             except Exception as e:
                 _log.error(str(e)) 
                 
-            if response != None:
+            if response != None and response.status_code < 500:
                 self.is_conn_err == True and _log.info('Network connection established.')
                 self.is_conn_err = False
                 break

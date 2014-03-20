@@ -105,16 +105,27 @@ class RTC(ThreadEx):
         ThreadEx.__init__(self)
         self.api = api.API()
         self.sio = None
+        self.globals = globals.Globals()
         self.is_stop = False
         self.daemon = True
         self.is_disconnected = False
         self.update_heartbeat()
         
+    def on_response(self, response, *args, **kwargs):
+        _log.debug("SocketIO received response %d; %s" % (response.status_code, response.text))
+        
+        if response.text == 'handshake error':
+            self.globals.post_event.wait(10)
+            
+        if self.is_stop == True or self.globals.stop_event.is_set():
+            raise Exception('Stopping RTC thread')
+               
     def connect(self):
         SocketIONamespace.rtc = self
         kwargs = {
             'Namespace': SocketIONamespace,
-            'cookies': self.api.cookies
+            'cookies': self.api.cookies,
+            'hooks': {'response': self.on_response}
         }
         
         if len(requests.utils.get_environ_proxies(self.api.get_url())):
@@ -123,7 +134,12 @@ class RTC(ThreadEx):
             kwargs['stream'] = True
         
         _log.debug('Waiting for SocketIO connection.')
-        self.sio = SocketIO(self.api.get_url(), **kwargs)
+        
+        try:
+            self.sio = SocketIO(self.api.get_url(), **kwargs)
+        except Exception as e:
+            _log.debug(str(e))
+        
         return self
     
     def stop(self):
@@ -156,8 +172,11 @@ class RTC(ThreadEx):
             except Exception as e:
                 _log.debug(str(e))
             
-            if self.is_stop == True or globals.Globals().stop_event.is_set():
+            if self.is_stop == True or self.globals.stop_event.is_set():
                 break
                 
             self.connect()
+                
+            if self.is_stop == True or self.globals.stop_event.is_set():
+                break
 
