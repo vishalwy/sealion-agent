@@ -37,8 +37,15 @@ class Connection(ThreadEx):
             
         return status
     
+    def reconnect_helper(self):
+        self.reconnect()
+    
     def reconnect(self):
-        if self.api.is_authenticated == False or isinstance(threading.current_thread(), rtc.RTC):
+        if self.api.is_authenticated == False:
+            return
+        
+        if isinstance(threading.current_thread(), rtc.RTC):
+            ThreadEx(target = self.reconnect_helper, name = 'ReconnectHelper')
             return
         
         self.api.is_authenticated = False

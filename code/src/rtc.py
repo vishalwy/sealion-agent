@@ -8,6 +8,7 @@ import time
 import requests
 import globals
 import api
+import connection
 from socketio_client import SocketIO, BaseNamespace
 from constructs import *
 
@@ -137,11 +138,10 @@ class RTC(ThreadEx):
         try:
             self.sio = SocketIO(self.api.get_url(), **kwargs)
         except SocketIOHandShakeError as e:
-            _log.debug(str(e))
+            _log.info(str(e))
             return None
         except Exception as e:
             _log.debug(str(e))
-            return None
         
         return self
     
@@ -168,12 +168,13 @@ class RTC(ThreadEx):
         self.update_heartbeat()
         return is_beating
 
-    def exe(self):               
+    def exe(self):        
         while 1:
             try:
                 self.sio.wait()
             except SocketIOHandShakeError as e:
-                _log.debug(str(e))
+                _log.info(str(e))
+                connection.Connection().reconnect()
                 break
             except Exception as e:
                 _log.debug(str(e))
@@ -182,5 +183,6 @@ class RTC(ThreadEx):
                 break
                 
             if self.connect() == None:
+                connection.Connection().reconnect()
                 break
 
