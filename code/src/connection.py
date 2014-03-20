@@ -47,14 +47,16 @@ class Connection(ThreadEx):
         
         if rtc_thread:
             _log.info('Waiting for SocketIO to disconnect')
+            count = 0
             
-            for i in range(0, 4):
+            while count < 4:
                 if rtc_thread.is_alive() == False:
                     break
                     
                 time.sleep(5)
+                count += 1
             
-            if i > 3:
+            if count > 3:
                 _log.info('SocketIO not responding. Self terminating service.')
                 self.globals.stop_status = 1
                 self.api.stop()
