@@ -117,8 +117,7 @@ class RTC(ThreadEx):
         
     def on_response(self, response, *args, **kwargs):
         if response.text == 'handshake error':
-            _log.debug("SocketIO received response %d; %s" % (response.status_code, response.text))
-            raise SocketIOHandShakeError('SocketIO handshake error')
+            raise SocketIOHandShakeError('%d; %s' % (response.status_code, response.text))
                
     def connect(self):
         SocketIONamespace.rtc = self
@@ -138,10 +137,10 @@ class RTC(ThreadEx):
         try:
             self.sio = SocketIO(self.api.get_url(), **kwargs)
         except SocketIOHandShakeError as e:
-            _log.info(str(e))
+            _log.error('Failed to connect SocketIO; %s' % str(e))
             return None
         except Exception as e:
-            _log.debug(str(e))
+            _log.error(str(e))
         
         return self
     
@@ -173,13 +172,14 @@ class RTC(ThreadEx):
             try:
                 self.sio.wait()
             except SocketIOHandShakeError as e:
-                _log.info(str(e))
+                _log.error('Failed to connect SocketIO; %s' % str(e))
                 connection.Connection().reconnect()
                 break
             except Exception as e:
-                _log.debug(str(e))
+                _log.error(str(e))
             
             if self.is_stop == True or self.globals.stop_event.is_set():
+                _log.debug('%s received stop event' % self.name)
                 break
                 
             if self.connect() == None:
