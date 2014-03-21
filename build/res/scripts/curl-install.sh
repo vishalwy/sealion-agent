@@ -27,7 +27,7 @@ log_output()
             ;;
     esac
 
-    if [ "$OUTPUT" == "" ]
+    if [ "$OUTPUT" == "" ] ; then
         return 1
     fi
 
