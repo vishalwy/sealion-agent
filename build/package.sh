@@ -1,19 +1,22 @@
 #!/bin/bash
 
+#script variables
 USAGE="Usage: $0 {-t prod|test | -a <api url> -u <update url> | -h}"
+TARGET="custom"
+VERSION_INFO_FILE="default.js"
+
+#config variables
 TEST_API_URL="https://api-test.sealion.com"
 TEST_UPDATE_URL="https://agent-test.sealion.com/sealion-agent.tar.gz"
 PROD_API_URL="https://api.sealion.com"
 PROD_UPDATE_URL="https://s3.amazonaws.com/sealion.com/sealion-agent.tar.gz"
 API_URL=
 UPDATE_URL=
-TARGET="custom"
-VERSION_INFO_FILE="default.js"
 
 check_conflict()
 {
     if [[ "$API_URL" != "" && "$UPDATE_URL" != "" ]] ; then
-        echo "You cannot specify multiple targets or urls"
+        echo "You cannot specify multiple targets or urls" >&2
         exit 1
     fi
 }
@@ -61,13 +64,13 @@ while getopts :a:u:t:h OPT ; do
     esac
 done
 
-API_URL="$(echo "$API_URL" | sed -e 's/^ *//' -e 's/ *$//')"
+API_URL="$(echo "$API_URL" | sed -e 's/^\s*//' -e 's/\s*$//')"
 API_URL=${API_URL%/}
-UPDATE_URL="$(echo "$UPDATE_URL" | sed -e 's/^ *//' -e 's/ *$//')"
+UPDATE_URL="$(echo "$UPDATE_URL" | sed -e 's/^\s*//' -e 's/\s*$//')"
 UPDATE_URL=${UPDATE_URL%/}
 
 if [[ "$API_URL" == "" || "$UPDATE_URL" == "" ]] ; then
-    echo "Please specify valid target or urls"
+    echo "Please specify valid target or urls" >&2
     echo $USAGE
     exit 1
 fi

@@ -27,6 +27,7 @@ INSTALL_AS_SERVICE=1
 SEALION_NODE_FOUND=0
 UPDATE_AGENT=0
 USAGE="Usage: $0 {-o <Organization token> [-c <Category name>] [-H <Host name>] [-x <Https proxy>] [-p <Python binary>] | -h for Help}"
+LOG_FILE_PATH=
 
 #setup variables
 INSTALL_PATH=$DEFAULT_INSTALL_PATH
@@ -65,8 +66,10 @@ log_output()
         echo $OUTPUT >&1
     fi
 
-    if [[ -d "$INSTALL_PATH/var/log" ]] ; then
-        echo "$(date): $ST: $OUTPUT" >>"$INSTALL_PATH/var/log/update.log"
+    if [[ "$LOG_FILE_PATH" != "" && -d "$LOG_FILE_PATH" ]] ; then
+        echo "$(date +\"%F %T,%3N\") - $ST: $OUTPUT" >>"$LOG_FILE_PATH/update.log"
+    else
+        LOG_FILE_PATH=
     fi
 
     return 0
@@ -104,38 +107,33 @@ while getopts :i:o:c:H:x:p:a:r:v:h OPT ; do
             REF=$OPTARG
             ;;
         \?)
-            log_output "Invalid option '-$OPTARG'" 2
-            log_output $USAGE
+            echo "Invalid option '-$OPTARG'" >&2
+            echo $USAGE
             exit $SCRIPT_ERR_INVALID_USAGE
             ;;
         :)
-            log_output "Option '-$OPTARG' requires an argument" 2
-            log_output $USAGE
+            echo "Option '-$OPTARG' requires an argument" >&2
+            echo $USAGE
             exit $SCRIPT_ERR_INVALID_USAGE
             ;;
     esac
 done
 
 if [ "$ORG_TOKEN" == '' ] ; then
-    log_output "Missing option '-o'" 2
-    log_output $USAGE
+    echo "Missing option '-o'" >&2
+    echo $USAGE
     exit $SCRIPT_ERR_INVALID_USAGE
 fi
 
-#check platform compatibility
+LOG_FILE_PATH="$INSTALL_PATH/var/log"
+
 if [ "`uname -s`" != "Linux" ] ; then
     log_output 'Error: SeaLion agent works on Linux only' 2
     exit $SCRIPT_ERR_INCOMPATIBLE_PLATFORM
 fi
 
-#check for python (min 2.6)
 PYTHON_OK=0
 PYTHON=$(readlink -f "$PYTHON" 2>/dev/null)
-
-if [ $? -ne 0 ] ; then
-    log_output "Error: '$PYTHON' is not a valid python binary" 2
-    exit $SCRIPT_ERR_INVALID_PYTHON
-fi
 
 if [ -f "$PYTHON" ] ; then
     case $("$PYTHON" --version 2>&1) in
@@ -149,6 +147,9 @@ if [ -f "$PYTHON" ] ; then
             PYTHON_OK=1
             ;;
     esac
+else
+    log_output "Error: '$PYTHON' is not a valid python binary" 2
+    exit $SCRIPT_ERR_INVALID_PYTHON
 fi
 
 if [ $PYTHON_OK -eq 0 ] ; then
@@ -198,9 +199,9 @@ check_dependency()
     cd agent/lib
     MODULES=('socketio_client' 'sqlite3')
     STMTS=
-
-    for (( i = 0 ; i < ${#MODULES[@]}; i++ )) ; do
-        STMTS="$STMTS\n\timport ${MODULES[$i]}"
+    
+    for MODULE in "${MODULES[@]}" ; do
+        STMTS="$STMTS\n\timport $MODULE"
     done
 
     CODE=$(printf "import sys\nsys.path.append('websocket_client')\nsys.path.append('socketio_client')\n\ntry:$STMTS\nexcept Exception as e:\n\tprint(str(e))\n\tsys.exit(1)\n\nsys.exit(0)")
@@ -345,7 +346,7 @@ if [ $SEALION_NODE_FOUND -eq 1 ] ; then
 
     log_output "Removing sealion-node"
     kill -SIGKILL `pgrep -d ',' 'sealion-node'` >/dev/null 2>&1
-    find "$INSTALL_PATH" -mindepth 1 -maxdepth 1 -exec rm -rf {} \; >/dev/null 2>&1
+    find "$INSTALL_PATH" -mindepth 1 -maxdepth 1 ! -name 'var' -exec rm -rf {} \; >/dev/null 2>&1
 fi
 
 if [ -f "$SERVICE_FILE" ] ; then
@@ -356,7 +357,7 @@ fi
 log_output "Copying files..."
 
 if [ $UPDATE_AGENT -eq 0 ] ; then
-    find "$INSTALL_PATH" -mindepth 1 -maxdepth 1 ! -name 'var' -exec rm -rf {} \;
+    find "$INSTALL_PATH" -mindepth 1 -maxdepth 1 ! -name 'var' -exec rm -rf {} \; >/dev/null 2>&1
     cp -r agent/* "$INSTALL_PATH"
     setup_config
     chown -R $USER_NAME:$USER_NAME "$INSTALL_PATH"

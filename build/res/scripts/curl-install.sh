@@ -1,12 +1,16 @@
 #!/bin/bash
 
+#config variables
 API_URL="<api-url>"
 DOWNLOAD_URL="<agent-download-url>"
-TMP_FILE_PATH=$(mktemp -d /tmp/sealion-agent.XXXX)
-TMP_FILE_PATH=${TMP_FILE_PATH%/}
-TMP_FILE_NAME="$TMP_FILE_PATH/sealion-agent.tar.gz"
-USAGE="Usage: curl -s $DOWNLOAD_URL {-o <Organization token> [-c <Category name>] [-H <Host name>] [-x <Https proxy>] [-p <Python binary>] | -h for Help}"
+
+#script variables
+USAGE="Usage: curl -s $DOWNLOAD_URL | sudo bash /dev/stdin {-o <Organization token> [-c <Category name>] [-H <Host name>] [-x <Https proxy>] [-p <Python binary>] | -h for Help}"
+LOG_FILE_PATH=
+
+#setup variables
 INSTALL_PATH="/usr/local/sealion-agent"
+TMP_FILE_PATH="/tmp/sealion-agent.XXXX"
 PROXY=
 AGENT_ID=
 ORG_TOKEN=
@@ -38,8 +42,10 @@ log_output()
         echo $OUTPUT >&1
     fi
 
-    if [[ -d "$INSTALL_PATH/var/log" ]] ; then
-        echo "$(date): $ST: $OUTPUT" >>"$INSTALL_PATH/var/log/update.log"
+    if [[ "$LOG_FILE_PATH" != "" && -d "$LOG_FILE_PATH" ]] ; then
+        echo "$(date +\"%F %T,%3N\") - $ST: $OUTPUT" >>"$LOG_FILE_PATH/update.log"
+    else
+        LOG_FILE_PATH=
     fi
 
     return 0
@@ -60,22 +66,26 @@ while getopts :i:o:c:H:x:p:a:r:v:h OPT ; do
             ORG_TOKEN=$OPTARG
             ;;
         h)
-            log_output $USAGE
+            echo $USAGE
             exit 0
             ;;
         \?)
-            log_output "Invalid option '-$OPTARG'" 2
-            log_output $USAGE
+            echo "Invalid option '-$OPTARG'" >&2
+            echo $USAGE
             exit 126
             ;;
         :)
-            log_output "Option '-$OPTARG' requires an argument" 2
-            log_output $USAGE
+            echo "Option '-$OPTARG' requires an argument" >&2
+            echo $USAGE
             exit 125
             ;;
     esac
 done
 
+LOG_FILE_PATH="$INSTALL_PATH/var/log"
+TMP_FILE_PATH=$(mktemp -d $TMP_FILE_PATH)
+TMP_FILE_PATH=${TMP_FILE_PATH%/}
+TMP_FILE_NAME="$TMP_FILE_PATH/sealion-agent.tar.gz"
 log_output "Downloading agent installer..."
 curl -s $PROXY $DOWNLOAD_URL -o $TMP_FILE_NAME >/dev/null 2>&1
 

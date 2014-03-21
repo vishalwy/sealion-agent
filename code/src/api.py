@@ -367,7 +367,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         }
         format = '"%(temp_dir)s/sealion-agent/install.sh" -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" && rm -rf "%(temp_dir)s'
         _log.debug(format % format_spec)
-        subprocess.Popen(['/bin/bash', '-c', format % format_spec])
+        subprocess.Popen(['bash', '-c', format % format_spec])
         time.sleep(60)
         _log.error('Failed to install the update')
         self.updater = None
