@@ -31,7 +31,7 @@ formatter = logging.Formatter('%(asctime)-15s %(levelname)-7s %(thread)d - %(mod
 logger = logging.getLogger()
 
 try:
-    lf = logging.handlers.RotatingFileHandler(helper.Utils.get_safe_path(exe_path + 'var/log/sealion.log'), maxBytes = 1024 * 1024 * 100, backupCount = 10)
+    lf = logging.handlers.RotatingFileHandler(helper.Utils.get_safe_path(exe_path + 'var/log/sealion.log'), maxBytes = 1024 * 1024 * 100, backupCount = 5)
     lf.setFormatter(formatter)
     logger.addHandler(lf)
 except Exception as e:

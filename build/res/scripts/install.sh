@@ -322,6 +322,7 @@ fi
 echo "Copying files..."
 
 if [ $UPDATE_AGENT -eq 0 ] ; then
+    find "$INSTALL_PATH" -mindepth 1 -maxdepth 1 ! -name 'var' -exec rm -rf {} \;
     cp -r agent/* "$INSTALL_PATH"
     setup_config
     chown -R $USER_NAME:$USER_NAME "$INSTALL_PATH"
@@ -357,9 +358,9 @@ echo "Starting agent..."
 "$SERVICE_FILE" start
 RET=$?
 
-if [ $RET -eq 0 ] ; then
+if [[ $UPDATE_AGENT -eq 0 && $RET -eq 0 ]] ; then
     URL="$(echo "$API_URL" | sed 's/api-//')"
-    echo "Please continue at $URL"
+    echo "Please continue on $URL"
 fi
 
 exit $RET

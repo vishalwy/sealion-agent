@@ -371,7 +371,12 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
             'org_token': self.globals.config.agent.orgToken, 
             'agent_id': self.globals.config.agent._id
         }
-        subprocess.Popen('"%(temp_dir)s/sealion-agent/install.sh" -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" && rm -rf "%(temp_dir)s"' % format_spec, shell=True)
+        format = '"%(temp_dir)s/sealion-agent/install.sh" -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s"'
+        format += ' 2>&1 1> >( while read line; do echo "$(date): ${line}"; done >> "%(exe_path)supdate.log" )'
+        format += ' && rm -rf "%(temp_dir)s"'
+        _log.debug(format % format_spec)
+        subprocess.Popen(['/bin/bash', '-c', format % format_spec])
         time.sleep(120)
+        _log.error('Failed to install the update. Check %supdate.log for details', exe_path)
         self.updater = None
 

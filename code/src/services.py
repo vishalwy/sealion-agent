@@ -40,7 +40,7 @@ class Job:
         if self.activity['is_whitelisted'] == True:
             _log.debug('Executing activity(%s @ %d)' % (self.details['_id'], self.timestamp))
             self.output_file = tempfile.TemporaryFile()
-            self.process = subprocess.Popen(self.details['command'], shell=True, stdout = self.output_file, stderr = self.output_file, preexec_fn = os.setpgrp)
+            self.process = subprocess.Popen(['/bin/bash', '-c', self.details['command']], stdout = self.output_file, stderr = self.output_file, preexec_fn = os.setpgrp)
             self.status = JobStatus.RUNNING
         else:
             _log.info('Activity %s is blocked by whitelist' % self.details['_id'])
