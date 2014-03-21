@@ -1,18 +1,14 @@
 #!/bin/bash
 
-VERSION="2.0.0"
-
 USAGE="Usage: $0 {-t prod|test | -a <api url> -u <update url> | -h}"
-
 TEST_API_URL="https://api-test.sealion.com"
 TEST_UPDATE_URL="https://agent-test.sealion.com/sealion-agent.tar.gz"
-
 PROD_API_URL="https://api.sealion.com"
 PROD_UPDATE_URL="https://s3.amazonaws.com/sealion.com/sealion-agent.tar.gz"
-
 API_URL=
 UPDATE_URL=
 TARGET="custom"
+VERSION_INFO_FILE="default.js"
 
 check_conflict()
 {
@@ -65,6 +61,11 @@ while getopts :a:u:t:h OPT ; do
     esac
 done
 
+API_URL="$(echo "$API_URL" | sed -e 's/^ *//' -e 's/ *$//')"
+API_URL=${API_URL%/}
+UPDATE_URL="$(echo "$UPDATE_URL" | sed -e 's/^ *//' -e 's/ *$//')"
+UPDATE_URL=${UPDATE_URL%/}
+
 if [[ "$API_URL" == "" || "$UPDATE_URL" == "" ]] ; then
     echo "Please specify valid target or urls"
     echo $USAGE
@@ -80,8 +81,14 @@ cd "$BASEDIR"
 rm -rf $TARGET >/dev/null 2>&1
 mkdir -p $TARGET/$OUTPUT/agent
 
+if [ "$API_URL" == "https://api.sealion.com" ] ; then
+    VERSION_INFO_FILE="production.js"
+fi
+
 generate_scripts()
 {
+    echo "Getting version info from $BASEDIR/../../server/config/$VERSION_INFO_FILE"
+    VERSION=$(cat "../../server/config/$VERSION_INFO_FILE" 2>/dev/null | grep "\"agentVersion\"\s*:\s*\"\([^\"]*\)\"" -o | sed 's/.*"agentVersion"\s*:\s*"\([^"]*\)".*/\1/')
     cp res/scripts/uninstall.sh $TARGET/$OUTPUT/agent/
     chmod +x $TARGET/$OUTPUT/agent/uninstall.sh
     echo "Uninstaller generated"

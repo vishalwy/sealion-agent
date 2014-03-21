@@ -54,8 +54,9 @@ log_output()
             ;;
     esac
 
-    if [ "$OUTPUT" == "" ]
+    if [ "$OUTPUT" == "" ] ; then
         return 1
+    fi
 
     if [ $STREAM -eq 2 ] ; then
         echo $OUTPUT >&2

@@ -219,7 +219,9 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         return ret
     
     def get_agent_version(self):
-        response = self.exec_method('get', {'retry_count': 0}, self.get_url('agents/agentVersion'), params = {'agentVersion': self.globals.config.agent.agentVersion})
+        data = self.globals.config.agent.get_dict([('orgToken', ''), ('_id', ''), ('agentVersion', '')])
+        url = self.get_url('orgs/%s/agents/%s/agentVersion' % (data['orgToken'], data['_id']))
+        response = self.exec_method('get', {'retry_count': 0}, url, params = {'agentVersion': data['agentVersion']})
         
         if API.is_success(response):
             ret = response.json()['agentVersion']
