@@ -58,12 +58,6 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         
         temp = (message + '; ' + temp) if len(message) else temp
         _log.error(temp)
-        
-    def is_ok(self, status):
-        if status < self.status.BAD_REQUEST:
-            return True
-        
-        return False
     
     def is_not_connected(self, status):
         if status == self.status.NOT_CONNECTED or status == self.status.NO_SERVICE:
@@ -280,8 +274,6 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
             post_event = False
             ret = self.status.NO_SERVICE
         elif status == 400:
-            post_event = None
-            exec_func = self.stop
             ret = self.status.BAD_REQUEST
         elif status == 401:
             if code == 200004:

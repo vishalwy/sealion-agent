@@ -21,12 +21,14 @@ class Connection(ThreadEx):
         self.api = api.API()
     
     def exe(self):
-        self.attempt(retry_interval = 10)
+        while 1:
+            if self.attempt(retry_interval = 10) != api.status.BAD_REQUEST:
+                break
     
     def attempt(self, retry_count = -1, retry_interval = 5):
         status = self.api.authenticate(retry_count = retry_count, retry_interval = retry_interval)
         status == self.api.status.SUCCESS and rtc.RTC().connect().start()
-        return status            
+        return status
         
     def connect(self):        
         status = self.attempt(2)
@@ -57,14 +59,14 @@ class Connection(ThreadEx):
             _log.info('Waiting for SocketIO to disconnect')
             count = 0
             
-            while count < 4:
+            while count < 6:
                 if rtc_thread.is_alive() == False:
                     break
                     
                 time.sleep(5)
                 count += 1
             
-            if count > 3:
+            if count > 5:
                 _log.info('SocketIO not responding. Self terminating service.')
                 self.globals.stop_status = exit_status.AGENT_ERR_TERMINATE
                 self.api.stop()
