@@ -22,11 +22,6 @@ while getopts :i:o:c:H:x:p:a:r:v:h OPT ; do
             ORG_TOKEN=$OPTARG
             ;;
         \?)
-            ;;
-        :)
-            ;;
-
-        \?)
             echo "Invalid option '-$OPTARG'" >&2
             echo $USAGE
             exit 126
