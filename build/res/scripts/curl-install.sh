@@ -5,11 +5,12 @@ DOWNLOAD_URL="<agent-download-url>"
 TMP_FILE_PATH=$(mktemp -d /tmp/sealion-agent.XXXX)
 TMP_FILE_PATH=${TMP_FILE_PATH%/}
 TMP_FILE_NAME="$TMP_FILE_PATH/sealion-agent.tar.gz"
+USAGE="Usage: curl -s $DOWNLOAD_URL {-o <Organization token> [-c <Category name>] [-H <Host name>] [-x <Https proxy>] [-p <Python binary>] | -h for Help}"
 PROXY=
 AGENT_ID=
 ORG_TOKEN=
 
-while getopts :x:a: OPT ; do
+while getopts :i:o:c:H:x:p:a:r:v:h OPT ; do
     case "$OPT" in
         x)
             PROXY="-x '$OPTARG'"
@@ -23,6 +24,17 @@ while getopts :x:a: OPT ; do
         \?)
             ;;
         :)
+            ;;
+
+        \?)
+            echo "Invalid option '-$OPTARG'" >&2
+            echo $USAGE
+            exit 126
+            ;;
+        :)
+            echo "Option '-$OPTARG' requires an argument" >&2
+            echo $USAGE
+            exit 125
             ;;
     esac
 done
