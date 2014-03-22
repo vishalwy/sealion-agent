@@ -152,11 +152,15 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         return ret
     
     def unregister(self):
-        response = self.exec_method('delete', {'retry_count': 2}, self.get_url('orgs/%s/servers/%s' % (self.globals.config.agent.orgToken, self.globals.config.agent._id)))
         ret = self.status.SUCCESS
         
+        if hasattr(self.globals.config.agent, '_id') == False:
+            return ret
+        
+        response = self.exec_method('delete', {'retry_count': 2}, self.get_url('orgs/%s/servers/%s' % (self.globals.config.agent.orgToken, self.globals.config.agent._id)))
+        
         if API.is_success(response) == False:
-            ret = self.error('Failed to register agent', response)
+            ret = self.error('Failed to unregister agent', response)
             
         return ret
     
@@ -365,8 +369,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
             'org_token': self.globals.config.agent.orgToken, 
             'agent_id': self.globals.config.agent._id
         }
-        format = '"%(temp_dir)s/sealion-agent/install.sh" -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" && rm -rf "%(temp_dir)s'
-        _log.debug(format % format_spec)
+        format = '"%(temp_dir)s/sealion-agent/install.sh" -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" && rm -rf "%(temp_dir)s"'
         subprocess.Popen(['bash', '-c', format % format_spec])
         time.sleep(60)
         _log.error('Failed to install the update')

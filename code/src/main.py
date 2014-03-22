@@ -75,7 +75,7 @@ for handler in logging.root.handlers:
         
 if hasattr(globals.config.agent, '_id') == False:   
     if api.register(retry_count = 2, retry_interval = 10) != api.status.SUCCESS:
-        sys.exit(exit_status.AGENT_ERR_FAILED_CONNECT)
+        sys.exit(exit_status.AGENT_ERR_FAILED_REGISTER)
 else:
     response = api.ping(True)
     

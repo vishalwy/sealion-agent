@@ -42,10 +42,8 @@ log_output()
         echo $OUTPUT >&1
     fi
 
-    if [[ "$LOG_FILE_PATH" != "" && -d "$LOG_FILE_PATH" ]] ; then
-        echo "$(date +\"%F %T,%3N\") - $ST: $OUTPUT" >>"$LOG_FILE_PATH/update.log"
-    else
-        LOG_FILE_PATH=
+    if [ "$LOG_FILE_PATH" != "" ] ; then
+        echo $(date +"%F %T,%3N - $ST: $OUTPUT") >>"$LOG_FILE_PATH/update.log"
     fi
 
     return 0
@@ -82,7 +80,10 @@ while getopts :i:o:c:H:x:p:a:r:v:h OPT ; do
     esac
 done
 
-LOG_FILE_PATH="$INSTALL_PATH/var/log"
+if [ -d "$INSTALL_PATH/var/log" ] ; then
+    LOG_FILE_PATH="$INSTALL_PATH/var/log"
+fi
+
 TMP_FILE_PATH=$(mktemp -d $TMP_FILE_PATH)
 TMP_FILE_PATH=${TMP_FILE_PATH%/}
 TMP_FILE_NAME="$TMP_FILE_PATH/sealion-agent.tar.gz"

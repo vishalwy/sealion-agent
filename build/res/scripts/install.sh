@@ -66,10 +66,8 @@ log_output()
         echo $OUTPUT >&1
     fi
 
-    if [[ "$LOG_FILE_PATH" != "" && -d "$LOG_FILE_PATH" ]] ; then
-        echo "$(date +\"%F %T,%3N\") - $ST: $OUTPUT" >>"$LOG_FILE_PATH/update.log"
-    else
-        LOG_FILE_PATH=
+    if [ "$LOG_FILE_PATH" != "" ] ; then
+        echo $(date +"%F %T,%3N - $ST: $OUTPUT") >>"$LOG_FILE_PATH/update.log"
     fi
 
     return 0
@@ -125,7 +123,9 @@ if [ "$ORG_TOKEN" == '' ] ; then
     exit $SCRIPT_ERR_INVALID_USAGE
 fi
 
-LOG_FILE_PATH="$INSTALL_PATH/var/log"
+if [ -d "$INSTALL_PATH/var/log" ] ; then
+    LOG_FILE_PATH="$INSTALL_PATH/var/log"
+fi
 
 if [ "`uname -s`" != "Linux" ] ; then
     log_output 'Error: SeaLion agent works on Linux only' 2
@@ -159,7 +159,9 @@ fi
 
 update_agent_config()
 {
-    ARGS="-i 's/\(\"$1\"\s*:\s*\)\(\"[^\"]\+\"\)/\1\"$2\"/'"
+    KEY="$(echo "$1" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
+    VALUE="$(echo "$2" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
+    ARGS="-i 's/\(\"$KEY\"\s*:\s*\)\(\"[^\"]\+\"\)/\1\"$VALUE\"/'"
     eval sed "$ARGS" "\"$INSTALL_PATH/etc/agent.json\""
 }
 
