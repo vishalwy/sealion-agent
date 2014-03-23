@@ -127,11 +127,14 @@ generate_scripts()
     eval sed "$ARGS" $CURL_INSTALLER    
     chmod +x $CURL_INSTALLER
     echo "Curl installer generated"
+    cp res/README $TARGET/$OUTPUT/agent
+    DATE="$(echo "$(date +"%F")" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
+    sed -i "1iSeaLion Agent $VERSION - $DATE" $TARGET/$OUTPUT/agent/README
+    echo "Generated README"
 }
 
 find ../code/ -mindepth 1 -maxdepth 1 -type d ! -name 'etc' -exec cp -r {} $TARGET/$OUTPUT/agent \;
 cp -r res/etc $TARGET/$OUTPUT/agent
-cp res/README $TARGET/$OUTPUT/agent
 mkdir -p $TARGET/$OUTPUT/agent/etc/init.d
 mkdir -p $TARGET/$OUTPUT/agent/bin
 generate_scripts
