@@ -1,7 +1,6 @@
 __copyright__ = '(c) Webyog, Inc'
 __author__ = 'Vishal P.R'
-__license__ = 'GPL'
-__email__ = 'support@sealion.com'
+__email__ = 'hello@sealion.com'
 
 AGENT_ERR_SUCCESS = 0
 AGENT_ERR_FAILED_DAEMONIZE_1 = 20

@@ -17,6 +17,7 @@ check_conflict()
 {
     if [[ "$API_URL" != "" && "$UPDATE_URL" != "" ]] ; then
         echo "You cannot specify multiple targets or urls" >&2
+        echo $USAGE
         exit 1
     fi
 }
@@ -50,15 +51,18 @@ while getopts :a:u:t:h OPT ; do
                 set_target "test" $TEST_API_URL $TEST_UPDATE_URL
             else
                 echo "Invalid argument for option -$OPTARG." >&2    
+                echo $USAGE
                 exit 1
             fi
             ;;
         \?)
             echo "Invalid option -$OPTARG" >&2
+            echo $USAGE
             exit 126
             ;;
         :)
             echo "Option $OPTARG requires an argument." >&2
+            echo $USAGE
             exit 125
             ;;
     esac
@@ -127,6 +131,7 @@ generate_scripts()
 
 find ../code/ -mindepth 1 -maxdepth 1 -type d ! -name 'etc' -exec cp -r {} $TARGET/$OUTPUT/agent \;
 cp -r res/etc $TARGET/$OUTPUT/agent
+cp res/README $TARGET/$OUTPUT/agent
 mkdir -p $TARGET/$OUTPUT/agent/etc/init.d
 mkdir -p $TARGET/$OUTPUT/agent/bin
 generate_scripts
