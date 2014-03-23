@@ -4,24 +4,61 @@ BASEDIR=$(readlink -f "$0")
 BASEDIR=$(dirname "$BASEDIR")
 BASEDIR=${BASEDIR%/}
 USER_NAME="sealion"
+LOG_FILE_PATH=
+
+log_output()
+{
+    OUTPUT=
+    STREAM=1
+    ST="O"
+
+    case "$#" in
+        "1")
+            OUTPUT=$1
+            ;;
+        "2")
+            OUTPUT=$1
+            STREAM=$2
+            ;;
+    esac
+
+    if [ "$OUTPUT" == "" ] ; then
+        return 1
+    fi
+
+    if [ $STREAM -eq 2 ] ; then
+        echo $OUTPUT >&2
+        ST="E"
+    else
+        echo $OUTPUT >&1
+    fi
+
+    if [ "$LOG_FILE_PATH" != "" ] ; then
+        echo $(date +"%F %T,%3N - $ST: $OUTPUT") >>"$LOG_FILE_PATH/update.log"
+    fi
+
+    return 0
+}
+
 cd "$BASEDIR"
+LOG_FILE_PATH="var/log"
 
 if [[ "$(id -u -n)" != "$USER_NAME" && $EUID -ne 0 ]] ; then
-    echo "Error: You need to run this script as either root or $USER_NAME" >&2
+    log_output "Error: You need to run this script as either root or $USER_NAME" 2
     exit 1
 fi
 
 if [ -f "etc/init.d/sealion" ] ; then
-    echo "Stopping agent..."
-    etc/init.d/sealion stop
+    log_output "Stopping agent..."
+    etc/init.d/sealion stop 1> >( while read line; do log_output "${line}"; done ) 2> >( while read line; do log_output "${line}" 2; done )
 fi
 
 if [ -f "src/unregister.py" ] ; then
-    echo "Unregistering agent..."
+    log_output "Unregistering agent..."
     python src/unregister.py >/dev/null 2>&1
 
     if [ $? -ne 0 ] ; then
-        echo "Error: Failed to unregister agent" >&2
+        log_output "Error: Failed to unregister agent" 2
         exit 1
     fi
 fi
@@ -39,7 +76,7 @@ uninstall_service()
     RET=0
 
     if [[ -z $RC1_PATH || -z $RC2_PATH || -z $RC3_PATH || -z $RC4_PATH || -z $RC5_PATH || -z $RC6_PATH || -z $INIT_D_PATH ]] ; then
-        echo "Error: Could not locate init.d/rc folders" >&2
+        log_output "Error: Could not locate init.d/rc folders" 2
         return 1
     else
         for (( i = 1 ; i < 7 ; i++ )) do
@@ -47,7 +84,7 @@ uninstall_service()
             rm -f $VAR_NAME
 
             if [ $? -ne 0 ] ; then
-                echo "Error: Failed to remove $VAR_NAME file" >&2
+                log_output "Error: Failed to remove $VAR_NAME file" 2
                 RET=1
             fi
         done
@@ -55,7 +92,7 @@ uninstall_service()
         rm -f $INIT_D_PATH/sealion
         
         if [ $? -ne 0 ] ; then
-            echo "Error: Failed to remove $INIT_D_PATH/sealion file" >&2
+            log_output "Error: Failed to remove $INIT_D_PATH/sealion file" 2
             RET=1
         fi
     fi
@@ -64,7 +101,7 @@ uninstall_service()
 }
 
 if [[ $EUID -ne 0 ]]; then
-    echo "Removing files except logs and uninstall.sh"
+    log_output "Removing files except logs and uninstall.sh"
     find var -mindepth 1 -maxdepth 1 -type d ! -name 'log' -exec rm -rf {} \;
     find . -mindepth 1 -maxdepth 1 -type d ! -name 'var' -exec rm -rf {} \;
 else
@@ -74,26 +111,26 @@ else
         if [ $? -eq 0 ] ; then
             pkill -KILL -u $USER_NAME
             userdel $USER_NAME
-            echo "User $USER_NAME removed"
+            log_output "User $USER_NAME removed"
         fi
 
         id -g $USER_NAME >/dev/null 2>&1
 
         if [ $? -eq 0 ] ; then
             groupdel $USER_NAME
-            echo "Group $USER_NAME removed"
+            log_output "Group $USER_NAME removed"
         fi
 
         uninstall_service
 
         if [ $? -ne 0 ] ; then
-            echo "Service sealion removed"
+            log_output "Service sealion removed"
         fi  
     fi
 
-    echo "Removing files..."
+    log_output "Removing files..."
     cd /
     rm -rf "$BASEDIR"
 fi
 
-echo "Sealion agent uninstalled successfully"
+log_output "Sealion agent uninstalled successfully"
