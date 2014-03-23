@@ -43,7 +43,6 @@ log_output()
 {
     OUTPUT=
     STREAM=1
-    ST="I"
 
     case "$#" in
         "1")
@@ -61,13 +60,12 @@ log_output()
 
     if [ $STREAM -eq 2 ] ; then
         echo $OUTPUT >&2
-        ST="E"
     else
         echo $OUTPUT >&1
     fi
 
     if [ "$LOG_FILE_PATH" != "" ] ; then
-        echo $(date +"%F %T,%3N - $ST: $OUTPUT") >>"$LOG_FILE_PATH/update.log"
+        echo $(date +"%F %T,%3N: $OUTPUT") >>"$LOG_FILE_PATH/update.log"
     fi
 
     return 0
@@ -353,7 +351,7 @@ fi
 
 if [ -f "$SERVICE_FILE" ] ; then
     log_output "Stopping agent..."
-    "$SERVICE_FILE" stop
+    "$SERVICE_FILE" stop 2> >( while read line; do log_output "${line}"; done ) 1> >( while read line; do log_output "${line}"; done )
 fi
 
 log_output "Copying files..."
@@ -392,7 +390,7 @@ else
 fi
 
 log_output "Starting agent..."
-"$SERVICE_FILE" start
+"$SERVICE_FILE" start 2> >( while read line; do log_output "${line}"; done ) 1> >( while read line; do log_output "${line}"; done )
 RET=$?
 
 if [[ $UPDATE_AGENT -eq 0 && $RET -eq 0 ]] ; then
