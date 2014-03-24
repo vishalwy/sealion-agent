@@ -342,10 +342,6 @@ else
 fi
 
 if [ $SEALION_NODE_FOUND -eq 1 ] ; then
-    if [ $UPDATE_AGENT -eq 1 ] ; then
-        migrate_node_agent_config
-    fi
-
     log_output "Removing sealion-node"
     kill -SIGKILL `pgrep -d ',' 'sealion-node'` >/dev/null 2>&1
 
