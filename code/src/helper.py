@@ -7,9 +7,11 @@ import json
 import re
 import threading
 import logging
+import exit_status
 from constructs import *
 
 _log = logging.getLogger(__name__)
+event_dispatcher = EventDispatcher()
    
 class Utils(Namespace):
     @staticmethod
@@ -198,3 +200,40 @@ class Config:
         self.lock.release()
         config.update(Config.parse(data, True)[0])
         return self.set(config)
+
+class Terminator(SingletonType('TerminatorMetaClass', (object, ), {})):   
+    def __init__(self):
+        self.thread = None
+        self.terminate_status = exit_status.AGENT_ERR_SUCCESS
+        self.cancel_event = threading.Event()
+    
+    def start(self, terminate_status, wait_func = None, *wait_func_args):
+        if self.thread == None:
+            self.thread = ThreadEx(target = self.terminate_func, name = 'Terminator')
+            self.cancel_event.clear()
+            self.thread.daemon = True
+            self.thread.start()
+            
+        self.terminate_status = terminate_status
+        wait_func != None and wait_func(*wait_func_args)
+        
+    def stop(self):
+        self.cancel_event.set()
+        
+    def terminate_func(self):
+        wait_timeout = 20
+        _log.debug('%s waiting for cancel event for %d seconds' % (self.thread.name, wait_timeout))
+        self.cancel_event.wait(wait_timeout)
+        
+        if self.cancel_event.is_set():
+            _log.debug('%s received cancel event' % self.thread.name)
+            self.thread = None
+            return
+        
+        if self.terminate_status != exit_status.AGENT_ERR_TERMINATE:
+            event_dispatcher.trigger('terminate', self.terminate_status)
+        
+        _log.info('Some of the threads are not responding. Agent self terminating with status code %d.' % self.terminate_status)
+        os._exit(self.terminate_status)
+
+    

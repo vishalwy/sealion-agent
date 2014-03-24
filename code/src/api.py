@@ -320,7 +320,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         filename = '%s/%s' % (temp_dir, url.split('/')[-1])
         _log.info('Update found; Downloading update to %s' % filename)
         f = open(filename, 'wb')
-        response = self.exec_method('get', {}, url, stream = True)
+        response = self.exec_method('get', {'retry_count': 0}, url, stream = True)
         
         if API.is_success(response) == False:
             self.error('Failed to download the update', response, True)

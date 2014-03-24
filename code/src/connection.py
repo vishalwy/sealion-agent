@@ -9,6 +9,7 @@ import globals
 import api
 import rtc
 import exit_status
+import helper
 from constructs import *
 
 _log = logging.getLogger(__name__)
@@ -56,20 +57,8 @@ class Connection(ThreadEx):
         
         if rtc_thread:
             _log.info('Waiting for SocketIO to disconnect')
-            count = 0
-            
-            while count < 6:
-                if rtc_thread.is_alive() == False:
-                    break
-                    
-                time.sleep(5)
-                count += 1
-            
-            if count > 5:
-                _log.info('SocketIO not responding. Self terminating service.')
-                self.globals.stop_status = exit_status.AGENT_ERR_TERMINATE
-                self.api.stop()
-                return
+            helper.Terminator().start(exit_status.AGENT_ERR_TERMINATE, rtc_thread.join)
+            helper.Terminator().stop()
                 
         self.start()
         

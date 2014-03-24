@@ -15,6 +15,7 @@ import globals
 import connection
 import services
 import exit_status
+import helper
 from datetime import datetime
 from constructs import *
 
@@ -117,6 +118,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         connection.Connection.stop_rtc()
         self.api.logout()
         self.api.close()
+        helper.Terminator().start(exit_status.AGENT_ERR_NOT_RESPONDING)
         threads = threading.enumerate()
         curr_thread = threading.current_thread()
 
@@ -138,19 +140,11 @@ def sig_handler(signum, frame):
         _log.debug('Received SIGALRM')
         signal.alarm(0)
         
-def stop():
-    status = globals.Globals().stop_status
-    
-    if status != exit_status.AGENT_ERR_TERMINATE:
-        _log.info('Agent shutting down with status code %d.' % status)
-        _log.debug('Took %f seconds to shutdown.' % (time.time() - _metric['stopping_time']))
-        _log.info('Ran for %s hours.' % str(datetime.now() - datetime.fromtimestamp(_metric['starting_time'])))
-        sys.exit(status)
-    else:
-        _log.info('Agent terminating with status code %d.' % status)
-        _log.debug('Took %f seconds to terminate.' % (time.time() - _metric['stopping_time']))
-        _log.info('Ran for %s hours.' % str(datetime.now() - datetime.fromtimestamp(_metric['starting_time'])))
-        os._exit(status)
+def stop(status = 0):
+    _log.info('Agent shutting down with status code %d.' % status)
+    _log.debug('Took %f seconds to shutdown.' % (time.time() - _metric['stopping_time']))
+    _log.info('Ran for %s hours.' % str(datetime.now() - datetime.fromtimestamp(_metric['starting_time'])))
+    sys.exit(status)
     
 def start():
     _metric['starting_time'] = time.time()

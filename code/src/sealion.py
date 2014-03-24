@@ -184,6 +184,7 @@ class sealion(Daemon):
             else:
                 _log.error('%s crashed. Failed to save dump file' % self.__class__.__name__)
             
+            _log.info('Agent self terminating with status code %d' % exit_status.AGENT_ERR_TERMINATE)
             os._exit(exit_status.AGENT_ERR_TERMINATE)
     
     def run(self):     
@@ -194,10 +195,15 @@ class sealion(Daemon):
             _log.info('Crash loop detected; Starting agent in update-only mode')
             is_update_only_mode = True
         
+        from globals import Globals
+        Globals().event_dispatcher.bind('terminate', self.terminate)
         from constructs import ThreadEx
         ThreadEx(target = self.send_crash_dumps, name = 'CrashDumpSender').start()
         import main
         main.start(is_update_only_mode)
+        
+    def terminate(self, event, status):
+        self.delete_pid()
             
 def sig_handler(signum, frame):    
     if signum == signal.SIGINT:
