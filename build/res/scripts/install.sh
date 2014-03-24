@@ -148,7 +148,12 @@ if [ -f "$PYTHON" ] ; then
             ;;
     esac
 else
-    log_output "Error: '$PYTHON' is not a valid python binary" 2
+    if [ "$PYTHON" == "" ] ; then
+        log_output "Error: No python found" 2
+    else
+        log_output "Error: '$PYTHON' is not a valid python binary" 2
+    fi
+
     exit $SCRIPT_ERR_INVALID_PYTHON
 fi
 
