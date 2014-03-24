@@ -5,11 +5,12 @@ SCRIPT_ERR_SUCCESS=0
 SCRIPT_ERR_INVALID_PYTHON=1
 SCRIPT_ERR_INCOMPATIBLE_PYTHON=2
 SCRIPT_ERR_FAILED_DEPENDENCY=3
-SCRIPT_ERR_INCOMPATIBLE_PLATFORM=4
-SCRIPT_ERR_INVALID_USAGE=5
-SCRIPT_ERR_FAILED_DIR_CREATE=6
-SCRIPT_ERR_FAILED_GROUP_CREATE=7
-SCRIPT_ERR_FAILED_USER_CREATE=8
+SCRIPT_ERR_FAILED_TYPE_DEPENDENCY=4
+SCRIPT_ERR_INCOMPATIBLE_PLATFORM=5
+SCRIPT_ERR_INVALID_USAGE=6
+SCRIPT_ERR_FAILED_DIR_CREATE=7
+SCRIPT_ERR_FAILED_GROUP_CREATE=8
+SCRIPT_ERR_FAILED_USER_CREATE=9
 
 #config variables
 API_URL="<api-url>"
@@ -204,21 +205,52 @@ install_service()
 check_dependency()
 {
     cd agent/lib
-    MODULES=('socketio_client' 'sqlite3')
-    STMTS=
+    PROXIES="{}"
     
-    for MODULE in "${MODULES[@]}" ; do
-        STMTS="$STMTS\n\timport $MODULE"
+    if [ "$PROXY" != "" ] ; then
+        PROXIES="{'https': '$PROXY'}"
+    fi
+
+    GLOBALS=("import sys", "sys.path.append('websocket_client')", "sys.path.append('socketio_client')")
+    STMTS=("import socketio_client" "import sqlite3" "import requests" "requests.get($API_URL, proxies = $PROXIES, timeout = 10)")
+    EXCEPTIONS=('TypeError')
+    EXCEPTION_RET_CODES=("$SCRIPT_ERR_FAILED_TYPE_DEPENDENCY")
+    GLOBAL_STMTS=
+    TRY_STMTS=
+    TRY_EXCEPTIONS=
+
+    for STMT in "${GLOBALS[@]}" ; do
+        GLOBAL_STMTS="$GLOBAL_STMTS$STMT\n"
     done
 
-    CODE=$(printf "import sys\nsys.path.append('websocket_client')\nsys.path.append('socketio_client')\n\ntry:$STMTS\nexcept Exception as e:\n\tprint(str(e))\n\tsys.exit(1)\n\nsys.exit(0)")
-    RET=$($PYTHON -c "$CODE" 2>&1)
+    for STMT in "${STMTS[@]}" ; do
+        if [ "$TRY_STMTS" == "" ] ; then
+            TRY_STMTS="try:"
+        fi
 
-    if [ $? -ne 0 ] ; then
+        TRY_STMTS="$TRY_STMTS\n\t$STMT"
+    done
+
+    if [ "$TRY_STMTS" != "" ] ; then
+        INDEX=0
+
+        for EXCEPTION in "${EXCEPTIONS[@]}" ; do
+            TRY_EXCEPTIONS="$TRY_EXCEPTIONS\nexcept $EXCEPTION as e:\n\tprint(str(e))\n\tsys.exit(${EXCEPTION_RET_CODES[$INDEX]})"
+            INDEX=$INDEX+1
+        done
+
+        TRY_EXCEPTIONS="$TRY_EXCEPTIONS\nexcept Exception as e:\n\tprint(str(e))\n\tsys.exit($SCRIPT_ERR_FAILED_DEPENDENCY)"
+    fi
+
+    CODE=$(printf "$GLOBAL_STMTS\n$TRY_STMTS$TRY_EXCEPTIONS\n\nsys.exit($SCRIPT_ERR_SUCCESS)")
+    RET=$($PYTHON -c "$CODE" 2>&1)
+    RET_CODE=$?
+
+    if [ $RET_CODE -ne $SCRIPT_ERR_SUCCESS ] ; then
         log_output "Error: Python package dependency check failed; $RET" 2
         rm -rf *.pyc
         find . -type d -name '__pycache__' -exec rm -rf {} \; >/dev/null 2>&1
-        exit $SCRIPT_ERR_FAILED_DEPENDENCY
+        exit $RET_CODE
     fi
 
     rm -rf *.pyc
