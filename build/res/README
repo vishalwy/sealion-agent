@@ -10,7 +10,7 @@ Software requirements
 =====================
 #   Requires GNU Linux
 #   Requires Python version 2.6 or above. 
-    If you have multiple versions of python installed, use -p option in the installer to point to the correct version.
+    If you have multiple versions of python installed, use -p option in the installer to point to the preferred version.
 #   Requires SSL and SQLite3 modules in Python.
 
 
@@ -22,7 +22,7 @@ Usage
 #   If not installed as a service, execute
     etc/init.d/sealion start|stop|restart|status
 
-Note:   You might want to add 'etc/init.d/sealion' to you system startup scripts if not installed as a service. 
+Note:   You might want to add 'etc/init.d/sealion' to your system startup scripts if not installed as a service. 
         This will allow agent to run automatically on system startup.
 
 
@@ -33,6 +33,7 @@ Warning: Do not edit 'etc/agent.json'. This file contains private settings for a
 'etc/config.json' contains configurable settings for agent. Refer 'etc/config.json.example' for details.
 
 Note: To make SeaLion Agent work behind a proxy, add {"https_proxy": "your proxy address"} to 'env' key in 'etc/config.json'.
+      For any changes to take effect, Sealion Agent must be restarted.
 
 
 Logging
