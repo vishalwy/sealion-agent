@@ -44,15 +44,10 @@ class sealion(Daemon):
             os.path.isdir(dir) or os.makedirs(dir)            
             report = {
                 'timestamp': timestamp,
-                'stack': ''.join(traceback.format_exception(type, value, tb))
+                'stack': ''.join(traceback.format_exception(type, value, tb)),
+                'orgToken': globals.config.agent.orgToken,
+                '_id': globals.config.agent._id
             }
-            
-            if hasattr(globals.config.agent, 'orgToken'):
-                report['orgToken'] = globals.config.agent.orgToken
-                
-            if hasattr(globals.config.agent, '_id'):
-                report['_id'] = globals.config.agent._id
-            
             f = open(path, 'w')
             json.dump(report, f)
         except:
@@ -64,6 +59,7 @@ class sealion(Daemon):
     
     def read_dump(self, file_name):
         f, report = None, None
+        keys = ['timestamp', 'stack', 'orgToken', '_id']
         
         try:
             f = open(file_name, 'r')
@@ -73,7 +69,7 @@ class sealion(Daemon):
         finally:
             f and f.close()
             
-        if report and (not report.get('orgToken') or not report.get('_id')):
+        if report == None or all(key in report for key in keys) == False:
             report = None
         
         return report
@@ -97,22 +93,24 @@ class sealion(Daemon):
 
                     while 1:
                         if globals.stop_event.is_set():
+                            return
+
+                        report = report if report != None else self.read_dump(file_name)
+
+                        if report == None or api.is_not_connected(api.send_crash_report(report)) == False:
                             break
 
-                        report = report if report else self.read_dump(file_name)
-
-                        if report == None:
-                            break
-                            
-                        if api.is_not_connected(api.send_crash_report(report)) == False:                        
-                            _log.info('Removing crash dump %s' % file_name)
-                            os.remove(file_name)
-                            break
-
+                        _log.debug('CrashDumpSender waiting for stop event for 10 seconds')
                         globals.stop_event.wait(10)
+                    
+                    try:
+                        os.remove(file_name)
+                        _log.info('Removed crash dump %s' % file_name)
+                    except Exception as e:
+                        _log.error('Failed to removed crash dump %s; %s' % (file_name, str(e)))
 
                 if globals.stop_event.is_set():
-                    break
+                    return
         except:
             pass
     
