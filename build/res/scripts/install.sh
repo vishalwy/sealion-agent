@@ -5,12 +5,11 @@ SCRIPT_ERR_SUCCESS=0
 SCRIPT_ERR_INVALID_PYTHON=1
 SCRIPT_ERR_INCOMPATIBLE_PYTHON=2
 SCRIPT_ERR_FAILED_DEPENDENCY=3
-SCRIPT_ERR_FAILED_TYPE_DEPENDENCY=4
-SCRIPT_ERR_INCOMPATIBLE_PLATFORM=5
-SCRIPT_ERR_INVALID_USAGE=6
-SCRIPT_ERR_FAILED_DIR_CREATE=7
-SCRIPT_ERR_FAILED_GROUP_CREATE=8
-SCRIPT_ERR_FAILED_USER_CREATE=9
+SCRIPT_ERR_INCOMPATIBLE_PLATFORM=4
+SCRIPT_ERR_INVALID_USAGE=5
+SCRIPT_ERR_FAILED_DIR_CREATE=6
+SCRIPT_ERR_FAILED_GROUP_CREATE=7
+SCRIPT_ERR_FAILED_USER_CREATE=8
 
 #config variables
 API_URL="<api-url>"
@@ -204,6 +203,7 @@ install_service()
 
 check_dependency()
 {
+    log_output "Performing dependency check..."
     cd agent/lib
     PROXIES="{}"
     
@@ -213,8 +213,8 @@ check_dependency()
 
     GLOBALS=("import sys" "sys.path.append('websocket_client')" "sys.path.append('socketio_client')")
     STMTS=("import socketio_client" "import sqlite3" "import requests" "requests.get('$API_URL', proxies = $PROXIES, timeout = 10)")
-    EXCEPTIONS=('TypeError')
-    EXCEPTION_RET_CODES=("$SCRIPT_ERR_FAILED_TYPE_DEPENDENCY")
+    EXCEPTIONS=('TypeError' 'ImportError')
+    EXCEPTION_RET_CODES=("$SCRIPT_ERR_FAILED_DEPENDENCY" "$SCRIPT_ERR_FAILED_DEPENDENCY")
     GLOBAL_STMTS=
     TRY_STMTS=
     TRY_EXCEPTIONS=
@@ -239,7 +239,7 @@ check_dependency()
             INDEX=$INDEX+1
         done
 
-        TRY_EXCEPTIONS="$TRY_EXCEPTIONS\nexcept Exception as e:\n\tprint(str(e))\n\tsys.exit($SCRIPT_ERR_FAILED_DEPENDENCY)"
+        TRY_EXCEPTIONS="$TRY_EXCEPTIONS\nfinally:\n\tpass"
     fi
 
     CODE=$(printf "$GLOBAL_STMTS\n$TRY_STMTS$TRY_EXCEPTIONS\n\nsys.exit($SCRIPT_ERR_SUCCESS)")
