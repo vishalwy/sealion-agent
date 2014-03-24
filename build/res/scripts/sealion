@@ -7,9 +7,9 @@
 # Should-Start      :      
 # Default-Start     : 2 3 4 5
 # Default-Stop      : 0 1 6
-# Short-Description : SeaLion agent
+# Short-Description : SeaLion Agent
 # Description       : SeaLion is cloud based server debugging tool.
-#                     This is SeaLion's Agent to send monitoring data to SeaLion server
+#                     This is SeaLion's agent to send monitoring data to SeaLion server
 # 
 ### END INIT INFO
 

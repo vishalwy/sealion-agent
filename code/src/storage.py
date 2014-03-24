@@ -191,8 +191,7 @@ class OfflineStore(ThreadEx):
             _log.error('Failed to retreive rows from %s; %s' % (self.name, str(e)))
             return True
         
-        _log.debug('Retreived %d rows from %s' % (len(rows), self.name))
-        _log.debug('Total %d rows in %s' % (total_rows, self.name))
+        _log.debug('Retreived %d out of %d rows from %s' % (len(rows), total_rows, self.name))
         callback(rows, total_rows)
         return True
             
@@ -224,7 +223,7 @@ class OfflineStore(ThreadEx):
     
     def close(self):
         _log.debug('%s received stop event' % self.name)
-        _log.debug('%s cleaning up queue' % self.name)
+        _log.debug('%s cleaning up task queue' % self.name)
         
         while 1:
             try:
@@ -354,6 +353,7 @@ class RealtimeSender(Sender):
         self.off_store.select_timestamp(int(time.time() * 1000))
             
     def cleanup(self):
+        _log.debug('%s cleaning up queue' % self.name)
         self.off_store.set_bulk_insert(True)
         rows = []
             
@@ -411,6 +411,7 @@ class HistoricSender(Sender):
             Sender.store_available(True)
             
     def cleanup(self):
+        _log.debug('%s cleaning up deleted rows' % self.name)
         len(self.del_rows) and self.off_store.rem(self.del_rows, [])
 
 class Storage:

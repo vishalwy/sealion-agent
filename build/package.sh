@@ -1,5 +1,9 @@
 #!/bin/bash
 
+#Copyright  : (c) Webyog, Inc
+#Author     : Vishal P.R
+#Email      : hello@sealion.com
+
 #script variables
 USAGE="Usage: $0 {-t prod|test | -a <api url> -u <update url> | -h}"
 TARGET="custom"

@@ -325,6 +325,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         if API.is_success(response) == False:
             self.error('Failed to download the update', response, True)
             f and f.close()
+            subprocess.call(['bash', '-c', 'rm -rf "%s"' % temp_dir])
             self.updater = None
             return
             
@@ -349,7 +350,8 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         if is_completed == True:
             _log.info('Update succesfully downloaded to %s' % filename)
         else:
-            _log.info('Downloading update aborted')
+            _log.info('Aborted downloading update')
+            subprocess.call(['bash', '-c', 'rm -rf "%s"' % temp_dir])
             self.updater = None
             return
         
@@ -357,6 +359,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         
         if subprocess.call(['tar', '-xf', "%s" % filename, '--directory=%s' % temp_dir]):
             _log.error('Failed to extract update from  %s' % filename)
+            subprocess.call(['bash', '-c', 'rm -rf "%s"' % temp_dir])
             self.updater = None
             return
             

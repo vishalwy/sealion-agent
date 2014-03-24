@@ -1,5 +1,9 @@
 #!/bin/bash
 
+#Copyright  : (c) Webyog, Inc
+#Author     : Vishal P.R
+#Email      : hello@sealion.com
+
 #config variables
 API_URL="<api-url>"
 DOWNLOAD_URL="<agent-download-url>"

@@ -1,5 +1,9 @@
 #!/bin/bash
 
+#Copyright  : (c) Webyog, Inc
+#Author     : Vishal P.R
+#Email      : hello@sealion.com
+
 BASEDIR=$(readlink -f "$0")
 BASEDIR=$(dirname "$BASEDIR")
 BASEDIR=${BASEDIR%/}

@@ -1,5 +1,9 @@
 #!/bin/bash
 
+#Copyright  : (c) Webyog, Inc
+#Author     : Vishal P.R
+#Email      : hello@sealion.com
+
 #script error codes
 SCRIPT_ERR_SUCCESS=0
 SCRIPT_ERR_INVALID_PYTHON=1

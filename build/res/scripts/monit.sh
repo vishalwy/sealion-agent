@@ -1,5 +1,9 @@
 #!/bin/bash
 
+#Copyright  : (c) Webyog, Inc
+#Author     : Vishal P.R
+#Email      : hello@sealion.com
+
 if [ "$#" != "2" ]; then
     exit 1
 fi
