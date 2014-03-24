@@ -348,6 +348,13 @@ if [ $SEALION_NODE_FOUND -eq 1 ] ; then
 
     log_output "Removing sealion-node"
     kill -SIGKILL `pgrep -d ',' 'sealion-node'` >/dev/null 2>&1
+
+    if [ -d "$INSTALL_PATH/var" ] ; then
+        find "$INSTALL_PATH/var" -mindepth 1 -maxdepth 1 -type d ! -name 'log' -exec rm -rf {} \;
+        rm -f "$INSTALL_PATH/var/log/sealion.log" 2>/dev/null
+        rm -f "$INSTALL_PATH/var/log/sealion.err" 2>/dev/null
+    fi
+
     find "$INSTALL_PATH" -mindepth 1 -maxdepth 1 ! -name 'var' -exec rm -rf {} \; >/dev/null 2>&1
 fi
 
