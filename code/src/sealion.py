@@ -107,7 +107,7 @@ class sealion(Daemon):
                         os.remove(file_name)
                         _log.info('Removed crash dump %s' % file_name)
                     except Exception as e:
-                        _log.error('Failed to removed crash dump %s; %s' % (file_name, str(e)))
+                        _log.error('Failed to remove crash dump %s; %s' % (file_name, str(e)))
 
                 if globals.stop_event.is_set():
                     return
