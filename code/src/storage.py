@@ -23,7 +23,7 @@ class OfflineStore(ThreadEx):
         self.conn_event = threading.Event()
         self.task_queue = queue.Queue()
         self.is_bulk_insert = False
-        self.bulk_insert_rows = []
+        self.pending_insert_row_count = 0
         self.select_max_timestamp = int(time.time() * 1000)
         self.select_timestamp_lock = threading.RLock()
         
@@ -98,15 +98,15 @@ class OfflineStore(ThreadEx):
             
         if self.is_bulk_insert == True:
             if task['op'] == 'insert':
-                self.bulk_insert_rows.append({'activity': task['kwargs']['activity'], 'data': task['kwargs']['activity']})
+                getattr(self, 'insert_bulk')(**{'rows': [{'activity': task['kwargs']['activity'], 'data': task['kwargs']['activity']}], 'is_commit': False})
                 is_insert = True
             elif task['op'] == 'insert_bulk':
-                self.bulk_insert_rows += task['kwargs']['rows']
+                getattr(self, 'insert_bulk')(**{'rows': task['kwargs']['rows'], 'is_commit': False})
                 is_insert = True
                 
         if is_insert == False:
-            len(self.bulk_insert_rows) and getattr(self, 'insert_bulk')(**{'rows': self.bulk_insert_rows})
-            self.bulk_insert_rows = []
+            self.pending_insert_row_count and getattr(self, 'insert_bulk')(**{'rows': []})
+            self.pending_insert_row_count = 0
         else:
             return True
 
@@ -163,18 +163,19 @@ class OfflineStore(ThreadEx):
         
         return True
     
-    def insert_bulk(self, rows):        
-        row_count = 0
-        
+    def insert_bulk(self, rows, is_commit = True):        
         try:
             for row in rows:
                 activity = row['activity']
                 data = row['data']
                 self.cursor.execute('INSERT OR IGNORE INTO data VALUES(?, ?, ?, ?)', (activity, data['timestamp'], data['returnCode'], data['data']))
-                row_count += self.cursor.rowcount
+                self.pending_insert_row_count += self.cursor.rowcount
+                
+            if is_commit == False:
+                return True
         
             self.conn.commit()
-            _log.debug('Inserted %d rows to %s' % (row_count, self.name))
+            _log.debug('Inserted %d rows to %s' % (self.pending_insert_row_count, self.name))
         except Exception as e:
             _log.error('Failed to insert rows to %s; %s' % (self.name, str(e)))
         
