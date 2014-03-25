@@ -22,7 +22,7 @@ class Connection(ThreadEx):
     
     def exe(self):
         while 1:
-            if self.attempt(retry_interval = 10) != api.status.BAD_REQUEST:
+            if self.attempt(retry_interval = 10) != self.api.status.BAD_REQUEST:
                 break
     
     def attempt(self, retry_count = -1, retry_interval = 5):

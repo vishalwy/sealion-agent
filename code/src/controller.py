@@ -4,7 +4,6 @@ __email__ = 'hello@sealion.com'
 
 import logging
 import threading
-import os
 import time
 import subprocess
 import signal
@@ -16,11 +15,9 @@ import connection
 import services
 import exit_status
 import helper
-from datetime import datetime
 from constructs import *
 
 _log = logging.getLogger(__name__)
-_metric = {'starting_time': 0, 'stopping_time': 0}
 
 class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):    
     def __init__(self):
@@ -69,14 +66,17 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
 
                 if self.globals.stop_event.is_set():
                     _log.debug('%s received stop event.', self.name)
+                    self.globals.set_time_metric('stopping_time')
                     break
             else:
                 if self.handle_response(connection.Connection().connect()) == False:
+                    self.globals.set_time_metric('stopping_time')
                     break
                     
                 store = storage.Storage()
 
                 if store.start() == False:
+                    self.globals.set_time_metric('stopping_time')
                     break
                     
                 job_producer = services.JobProducer(store)
@@ -94,14 +94,13 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
 
                     if self.globals.stop_event.is_set():
                         _log.debug('%s received stop event.', self.name)
-                        _metric['stopping_time'] = time.time()
+                        self.globals.set_time_metric('stopping_time')
                         job_producer.finish_jobs(None)
                         break
                         
                 self.handle_response(self.api.stop_status)
                 break
 
-        _metric['stopping_time'] = _metric['stopping_time'] if _metric['stopping_time'] else time.time()
         self.is_stop = True
         self.stop_threads()
 
@@ -115,10 +114,10 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
     def stop_threads(self):
         _log.debug('Stopping all threads.')
         self.api.stop()
+        helper.Terminator().start(exit_status.AGENT_ERR_NOT_RESPONDING)
         connection.Connection.stop_rtc()
         self.api.logout()
         self.api.close()
-        helper.Terminator().start(exit_status.AGENT_ERR_NOT_RESPONDING)
         threads = threading.enumerate()
         curr_thread = threading.current_thread()
 
@@ -142,12 +141,11 @@ def sig_handler(signum, frame):
         
 def stop(status = 0):
     _log.info('Agent shutting down with status code %d.' % status)
-    _log.debug('Took %f seconds to shutdown.' % (time.time() - _metric['stopping_time']))
-    _log.info('Ran for %s hours.' % str(datetime.now() - datetime.fromtimestamp(_metric['starting_time'])))
+    _log.debug('Took %f seconds to shutdown.' % (globals.Globals().get_stoppage_time()))
+    _log.info('Ran for %s hours.' %  globals.Globals().get_run_time_str())
     sys.exit(status)
     
 def start():
-    _metric['starting_time'] = time.time()
     _log.info('Agent starting up.')
     _log.info('Using python binary at %s.' % sys.executable)
     _log.info('Python version : %s.' % globals.Globals().details['pythonVersion'])

@@ -7,7 +7,10 @@ import os
 import logging
 import platform
 import sys
+import time
+import multiprocessing
 import helper
+from datetime import datetime
 from constructs import *
 
 _log = logging.getLogger(__name__)
@@ -85,6 +88,8 @@ class AgentConfig(helper.Config):
 
 class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
     def __init__(self):
+        cur_time = time.time()
+        self.metric = {'starting_time': cur_time, 'stopping_time': cur_time}
         exe_path = os.path.dirname(os.path.abspath(__file__))
         exe_path = exe_path[:-1] if exe_path[len(exe_path) - 1] == '/' else exe_path
         self.exe_path = exe_path[:exe_path.rfind('/') + 1]
@@ -115,10 +120,26 @@ class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
             'kernel': uname[2],
             'arch': platform.machine(),
             'pythonVersion': '%s %s' % (platform.python_implementation(), '.'.join([str(i) for i in sys.version_info])),
+            'cpuCount': multiprocessing.cpu_count(),
             'dist': {
                 'name': dist[0],
                 'version': dist[1],
                 'codeName': dist[2]
             }
         }
+        
+    def get_run_time(self):
+        return time.time() - self.metric['starting_time']
+    
+    def set_time_metric(self, metric):
+        self.metric[metric] = time.time()
+        
+    def get_time_metric(self, metric):
+        return self.metric[metric]
+        
+    def get_stoppage_time(self):
+        return time.time() - self.metric['stopping_time']
+    
+    def get_run_time_str(self):
+        return str(datetime.now() - datetime.fromtimestamp(self.metric['starting_time']))
         

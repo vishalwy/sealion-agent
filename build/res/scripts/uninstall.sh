@@ -106,7 +106,7 @@ uninstall_service()
 
 if [[ $EUID -ne 0 ]]; then
     log_output "Removing files except logs and uninstall.sh"
-    find var -mindepth 1 -maxdepth 1 -type d ! -name 'log' -exec rm -rf {} \;
+    find var -mindepth 1 -maxdepth 1 -type d ! -name 'log' ! -name 'crash' -exec rm -rf {} \;
     find . -mindepth 1 -maxdepth 1 -type d ! -name 'var' -exec rm -rf {} \;
 else
     if [ "$BASEDIR" == "/usr/local/sealion-agent" ] ; then

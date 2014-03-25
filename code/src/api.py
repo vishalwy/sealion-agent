@@ -113,7 +113,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
                 self.is_conn_err = False
                 break
                 
-            i += 0 if retry_count == -1 and i > 0 else 1
+            i += 0 if (retry_count == -1 and i > 0) else 1
             
         if response == None and self.is_authenticated == True:
             self.is_conn_err = True

@@ -45,7 +45,12 @@ class sealion(Daemon):
                 'timestamp': timestamp,
                 'stack': ''.join(traceback.format_exception(type, value, tb)),
                 'orgToken': globals.config.agent.orgToken,
-                '_id': globals.config.agent._id
+                '_id': globals.config.agent._id,
+                'process': {
+                    'uid': os.getuid(),
+                    'gid': os.getgid(),
+                    'uptime': int(globals.get_run_time() * 1000)
+                }
             }
             f = open(path, 'w')
             json.dump(report, f)
@@ -58,7 +63,7 @@ class sealion(Daemon):
     
     def read_dump(self, file_name):
         f, report = None, None
-        keys = ['timestamp', 'stack', 'orgToken', '_id']
+        keys = ['timestamp', 'stack', 'orgToken', '_id', 'process']
         
         try:
             f = open(file_name, 'r')
