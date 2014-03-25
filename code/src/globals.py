@@ -113,7 +113,9 @@ class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
         self.post_event = threading.Event()
         self.event_dispatcher = helper.event_dispatcher
         uname = platform.uname()
-        dist = platform.linux_distribution(supported_dists = ['system'])
+        dist = platform.linux_distribution()
+        dist = dist if dist[0] else platform.linux_distribution(supported_dists = ['system'])
+        dist = dist if dist[0] else ('Unknown', 'Unknown', 'Unknown')
         
         self.details = {
             'type': uname[0],
