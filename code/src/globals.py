@@ -113,7 +113,7 @@ class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
         self.post_event = threading.Event()
         self.event_dispatcher = helper.event_dispatcher
         uname = platform.uname()
-        dist = platform.linux_distribution()
+        dist = platform.linux_distribution(supported_dists = ['system'])
         
         self.details = {
             'type': uname[0],

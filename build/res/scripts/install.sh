@@ -387,7 +387,7 @@ if [ $SEALION_NODE_FOUND -eq 1 ] ; then
     kill -SIGKILL `pgrep -d ',' 'sealion-node'` >/dev/null 2>&1
 
     if [ -d "$INSTALL_PATH/var" ] ; then
-        find "$INSTALL_PATH/var" -mindepth 1 -maxdepth 1 -type d ! -name 'log' -exec rm -rf {} \;
+        find "$INSTALL_PATH/var" -mindepth 1 -maxdepth 1 ! -name 'log' -exec rm -rf {} \;
         mv "$INSTALL_PATH/var/log/sealion.log" "$INSTALL_PATH/var/log/sealion.log.old" 1>/dev/null 2>&1
         mv "$INSTALL_PATH/var/log/sealion.err" "$INSTALL_PATH/var/log/sealion.err.old" 1>/dev/null 2>&1
     fi

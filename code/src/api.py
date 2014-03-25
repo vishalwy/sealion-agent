@@ -8,6 +8,7 @@ import requests
 import tempfile
 import subprocess
 import time
+import json
 import connection
 import globals
 from constructs import *
@@ -166,9 +167,10 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
     def authenticate(self, **kwargs):
         data = self.globals.config.agent.get_dict(['orgToken', 'agentVersion'])
         data['timestamp'] = int(time.time() * 1000)
-        data['isProxy'] = True if len(requests.utils.get_environ_proxies(self.get_url())) else False
-        data.update(self.globals.details)
-        response = self.exec_method('post', kwargs, self.get_url('agents/' + self.globals.config.agent._id + '/sessions'), data = data)    
+        data['platform'] = {'isProxy': True if len(requests.utils.get_environ_proxies(self.get_url())) else False}
+        data['platform'].update(self.globals.details)
+        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+        response = self.exec_method('post', kwargs, self.get_url('agents/' + self.globals.config.agent._id + '/sessions'), data = json.dumps(data), headers = headers)    
         ret = self.status.SUCCESS
         
         if API.is_success(response):
@@ -232,6 +234,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
             ret = response.json()['agentVersion']
         else:
             ret = self.error('Failed to get agent version ', response, True)
+            ret == self.status.MISMATCH and self.stop()
         
         return ret
     
