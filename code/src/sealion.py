@@ -25,8 +25,7 @@ _log = logging.getLogger(__name__)
 
 class sealion(Daemon):
     user_name = 'sealion'
-    monit_interval = 30
-    crash_dump_threshold = 5
+    crash_loop_timeout = 120
     
     @property
     def crash_dump_path(self):
@@ -75,7 +74,7 @@ class sealion(Daemon):
         return report
     
     def send_crash_dumps(self):        
-        crash_dump_timeout = (self.monit_interval * self.crash_dump_threshold) + 10
+        crash_dump_timeout = sealion.crash_loop_timeout + 10
         from globals import Globals
         from api import API
         globals = Globals()
@@ -159,17 +158,16 @@ class sealion(Daemon):
             
     def on_fork(self, cpid):        
         try:
-            subprocess.Popen([exe_path + 'bin/monit.sh', str(cpid), str(self.monit_interval)])
+            subprocess.Popen([exe_path + 'bin/monit.sh', str(cpid), '30'])
         except Exception as e:
             _log.error('Failed to open monitoring script; %s' % str(e))
         
     def is_crash_loop(self):
         t = int(time.time())
         path = self.crash_dump_path
-        crash_dump_timeout = self.monit_interval * self.crash_dump_threshold
         
         try:
-            files = [f for f in os.listdir(path) if os.path.isfile(path + f) and t - os.path.getmtime(path + f) < crash_dump_timeout]
+            files = [f for f in os.listdir(path) if os.path.isfile(path + f) and t - os.path.getmtime(path + f) < sealion.crash_loop_timeout]
         except:
             return 0
         
@@ -184,8 +182,9 @@ class sealion(Daemon):
             else:
                 _log.error('%s crashed. Failed to save dump file' % self.__class__.__name__)
             
-            _log.info('Agent self terminating with status code %d' % exit_status.AGENT_ERR_TERMINATE)
-            os._exit(exit_status.AGENT_ERR_TERMINATE)
+            from helper import Utils
+            _log.info('Restarting agent.')
+            Utils.restart_agent()
     
     def run(self):     
         self.set_procname('sealiond')

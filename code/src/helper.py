@@ -7,6 +7,8 @@ import json
 import re
 import threading
 import logging
+import subprocess
+import sys
 import exit_status
 from constructs import *
 
@@ -109,6 +111,12 @@ class Utils(Namespace):
             os.makedirs(dir)
 
         return path    
+    
+    @staticmethod
+    def restart_agent():
+        event_dispatcher.trigger('terminate', exit_status.AGENT_ERR_RESTART)
+        subprocess.Popen(['bash', '-c', 'sleep 5 && "%s" %s' % (sys.executable, ' '.join(sys.argv))])
+        os._exit(exit_status.AGENT_ERR_RESTART)
          
 class Config:
     def __init__(self):
@@ -230,10 +238,12 @@ class Terminator(SingletonType('TerminatorMetaClass', (object, ), {})):
             self.thread = None
             return
         
-        if self.terminate_status != exit_status.AGENT_ERR_TERMINATE:
+        if self.terminate_status == exit_status.AGENT_ERR_RESTART:
+            _log.info('Some of the threads are not responding. Restarting agent.')
+            Utils.restart_agent()
+        else:
+            _log.info('Some of the threads are not responding. Agent terminating with status code %d.' % self.terminate_status)
             event_dispatcher.trigger('terminate', self.terminate_status)
-        
-        _log.info('Some of the threads are not responding. Agent self terminating with status code %d.' % self.terminate_status)
-        os._exit(self.terminate_status)
+            os._exit(self.terminate_status)
 
     

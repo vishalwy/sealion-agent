@@ -57,7 +57,7 @@ class Connection(ThreadEx):
         
         if rtc_thread:
             _log.info('Waiting for SocketIO to disconnect')
-            helper.Terminator().start(exit_status.AGENT_ERR_TERMINATE, rtc_thread.join)
+            helper.Terminator().start(exit_status.AGENT_ERR_RESTART, rtc_thread.join)
             helper.Terminator().stop()
                 
         self.start()
