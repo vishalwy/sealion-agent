@@ -243,7 +243,7 @@ check_dependency()
             INDEX=$INDEX+1
         done
 
-        TRY_EXCEPTIONS="$TRY_EXCEPTIONS\nfinally:\n\tpass"
+        TRY_EXCEPTIONS="$TRY_EXCEPTIONS\nexcept:\n\tpass"
     fi
 
     CODE=$(printf "$GLOBAL_STMTS\n$TRY_STMTS$TRY_EXCEPTIONS\n\nsys.exit($SCRIPT_ERR_SUCCESS)")
