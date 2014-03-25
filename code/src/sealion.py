@@ -182,9 +182,12 @@ class sealion(Daemon):
             else:
                 _log.error('%s crashed. Failed to save dump file' % self.__class__.__name__)
             
-            from helper import Utils
-            _log.info('Restarting agent.')
-            Utils.restart_agent()
+            try:
+                from helper import Utils
+                _log.info('Restarting agent.')
+                Utils.restart_agent()
+            except:
+                pass
     
     def run(self):     
         self.set_procname('sealiond')

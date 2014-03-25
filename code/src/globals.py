@@ -61,7 +61,7 @@ class AgentConfig(helper.Config):
                 'depends': ['_id', 'agentVersion'],
                 'optional': True
             },
-            'updateUrl': {'type': 'str,unicode', 'regex': '^.+$'},
+            'updateUrl': {'type': 'str,unicode', 'regex': '^https?://[^\s:]+(:[0-9]+)?$'},
             'org': {'type': 'str,unicode', 'depends': ['orgToken', '_id', 'agentVersion'], 'regex': '^[a-zA-Z0-9]{24}$', 'optional': True},
             'ref': {'type': 'str,unicode', 'depends': ['orgToken', 'agentVersion'], 'regex': 'curl|tarball', 'optional': True}
         }
