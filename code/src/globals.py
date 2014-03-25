@@ -5,6 +5,8 @@ __email__ = 'hello@sealion.com'
 import threading
 import os
 import logging
+import platform
+import sys
 import helper
 from constructs import *
 
@@ -105,3 +107,18 @@ class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
         self.stop_event = threading.Event()
         self.post_event = threading.Event()
         self.event_dispatcher = helper.event_dispatcher
+        uname = platform.uname()
+        dist = platform.linux_distribution()
+        
+        self.details = {
+            'type': uname[0],
+            'kernel': uname[2],
+            'arch': platform.machine(),
+            'pythonVersion': '%s %s' % (platform.python_implementation(), '.'.join([str(i) for i in sys.version_info])),
+            'dist': {
+                'name': dist[0],
+                'version': dist[1],
+                'codeName': dist[2]
+            }
+        }
+        

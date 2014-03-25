@@ -150,7 +150,7 @@ def start():
     _metric['starting_time'] = time.time()
     _log.info('Agent starting up.')
     _log.info('Using python binary at %s.' % sys.executable)
-    _log.info('Python version : %s.' % '.'.join([str(i) for i in sys.version_info]))
+    _log.info('Python version : %s.' % globals.Globals().details['pythonVersion'])
     _log.info('Agent version  : %s.' % globals.Globals().config.agent.agentVersion)
     controller = Controller()
     signal.signal(signal.SIGALRM, sig_handler)

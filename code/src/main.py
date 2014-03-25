@@ -40,7 +40,7 @@ except Exception as e:
 try:
     globals = Globals()
     api = api.API()
-except RuntimeError as e:
+except Exception as e:
     _log.error(str(e))
     sys.exit(exit_status.AGENT_ERR_FAILED_INITIALIZE)
     

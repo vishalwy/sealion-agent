@@ -8,7 +8,6 @@ import requests
 import tempfile
 import subprocess
 import time
-import platform
 import connection
 import globals
 from constructs import *
@@ -167,17 +166,8 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
     def authenticate(self, **kwargs):
         data = self.globals.config.agent.get_dict(['orgToken', 'agentVersion'])
         data['timestamp'] = int(time.time() * 1000)
-        uname = platform.uname()
-        data['type'] = uname[0]
-        data['kernel'] = uname[2]
-        data['arch'] = platform.machine()
-        data['pythonVersion'] = '.'.join([str(i) for i in sys.version_info])
-        dist = platform.linux_distribution()
-        data['dist'] = {
-            'name': dist[0],
-            'version': dist[1],
-            'codeName': dist[2]
-        }
+        data['isProxy'] = True if len(requests.utils.get_environ_proxies(self.get_url())) else False
+        data.update(self.globals.details)
         response = self.exec_method('post', kwargs, self.get_url('agents/' + self.globals.config.agent._id + '/sessions'), data = data)    
         ret = self.status.SUCCESS
         
