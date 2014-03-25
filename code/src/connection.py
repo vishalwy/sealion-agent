@@ -4,7 +4,6 @@ __email__ = 'hello@sealion.com'
 
 import logging
 import threading
-import time
 import globals
 import api
 import rtc
@@ -19,6 +18,7 @@ class Connection(ThreadEx):
         ThreadEx.__init__(self)
         self.globals = globals.Globals()
         self.api = api.API()
+        self.daemon = True
     
     def exe(self):
         while 1:

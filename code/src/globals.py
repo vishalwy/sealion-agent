@@ -6,7 +6,6 @@ import threading
 import os
 import logging
 import helper
-import exit_status
 from constructs import *
 
 _log = logging.getLogger(__name__)

@@ -217,7 +217,7 @@ class Terminator(SingletonType('TerminatorMetaClass', (object, ), {})):
     
     def start(self, terminate_status, wait_func = None, *wait_func_args):
         if self.thread == None:
-            self.thread = ThreadEx(target = self.terminate_func, name = 'Terminator')
+            self.thread = ThreadEx(target = self.terminate_func, name = 'ShutdownHelper')
             self.cancel_event.clear()
             self.thread.daemon = True
             self.thread.start()
