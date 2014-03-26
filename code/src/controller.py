@@ -27,7 +27,6 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         self.is_stop = False
         self.main_thread = threading.current_thread()
         self.activities = {}
-        self.activities_lock = threading.RLock()
     
     def handle_response(self, status):
         _log.debug('Handling response status %d.' % status)

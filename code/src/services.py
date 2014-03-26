@@ -20,9 +20,7 @@ class JobStatus(Namespace):
     RUNNING = 1
     TIMED_OUT = 2
 
-class Job:
-    timestamp_lock = threading.RLock()
-    
+class Job:    
     def __init__(self, activity, store):
         self.activity = activity
         self.status = JobStatus.NOT_RUNNING
@@ -100,7 +98,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
         self.globals = globals.Globals()
         self.jobs = []
         self.jobs_lock = threading.RLock()
-        self.activities_lock = threading.Lock()
+        self.activities_lock = threading.RLock()
         self.activities = {}
         self.queue = queue.Queue()
         self.sleep_interval = 5
