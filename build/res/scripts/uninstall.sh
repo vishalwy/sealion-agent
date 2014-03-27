@@ -46,10 +46,10 @@ log_output()
 
 cd "$BASEDIR"
 LOG_FILE_PATH="var/log"
-trap "kill 0" EXIT
+trap "kill 0 >/dev/null 2>&1" EXIT
 
 if [[ "$(id -u -n)" != "$USER_NAME" && $EUID -ne 0 ]] ; then
-    echo "Error: You need to run this script as either root or $USER_NAME" 
+    echo "Error: You need to run this script as either root or $USER_NAME" >&2
     exit 1
 fi
 

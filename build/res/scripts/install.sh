@@ -77,7 +77,7 @@ log_output()
     return 0
 }
 
-trap "kill 0" EXIT
+trap "kill 0 >/dev/null 2>&1" EXIT
 
 while getopts :i:o:c:H:x:p:a:r:v:h OPT ; do
     case "$OPT" in
@@ -330,7 +330,7 @@ fi
 
 if [ $UPDATE_AGENT -eq 0 ] ; then
     if [[ $EUID -ne 0 ]]; then
-        echo "Error: You need to run this as root" 2
+        echo "Error: You need to run this as root" >&2
         exit $SCRIPT_ERR_INVALID_USAGE
     fi
 
@@ -374,7 +374,7 @@ if [ $UPDATE_AGENT -eq 0 ] ; then
     fi
 else
     if [ "$(id -u -n)" != "$USER_NAME" ] ; then
-        echo "Error: You need to run this as $USER_NAME user" 2
+        echo "Error: You need to run this as $USER_NAME user" >&2
         exit $SCRIPT_ERR_INVALID_USAGE
     fi
 
