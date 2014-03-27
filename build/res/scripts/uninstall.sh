@@ -49,7 +49,7 @@ LOG_FILE_PATH="var/log"
 trap "kill 0" EXIT
 
 if [[ "$(id -u -n)" != "$USER_NAME" && $EUID -ne 0 ]] ; then
-    echo "Error: You need to run this script as either root or $USER_NAME" 2
+    echo "Error: You need to run this script as either root or $USER_NAME" 
     exit 1
 fi
 
