@@ -4,8 +4,10 @@ __email__ = 'hello@sealion.com'
 
 import os
 import sys
+import threading
 import logging
 import logging.handlers
+import linecache
 
 exe_path = os.path.dirname(os.path.abspath(__file__))
 exe_path = exe_path[:-1] if exe_path[len(exe_path) - 1] == '/' else exe_path
@@ -24,7 +26,7 @@ from globals import Globals
 _log = logging.getLogger(__name__)
 
 logging_list = []
-logging_level = logging.INFO
+logging_level = logging.NOTSET
 logging.basicConfig(level = logging_level, format = '%(message)s')
 formatter = logging.Formatter('%(asctime)-15s %(levelname)-7s %(thread)d - %(module)-s[%(lineno)-d]: %(message)s')
 logger = logging.getLogger()
@@ -58,13 +60,19 @@ except:
 
 try:
     temp = globals.config.sealion.logging['level'].strip()
+    is_trace = False
     
     if temp == 'error':
         logging_level = logging.ERROR
+    elif temp == 'info':
+        logging_level = logging.INFO
     elif temp == 'debug':
         logging_level = logging.DEBUG
     elif temp == 'none':
         logging_list = []
+    elif temp == 'trace':
+        is_trace = True
+        logging_level = logging.DEBUG        
 except:
     logging_list = []
 
@@ -76,15 +84,48 @@ if hasattr(globals.config.agent, '_id') == False:
     if api.register(retry_count = 2, retry_interval = 10) != api.status.SUCCESS:
         sys.exit(exit_status.AGENT_ERR_FAILED_REGISTER)
         
-logger.setLevel(logging_level)
-
 for handler in logging.root.handlers:
+    handler.setLevel(logging_level)
     handler.setFormatter(formatter)
+
+def traceit(frame, event, arg):
+    if event == "line":
+        lineno = frame.f_lineno
+        filename = frame.f_globals.get("__file__")
+        
+        if filename == None:
+            return traceit
+        
+        if (filename.endswith(".pyc") or
+            filename.endswith(".pyo")):
+            filename = filename[:-1]
+        name = frame.f_globals["__name__"]
+        
+        if (name in logging_list and name not in ['__main__', 'main']) or (len(logging_list) == 1 and logging_list[0] == 'all'):
+            line = linecache.getline(filename, lineno)
+            _log.log(5, "%s[%d]: %s" % (name, lineno, line.rstrip()))
+    return traceit
+
+if is_trace == True:
+    try:
+        lf = logging.handlers.RotatingFileHandler(helper.Utils.get_safe_path(exe_path + 'var/log/trace.log'), maxBytes = 1024 * 1024 * 100, backupCount = 5)
+        
+        if len(logging_list) != 1 or logging_list[0] != 'all':
+            lf.addFilter(LoggingList(*logging_list))
+            
+        formatter = logging.Formatter('%(asctime)-15s TRACE   %(thread)d - %(message)s')
+        lf.setFormatter(formatter)
+        sys.settrace(traceit)
+        threading.settrace(traceit)
+        lf.setLevel(5)
+        logger.addHandler(lf)
+    except:
+        pass
                
 def start(is_update_only_mode = False): 
     os.nice(19)
     globals.is_update_only_mode = is_update_only_mode
     controller.start()
-    
+
 if __name__ == "__main__":
     start()
