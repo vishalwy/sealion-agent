@@ -50,6 +50,7 @@ while getopts :a:u:t:v:h OPT ; do
             ;;
         v)
             VERSION="$OPTARG"
+            ;;
         t)
             if [ "$OPTARG" == "prod" ] ; then
                 set_target "prod" $PROD_API_URL $PROD_UPDATE_URL
