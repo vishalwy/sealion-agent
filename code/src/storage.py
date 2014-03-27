@@ -241,6 +241,7 @@ class OfflineStore(ThreadEx):
 class Sender(ThreadEx):   
     off_store_lock = threading.RLock()
     store_data_available = True
+    validate_funct = None
     
     def __init__(self, off_store):
         ThreadEx.__init__(self)
@@ -310,7 +311,7 @@ class Sender(ThreadEx):
                 item = self.queue.get(True, 5)
                 is_perform_gc = True
                 
-                if self.is_valid_activity(item['activity']) == False:
+                if Sender.validate_funct(item['activity']) == None:
                     _log.debug('Discarding activity %s' % item['activity'])                    
                     continue
             except:
@@ -324,11 +325,6 @@ class Sender(ThreadEx):
             self.post_data(item)
                 
         self.cleanup()
-        
-    def is_valid_activity(self, activity_id):
-        ret = EmptyClass()
-        self.globals.event_dispatcher.trigger('get_activity', activity_id, lambda x: [True, setattr(ret, 'value', x)][0])
-        return ret.value != None
     
     def queue_empty(self):
         pass
@@ -426,6 +422,7 @@ class Storage:
         if self.off_store.start() == False:
             return False
         
+        self.globals.event_dispatcher.trigger('get_activity_funct', lambda x: [True, setattr(Sender, 'validate_funct', x)][0])
         self.realtime_sender.start()
         self.historic_sender.start()
         return True

@@ -111,7 +111,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
             self.timeout = 30
 
         self.timeout = int(self.timeout * 1000)
-        self.globals.event_dispatcher.bind('get_activity', self.get_activity)
+        self.globals.event_dispatcher.bind('get_activity_funct', self.get_activity_funct)
 
     def is_in_whitelist(self, command):
         whitelist = []
@@ -260,12 +260,17 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
         while self.consumer_count > count:
             self.queue.put(None)
             self.consumer_count -= 1
+            
+    def get_activity_funct(self, event, callback):
+        callback(self.get_activity)
                 
-    def get_activity(self, event, activity, callback):
+    def get_activity(self, activity):
         self.activities_lock.acquire()
-        ret = self.activities.get(activity)
-        self.activities_lock.release()
-        callback(ret)
+        
+        try:      
+            return self.activities.get(activity)
+        finally:
+            self.activities_lock.release()
 
 class JobConsumer(ThreadEx):
     unique_id = 1

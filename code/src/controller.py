@@ -4,7 +4,6 @@ __email__ = 'hello@sealion.com'
 
 import logging
 import threading
-import time
 import subprocess
 import signal
 import sys
@@ -73,12 +72,12 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                     break
                     
                 store = storage.Storage()
+                job_producer = services.JobProducer(store)
 
                 if store.start() == False:
                     self.globals.set_time_metric('stopping_time')
                     break
                     
-                job_producer = services.JobProducer(store)
                 job_producer.start()
 
                 while 1:             
