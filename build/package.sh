@@ -5,9 +5,8 @@
 #Email      : hello@sealion.com
 
 #script variables
-USAGE="Usage: $0 {-t prod|test | -a <api url> -u <update url> | -h}"
+USAGE="Usage: $0 {-t prod|test | -a <api url> -u <update url> | -h} [-v <version>]"
 TARGET="custom"
-VERSION_INFO_FILE="default.js"
 
 #config variables
 TEST_API_URL="https://api-test.sealion.com"
@@ -16,6 +15,7 @@ PROD_API_URL="https://api.sealion.com"
 PROD_UPDATE_URL="https://s3.amazonaws.com/sealion.com/sealion-agent.tar.gz"
 API_URL=
 UPDATE_URL=
+VERSION="3.0.0"
 
 check_conflict()
 {
@@ -34,7 +34,7 @@ set_target()
     UPDATE_URL=$3
 }
 
-while getopts :a:u:t:h OPT ; do
+while getopts :a:u:t:v:h OPT ; do
     case "$OPT" in
         a)
             check_conflict
@@ -48,6 +48,8 @@ while getopts :a:u:t:h OPT ; do
             echo $USAGE
             exit 0
             ;;
+        v)
+            VERSION="$OPTARG"
         t)
             if [ "$OPTARG" == "prod" ] ; then
                 set_target "prod" $PROD_API_URL $PROD_UPDATE_URL
@@ -92,14 +94,8 @@ cd "$BASEDIR"
 rm -rf $TARGET >/dev/null 2>&1
 mkdir -p $TARGET/$OUTPUT/agent
 
-if [ "$API_URL" == "https://api.sealion.com" ] ; then
-    VERSION_INFO_FILE="production.js"
-fi
-
 generate_scripts()
 {
-    echo "Getting version info from $BASEDIR/../../server/config/$VERSION_INFO_FILE"
-    VERSION=$(cat "../../server/config/$VERSION_INFO_FILE" 2>/dev/null | grep "\"agentVersion\"\s*:\s*\"\([^\"]*\)\"" -o | sed 's/.*"agentVersion"\s*:\s*"\([^"]*\)".*/\1/')
     cp res/scripts/uninstall.sh $TARGET/$OUTPUT/agent/
     chmod +x $TARGET/$OUTPUT/agent/uninstall.sh
     echo "Uninstaller generated"
@@ -132,8 +128,13 @@ generate_scripts()
     chmod +x $CURL_INSTALLER
     echo "Curl installer generated"
     cp res/README $TARGET/$OUTPUT/agent
-    DATE="$(echo "$(date +"%F")" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
-    sed -i "1iSeaLion Agent $VERSION - $DATE" $TARGET/$OUTPUT/agent/README
+    DATE="$(echo "$(date +"%F %T")" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
+
+    if [ "$REVISION" != "" ] ; then
+        REVISION="- $REVISION"
+    fi
+
+    sed -i "1iSeaLion Agent $VERSION - $DATE $REVISION" $TARGET/$OUTPUT/agent/README
     echo "Generated README"
 }
 
