@@ -8,6 +8,7 @@ import threading
 import logging
 import logging.handlers
 import linecache
+import re
 
 exe_path = os.path.dirname(os.path.abspath(__file__))
 exe_path = exe_path[:-1] if exe_path[len(exe_path) - 1] == '/' else exe_path
@@ -101,7 +102,7 @@ def traceit(frame, event, arg):
             filename = filename[:-1]
         name = frame.f_globals["__name__"]
         
-        if (name in logging_list and name not in ['__main__', 'main']) or (len(logging_list) == 1 and logging_list[0] == 'all'):
+        if (re.match('^(logging.*|main|\_\_main\_\_|threading|posixpath|genericpath)$', name) == None and (name in logging_list or (len(logging_list) == 1 and logging_list[0] == 'all'))):
             line = linecache.getline(filename, lineno)
             _log.log(5, "%s[%d]: %s" % (name, lineno, line.rstrip()))
     return traceit
