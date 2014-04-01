@@ -101,14 +101,13 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                 self.handle_response(self.api.stop_status)
                 break
 
-        self.is_stop = True
         self.stop_threads()
+        self.is_stop = True
 
         _log.debug('%s generating SIGALRM', self.name)
         signal.alarm(1)
             
     def stop(self):
-        self.is_stop = True
         self.api.stop()
         
     def stop_threads(self):
