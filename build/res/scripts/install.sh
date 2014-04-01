@@ -137,6 +137,18 @@ if [ "`uname -s`" != "Linux" ] ; then
     exit $SCRIPT_ERR_INCOMPATIBLE_PLATFORM
 fi
 
+if [ $UPDATE_AGENT -eq 0 ] ; then
+    if [[ $EUID -ne 0 ]]; then
+        echo "Error: You need to run this as root" >&2
+        exit $SCRIPT_ERR_INVALID_USAGE
+    fi
+else
+    if [ "$(id -u -n)" != "$USER_NAME" ] ; then
+        echo "Error: You need to run this as $USER_NAME user" >&2
+        exit $SCRIPT_ERR_INVALID_USAGE
+    fi
+fi
+
 PYTHON_OK=0
 PYTHON=$(readlink -f "$PYTHON" 2>/dev/null)
 
@@ -328,11 +340,6 @@ if [ -f "$INSTALL_PATH/bin/sealion-node" ] ; then
 fi
 
 if [ $UPDATE_AGENT -eq 0 ] ; then
-    if [[ $EUID -ne 0 ]]; then
-        echo "Error: You need to run this as root" >&2
-        exit $SCRIPT_ERR_INVALID_USAGE
-    fi
-
     mkdir -p "$INSTALL_PATH/var/log"
 
     if [ $? -ne 0 ] ; then
@@ -372,11 +379,6 @@ if [ $UPDATE_AGENT -eq 0 ] ; then
         log_output "User $USER_NAME already exists"
     fi
 else
-    if [ "$(id -u -n)" != "$USER_NAME" ] ; then
-        echo "Error: You need to run this as $USER_NAME user" >&2
-        exit $SCRIPT_ERR_INVALID_USAGE
-    fi
-
     if [[ ! -f "$SERVICE_FILE" && $SEALION_NODE_FOUND -eq 0 ]] ; then
         log_output "Error: '$INSTALL_PATH' is not a valid sealion installation directory" 2
         exit $SCRIPT_ERR_INVALID_USAGE
