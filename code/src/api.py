@@ -221,7 +221,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         if API.is_success(response):
             _log.info('Logout successful')
         else:
-            ret = self.error('Logout failed. ', response)
+            ret = self.error('Logout failed. ', response, True)
 
         return ret
     
