@@ -7,6 +7,8 @@ import threading
 import subprocess
 import signal
 import sys
+import traceback
+import time
 import api
 import storage
 import globals
@@ -136,6 +138,30 @@ def sig_handler(signum, frame):
     elif signum == signal.SIGALRM:
         _log.debug('Received SIGALRM')
         signal.alarm(0)
+    elif signum == signal.SIGUSR1:
+        _log.debug('Received SIGUSR1')
+        dump_stack_traces()
+        
+def dump_stack_traces():
+    trace = ''
+        
+    for thread_id, frame in sys._current_frames().items():
+        trace += '# Thread ID: %s\n' % thread_id
+        trace += ''.join(traceback.format_list(traceback.extract_stack(frame)))
+        trace += '\n\n'
+            
+    timestamp = int(time.time() * 1000)
+    f = None
+    
+    try:
+        path = helper.Utils.get_safe_path(globals.Globals().exe_path + ('var/log/stack_trace_%d.log' % timestamp))
+        f = open(path, 'w')
+        f.write(trace)
+        _log.info('Stack trace saved at %s' % path)
+    except Exception as e:
+        _log.error('Failed to save stack trace; %s' % str(e))
+    finally:
+        f and f.close()
         
 def stop(status = 0):
     _log.info('Agent shutting down with status code %d.' % status)
@@ -152,10 +178,11 @@ def start():
     signal.signal(signal.SIGALRM, sig_handler)
     signal.signal(signal.SIGTERM, sig_handler)
     signal.signal(signal.SIGINT, sig_handler)
+    signal.signal(signal.SIGUSR1, sig_handler)
     controller.start()
     
     while 1:
-        _log.debug('Waiting for signals SIGALRM or SIGTERM or SIGINT')
+        _log.debug('Waiting for signals SIGALRM or SIGTERM or SIGINT or SIGUSR1')
         signal.pause()
         
         if controller.is_stop == True:
