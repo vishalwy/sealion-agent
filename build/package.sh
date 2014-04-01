@@ -5,7 +5,7 @@
 #Email      : hello@sealion.com
 
 #script variables
-USAGE="Usage: $0 {[-s <sub domain>] [-v <version>] | -h}"
+USAGE="Usage: $0 {[-s <sub domain>] [-v <version>]} | -h"
 
 #config variables
 SUBDOMAIN=
@@ -85,6 +85,7 @@ generate_scripts()
     echo "Curl installer generated"
     cp res/README $TARGET/$OUTPUT/agent
     DATE="$(echo "$(date +"%F %T")" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
+    REVISION=$(git rev-parse --short=10 HEAD 2>/dev/null)
 
     if [ "$REVISION" != "" ] ; then
         REVISION="- $REVISION"

@@ -5,7 +5,6 @@ __email__ = 'hello@sealion.com'
 import sys
 import logging
 import requests
-import tempfile
 import subprocess
 import time
 import json
@@ -331,7 +330,6 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         }       
         subprocess.call(['bash', '-c', format % format_spec])
         time.sleep(60)
-        _log.error('Failed to install the update')
+        _log.error('Failed to install update %s' % version)
         self.updater = None
         
-
