@@ -66,7 +66,6 @@ class AgentConfig(helper.Config):
                 'depends': ['_id', 'agentVersion'],
                 'optional': True
             },
-            'updateUrl': {'type': 'str,unicode', 'regex': '^https?://[^\s:]+(:[0-9]+)?$'},
             'org': {'type': 'str,unicode', 'depends': ['orgToken', '_id', 'agentVersion'], 'regex': '^[a-zA-Z0-9]{24}$', 'optional': True},
             'ref': {'type': 'str,unicode', 'depends': ['orgToken', 'agentVersion'], 'regex': 'curl|tarball', 'optional': True}
         }
@@ -79,8 +78,8 @@ class AgentConfig(helper.Config):
         version = data.get('agentVersion')
              
         if version and version != self.data['agentVersion']:
+            hasattr(self, '_id') and globals.event_dispatcher.trigger('update_agent', data['agentVersion'])
             del data['agentVersion']
-            hasattr(self, '_id') and globals.event_dispatcher.trigger('update_agent')
             
         ret = helper.Config.update(self, data)
         globals.event_dispatcher.trigger('set_activities')

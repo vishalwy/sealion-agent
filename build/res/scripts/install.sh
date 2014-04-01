@@ -17,7 +17,6 @@ SCRIPT_ERR_FAILED_USER_CREATE=8
 
 #config variables
 API_URL="<api-url>"
-UPDATE_URL="<agent-download-url>"
 VERSION="<version>"
 
 #script variables
@@ -275,7 +274,7 @@ migrate_node_agent_config()
 
 setup_config()
 {
-    CONFIG="\"orgToken\": \"$ORG_TOKEN\", \"apiUrl\": \"$API_URL\", \"updateUrl\": \"$UPDATE_URL\", \"agentVersion\": \"$VERSION\", \"name\": \"$HOST_NAME\", \"ref\": \"$REF\""
+    CONFIG="\"orgToken\": \"$ORG_TOKEN\", \"apiUrl\": \"$API_URL\", \"agentVersion\": \"$VERSION\", \"name\": \"$HOST_NAME\", \"ref\": \"$REF\""
     TEMP_VAR=""
 
     if [ "$CATEGORY" != "" ] ; then
@@ -431,7 +430,6 @@ else
         find agent/ -mindepth 1 -maxdepth 1 ! -name 'etc' -exec cp -r {} "$INSTALL_PATH" \;
         update_agent_config "agentVersion" $VERSION
         update_agent_config "apiUrl" $API_URL
-        update_agent_config "updateUrl" $UPDATE_URL
     fi
 
     log_output "Sealion agent updated successfully"

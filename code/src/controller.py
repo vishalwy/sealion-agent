@@ -59,7 +59,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                 version_type = type(version)
 
                 if (version_type is str or version_type is unicode) and version != self.globals.config.agent.agentVersion:
-                    self.api.update_agent()
+                    self.api.update_agent(None, version)
 
                 _log.debug('%s waiting for stop event for %d seconds.' % (self.name, 5 * 60, ))
                 self.globals.stop_event.wait(5 * 60)

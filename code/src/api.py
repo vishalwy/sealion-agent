@@ -9,6 +9,7 @@ import tempfile
 import subprocess
 import time
 import json
+import re
 import connection
 import globals
 from constructs import *
@@ -252,11 +253,11 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         
         return ret
     
-    def update_agent(self, event = None):
+    def update_agent(self, event, version):
         if self.updater != None:
             return
         
-        self.updater = ThreadEx(target = self.download_update, name = 'Updater')
+        self.updater = ThreadEx(target = self.install_update, name = 'Updater', args = (version,))
         self.updater.daemon = True
         self.updater.start()
     
@@ -317,68 +318,20 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
             
         return ret
     
-    def download_update(self):
-        exe_path = self.globals.exe_path
-        url = self.globals.config.agent.updateUrl
-        temp_dir = tempfile.mkdtemp()
-        temp_dir = temp_dir[:-1] if temp_dir[len(temp_dir) - 1] == '/' else temp_dir
-        filename = '%s/%s' % (temp_dir, url.split('/')[-1])
-        _log.info('Update found; Downloading update to %s' % filename)
-        f = open(filename, 'wb')
-        response = self.exec_method('get', {'retry_count': 0}, url, stream = True)
-        
-        if API.is_success(response) == False:
-            self.error('Failed to download the update', response, True)
-            f and f.close()
-            subprocess.call(['bash', '-c', 'rm -rf "%s"' % temp_dir])
-            self.updater = None
-            return
-            
-        is_completed = False
-        
-        try:
-            for chunk in response.iter_content(chunk_size = 1024):
-                if self.globals.stop_event.is_set():
-                    _log.info('%s received stop event' % self.name)
-                    break
-
-                if chunk:
-                    f.write(chunk)
-                    f.flush()
-
-            is_completed = True
-        except Exception as e:
-            _log.error(str(e))
-        finally:
-            f.close()
-            
-        if is_completed == True:
-            _log.info('Update succesfully downloaded to %s' % filename)
-        else:
-            _log.info('Aborted downloading update')
-            subprocess.call(['bash', '-c', 'rm -rf "%s"' % temp_dir])
-            self.updater = None
-            return
-        
-        _log.debug('Extracting %s to %s' % (filename, temp_dir))
-        
-        if subprocess.call(['tar', '-xf', "%s" % filename, '--directory=%s' % temp_dir]):
-            _log.error('Failed to extract update from  %s' % filename)
-            subprocess.call(['bash', '-c', 'rm -rf "%s"' % temp_dir])
-            self.updater = None
-            return
-            
-        _log.info('Installing the update')
+    def install_update(self, version):
+        _log.info('Update found; Installing update %s' % version)
+        format = 'curl -s %(download_url)s | bash /dev/stdin -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" -v %(version)s'
         format_spec = {
-            'temp_dir': temp_dir, 
             'exe_path': exe_path, 
             'executable': sys.executable, 
             'org_token': self.globals.config.agent.orgToken, 
-            'agent_id': self.globals.config.agent._id
-        }
-        format = '"%(temp_dir)s/sealion-agent/install.sh" -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" && rm -rf "%(temp_dir)s"'
-        subprocess.Popen(['bash', '-c', format % format_spec])
+            'agent_id': self.globals.config.agent._id,
+            'version': version, 
+            'download_url': re.sub('://api', '://agent', self.get_url()) 
+        }       
+        subprocess.call(['bash', '-c', format % format_spec])
         time.sleep(60)
         _log.error('Failed to install the update')
         self.updater = None
+        
 

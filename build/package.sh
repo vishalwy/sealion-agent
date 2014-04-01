@@ -5,62 +5,23 @@
 #Email      : hello@sealion.com
 
 #script variables
-USAGE="Usage: $0 {-t prod|test | -a <api url> -u <update url> | -h} [-v <version>]"
-TARGET="custom"
+USAGE="Usage: $0 {[-s <sub domain>] [-v <version>] | -h}"
 
 #config variables
-TEST_API_URL="https://api-test.sealion.com"
-TEST_UPDATE_URL="https://agent-test.sealion.com/sealion-agent.tar.gz"
-PROD_API_URL="https://api.sealion.com"
-PROD_UPDATE_URL="https://s3.amazonaws.com/sealion.com/sealion-agent.tar.gz"
-API_URL=
-UPDATE_URL=
+SUBDOMAIN=
+API_URL="https://api.sealion.com"
+AGENT_URL="https://agent.sealion.com"
+TARGET="sealion.com"
 VERSION="3.0.0"
 
-check_conflict()
-{
-    if [[ "$API_URL" != "" && "$UPDATE_URL" != "" ]] ; then
-        echo "You cannot specify multiple targets or urls" >&2
-        echo $USAGE
-        exit 1
-    fi
-}
-
-set_target()
-{
-    check_conflict
-    TARGET=$1
-    API_URL=$2
-    UPDATE_URL=$3
-}
-
-while getopts :a:u:t:v:h OPT ; do
+while getopts :s:v:h OPT ; do
     case "$OPT" in
-        a)
-            check_conflict
-            API_URL=$OPTARG
-            ;;
-        u)
-            check_conflict
-            UPDATE_URL=$OPTARG
+        s)
+            SUBDOMAIN=$OPTARG
             ;;
         h)
             echo $USAGE
             exit 0
-            ;;
-        v)
-            VERSION="$OPTARG"
-            ;;
-        t)
-            if [ "$OPTARG" == "prod" ] ; then
-                set_target "prod" $PROD_API_URL $PROD_UPDATE_URL
-            elif [ "$OPTARG" == "test" ] ; then
-                set_target "test" $TEST_API_URL $TEST_UPDATE_URL
-            else
-                echo "Invalid argument for option -$OPTARG." >&2    
-                echo $USAGE
-                exit 1
-            fi
             ;;
         \?)
             echo "Invalid option -$OPTARG" >&2
@@ -75,15 +36,12 @@ while getopts :a:u:t:v:h OPT ; do
     esac
 done
 
-API_URL="$(echo "$API_URL" | sed -e 's/^\s*//' -e 's/\s*$//')"
-API_URL=${API_URL%/}
-UPDATE_URL="$(echo "$UPDATE_URL" | sed -e 's/^\s*//' -e 's/\s*$//')"
-UPDATE_URL=${UPDATE_URL%/}
+SUBDOMAIN="$(echo "$SUBDOMAIN" | sed -e 's/^\s*//' -e 's/\s*$//')"
 
-if [[ "$API_URL" == "" || "$UPDATE_URL" == "" ]] ; then
-    echo "Please specify valid target or urls" >&2
-    echo $USAGE
-    exit 1
+if [ "$SUBDOMAIN" != "" ] ; then
+    API_URL="https://api-$SUBDOMAIN.sealion.com"
+    AGENT_URL="https://agent-$SUBDOMAIN.sealion.com"
+    TARGET="$SUBDOMAIN.sealion.com"
 fi
 
 BASEDIR=$(readlink -f "$0")
@@ -112,9 +70,6 @@ generate_scripts()
     URL="$(echo "$API_URL" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
     ARGS="-i 's/\(^API\_URL=\)\(\"[^\"]\+\"\)/\1\"$URL\"/'"
     eval sed "$ARGS" $INSTALLER
-    URL="$(echo "$UPDATE_URL" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
-    ARGS="-i 's/\(^UPDATE\_URL=\)\(\"[^\"]\+\"\)/\1\"$URL\"/'"
-    eval sed "$ARGS" $INSTALLER
     ARGS="-i 's/\(^VERSION=\)\(\"[^\"]\+\"\)/\1\"$VERSION\"/'"
     eval sed "$ARGS" $INSTALLER
     chmod +x $INSTALLER
@@ -123,7 +78,7 @@ generate_scripts()
     URL="$(echo "$API_URL" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
     ARGS="-i 's/\(^API\_URL=\)\(\"[^\"]\+\"\)/\1\"$URL\"/'"
     eval sed "$ARGS" $CURL_INSTALLER
-    URL="$(echo "$UPDATE_URL" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
+    URL="$(echo "$AGENT_URL" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
     ARGS="-i 's/\(^DOWNLOAD\_URL=\)\(\"[^\"]\+\"\)/\1\"$URL\"/'"
     eval sed "$ARGS" $CURL_INSTALLER    
     chmod +x $CURL_INSTALLER
