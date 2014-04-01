@@ -76,7 +76,7 @@ log_output()
     return 0
 }
 
-trap "kill 0 >/dev/null 2>&1" EXIT
+trap "kill -PIPE 0 >/dev/null 2>&1" EXIT
 
 while getopts :i:o:c:H:x:p:a:r:v:h OPT ; do
     case "$OPT" in
