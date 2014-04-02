@@ -167,7 +167,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
     def authenticate(self, **kwargs):
         data = self.globals.config.agent.get_dict(['orgToken', 'agentVersion'])
         data['timestamp'] = int(time.time() * 1000)
-        data['platform'] = {'isProxy': True if requests.utils.get_environ_proxies(self.api.get_url()).get('https') != None else False}
+        data['platform'] = {'isProxy': True if requests.utils.get_environ_proxies(self.get_url()).get('https') != None else False}
         data['platform'].update(self.globals.details)
         headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
         response = self.exec_method('post', kwargs, self.get_url('agents/' + self.globals.config.agent._id + '/sessions'), data = json.dumps(data), headers = headers)    

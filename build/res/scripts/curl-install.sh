@@ -97,7 +97,7 @@ report_failure()
     curl -s PROXY -w "%{http_code}" -H "Content-Type: application/json" -X PUT -d "{\"reason\":\"$1\"}"  "$API_URL/orgs/$ORG_TOKEN/agents/$AGENT_ID/updatefail" >/dev/null 2>&1
 }
 
-TMP_DATA_FILE=$(mktemp -d $TMP_DATA_FILE)
+TMP_DATA_FILE=$(mktemp $TMP_DATA_FILE)
 log_output "Getting agent installer details..."
 RET=$(curl -s $PROXY -w "%{http_code}" -H "Content-Type: application/json" "$API_URL/orgs/$ORG_TOKEN/agentVersion" -o "$TMP_DATA_FILE" 2>/dev/null)
 
