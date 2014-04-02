@@ -132,7 +132,7 @@ class RTC(ThreadEx):
             self.sio = None
             _log.debug('GC collected %d unreachables' % gc.collect())
         
-        if len(requests.utils.get_environ_proxies(self.api.get_url())):
+        if requests.utils.get_environ_proxies(self.api.get_url()).get('https') != None:
             _log.info('Proxy detected; Forcing xhr-polling for SocketIO')
             kwargs['transports'] = ['xhr-polling']
         

@@ -114,7 +114,7 @@ class Utils(Namespace):
     
     @staticmethod
     def restart_agent():
-        subprocess.Popen(['bash', '-c', 'sleep 30 && "%s" %s' % (sys.executable, ' '.join(sys.argv))])
+        subprocess.Popen(['bash', '-c', 'sleep 10 && "%s" %s' % (sys.executable, ' '.join(sys.argv))])
         event_dispatcher.trigger('terminate', exit_status.AGENT_ERR_RESTART)
         os._exit(exit_status.AGENT_ERR_RESTART)
          
