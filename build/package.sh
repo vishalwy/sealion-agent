@@ -5,19 +5,22 @@
 #Email      : hello@sealion.com
 
 #script variables
-USAGE="Usage: $0 {[-s <sub domain>] [-v <version>]} | -h"
+USAGE="Usage: $0 {-v <version> [-s <sub domain>]} | -h"
 
 #config variables
 SUBDOMAIN=
 API_URL="https://api.sealion.com"
 AGENT_URL="https://agent.sealion.com"
 TARGET="sealion.com"
-VERSION="3.0.0"
+VERSION=
 
 while getopts :s:v:h OPT ; do
     case "$OPT" in
         s)
             SUBDOMAIN=$OPTARG
+            ;;
+        v)
+            VERSION=$OPTARG
             ;;
         h)
             echo $USAGE
@@ -36,7 +39,14 @@ while getopts :s:v:h OPT ; do
     esac
 done
 
+VERSION="$(echo "$VERSION" | sed -e 's/^\s*//' -e 's/\s*$//')"
 SUBDOMAIN="$(echo "$SUBDOMAIN" | sed -e 's/^\s*//' -e 's/\s*$//')"
+
+if [ "$VERSION" == "" ] ; then
+    echo "Please specify a valid version for the build"
+    echo $USAGE
+    exit 1
+fi
 
 if [ "$SUBDOMAIN" != "" ] ; then
     API_URL="https://api-$SUBDOMAIN.sealion.com"
@@ -47,7 +57,7 @@ fi
 BASEDIR=$(readlink -f "$0")
 BASEDIR=$(dirname "$BASEDIR")
 BASEDIR=${BASEDIR%/}
-OUTPUT=sealion-agent
+OUTPUT="sealion-agent"
 TARGET="bin/$TARGET"
 cd "$BASEDIR"
 rm -rf $TARGET >/dev/null 2>&1
@@ -100,6 +110,6 @@ cp -r res/etc $TARGET/$OUTPUT/agent
 mkdir -p $TARGET/$OUTPUT/agent/etc/init.d
 mkdir -p $TARGET/$OUTPUT/agent/bin
 generate_scripts
-tar -zcvf $TARGET/$OUTPUT.tar.gz --exclude="*.pyc" --exclude="var" --exclude="__pycache__" --exclude="*~" --exclude-vcs --exclude-backups --directory=$TARGET $OUTPUT/
+tar -zcvf "$TARGET/$OUTPUT-$VERSION-noarch.tar.gz" --exclude="*.pyc" --exclude="var" --exclude="__pycache__" --exclude="*~" --exclude-vcs --exclude-backups --directory=$TARGET $OUTPUT/
 rm -rf $TARGET/$OUTPUT
 

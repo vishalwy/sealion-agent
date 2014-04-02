@@ -8,7 +8,6 @@ BASEDIR=$(readlink -f "$0")
 BASEDIR=$(dirname "$BASEDIR")
 BASEDIR=${BASEDIR%/}
 USER_NAME="sealion"
-LOG_FILE_PATH=
 
 log_output()
 {
@@ -37,15 +36,22 @@ log_output()
         echo $OUTPUT >&1
     fi
 
-    if [ "$LOG_FILE_PATH" != "" ] ; then
-        echo $(date +"%F %T,%3N - $ST: $OUTPUT") >>"$LOG_FILE_PATH/update.log"
+    if [ "$UPDATE_LOG_FILE" == "" ] ; then
+        if [ -w "var/log" ] ; then
+            UPDATE_LOG_FILE="var/log/update.log"
+        else
+            UPDATE_LOG_FILE=" "
+        fi
+    fi
+
+    if [ "$UPDATE_LOG_FILE" != " " ] ; then
+        echo $(date +"%F %T,%3N - $ST: $OUTPUT") >>"$UPDATE_LOG_FILE"
     fi
 
     return 0
 }
 
 cd "$BASEDIR"
-LOG_FILE_PATH="var/log"
 trap "kill -PIPE 0 >/dev/null 2>&1" EXIT
 
 if [[ "$(id -u -n)" != "$USER_NAME" && $EUID -ne 0 ]] ; then

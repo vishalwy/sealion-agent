@@ -30,7 +30,6 @@ INSTALL_AS_SERVICE=1
 SEALION_NODE_FOUND=0
 UPDATE_AGENT=0
 USAGE="Usage: $0 {-o <Organization token> [-c <Category name>] [-H <Host name>] [-x <Https proxy>] [-p <Python binary>] | -h for Help}"
-LOG_FILE_PATH=
 
 #setup variables
 INSTALL_PATH=$DEFAULT_INSTALL_PATH
@@ -69,8 +68,16 @@ log_output()
         echo $OUTPUT >&1
     fi
 
-    if [ "$LOG_FILE_PATH" != "" ] ; then
-        echo $(date +"%F %T,%3N - $ST: $OUTPUT") >>"$LOG_FILE_PATH/update.log"
+    if [ "$UPDATE_LOG_FILE" == "" ] ; then
+        if [ -w "$INSTALL_PATH/var/log" ] ; then
+            UPDATE_LOG_FILE="$INSTALL_PATH/var/log/update.log"
+        else
+            UPDATE_LOG_FILE=" "
+        fi
+    fi
+
+    if [ "$UPDATE_LOG_FILE" != " " ] ; then
+        echo $(date +"%F %T,%3N - $ST: $OUTPUT") >>"$UPDATE_LOG_FILE"
     fi
 
     return 0
@@ -128,25 +135,9 @@ if [ "$ORG_TOKEN" == '' ] ; then
     exit $SCRIPT_ERR_INVALID_USAGE
 fi
 
-if [ -d "$INSTALL_PATH/var/log" ] ; then
-    LOG_FILE_PATH="$INSTALL_PATH/var/log"
-fi
-
 if [ "`uname -s`" != "Linux" ] ; then
     log_output 'Error: SeaLion agent works on Linux only' 2
     exit $SCRIPT_ERR_INCOMPATIBLE_PLATFORM
-fi
-
-if [ $UPDATE_AGENT -eq 0 ] ; then
-    if [[ $EUID -ne 0 ]]; then
-        echo "Error: You need to run this as root" >&2
-        exit $SCRIPT_ERR_INVALID_USAGE
-    fi
-else
-    if [ "$(id -u -n)" != "$USER_NAME" ] ; then
-        echo "Error: You need to run this as $USER_NAME user" >&2
-        exit $SCRIPT_ERR_INVALID_USAGE
-    fi
 fi
 
 PYTHON_OK=0
@@ -340,6 +331,11 @@ if [ -f "$INSTALL_PATH/bin/sealion-node" ] ; then
 fi
 
 if [ $UPDATE_AGENT -eq 0 ] ; then
+    if [[ $EUID -ne 0 ]]; then
+        echo "Error: You need to run this as root" >&2
+        exit $SCRIPT_ERR_INVALID_USAGE
+    fi
+
     mkdir -p "$INSTALL_PATH/var/log"
 
     if [ $? -ne 0 ] ; then
@@ -379,6 +375,11 @@ if [ $UPDATE_AGENT -eq 0 ] ; then
         log_output "User $USER_NAME already exists"
     fi
 else
+    if [ "$(id -u -n)" != "$USER_NAME" ] ; then
+        echo "Error: You need to run this as $USER_NAME user" >&2
+        exit $SCRIPT_ERR_INVALID_USAGE
+    fi
+
     if [[ ! -f "$SERVICE_FILE" && $SEALION_NODE_FOUND -eq 0 ]] ; then
         log_output "Error: '$INSTALL_PATH' is not a valid sealion installation directory" 2
         exit $SCRIPT_ERR_INVALID_USAGE

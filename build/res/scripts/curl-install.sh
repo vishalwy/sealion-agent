@@ -10,11 +10,11 @@ DOWNLOAD_URL="<agent-download-url>"
 
 #script variables
 USAGE="Usage: curl -s $DOWNLOAD_URL | sudo bash /dev/stdin {-o <Organization token> [-c <Category name>] [-H <Host name>] [-x <Https proxy>] [-p <Python binary>] | -h for Help}"
-LOG_FILE_PATH=
 
 #setup variables
 INSTALL_PATH="/usr/local/sealion-agent"
 TMP_FILE_PATH="/tmp/sealion-agent.XXXX"
+TMP_DATA_FILE="/tmp/sealion-agent.response.XXXX"
 PROXY=
 AGENT_ID=
 ORG_TOKEN=
@@ -46,8 +46,16 @@ log_output()
         echo $OUTPUT >&1
     fi
 
-    if [ "$LOG_FILE_PATH" != "" ] ; then
-        echo $(date +"%F %T,%3N - $ST: $OUTPUT") >>"$LOG_FILE_PATH/update.log"
+    if [ "$UPDATE_LOG_FILE" == "" ] ; then
+        if [ -w "$INSTALL_PATH/var/log" ] ; then
+            UPDATE_LOG_FILE="$INSTALL_PATH/var/log/update.log"
+        else
+            UPDATE_LOG_FILE=" "
+        fi
+    fi
+
+    if [ "$UPDATE_LOG_FILE" != " " ] ; then
+        echo $(date +"%F %T,%3N - $ST: $OUTPUT") >>"$UPDATE_LOG_FILE"
     fi
 
     return 0
@@ -84,8 +92,13 @@ while getopts :i:o:c:H:x:p:a:r:v:h OPT ; do
     esac
 done
 
-if [ -d "$INSTALL_PATH/var/log" ] ; then
-    LOG_FILE_PATH="$INSTALL_PATH/var/log"
+TMP_DATA_FILE=$(mktemp -d $TMP_DATA_FILE)
+log_output "Getting installer details..."
+
+
+RET=$(curl -s $PROXY -w "%{http_code}" -H "Content-Type: application/json" "$API_URL/orgs/$ORG_TOKEN/agentVersion" -o "$TMP_DATA_FILE")
+if [[ $? -ne 0 || $RET -ne 200 ]] ; then
+    log_output "Error: Failed to download agent installer" 2
 fi
 
 TMP_FILE_PATH=$(mktemp -d $TMP_FILE_PATH)
