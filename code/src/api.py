@@ -320,7 +320,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         _log.info('Update found; Installing update version %s' % version)
         format = 'curl -s %(download_url)s | bash /dev/stdin -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" -v %(version)s'
         format_spec = {
-            'exe_path': exe_path, 
+            'exe_path': self.globals.exe_path, 
             'executable': sys.executable, 
             'org_token': self.globals.config.agent.orgToken, 
             'agent_id': self.globals.config.agent._id,
