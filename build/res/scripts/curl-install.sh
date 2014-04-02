@@ -107,7 +107,14 @@ if [[ $? -ne 0 || $RET -ne 200 ]] ; then
     exit 117
 fi
 
-DOWNLOAD_URL=$(cat $TMP_DATA_FILE)
+MAJOR_VERSION=$(cat $TMP_DATA_FILE | grep '"agentVersion"\s*:\s*"[^"]*"' -o |  sed 's/"agentVersion"\s*:\s*"\([^"]*\)"/\1/' | grep '^[0-9]\+' -o)
+
+if [ $MAJOR_VERSION -le 2 ] ; then
+    curl -s $PROXY "$DOWNLOAD_URL/curl-install-node.sh" | bash /dev/stdin "$@"
+    exit 0
+fi
+
+DOWNLOAD_URL=$(cat $TMP_DATA_FILE | grep '"agentDownloadURL"\s*:\s*"[^"]*"' -o |  sed 's/"agentDownloadURL"\s*:\s*"\([^"]*\)"/\1/')
 rm -f $TMP_DATA_FILE
 TMP_FILE_PATH=$(mktemp -d $TMP_FILE_PATH)
 TMP_FILE_PATH=${TMP_FILE_PATH%/}
