@@ -167,8 +167,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
     def authenticate(self, **kwargs):
         data = self.globals.config.agent.get_dict(['orgToken', 'agentVersion'])
         data['timestamp'] = int(time.time() * 1000)
-        data['platform'] = {'isProxy': True if requests.utils.get_environ_proxies(self.get_url()).get('https') != None else False}
-        data['platform'].update(self.globals.details)
+        data['platform'] = self.globals.details
         headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
         response = self.exec_method('post', kwargs, self.get_url('agents/' + self.globals.config.agent._id + '/sessions'), data = json.dumps(data), headers = headers)    
         ret = self.status.SUCCESS
@@ -318,14 +317,15 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
     
     def install_update(self, version):
         _log.info('Update found; Installing update version %s' % version)
-        format = 'curl -s %(download_url)s | bash /dev/stdin -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" -v %(version)s'
+        format = 'curl -s %(download_url)s | bash /dev/stdin -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" -v %(version)s %(proxy)s'
         format_spec = {
             'exe_path': self.globals.exe_path, 
             'executable': sys.executable, 
             'org_token': self.globals.config.agent.orgToken, 
             'agent_id': self.globals.config.agent._id,
             'version': version, 
-            'download_url': re.sub('://api', '://agent', self.get_url()) 
+            'download_url': re.sub('://api', '://agent', self.get_url()),
+            'proxy': ('-x "%s"' % self.globals.proxy_url) if self.globals.details['isProxy'] else ''
         }       
         subprocess.call(['bash', '-c', format % format_spec])
         time.sleep(60)

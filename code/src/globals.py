@@ -9,6 +9,7 @@ import platform
 import sys
 import time
 import multiprocessing
+import requests
 import helper
 from datetime import datetime
 from constructs import *
@@ -111,6 +112,7 @@ class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
         self.stop_event = threading.Event()
         self.post_event = threading.Event()
         self.event_dispatcher = helper.event_dispatcher
+        self.proxy_url = requests.utils.get_environ_proxies(self.config.agent.apiUrl).get('https', '')
         uname = platform.uname()
         dist = platform.linux_distribution()
         dist = dist if dist[0] else platform.linux_distribution(supported_dists = ['system'])
@@ -122,6 +124,7 @@ class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
             'arch': platform.machine(),
             'pythonVersion': '%s %s' % (platform.python_implementation(), '.'.join([str(i) for i in sys.version_info])),
             'cpuCount': multiprocessing.cpu_count(),
+            'isProxy': True if self.proxy_url else False,
             'dist': {
                 'name': dist[0],
                 'version': dist[1],

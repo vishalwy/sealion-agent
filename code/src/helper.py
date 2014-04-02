@@ -113,8 +113,12 @@ class Utils(Namespace):
         return path    
     
     @staticmethod
-    def restart_agent():
-        subprocess.Popen(['bash', '-c', 'sleep 10 && "%s" %s' % (sys.executable, ' '.join(sys.argv))])
+    def restart_agent(message = ''):
+        timeout = 10
+        message = message + '. ' if message else ''
+        message += 'Restarting agent in %d seconds.' % timeout
+        _log.info(message)
+        subprocess.Popen(['bash', '-c', 'sleep %d ; "%s" %s' % (timeout, sys.executable, ' '.join(['"%s"' % arg for arg in sys.argv]))])
         event_dispatcher.trigger('terminate', exit_status.AGENT_ERR_RESTART)
         os._exit(exit_status.AGENT_ERR_RESTART)
          
@@ -239,8 +243,7 @@ class Terminator(SingletonType('TerminatorMetaClass', (object, ), {})):
             return
         
         if self.terminate_status == exit_status.AGENT_ERR_RESTART:
-            _log.info('Some of the threads are not responding. Restarting agent.')
-            Utils.restart_agent()
+            Utils.restart_agent('Some of the threads are not responding')
         else:
             _log.info('Some of the threads are not responding. Agent terminating with status code %d.' % self.terminate_status)
             event_dispatcher.trigger('terminate', self.terminate_status)

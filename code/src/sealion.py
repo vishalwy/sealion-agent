@@ -189,7 +189,6 @@ class sealion(Daemon):
             
             try:
                 from helper import Utils
-                _log.info('Restarting agent.')
                 Utils.restart_agent()
             except:
                 pass
