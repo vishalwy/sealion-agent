@@ -246,7 +246,6 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         
         if API.is_success(response):
             _log.info('Sent crash dump @ %d' % data['timestamp'])
-            self.set_events(post_event = True)
         else:
             ret = self.error('Failed to send crash dump ', response, True)
         
@@ -318,7 +317,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         return ret
     
     def install_update(self, version):
-        _log.info('Update found; Installing update %s' % version)
+        _log.info('Update found; Installing update version %s' % version)
         format = 'curl -s %(download_url)s | bash /dev/stdin -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" -v %(version)s'
         format_spec = {
             'exe_path': exe_path, 
@@ -330,6 +329,6 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         }       
         subprocess.call(['bash', '-c', format % format_spec])
         time.sleep(60)
-        _log.error('Failed to install update %s' % version)
+        _log.error('Failed to install update version %s' % version)
         self.updater = None
         
