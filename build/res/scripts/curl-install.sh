@@ -107,10 +107,13 @@ if [[ $? -ne 0 || $RET -ne 200 ]] ; then
     exit 117
 fi
 
-MAJOR_VERSION=$(cat $TMP_DATA_FILE | grep '"agentVersion"\s*:\s*"[^"]*"' -o |  sed 's/"agentVersion"\s*:\s*"\([^"]*\)"/\1/' | grep '^[0-9]\+' -o)
+VERSION=$(cat $TMP_DATA_FILE | grep '"agentVersion"\s*:\s*"[^"]*"' -o |  sed 's/"agentVersion"\s*:\s*"\([^"]*\)"/\1/')
+MAJOR_VERSION=$(echo $VERSION | grep '^[0-9]\+' -o)
 
 if [ $MAJOR_VERSION -le 2 ] ; then
-    curl -s $PROXY "$DOWNLOAD_URL/curl-install-node.sh" | bash /dev/stdin "$@"
+    echo "Executing curl-install-node.sh"
+    curl -s $PROXY "$DOWNLOAD_URL/curl-install-node.sh" 2>/dev/null | bash /dev/stdin "$@" -v $VERSION
+    rm -f $TMP_DATA_FILE
     exit 0
 fi
 
