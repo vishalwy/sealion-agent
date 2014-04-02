@@ -92,23 +92,40 @@ while getopts :i:o:c:H:x:p:a:r:v:h OPT ; do
     esac
 done
 
+report_failure()
+{
+    curl -s PROXY -w "%{http_code}" -H "Content-Type: application/json" -X PUT -d "{\"reason\":\"$1\"}"  "$API_URL/orgs/$ORG_TOKEN/agents/$AGENT_ID/updatefail" >/dev/null 2>&1
+}
+
 TMP_DATA_FILE=$(mktemp -d $TMP_DATA_FILE)
-log_output "Getting installer details..."
+log_output "Getting agent installer details..."
+RET=$(curl -s $PROXY -w "%{http_code}" -H "Content-Type: application/json" "$API_URL/orgs/$ORG_TOKEN/agentVersion" -o "$TMP_DATA_FILE" 2>/dev/null)
 
-
-RET=$(curl -s $PROXY -w "%{http_code}" -H "Content-Type: application/json" "$API_URL/orgs/$ORG_TOKEN/agentVersion" -o "$TMP_DATA_FILE")
 if [[ $? -ne 0 || $RET -ne 200 ]] ; then
-    log_output "Error: Failed to download agent installer" 2
+    log_output "Error: Failed to get agent installer details" 2
+    rm -f $TMP_DATA_FILE
+    exit 117
 fi
 
+DOWNLOAD_URL=$(cat $TMP_DATA_FILE)
+rm -f $TMP_DATA_FILE
 TMP_FILE_PATH=$(mktemp -d $TMP_FILE_PATH)
 TMP_FILE_PATH=${TMP_FILE_PATH%/}
 TMP_FILE_NAME="$TMP_FILE_PATH/sealion-agent.tar.gz"
 log_output "Downloading agent installer..."
-curl -s $PROXY $DOWNLOAD_URL -o $TMP_FILE_NAME >/dev/null 2>&1
+RET=$(curl -s $PROXY -w "%{http_code}" $DOWNLOAD_URL -o $TMP_FILE_NAME >/dev/null 2>&1)
 
 if [ $? -ne 0 ] ; then
     log_output "Error: Failed to download agent installer" 2
+
+    if [ $RET -eq 404 ] ; then
+        report_failure 5
+    fi
+
+    if [[ -f "$INSTALL_PATH/bin/sealion-node" && -f "$INSTALL_PATH/etc/sealion" ]] ; then
+        "$INSTALL_PATH/etc/sealion" start
+    fi
+
     rm -rf $TMP_FILE_PATH
     exit 117
 fi
@@ -125,7 +142,7 @@ $TMP_FILE_PATH/sealion-agent/install.sh "$@" -r curl
 RET=$?
 
 if [[ "$AGENT_ID" != "" && $RET -ne 0 ]] ; then
-    RET=`curl -s PROXY -w "%{http_code}" -H "Content-Type: application/json" -X PUT -d "{\"reason\":\"$RET\"}"  "$API_URL/orgs/$ORG_TOKEN/agents/$AGENT_ID/updatefail" >/dev/null 2>&1`
+    report_failure $RET
     rm -rf $TMP_FILE_PATH
 
     if [[ -f "$INSTALL_PATH/bin/sealion-node" && -f "$INSTALL_PATH/etc/sealion" ]] ; then
