@@ -61,6 +61,8 @@ log_output()
     return 0
 }
 
+trap "kill -PIPE 0 >/dev/null 2>&1" EXIT
+
 while getopts :i:o:c:H:x:p:a:r:v:h OPT ; do
     case "$OPT" in
         i)
@@ -112,7 +114,7 @@ MAJOR_VERSION=$(echo $VERSION | grep '^[0-9]\+' -o)
 TAR_DOWNLOAD_URL=$(cat $TMP_DATA_FILE | grep '"agentDownloadURL"\s*:\s*"[^"]*"' -o |  sed 's/"agentDownloadURL"\s*:\s*"\([^"]*\)"/\1/')
 
 if [ $MAJOR_VERSION -le 2 ] ; then
-    curl -s $PROXY "$DOWNLOAD_URL/curl-install-node.sh" 2>/dev/null | bash /dev/stdin "$@" -t $TAR_DOWNLOAD_URL
+    curl -s $PROXY "$DOWNLOAD_URL/curl-install-node.sh" 2>/dev/null | bash /dev/stdin "$@" -t $TAR_DOWNLOAD_URL 1> >( while read line; do log_output "${line}"; done ) 2> >( while read line; do log_output "${line}" 2; done )
     rm -f $TMP_DATA_FILE
     exit 0
 fi

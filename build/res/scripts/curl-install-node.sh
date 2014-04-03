@@ -53,8 +53,7 @@ while getopts a:t:o:x:c:v:hH: OPT ; do
     esac
 done
 
-arch=$PLATFORM
-TAR_FILE_URL=$(echo "$TAR_FILE_URL")
+TAR_FILE_URL=$(echo $TAR_FILE_URL | sed "s/PLATFORM/$PLATFORM/")
 PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
 
 USAGE="Usage:\n curl -s "$DOWNLOAD_URL" | sudo bash /dev/stdin -o <Organisation Token> \n\t[-H <Hostname>] \n\t[-c <Category name>] \n\t[-x <Proxy address>] \n\t[-h for help]"
