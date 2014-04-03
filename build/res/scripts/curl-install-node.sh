@@ -103,6 +103,8 @@ get_JSON_value()
     return 0
 }
 
+unset OPTIND
+
 while getopts a:t:o:x:c:v:hH: OPT ; do
     case "$OPT" in
         v)
