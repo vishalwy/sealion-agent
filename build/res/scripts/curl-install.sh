@@ -109,20 +109,20 @@ fi
 
 VERSION=$(cat $TMP_DATA_FILE | grep '"agentVersion"\s*:\s*"[^"]*"' -o |  sed 's/"agentVersion"\s*:\s*"\([^"]*\)"/\1/')
 MAJOR_VERSION=$(echo $VERSION | grep '^[0-9]\+' -o)
+TAR_DOWNLOAD_URL=$(cat $TMP_DATA_FILE | grep '"agentDownloadURL"\s*:\s*"[^"]*"' -o |  sed 's/"agentDownloadURL"\s*:\s*"\([^"]*\)"/\1/')
 
 if [ $MAJOR_VERSION -le 2 ] ; then
-    curl -s $PROXY "$DOWNLOAD_URL/curl-install-node.sh" 2>/dev/null | bash /dev/stdin "$@"
+    curl -s $PROXY "$DOWNLOAD_URL/curl-install-node.sh" 2>/dev/null | bash /dev/stdin "$@" -t $TAR_DOWNLOAD_URL
     rm -f $TMP_DATA_FILE
     exit 0
 fi
 
-DOWNLOAD_URL=$(cat $TMP_DATA_FILE | grep '"agentDownloadURL"\s*:\s*"[^"]*"' -o |  sed 's/"agentDownloadURL"\s*:\s*"\([^"]*\)"/\1/')
 rm -f $TMP_DATA_FILE
 TMP_FILE_PATH=$(mktemp -d $TMP_FILE_PATH)
 TMP_FILE_PATH=${TMP_FILE_PATH%/}
 TMP_FILE_NAME="$TMP_FILE_PATH/sealion-agent.tar.gz"
 log_output "Downloading agent installer..."
-RET=$(curl -s $PROXY -w "%{http_code}" $DOWNLOAD_URL -o $TMP_FILE_NAME >/dev/null 2>&1)
+RET=$(curl -s $PROXY -w "%{http_code}" $TAR_DOWNLOAD_URL -o $TMP_FILE_NAME 2>/dev/null)
 
 if [ $? -ne 0 ] ; then
     log_output "Error: Failed to download agent installer" 2

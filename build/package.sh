@@ -76,6 +76,7 @@ generate_scripts()
     echo "Service script generated"
     INSTALLER=$TARGET/$OUTPUT/install.sh
     CURL_INSTALLER=$TARGET/curl-install.sh
+    CURL_INSTALLER_NODE=$TARGET/curl-install-node.sh
     cp res/scripts/install.sh $INSTALLER
     URL="$(echo "$API_URL" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
     ARGS="-i 's/\(^API\_URL=\)\(\"[^\"]\+\"\)/\1\"$URL\"/'"
@@ -93,6 +94,13 @@ generate_scripts()
     eval sed "$ARGS" $CURL_INSTALLER    
     chmod +x $CURL_INSTALLER
     echo "Curl installer generated"
+    cp res/scripts/curl-install-node.sh $CURL_INSTALLER_NODE
+    eval sed "$ARGS" $CURL_INSTALLER_NODE
+    URL="$(echo "$API_URL/agents" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
+    ARGS="-i 's/\(^REGISTRATION\_URL=\)\(\"[^\"]\+\"\)/\1\"$URL\"/'"
+    eval sed "$ARGS" $CURL_INSTALLER_NODE
+    chmod +x $CURL_INSTALLER_NODE
+    echo "Curl installer for node generated"
     cp res/README $TARGET/$OUTPUT/agent
     DATE="$(echo "$(date +"%F %T")" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
     REVISION=$(git rev-parse --short=10 HEAD 2>/dev/null)
