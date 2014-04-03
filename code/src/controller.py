@@ -113,7 +113,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
     def stop_threads(self):
         _log.debug('Stopping all threads.')
         self.api.stop()
-        helper.Terminator().start(exit_status.AGENT_ERR_NOT_RESPONDING)
+        helper.ThreadMonitor().register(exit_status.AGENT_ERR_NOT_RESPONDING)
         connection.Connection.stop_rtc()
         self.api.logout()
         self.api.close()

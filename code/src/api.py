@@ -11,6 +11,7 @@ import json
 import re
 import connection
 import globals
+import helper
 from constructs import *
 
 _log = logging.getLogger(__name__)
@@ -104,10 +105,13 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
                 break
             
             try:
+                helper.ThreadMonitor().register()
                 response = method(timeout = 10, *args, **kwargs)
             except Exception as e:
                 _log.error(str(e))
                 exception = e
+            finally:
+                helper.ThreadMonitor().unregister()
                 
             if response != None and response.status_code < 500:
                 self.is_conn_err == True and _log.info('Network connection established')

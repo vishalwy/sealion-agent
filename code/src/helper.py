@@ -9,6 +9,7 @@ import threading
 import logging
 import subprocess
 import sys
+import time
 import exit_status
 from constructs import *
 
@@ -213,40 +214,59 @@ class Config:
         config.update(Config.parse(data, True)[0])
         return self.set(config)
 
-class Terminator(SingletonType('TerminatorMetaClass', (object, ), {})):   
+class ThreadMonitor(SingletonType('ThreadMonitorMetaClass', (ThreadEx, ), {})):
     def __init__(self):
-        self.thread = None
-        self.terminate_status = exit_status.AGENT_ERR_SUCCESS
-        self.cancel_event = threading.Event()
+        ThreadEx.__init__(self)
+        self.registered_threads = {}
+        self.lock = threading.RLock()
+        self.daemon = True
+        
+    def register(self, terminate_status = exit_status.AGENT_ERR_RESTART, timeout = 20, message = ''):
+        self.lock.acquire()
+        thread_id = threading.current_thread().ident
+        data = {
+            'exp_time': time.time() + timeout, 
+            'terminate_status': terminate_status,
+            'message': message if message else 'Thread %d is not responding' % thread_id
+        }
+        self.registered_threads['%d' % thread_id] = data
+        self.lock.release()
+        
+    def unregister(self):
+        self.lock.acquire()
+        
+        try:
+            del self.registered_threads['%d' % threading.current_thread().ident]
+        except:
+            pass
+        
+        self.lock.release()
+        
+    def get_expiry_status(self):
+        ret = (-1, '')
+        self.lock.acquire()
+        t = time.time()
+        
+        for thread in self.registered_threads:
+            if thread['exp_time'] > t:
+                ret = (thread['terminate_status'], thread['message'])
+                
+                if ret[0] != exit_status.AGENT_ERR_RESTART:
+                    break
+                    
+        self.lock.release()
+        return ret
     
-    def start(self, terminate_status, wait_func = None, *wait_func_args):
-        if self.thread == None:
-            self.thread = ThreadEx(target = self.terminate_func, name = 'ShutdownHelper')
-            self.cancel_event.clear()
-            self.thread.daemon = True
-            self.thread.start()
+    def exe(self):
+        while 1:
+            time.sleep(10)
+            ret = self.get_expiry_status()
             
-        self.terminate_status = terminate_status
-        wait_func != None and wait_func(*wait_func_args)
+            if ret[0] == exit_status.AGENT_ERR_RESTART:
+                Utils.restart_agent(ret[1])
+            elif ret[0] != -1:
+                _log.info('%s. Agent terminating with status code %d.' % (ret[1], ret[0]))
+                event_dispatcher.trigger('terminate', ret[0])
+                os._exit(ret[0])
         
-    def stop(self):
-        self.cancel_event.set()
-        
-    def terminate_func(self):
-        wait_timeout = 20
-        _log.debug('%s waiting for cancel event for %d seconds' % (self.thread.name, wait_timeout))
-        self.cancel_event.wait(wait_timeout)
-        
-        if self.cancel_event.is_set():
-            _log.debug('%s received cancel event' % self.thread.name)
-            self.thread = None
-            return
-        
-        if self.terminate_status == exit_status.AGENT_ERR_RESTART:
-            Utils.restart_agent('Some of the threads are not responding')
-        else:
-            _log.info('Some of the threads are not responding. Agent terminating with status code %d.' % self.terminate_status)
-            event_dispatcher.trigger('terminate', self.terminate_status)
-            os._exit(self.terminate_status)
-
     
