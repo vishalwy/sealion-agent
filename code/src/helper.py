@@ -267,7 +267,7 @@ class ThreadMonitor(SingletonType('ThreadMonitorMetaClass', (ThreadEx, ), {})):
                 ret = (data['terminate_status'], int(thread_id))
                 
                 if ret[0] != exit_status.AGENT_ERR_RESTART:
-                    break                
+                    break
                     
         if ret[0] == exit_status.AGENT_ERR_RESTART and temp != -1:
             ret = (temp, ret[1])
