@@ -142,15 +142,8 @@ def sig_handler(signum, frame):
         dump_stack_traces()
         
 def dump_stack_traces():
-    trace = ''
-        
-    for thread_id, frame in sys._current_frames().items():
-        trace += '# Thread ID: %s\n' % thread_id
-        trace += ''.join(traceback.format_list(traceback.extract_stack(frame)))
-        trace += '\n\n'
-            
-    timestamp = int(time.time() * 1000)
-    f = None
+    trace = helper.Utils.get_stack_trace()
+    f, timestamp = None, int(time.time() * 1000)
     
     try:
         path = helper.Utils.get_safe_path(globals.Globals().exe_path + ('var/log/stack_trace_%d.log' % timestamp))
@@ -178,6 +171,7 @@ def start():
     signal.signal(signal.SIGTERM, sig_handler)
     signal.signal(signal.SIGINT, sig_handler)
     signal.signal(signal.SIGUSR1, sig_handler)
+    helper.ThreadMonitor().start()
     controller.start()
     
     while 1:

@@ -10,6 +10,7 @@ import logging
 import subprocess
 import sys
 import time
+import traceback
 import exit_status
 from constructs import *
 
@@ -114,14 +115,26 @@ class Utils(Namespace):
         return path    
     
     @staticmethod
-    def restart_agent(message = ''):
+    def restart_agent(message = '', stack_trace = ''):
         timeout = 10
         message = message + '. ' if message else ''
         message += 'Restarting agent in %d seconds.' % timeout
         _log.info(message)
         subprocess.Popen(['bash', '-c', 'sleep %d ; "%s" %s' % (timeout, sys.executable, ' '.join(['"%s"' % arg for arg in sys.argv]))])
-        event_dispatcher.trigger('terminate', exit_status.AGENT_ERR_RESTART)
+        event_dispatcher.trigger('terminate', exit_status.AGENT_ERR_RESTART, stack_trace)
         os._exit(exit_status.AGENT_ERR_RESTART)
+     
+    @staticmethod
+    def get_stack_trace(thread_ident = None):
+        trace = ''
+
+        for thread_id, frame in sys._current_frames().items():
+            if thread_ident == None or thread_ident == thread_id:
+                trace += '# Thread ID: %s\n' % thread_id if thread_ident == None else ''
+                trace += ''.join(traceback.format_list(traceback.extract_stack(frame)))
+                trace += '\n\n' if thread_ident == None else ''
+
+        return trace
          
 class Config:
     def __init__(self):
@@ -221,13 +234,13 @@ class ThreadMonitor(SingletonType('ThreadMonitorMetaClass', (ThreadEx, ), {})):
         self.lock = threading.RLock()
         self.daemon = True
         
-    def register(self, terminate_status = exit_status.AGENT_ERR_RESTART, timeout = 20, message = ''):
+    def register(self, terminate_status = exit_status.AGENT_ERR_RESTART, timeout = 20):
         self.lock.acquire()
         thread_id = threading.current_thread().ident
         data = {
             'exp_time': time.time() + timeout, 
             'terminate_status': terminate_status,
-            'message': message if message else 'Thread %d is not responding' % thread_id
+            'thread_id': thread_id
         }
         self.registered_threads['%d' % thread_id] = data
         self.lock.release()
@@ -243,13 +256,13 @@ class ThreadMonitor(SingletonType('ThreadMonitorMetaClass', (ThreadEx, ), {})):
         self.lock.release()
         
     def get_expiry_status(self):
-        ret = (-1, '')
+        ret = (-1, 0)
         self.lock.acquire()
         t = time.time()
         
         for thread in self.registered_threads:
             if thread['exp_time'] > t:
-                ret = (thread['terminate_status'], thread['message'])
+                ret = (thread['terminate_status'], thread['thread_id'])
                 
                 if ret[0] != exit_status.AGENT_ERR_RESTART:
                     break
@@ -263,10 +276,10 @@ class ThreadMonitor(SingletonType('ThreadMonitorMetaClass', (ThreadEx, ), {})):
             ret = self.get_expiry_status()
             
             if ret[0] == exit_status.AGENT_ERR_RESTART:
-                Utils.restart_agent(ret[1])
+                Utils.restart_agent('Thread %d is not responding' % ret[1], Utils.get_stack_trace(ret[1]))
             elif ret[0] != -1:
-                _log.info('%s. Agent terminating with status code %d.' % (ret[1], ret[0]))
-                event_dispatcher.trigger('terminate', ret[0])
+                _log.info('Thread %d is not responding. Agent terminating with status code %d.' % (ret[1], ret[0]))
+                event_dispatcher.trigger('terminate', ret[0], Utils.get_stack_trace(ret[1]))
                 os._exit(ret[0])
         
     

@@ -6,7 +6,6 @@ import logging
 import os
 import sys
 import time
-import traceback
 import signal
 import pwd
 import subprocess
@@ -31,11 +30,11 @@ class sealion(Daemon):
     def crash_dump_path(self):
         return '%svar/crash/' % exe_path 
     
-    def save_dump(self, type, value, tb):
+    def save_dump(self, stack_trace):
         from globals import Globals
         globals = Globals()
         timestamp = int(time.time() * 1000)
-        path = self.crash_dump_path + ('sealion_%d.dmp' % timestamp)
+        path = self.crash_dump_path + ('sealion-%d.dmp' % timestamp)
         dir = os.path.dirname(path)
         f = None
         
@@ -43,7 +42,7 @@ class sealion(Daemon):
             os.path.isdir(dir) or os.makedirs(dir)            
             report = {
                 'timestamp': timestamp,
-                'stack': ''.join(traceback.format_exception(type, value, tb)),
+                'stack': stack_trace,
                 'orgToken': globals.config.agent.orgToken,
                 '_id': globals.config.agent._id,
                 'process': {
@@ -180,7 +179,7 @@ class sealion(Daemon):
         
     def exception_hook(self, type, value, tb):
         if type != SystemExit:
-            dump_file = self.save_dump(type, value, tb)
+            dump_file = self.save_dump(''.join(traceback.format_exception(type, value, tb)))
             
             if dump_file:
                 _log.error('%s crashed. Dump file saved at %s' % (self.__class__.__name__, dump_file))
@@ -208,8 +207,11 @@ class sealion(Daemon):
         import main
         main.start(is_update_only_mode)
         
-    def terminate(self, event, status):
+    def terminate(self, event, status, stack_trace = ''):
         self.delete_pid()
+        
+        if stack_trace:
+            self.save_dump(stack_trace)
             
 def sig_handler(signum, frame):    
     if signum == signal.SIGINT:
