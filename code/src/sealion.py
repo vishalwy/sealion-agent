@@ -10,6 +10,7 @@ import signal
 import pwd
 import subprocess
 import json
+import re
 
 exe_path = os.path.dirname(os.path.abspath(__file__))
 exe_path = exe_path[:-1] if exe_path[len(exe_path) - 1] == '/' else exe_path
@@ -91,7 +92,7 @@ class sealion(Daemon):
             for file in os.listdir(path):
                 file_name = path + file
 
-                if os.path.isfile(file_name):
+                if os.path.isfile(file_name) and re.match('^sealion-[0-9]+\.dmp$', file) != None:
                     report = None
 
                     while 1:
@@ -166,16 +167,17 @@ class sealion(Daemon):
         except Exception as e:
             _log.error('Failed to open monitoring script; %s' % str(e))
         
-    def is_crash_loop(self):
+    def get_crash_dump_details(self):
         t = int(time.time())
         path = self.crash_dump_path
         
         try:
-            files = [f for f in os.listdir(path) if os.path.isfile(path + f) and t - os.path.getmtime(path + f) < sealion.crash_loop_timeout]
+            files = [f for f in os.listdir(path) if os.path.isfile(path + f) and re.match('^sealion-[0-9]+\.dmp$', f) != None]
+            loop_files = [f for f in files if t - os.path.getmtime(path + f) < sealion.crash_loop_timeout]
         except:
-            return 0
+            return (False, 0)
         
-        return len(files) >= 5
+        return (len(loop_files) >= 5, len(files))
         
     def exception_hook(self, type, value, tb):
         if type != SystemExit:
@@ -195,15 +197,16 @@ class sealion(Daemon):
     def run(self):     
         self.set_procname('sealiond')
         is_update_only_mode = False
+        crash_dump_details = get_crash_dump_details()
         
-        if self.is_crash_loop() == True:
+        if crash_dump_details[0] == True:
             _log.info('Crash loop detected; Starting agent in update-only mode')
             is_update_only_mode = True
         
         from globals import Globals
         Globals().event_dispatcher.bind('terminate', self.terminate)
         from constructs import ThreadEx
-        ThreadEx(target = self.send_crash_dumps, name = 'CrashDumpSender').start()
+        crash_dump_details[1] > 0 and ThreadEx(target = self.send_crash_dumps, name = 'CrashDumpSender').start()
         import main
         main.start(is_update_only_mode)
         

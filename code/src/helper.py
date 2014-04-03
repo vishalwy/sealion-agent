@@ -236,13 +236,11 @@ class ThreadMonitor(SingletonType('ThreadMonitorMetaClass', (ThreadEx, ), {})):
         
     def register(self, terminate_status = exit_status.AGENT_ERR_RESTART, timeout = 20):
         self.lock.acquire()
-        thread_id = threading.current_thread().ident
         data = {
             'exp_time': time.time() + timeout, 
-            'terminate_status': terminate_status,
-            'thread_id': thread_id
+            'terminate_status': terminate_status
         }
-        self.registered_threads['%d' % thread_id] = data
+        self.registered_threads['%d' % threading.current_thread().ident] = data
         self.lock.release()
         
     def unregister(self):
@@ -257,16 +255,24 @@ class ThreadMonitor(SingletonType('ThreadMonitorMetaClass', (ThreadEx, ), {})):
         
     def get_expiry_status(self):
         ret = (-1, 0)
+        temp = -1
         self.lock.acquire()
         t = time.time()
         
-        for thread in self.registered_threads:
-            if thread['exp_time'] > t:
-                ret = (thread['terminate_status'], thread['thread_id'])
+        for thread_id in self.registered_threads:
+            data = self.registered_threads[thread_id]
+            
+            if t > data['exp_time']:
+                ret = (data['terminate_status'], int(thread_id))
                 
                 if ret[0] != exit_status.AGENT_ERR_RESTART:
                     break
+            else:
+                temp = data['terminate_status']
                     
+        if ret[0] == exit_status.AGENT_ERR_RESTART and temp != -1 and temp != exit_status.AGENT_ERR_RESTART:
+            ret = (temp, ret[1])
+        
         self.lock.release()
         return ret
     

@@ -146,7 +146,7 @@ def dump_stack_traces():
     f, timestamp = None, int(time.time() * 1000)
     
     try:
-        path = helper.Utils.get_safe_path(globals.Globals().exe_path + ('var/log/stack_trace_%d.log' % timestamp))
+        path = helper.Utils.get_safe_path(globals.Globals().exe_path + ('var/log/stack-trace-%d.log' % timestamp))
         f = open(path, 'w')
         f.write(trace)
         _log.info('Stack trace saved at %s' % path)
