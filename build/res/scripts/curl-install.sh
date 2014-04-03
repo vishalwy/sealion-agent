@@ -94,7 +94,7 @@ done
 
 report_failure()
 {
-    curl -s PROXY -w "%{http_code}" -H "Content-Type: application/json" -X PUT -d "{\"reason\":\"$1\"}"  "$API_URL/orgs/$ORG_TOKEN/agents/$AGENT_ID/updatefail" >/dev/null 2>&1
+    curl -s PROXY -H "Content-Type: application/json" -X PUT -d "{\"reason\":\"$1\"}"  "$API_URL/orgs/$ORG_TOKEN/agents/$AGENT_ID/updatefail" >/dev/null 2>&1
 }
 
 TMP_DATA_FILE=$(mktemp $TMP_DATA_FILE)
@@ -111,8 +111,7 @@ VERSION=$(cat $TMP_DATA_FILE | grep '"agentVersion"\s*:\s*"[^"]*"' -o |  sed 's/
 MAJOR_VERSION=$(echo $VERSION | grep '^[0-9]\+' -o)
 
 if [ $MAJOR_VERSION -le 2 ] ; then
-    echo "Executing curl-install-node.sh"
-    curl -s $PROXY "$DOWNLOAD_URL/curl-install-node.sh" 2>/dev/null | bash /dev/stdin "$@" -v $VERSION
+    curl -s $PROXY "$DOWNLOAD_URL/curl-install-node.sh" 2>/dev/null | bash /dev/stdin "$@"
     rm -f $TMP_DATA_FILE
     exit 0
 fi
@@ -127,10 +126,18 @@ RET=$(curl -s $PROXY -w "%{http_code}" $DOWNLOAD_URL -o $TMP_FILE_NAME >/dev/nul
 
 if [ $? -ne 0 ] ; then
     log_output "Error: Failed to download agent installer" 2
-
-    if [ $RET -eq 404 ] ; then
-        report_failure 5
+    
+    if [[ -f "$INSTALL_PATH/bin/sealion-node" && -f "$INSTALL_PATH/etc/sealion" ]] ; then
+        "$INSTALL_PATH/etc/sealion" start
     fi
+
+    rm -rf $TMP_FILE_PATH
+    exit 117
+fi
+
+if [ $RET -eq 404 ] ; then
+    log_output "Error: Failed to download agent installer" 2
+    report_failure 5
 
     if [[ -f "$INSTALL_PATH/bin/sealion-node" && -f "$INSTALL_PATH/etc/sealion" ]] ; then
         "$INSTALL_PATH/etc/sealion" start
