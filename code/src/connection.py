@@ -26,8 +26,17 @@ class Connection(ThreadEx):
                 break
     
     def attempt(self, retry_count = -1, retry_interval = 5):
-        status = self.api.authenticate(retry_count = retry_count, retry_interval = retry_interval)
-        status == self.api.status.SUCCESS and rtc.RTC().connect().start()
+        rtc_conn = None
+        
+        while rtc_conn == None:
+            status = self.api.authenticate(retry_count = retry_count, retry_interval = retry_interval)
+        
+            if status == self.api.status.SUCCESS:
+                rtc_conn = rtc.RTC().connect()
+            else:
+                break
+            
+        rtc_conn and rtc_conn.start()
         return status
         
     def connect(self):        

@@ -98,6 +98,7 @@ class sealion(Daemon):
 
                     while 1:
                         if globals.stop_event.is_set():
+                            _log.debug('CrashDumpSender received stop event')
                             return
 
                         report = report if report != None else self.read_dump(file_name)
@@ -115,6 +116,7 @@ class sealion(Daemon):
                         _log.error('Failed to remove crash dump %s; %s' % (file_name, str(e)))
 
                 if globals.stop_event.is_set():
+                    _log.debug('CrashDumpSender received stop event')
                     return
         except:
             pass
@@ -172,14 +174,19 @@ class sealion(Daemon):
         t = int(time.time())
         path = self.crash_dump_path
         crash_loop_timeout = sealion.crash_loop_count * sealion.monit_interval
+        file_count, loop_file_count = 0, 0
         
         try:
-            files = [f for f in os.listdir(path) if os.path.isfile(path + f) and re.match('^sealion-[0-9]+\.dmp$', f) != None]
-            loop_files = [f for f in files if t - os.path.getmtime(path + f) < crash_loop_timeout]
+            for f in os.listdir(path):
+                if os.path.isfile(path + f) and re.match('^sealion-[0-9]+\.dmp$', f) != None:
+                    file_count += 1
+                    
+                    if t - os.path.getmtime(path + f) < crash_loop_timeout:
+                        loop_file_count += 1
         except:
-            return (False, 0)
+            pass
         
-        return (len(loop_files) >= 5, len(files))
+        return (loop_file_count >= 5, file_count)
         
     def exception_hook(self, type, value, tb):
         if type != SystemExit:
