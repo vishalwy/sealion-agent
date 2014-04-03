@@ -261,16 +261,15 @@ class ThreadMonitor(SingletonType('ThreadMonitorMetaClass', (ThreadEx, ), {})):
         
         for thread_id in self.registered_threads:
             data = self.registered_threads[thread_id]
+            temp = data['terminate_status']
             
             if t > data['exp_time']:
                 ret = (data['terminate_status'], int(thread_id))
                 
                 if ret[0] != exit_status.AGENT_ERR_RESTART:
-                    break
-            else:
-                temp = data['terminate_status']
+                    break                
                     
-        if ret[0] == exit_status.AGENT_ERR_RESTART and temp != -1 and temp != exit_status.AGENT_ERR_RESTART:
+        if ret[0] == exit_status.AGENT_ERR_RESTART and temp != -1:
             ret = (temp, ret[1])
         
         self.lock.release()

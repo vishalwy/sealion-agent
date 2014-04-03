@@ -25,7 +25,8 @@ _log = logging.getLogger(__name__)
 
 class sealion(Daemon):
     user_name = 'sealion'
-    crash_loop_timeout = 120
+    monit_interval = 30
+    crash_loop_count = 5
     
     @property
     def crash_dump_path(self):
@@ -79,7 +80,7 @@ class sealion(Daemon):
         return report
     
     def send_crash_dumps(self):        
-        crash_dump_timeout = sealion.crash_loop_timeout + 10
+        crash_dump_timeout = (sealion.crash_loop_count * sealion.monit_interval) + 10
         from globals import Globals
         from api import API
         globals = Globals()
@@ -163,17 +164,18 @@ class sealion(Daemon):
             
     def on_fork(self, cpid):        
         try:
-            subprocess.Popen([exe_path + 'bin/monit.sh', str(cpid), '30'])
+            subprocess.Popen([exe_path + 'bin/monit.sh', str(cpid), '%d' % sealion.monit_interval])
         except Exception as e:
             _log.error('Failed to open monitoring script; %s' % str(e))
         
     def get_crash_dump_details(self):
         t = int(time.time())
         path = self.crash_dump_path
+        crash_loop_timeout = sealion.crash_loop_count * sealion.monit_interval
         
         try:
             files = [f for f in os.listdir(path) if os.path.isfile(path + f) and re.match('^sealion-[0-9]+\.dmp$', f) != None]
-            loop_files = [f for f in files if t - os.path.getmtime(path + f) < sealion.crash_loop_timeout]
+            loop_files = [f for f in files if t - os.path.getmtime(path + f) < crash_loop_timeout]
         except:
             return (False, 0)
         
@@ -197,7 +199,7 @@ class sealion(Daemon):
     def run(self):     
         self.set_procname('sealiond')
         is_update_only_mode = False
-        crash_dump_details = get_crash_dump_details()
+        crash_dump_details = self.get_crash_dump_details()
         
         if crash_dump_details[0] == True:
             _log.info('Crash loop detected; Starting agent in update-only mode')
