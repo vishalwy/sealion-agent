@@ -126,21 +126,13 @@ TMP_FILE_NAME="$TMP_FILE_PATH/sealion-agent.tar.gz"
 log_output "Downloading agent installer..."
 RET=$(curl -s $PROXY -w "%{http_code}" $TAR_DOWNLOAD_URL -o $TMP_FILE_NAME 2>/dev/null)
 
-if [ $? -ne 0 ] ; then
+if [[ $? -ne 0 || $RET -eq 404 ]] ; then
     log_output "Error: Failed to download agent installer" 2
-    
-    if [[ -f "$INSTALL_PATH/bin/sealion-node" && -f "$INSTALL_PATH/etc/sealion" ]] ; then
-        "$INSTALL_PATH/etc/sealion" start
+
+    if [ "$RET" == "404" ] ; then
+        report_failure 5
     fi
-
-    rm -rf $TMP_FILE_PATH
-    exit 117
-fi
-
-if [ $RET -eq 404 ] ; then
-    log_output "Error: Failed to download agent installer" 2
-    report_failure 5
-
+    
     if [[ -f "$INSTALL_PATH/bin/sealion-node" && -f "$INSTALL_PATH/etc/sealion" ]] ; then
         "$INSTALL_PATH/etc/sealion" start
     fi
