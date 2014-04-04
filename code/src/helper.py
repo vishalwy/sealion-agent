@@ -114,11 +114,11 @@ class Utils(Namespace):
         return path    
     
     @staticmethod
-    def restart_agent(message = '', stack_trace = ''):
+    def restart_agent(message = '', stack_trace = '', status = exit_status.AGENT_ERR_RESTART):
+        event_dispatcher.trigger('terminate', stack_trace, status)
         message = message + '. ' if message else ''
         message += 'Restarting agent.'
         _log.info(message)
-        event_dispatcher.trigger('terminate', exit_status.AGENT_ERR_RESTART, stack_trace)
         os.execl(sys.executable, sys.executable, *sys.argv)
      
     @staticmethod
@@ -281,7 +281,7 @@ class ThreadMonitor(SingletonType('ThreadMonitorMetaClass', (ThreadEx, ), {})):
                 Utils.restart_agent('Thread %d is not responding' % ret[1], Utils.get_stack_trace(ret[1]))
             elif ret[0] != -1:
                 _log.info('Thread %d is not responding. Agent terminating with status code %d.' % (ret[1], ret[0]))
-                event_dispatcher.trigger('terminate', ret[0], Utils.get_stack_trace(ret[1]))
+                event_dispatcher.trigger('terminate', Utils.get_stack_trace(ret[1]), ret[0])
                 os._exit(ret[0])
         
     

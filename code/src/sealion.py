@@ -194,18 +194,13 @@ class sealion(Daemon):
         
     def exception_hook(self, type, value, tb):
         if type != SystemExit:
-            dump_file = self.save_dump(''.join(traceback.format_exception(type, value, tb)))
+            from helper import Utils
+            Utils.restart_agent('', ''.join(traceback.format_exception(type, value, tb)), exit_status.AGENT_ERR_CRASHED)
             
             if dump_file:
                 _log.error('%s crashed. Dump file saved at %s' % (self.__class__.__name__, dump_file))
             else:
                 _log.error('%s crashed. Failed to save dump file' % self.__class__.__name__)
-            
-            try:
-                from helper import Utils
-                Utils.restart_agent()
-            except:
-                pass
     
     def run(self):             
         self.set_procname('sealiond')
@@ -231,11 +226,24 @@ class sealion(Daemon):
         
         Daemon.cleanup(self)
         
-    def terminate(self, event, status, stack_trace = ''):
+    def terminate(self, event, stack_trace, status):
         self.cleanup()
         
-        if stack_trace:
-            self.save_dump(stack_trace)
+        if not stack_trace:
+            return
+        
+        dump_file = self.save_dump(stack_trace)
+
+        if dump_file:
+            if status == exit_status.AGENT_ERR_CRASHED:
+                _log.error('%s crashed. Dump saved at %s' % (self.__class__.__name__, dump_file))
+            else:
+                _log.info('Stack trace saved at %s' % dump_file)
+        else:
+            if status == exit_status.AGENT_ERR_CRASHED:
+                _log.error('%s crashed. Failed to save dump' % self.__class__.__name__)
+            else:
+                _log.error('Failed to save stack trace')
             
 def sig_handler(signum, frame):    
     if signum == signal.SIGINT:
