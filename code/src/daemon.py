@@ -50,7 +50,6 @@ class Daemon(object):
         os.dup2(se.fileno(), sys.stderr.fileno())
         
         if pid > 0:
-            self.on_fork(pid)
             sys.exit(exit_status.AGENT_ERR_SUCCESS)
         
         atexit.register(self.cleanup)
@@ -131,9 +130,6 @@ class Daemon(object):
             
     def initialize(self):
         return True
-
-    def on_fork(self, cpid):
-        pass
 
     def run(self):
         pass

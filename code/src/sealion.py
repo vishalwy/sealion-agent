@@ -166,13 +166,7 @@ class sealion(Daemon):
             sys.exit(exit_status.AGENT_ERR_FAILED_PID_FILE)
         
         sys.excepthook = self.exception_hook
-        import main
-        
-    def on_fork(self, cpid):        
-        try:
-            self.monit_pid = subprocess.Popen([exe_path + 'bin/monit.sh', str(cpid), '%d' % self.monit_interval], preexec_fn = os.setpgrp).pid
-        except Exception as e:
-            _log.error('Failed to open monitoring script; %s' % str(e))
+        import main        
         
     def get_crash_dump_details(self):
         t = int(time.time())
@@ -202,7 +196,12 @@ class sealion(Daemon):
             else:
                 _log.error('%s crashed. Failed to save dump file' % self.__class__.__name__)
     
-    def run(self):             
+    def run(self): 
+        try:
+            self.monit_pid = subprocess.Popen([exe_path + 'bin/monit.sh', str(os.getpid()), '%d' % self.monit_interval], preexec_fn = os.setpgrp).pid
+        except Exception as e:
+            _log.error('Failed to open monitoring script; %s' % str(e))
+        
         self.set_procname('sealiond')
         is_update_only_mode = False
         crash_dump_details = self.get_crash_dump_details()
@@ -218,7 +217,7 @@ class sealion(Daemon):
         import main
         main.start(is_update_only_mode)
         
-    def cleanup(self):
+    def cleanup(self):        
         try:
             self.monit_pid != -1 and os.killpg(self.monit_pid, signal.SIGKILL)
         except:
