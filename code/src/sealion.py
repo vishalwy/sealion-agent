@@ -25,9 +25,12 @@ from daemon import Daemon
 _log = logging.getLogger(__name__)
 
 class sealion(Daemon):
-    user_name = 'sealion'
-    monit_interval = 30
-    crash_loop_count = 5
+    def __init__(self, pidfile, stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
+        Daemon.__init__(self, pidfile, stdin, stdout, stderr)
+        self.user_name = 'sealion'
+        self.monit_interval = 30
+        self.crash_loop_count = 5
+        self.monit_pid = -1
     
     @property
     def crash_dump_path(self):
@@ -81,7 +84,7 @@ class sealion(Daemon):
         return report
     
     def send_crash_dumps(self):        
-        crash_dump_timeout = (sealion.crash_loop_count * sealion.monit_interval) + 10
+        crash_dump_timeout = (self.crash_loop_count * self.monit_interval) + 10
         from globals import Globals
         from api import API
         globals = Globals()
@@ -164,17 +167,17 @@ class sealion(Daemon):
         
         sys.excepthook = self.exception_hook
         import main
-            
+        
     def on_fork(self, cpid):        
         try:
-            subprocess.Popen([exe_path + 'bin/monit.sh', str(cpid), '%d' % sealion.monit_interval])
+            self.monit_pid = subprocess.Popen([exe_path + 'bin/monit.sh', str(cpid), '%d' % self.monit_interval], preexec_fn = os.setpgrp).pid
         except Exception as e:
             _log.error('Failed to open monitoring script; %s' % str(e))
         
     def get_crash_dump_details(self):
         t = int(time.time())
         path = self.crash_dump_path
-        crash_loop_timeout = sealion.crash_loop_count * sealion.monit_interval
+        crash_loop_timeout = self.crash_loop_count * self.monit_interval
         file_count, loop_file_count = 0, 0
         
         try:
@@ -204,7 +207,7 @@ class sealion(Daemon):
             except:
                 pass
     
-    def run(self):     
+    def run(self):             
         self.set_procname('sealiond')
         is_update_only_mode = False
         crash_dump_details = self.get_crash_dump_details()
@@ -220,8 +223,16 @@ class sealion(Daemon):
         import main
         main.start(is_update_only_mode)
         
+    def cleanup(self):
+        try:
+            self.monit_pid != -1 and os.killpg(self.monit_pid, signal.SIGKILL)
+        except:
+            pass
+        
+        Daemon.cleanup(self)
+        
     def terminate(self, event, status, stack_trace = ''):
-        self.delete_pid()
+        self.cleanup()
         
         if stack_trace:
             self.save_dump(stack_trace)

@@ -53,13 +53,13 @@ class Daemon(object):
             self.on_fork(pid)
             sys.exit(exit_status.AGENT_ERR_SUCCESS)
         
-        atexit.register(self.delete_pid)
+        atexit.register(self.cleanup)
         pid = str(os.getpid())
         
         with open(self.pidfile, 'w+') as f:
             f.write('%s\n' % pid)
     
-    def delete_pid(self):
+    def cleanup(self):
         try:
             os.remove(self.pidfile)
         except:
@@ -131,7 +131,7 @@ class Daemon(object):
             
     def initialize(self):
         return True
-    
+
     def on_fork(self, cpid):
         pass
 

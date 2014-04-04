@@ -7,7 +7,6 @@ import json
 import re
 import threading
 import logging
-import subprocess
 import sys
 import time
 import traceback
@@ -116,13 +115,11 @@ class Utils(Namespace):
     
     @staticmethod
     def restart_agent(message = '', stack_trace = ''):
-        timeout = 10
         message = message + '. ' if message else ''
-        message += 'Restarting agent in %d seconds.' % timeout
+        message += 'Restarting agent.'
         _log.info(message)
-        subprocess.Popen(['bash', '-c', 'sleep %d ; "%s" %s' % (timeout, sys.executable, ' '.join(['"%s"' % arg for arg in sys.argv]))])
         event_dispatcher.trigger('terminate', exit_status.AGENT_ERR_RESTART, stack_trace)
-        os._exit(exit_status.AGENT_ERR_RESTART)
+        os.execl(sys.executable, sys.executable, *sys.argv)
      
     @staticmethod
     def get_stack_trace(thread_ident = None):
