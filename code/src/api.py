@@ -105,7 +105,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
                 break
             
             try:
-                helper.ThreadMonitor().register()
+                helper.ThreadMonitor().register(callback = self.close)
                 response = method(timeout = 10, *args, **kwargs)
             except Exception as e:
                 _log.error(str(e))

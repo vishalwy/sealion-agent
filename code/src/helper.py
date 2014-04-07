@@ -15,6 +15,12 @@ from constructs import *
 
 _log = logging.getLogger(__name__)
 event_dispatcher = EventDispatcher()
+
+def default_termination_hook(message, stack_trace):
+    message and sys.stderr.write(message + '\n')
+    stack_trace and sys.stderr.write(stack_trace)
+
+terminatehook = default_termination_hook
    
 class Utils(Namespace):
     @staticmethod
@@ -115,7 +121,7 @@ class Utils(Namespace):
     
     @staticmethod
     def restart_agent(message = '', stack_trace = ''):
-        event_dispatcher.trigger('terminate', message, stack_trace)
+        terminatehook(message, stack_trace)
         _log.info('Restarting agent.')
         os.execl(sys.executable, sys.executable, *sys.argv)
      
@@ -228,11 +234,13 @@ class ThreadMonitor(SingletonType('ThreadMonitorMetaClass', (object, ), {})):
         self.lock = threading.RLock()
         self.thread = None
         
-    def register(self, terminate_status = exit_status.AGENT_ERR_RESTART, timeout = 20):
+    def register(self, timeout = 20, callback = exit_status.AGENT_ERR_RESTART, callback_args = (), callback_kwargs = {}):
         self.lock.acquire()
         data = {
             'exp_time': time.time() + timeout, 
-            'terminate_status': terminate_status
+            'callback': callback,
+            'callback_args': callback_args,
+            'callback_kwargs': callback_kwargs
         }
         self.registered_threads['%d' % threading.current_thread().ident] = data
         self.lock.release()
@@ -249,43 +257,48 @@ class ThreadMonitor(SingletonType('ThreadMonitorMetaClass', (object, ), {})):
         self.lock.release()
         
     def get_expiry_status(self):
-        ret = (-1, 0)
-        temp = -1
+        ret, temp = {'callback': -1}, {'callback': -1}
         self.lock.acquire()
         t = time.time()
         
         for thread_id in self.registered_threads:
             data = self.registered_threads[thread_id]
-            temp = data['terminate_status']
+            temp.update(data)
+            temp.update({'thread_id': int(thread_id)})
             
             if t > data['exp_time']:
-                ret = (data['terminate_status'], int(thread_id))
+                ret.update(data)
+                ret.update({'thread_id': int(thread_id)})
                 
-                if ret[0] != exit_status.AGENT_ERR_RESTART:
+                if ret['callback'] != exit_status.AGENT_ERR_RESTART:
                     break
                     
-        if ret[0] == exit_status.AGENT_ERR_RESTART and temp != -1:
-            ret = (temp, ret[1])
+        if (ret['callback'] == exit_status.AGENT_ERR_RESTART and 
+            hasattr(temp['callback'], '__call__') == False and temp['callback'] != -1 and temp['callback'] != exit_status.AGENT_ERR_RESTART):
+            ret = temp
         
-        ret += (True if len(self.registered_threads) else False,)
+        ret['length'] = len(self.registered_threads)
         self.lock.release()
         return ret
     
     def monitor(self):
-        is_exit_when_empty = self.get_expiry_status()[2]
+        is_exit_when_empty = False if self.get_expiry_status()['length'] == 0 else True
         
         while 1:
-           time.sleep(10)
-           ret = self.get_expiry_status()
+            time.sleep(10)
+            ret = self.get_expiry_status()
            
-           if is_exit_when_empty == True and ret[2] == False:
-               break
+            if is_exit_when_empty == True and ret['length'] == 0:
+                break
 
-           if ret[0] == exit_status.AGENT_ERR_RESTART:
-               Utils.restart_agent('Thread %d is not responding' % ret[1], Utils.get_stack_trace(ret[1]))
-           elif ret[0] != -1:
-               event_dispatcher.trigger('terminate', 'Thread %d is not responding. Agent terminating with status code %d.' % (ret[1], ret[0]), Utils.get_stack_trace(ret[1]))
-               os._exit(ret[0])
+            if hasattr(ret['callback'], '__call__'):
+                ret['callback'](*ret['callback_args'], **ret['callback_kwargs'])
+            elif ret['callback'] == exit_status.AGENT_ERR_RESTART:
+               Utils.restart_agent('Thread %d is not responding' % ret['thread_id'], Utils.get_stack_trace(ret['thread_id']))
+            elif ret['callback'] != -1:
+                terminatehook('Thread %d is not responding' % ret['thread_id'], Utils.get_stack_trace(ret['thread_id']))
+                _log.info('Agent terminating with status code %d.' % ret['callback'])
+                os._exit(ret[0])
                
         self.thread = None
         

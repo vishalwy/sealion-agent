@@ -188,8 +188,8 @@ class sealion(Daemon):
         
     def exception_hook(self, type, value, tb):
         if type != SystemExit:
-            from helper import Utils
-            Utils.restart_agent('%s crashed' % self.__class__.__name__, ''.join(traceback.format_exception(type, value, tb)))
+            import helper
+            helper.Utils.restart_agent('%s crashed' % self.__class__.__name__, ''.join(traceback.format_exception(type, value, tb)))
     
     def run(self): 
         try:
@@ -205,8 +205,8 @@ class sealion(Daemon):
             _log.info('Crash loop detected; Starting agent in update-only mode')
             is_update_only_mode = True
         
-        from globals import Globals
-        Globals().event_dispatcher.bind('terminate', self.terminate)
+        import helper
+        helper.terminatehook = self.termination_hook
         from constructs import ThreadEx
         crash_dump_details[1] > 0 and ThreadEx(target = self.send_crash_dumps, name = 'CrashDumpSender').start()
         import main
@@ -220,7 +220,7 @@ class sealion(Daemon):
         
         Daemon.cleanup(self)
         
-    def terminate(self, event, message, stack_trace):
+    def termination_hook(self, message, stack_trace):
         self.cleanup()
         message and _log.error(message)
         
