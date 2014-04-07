@@ -222,6 +222,12 @@ else
     fi
 fi    
 
+if [ -f "$INSTALLATION_DIRECTORYetc/init.d/sealion" ] ; then
+    echo "Removing sealion-python"
+    "$INSTALLATION_DIRECTORYetc/init.d/sealion" stop
+    find "$INSTALLATION_DIRECTORY" -mindepth 1 -maxdepth 1 ! -name 'var' -exec rm -rf {} \; >/dev/null 2>&1
+fi
+
 echo "Extracting files to /usr/local/sealion-agent..." >&1
     
     tar -xzf $TMP_FILE_NAME -C $INSTALLATION_DIRECTORY --overwrite
