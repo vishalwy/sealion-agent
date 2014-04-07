@@ -222,12 +222,11 @@ class Config:
         config.update(Config.parse(data, True)[0])
         return self.set(config)
 
-class ThreadMonitor(SingletonType('ThreadMonitorMetaClass', (ThreadEx, ), {})):
+class ThreadMonitor(SingletonType('ThreadMonitorMetaClass', (object, ), {})):
     def __init__(self):
-        ThreadEx.__init__(self)
         self.registered_threads = {}
         self.lock = threading.RLock()
-        self.daemon = True
+        self.thread = None
         
     def register(self, terminate_status = exit_status.AGENT_ERR_RESTART, timeout = 20):
         self.lock.acquire()
@@ -237,6 +236,7 @@ class ThreadMonitor(SingletonType('ThreadMonitorMetaClass', (ThreadEx, ), {})):
         }
         self.registered_threads['%d' % threading.current_thread().ident] = data
         self.lock.release()
+        self.start()
         
     def unregister(self):
         self.lock.acquire()
@@ -267,18 +267,32 @@ class ThreadMonitor(SingletonType('ThreadMonitorMetaClass', (ThreadEx, ), {})):
         if ret[0] == exit_status.AGENT_ERR_RESTART and temp != -1:
             ret = (temp, ret[1])
         
+        ret += (True if len(self.registered_threads) else False,)
         self.lock.release()
         return ret
     
-    def exe(self):
-        while 1:
-            time.sleep(10)
-            ret = self.get_expiry_status()
-            
-            if ret[0] == exit_status.AGENT_ERR_RESTART:
-                Utils.restart_agent('Thread %d is not responding' % ret[1], Utils.get_stack_trace(ret[1]))
-            elif ret[0] != -1:
-                event_dispatcher.trigger('terminate', 'Thread %d is not responding. Agent terminating with status code %d.' % (ret[1], ret[0]), Utils.get_stack_trace(ret[1]))
-                os._exit(ret[0])
+    def monitor(self):
+        is_exit_when_empty = self.get_expiry_status()[2]
         
-    
+        while 1:
+           time.sleep(10)
+           ret = self.get_expiry_status()
+           
+           if is_exit_when_empty == True and ret[2] == False:
+               break
+
+           if ret[0] == exit_status.AGENT_ERR_RESTART:
+               Utils.restart_agent('Thread %d is not responding' % ret[1], Utils.get_stack_trace(ret[1]))
+           elif ret[0] != -1:
+               event_dispatcher.trigger('terminate', 'Thread %d is not responding. Agent terminating with status code %d.' % (ret[1], ret[0]), Utils.get_stack_trace(ret[1]))
+               os._exit(ret[0])
+               
+        self.thread = None
+        
+    def start(self):
+        if self.thread != None:
+            return
+        
+        self.thread = ThreadEx(target = self.monitor, name = 'ThreadMonitor')
+        self.thread.daemon = True
+        self.thread.start()
