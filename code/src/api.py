@@ -242,6 +242,8 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         return ret
     
     def send_crash_report(self, data, **kwargs):
+        temp = data.copy()
+        data = temp
         orgToken, agentId = data['orgToken'], data['_id']
         del data['orgToken'], data['_id']
         response = self.exec_method('post', {'retry_count': 0}, self.get_url('orgs/%s/agents/%s/crashreport' % (orgToken, agentId)), data = data)    
