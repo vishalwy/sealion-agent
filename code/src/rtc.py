@@ -161,13 +161,9 @@ class RTC(ThreadEx):
     def update_heartbeat(self):
         self.last_heartbeat = int(time.time())
         
-    def is_heartbeating(self):
-        if self.sio == None or self.sio.heartbeat_timeout == -1:
-            return True
-        
+    def is_heartbeating(self):       
         t = int(time.time())        
-        is_beating = True if t - self.last_heartbeat < self.sio.heartbeat_timeout else False
-        self.update_heartbeat()
+        is_beating = True if t - self.last_heartbeat < (24 * 60 * 60 * 1000) else False
         return is_beating
 
     def exe(self):        

@@ -75,11 +75,16 @@ class Connection(ThreadEx):
         self.start()
         
     @staticmethod
-    def stop_rtc():
+    def get_rtc():
         for thread in threading.enumerate():
             if isinstance(thread, rtc.RTC):
-                thread.stop()
                 return thread
         
         return None
+        
+    @staticmethod
+    def stop_rtc():
+        rtc_thread = Connection.get_rtc()
+        rtc_thread and rtc_thread.stop()
+        return rtc_thread
 

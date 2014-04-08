@@ -7,7 +7,6 @@ import threading
 import subprocess
 import signal
 import sys
-import traceback
 import time
 import api
 import storage
@@ -25,6 +24,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         ThreadEx.__init__(self)
         self.globals = globals.Globals()
         self.api = api.API()
+        self.rtc = None
         self.is_stop = False
         self.main_thread = threading.current_thread()
         self.activities = {}
@@ -51,6 +51,15 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
             _log.error('Agent session conflict')
 
         return False
+    
+    def is_rtc_heartbeating(self):
+        if api.is_authenticated == False:
+            return True
+        
+        if self.rtc == None or self.rtc.is_alive() == False:
+            self.rtc = connection.Connection.get_rtc()
+        
+        return True if self.rtc == None else self.rtc.is_heartbeating()
         
     def exe(self):        
         while 1:
@@ -82,7 +91,10 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                     
                 job_producer.start()
 
-                while 1:             
+                while 1:              
+                    if self.is_rtc_heartbeating() == False:
+                        self.api.get_config()
+                    
                     finished_job_count = 0
 
                     for job in job_producer.finish_jobs():
@@ -172,7 +184,6 @@ def start():
     signal.signal(signal.SIGTERM, sig_handler)
     signal.signal(signal.SIGINT, sig_handler)
     signal.signal(signal.SIGUSR1, sig_handler)
-    helper.ThreadMonitor().start()
     controller.start()
     
     while 1:

@@ -15,7 +15,7 @@ All the keys in the configuration are optional.
         Set the modules you want to enable logging. You can specify the name of any *.py file under src/ and lib/ directories.
         You can enable logging for all the modules by specifying ["all"] as the value for this key.
         */
-        "modules": ["__main__", "api", "connection", "daemon", "globals", "helper", "main", "rtc", "services", "storage", "controller"]
+        "modules": ["__main__", "api", "connection", "daemon", "globals", "helper", "main", "rtc", "services", "storage", "controller", "constructs"]
     },
 
     /*Specify the environment variables you want to export for the agent and the commands you schedule as an array of key value pairs.*/
