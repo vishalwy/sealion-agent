@@ -40,6 +40,7 @@ HOST_NAME=$(hostname)
 PROXY=$https_proxy
 NO_PROXY=$no_proxy
 REF="tarball"
+PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
 
 log_output()
 {

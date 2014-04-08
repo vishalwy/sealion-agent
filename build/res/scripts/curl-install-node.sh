@@ -160,7 +160,7 @@ echo "Downloading agent..."
 
 
 if [ -z $agent_id ] ; then
-    curl -# $CURL_COMMAND_PROXY $TAR_FILE_URL -o $TMP_FILE_NAME
+    curl -s $CURL_COMMAND_PROXY $TAR_FILE_URL -o $TMP_FILE_NAME
     if [ $? -ne 0 ] ; then
         echo "Error: Downloading source file failed" >&2
         exit 117
