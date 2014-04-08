@@ -221,8 +221,8 @@ check_dependency()
 
     GLOBALS=("import sys" "sys.path.insert(0, '.')" "sys.path.insert(0, 'websocket_client')" "sys.path.insert(0, 'socketio_client')")
     STMTS=("import socketio_client" "import sqlite3" "import requests" "requests.get('$API_URL', proxies = $PROXIES, timeout = 10)")
-    EXCEPTIONS=('TypeError' 'ImportError')
-    EXCEPTION_RET_CODES=("$SCRIPT_ERR_FAILED_DEPENDENCY" "$SCRIPT_ERR_FAILED_DEPENDENCY")
+    EXCEPTIONS=('TypeError' 'ImportError' 'AttributeError')
+    EXCEPTION_RET_CODES=("$SCRIPT_ERR_FAILED_DEPENDENCY" "$SCRIPT_ERR_FAILED_DEPENDENCY" "$SCRIPT_ERR_FAILED_DEPENDENCY")
     GLOBAL_STMTS=
     TRY_STMTS=
     TRY_EXCEPTIONS=
