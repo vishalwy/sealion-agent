@@ -19,6 +19,9 @@ exe_path = exe_path[:exe_path.rfind('/') + 1]
 sys.path.insert(0, exe_path + 'src') 
 sys.path.insert(0, exe_path)
 
+if sys.version_info[0] == 3:
+    sys.path.insert(0, exe_path + 'lib/httplib')
+
 import exit_status
 from daemon import Daemon
 

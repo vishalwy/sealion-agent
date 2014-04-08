@@ -15,6 +15,9 @@ sys.path.insert(0, exe_path + 'lib/websocket_client')
 sys.path.insert(0, exe_path + 'src')
 sys.path.insert(0, exe_path + 'lib')
 
+if sys.version_info[0] == 3:
+    sys.path.insert(0, exe_path + 'lib/httplib')
+
 import helper
 import controller
 import api

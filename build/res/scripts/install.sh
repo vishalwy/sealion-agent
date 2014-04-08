@@ -219,7 +219,7 @@ check_dependency()
         PROXIES="{'https': '$PROXY'}"
     fi
 
-    GLOBALS=("import sys" "sys.path.append('websocket_client')" "sys.path.append('socketio_client')")
+    GLOBALS=("import sys" "sys.path.insert('.')" "sys.path.insert('websocket_client')" "sys.path.insert('socketio_client')")
     STMTS=("import socketio_client" "import sqlite3" "import requests" "requests.get('$API_URL', proxies = $PROXIES, timeout = 10)")
     EXCEPTIONS=('TypeError' 'ImportError')
     EXCEPTION_RET_CODES=("$SCRIPT_ERR_FAILED_DEPENDENCY" "$SCRIPT_ERR_FAILED_DEPENDENCY")
