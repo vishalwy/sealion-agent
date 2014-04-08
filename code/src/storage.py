@@ -142,8 +142,8 @@ class OfflineStore(ThreadEx):
         if is_existing_table == True:
             try:
                 self.cursor.execute('PRAGMA TABLE_INFO(data)')
-                schema = set(schema)
-                cur_schema = set(self.cursor.fetchall())
+                schema = set([col if col[-1] == 0 else col[:-1] + (1,) for col in schema])
+                cur_schema = set([col if col[-1] == 0 else col[:-1] + (1,) for col in self.cursor.fetchall()])
 
                 if len(schema - cur_schema) > 0 or len(cur_schema - schema) > 0:
                     return False
