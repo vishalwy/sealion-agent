@@ -9,7 +9,7 @@ API_URL="<api-url>"
 DOWNLOAD_URL="<agent-download-url>"
 
 #script variables
-USAGE="Usage: curl -s $DOWNLOAD_URL | sudo bash /dev/stdin {-o <Organization token> [-c <Category name>] [-H <Host name>] [-x <Https proxy>] [-p <Python binary>] | -h for Help}"
+USAGE="Usage: curl -s $DOWNLOAD_URL | sudo bash /dev/stdin {-o <Organization token> [-c <Category name>] [-H <Host name>] [-x <Proxy address>] [-p <Python binary>] | -h for Help}"
 
 #setup variables
 INSTALL_PATH="/usr/local/sealion-agent"
@@ -153,7 +153,7 @@ if [ $? -ne 0 ] ; then
     exit 1
 fi
 
-$TMP_FILE_PATH/sealion-agent/install.sh "$@" -r curl
+$TMP_FILE_PATH/sealion-agent/install.sh "$@" -r curl 1> >( while read line; do log_output "${line}"; done ) 2> >( while read line; do log_output "${line}" 2; done )
 RET=$?
 
 if [[ "$AGENT_ID" != "" && $RET -ne 0 ]] ; then

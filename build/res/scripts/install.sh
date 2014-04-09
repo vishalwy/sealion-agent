@@ -29,7 +29,7 @@ DEFAULT_INSTALL_PATH="/usr/local/sealion-agent"
 INSTALL_AS_SERVICE=1
 SEALION_NODE_FOUND=0
 UPDATE_AGENT=0
-USAGE="Usage: $0 {-o <Organization token> [-c <Category name>] [-H <Host name>] [-x <Https proxy>] [-p <Python binary>] | -h for Help}"
+USAGE="Usage: $0 {-o <Organization token> [-c <Category name>] [-H <Host name>] [-x <Proxy address>] [-p <Python binary>] | -h for Help}"
 
 #setup variables
 INSTALL_PATH=$DEFAULT_INSTALL_PATH
@@ -41,54 +41,6 @@ PROXY=$https_proxy
 NO_PROXY=$no_proxy
 REF="tarball"
 PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
-
-log_output()
-{
-    OUTPUT=
-    STREAM=1
-    ST="O"
-
-    case "$#" in
-        "1")
-            OUTPUT=$1
-            ;;
-        "2")
-            OUTPUT=$1
-            STREAM=$2
-            ;;
-    esac
-
-    if [ "$OUTPUT" == "" ] ; then
-        return 1
-    fi
-
-    if [ $STREAM -eq 2 ] ; then
-        echo $OUTPUT >&2
-        ST="E"
-    else
-        echo $OUTPUT >&1
-    fi
-
-    if [ "$UPDATE_LOG_FILE" == "" ] ; then
-        if [ -w "$INSTALL_PATH/var/log" ] ; then
-            UPDATE_LOG_FILE="$INSTALL_PATH/var/log/update.log"
-        else
-            UPDATE_LOG_FILE=" "
-        fi
-    fi
-
-    if [ "$UPDATE_LOG_FILE" != " " ] ; then
-        echo $(date +"%F %T,%3N - $ST: $OUTPUT") >>"$UPDATE_LOG_FILE"
-    fi
-
-    return 0
-}
-
-if [[ -t 0 || -t 1 ]] ; then
-    trap "kill -PIPE 0 >/dev/null 2>&1" EXIT
-else
-    trap "kill -9 0 >/dev/null 2>&1" EXIT
-fi
 
 while getopts :i:o:c:H:x:p:a:r:v:h OPT ; do
     case "$OPT" in
@@ -102,7 +54,7 @@ while getopts :i:o:c:H:x:p:a:r:v:h OPT ; do
             CATEGORY=$OPTARG
             ;;
         h)
-            log_output $USAGE
+            echo $USAGE
             exit $SCRIPT_ERR_SUCCESS
             ;;
         H)
@@ -141,7 +93,7 @@ if [ "$ORG_TOKEN" == '' ] ; then
 fi
 
 if [ "`uname -s`" != "Linux" ] ; then
-    log_output 'Error: SeaLion agent works on Linux only' 2
+    echo 'Error: SeaLion agent works on Linux only' >&2
     exit $SCRIPT_ERR_INCOMPATIBLE_PLATFORM
 fi
 
@@ -162,16 +114,16 @@ if [ -f "$PYTHON" ] ; then
     esac
 else
     if [ "$PYTHON" == "" ] ; then
-        log_output "Error: No python found" 2
+        echo "Error: No python found" >&2
     else
-        log_output "Error: '$PYTHON' is not a valid python binary" 2
+        echo "Error: '$PYTHON' is not a valid python binary" >&2
     fi
 
     exit $SCRIPT_ERR_INVALID_PYTHON
 fi
 
 if [ $PYTHON_OK -eq 0 ] ; then
-    log_output "Error: SeaLion agent requires python version 2.6 or above" 2
+    echo "Error: SeaLion agent requires python version 2.6 or above" >&2
     exit $SCRIPT_ERR_INCOMPATIBLE_PYTHON
 fi
 
@@ -195,7 +147,7 @@ install_service()
     SYMLINK_PATHS=(K K S S S S K)
 
     if [[ -z $RC1_PATH || -z $RC2_PATH || -z $RC3_PATH || -z $RC4_PATH || -z $RC5_PATH || -z $RC6_PATH || -z $INIT_D_PATH ]] ; then
-        log_output "Error: Cannot create service sealion. Could not locate init.d/rc directories." 2
+        echo "Error: Cannot create service sealion. Could not locate init.d/rc directories." >&2
         return 1
     fi
     
@@ -206,7 +158,7 @@ install_service()
         ln -sf "$SERVICE_FILE" ${!VAR_NAME}/${SYMLINK_PATHS[$i]}99sealion
         
         if [ $? -ne 0 ] ; then
-            log_output "Error: Cannot create service sealion. Unable to update init.d files." 2
+            echo "Error: Cannot create service sealion. Unable to update init.d files." >&2
             return 1
         fi
     done
@@ -216,7 +168,7 @@ install_service()
 
 check_dependency()
 {
-    log_output "Performing dependency check..."
+    echo "Performing dependency check..."
     cd agent/lib
     PROXIES="{}"
     
@@ -260,7 +212,7 @@ check_dependency()
     RET_CODE=$?
 
     if [ $RET_CODE -ne $SCRIPT_ERR_SUCCESS ] ; then
-        log_output "Error: Python package dependency check failed; $RET" 2
+        echo "Error: Python package dependency check failed; $RET" >&2
         rm -rf *.pyc
         find . -type d -name '__pycache__' -exec rm -rf {} \; >/dev/null 2>&1
         exit $RET_CODE
@@ -317,7 +269,7 @@ setup_config()
 INSTALL_PATH=$(readlink -m "$INSTALL_PATH" 2>/dev/null)
 
 if [ $? -ne 0 ] ; then
-    log_output "Error: '$INSTALL_PATH' is not a valid directory" 2
+    echo "Error: '$INSTALL_PATH' is not a valid directory" >&2
     exit $SCRIPT_ERR_INVALID_USAGE
 fi
 
@@ -344,10 +296,10 @@ if [ $UPDATE_AGENT -eq 0 ] ; then
     mkdir -p "$INSTALL_PATH/var/log"
 
     if [ $? -ne 0 ] ; then
-        log_output "Error: Cannot create installation directory at '$INSTALL_PATH'" 2
+        echo "Error: Cannot create installation directory at '$INSTALL_PATH'" >&2
         exit $SCRIPT_ERR_FAILED_DIR_CREATE
     else
-        log_output "Install directory created at '$INSTALL_PATH'"
+        echo "Install directory created at '$INSTALL_PATH'"
     fi
 
     id -g $USER_NAME >/dev/null 2>&1
@@ -356,13 +308,13 @@ if [ $UPDATE_AGENT -eq 0 ] ; then
         groupadd -r $USER_NAME >/dev/null 2>&1
         
         if [ $? -ne 0 ] ; then
-            log_output "Error: Cannot create $USER_NAME group" 2
+            echo "Error: Cannot create $USER_NAME group" >&2
             exit $SCRIPT_ERR_FAILED_GROUP_CREATE
         else
-            log_output "Group $USER_NAME created"
+            echo "Group $USER_NAME created"
         fi
     else
-        log_output "Group $USER_NAME already exists"
+        echo "Group $USER_NAME already exists"
     fi
 
     id $USER_NAME >/dev/null 2>&1
@@ -371,13 +323,13 @@ if [ $UPDATE_AGENT -eq 0 ] ; then
         useradd -rMN -g $USER_NAME $USER_NAME >/dev/null 2>&1
         
         if [ $? -ne 0 ] ; then
-            log_output "Error: Cannot create user $USER_NAME" 2
+            echo "Error: Cannot create user $USER_NAME" >&2
             exit $SCRIPT_ERR_FAILED_USER_CREATE
         else
-            log_output "User $USER_NAME created"
+            echo "User $USER_NAME created"
         fi
     else
-        log_output "User $USER_NAME already exists"
+        echo "User $USER_NAME already exists"
     fi
 else
     if [ "$(id -u -n)" != "$USER_NAME" ] ; then
@@ -386,13 +338,13 @@ else
     fi
 
     if [[ ! -f "$SERVICE_FILE" && $SEALION_NODE_FOUND -eq 0 ]] ; then
-        log_output "Error: '$INSTALL_PATH' is not a valid sealion installation directory" 2
+        echo "Error: '$INSTALL_PATH' is not a valid sealion installation directory" >&2
         exit $SCRIPT_ERR_INVALID_USAGE
     fi
 fi
 
 if [ $SEALION_NODE_FOUND -eq 1 ] ; then
-    log_output "Removing sealion-node"
+    echo "Removing sealion-node"
     kill -SIGKILL `pgrep -d ',' 'sealion-node'` >/dev/null 2>&1
 
     if [ -d "$INSTALL_PATH/var" ] ; then
@@ -405,29 +357,29 @@ if [ $SEALION_NODE_FOUND -eq 1 ] ; then
 fi
 
 if [ -f "$SERVICE_FILE" ] ; then
-    log_output "Stopping agent..."
-    "$SERVICE_FILE" stop 1> >( while read line; do log_output "${line}"; done ) 2> >( while read line; do log_output "${line}" 2; done )
+    echo "Stopping agent..."
+    "$SERVICE_FILE" stop
 fi
 
-log_output "Copying files..."
+echo "Copying files..."
 
 if [ $UPDATE_AGENT -eq 0 ] ; then
     find "$INSTALL_PATH" -mindepth 1 -maxdepth 1 ! -name 'var' -exec rm -rf {} \; >/dev/null 2>&1
     cp -r agent/* "$INSTALL_PATH"
     setup_config
     chown -R $USER_NAME:$USER_NAME "$INSTALL_PATH"
-    log_output "Sealion agent installed successfully"    
+    echo "Sealion agent installed successfully"    
 
     if [ $INSTALL_AS_SERVICE -eq 1 ] ; then
         install_service
 
         if [ $? -ne 0 ] ; then
-            log_output "Use '$SERVICE_FILE' to control sealion"
+            echo "Use '$SERVICE_FILE' to control sealion"
         else
-            log_output "Service created"
+            echo "Service created"
         fi
     else
-        log_output "Use '$SERVICE_FILE' to control sealion"
+        echo "Use '$SERVICE_FILE' to control sealion"
     fi
 else
     if [ $SEALION_NODE_FOUND -eq 1 ] ; then
@@ -440,16 +392,16 @@ else
         update_agent_config "apiUrl" $API_URL
     fi
 
-    log_output "Sealion agent updated successfully"
+    echo "Sealion agent updated successfully"
 fi
 
-log_output "Starting agent..."
-"$SERVICE_FILE" start 1> >( while read line; do log_output "${line}"; done ) 2> >( while read line; do log_output "${line}" 2; done )
+echo "Starting agent..."
+"$SERVICE_FILE" start
 RET=$?
 
 if [[ $UPDATE_AGENT -eq 0 && $RET -eq 0 ]] ; then
     URL="$(echo "$API_URL" | sed 's/api-//')"
-    log_output "Please continue on $URL"
+    echo "Please continue on $URL"
 fi
 
 exit $RET

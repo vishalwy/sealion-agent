@@ -45,7 +45,7 @@ DOWNLOAD_URL="<download url>"
 REGISTRATION_URL="<registration url>"
 TAR_FILE_URL=
 
-while getopts a:t:i:p:o:x:c:v:hH: OPT ; do
+while getopts :a:t:i:p:o:x:c:v:hH: OPT ; do
     case "$OPT" in
         t)
             TAR_FILE_URL=$OPTARG
@@ -55,9 +55,7 @@ done
 
 TAR_FILE_URL=$(echo $TAR_FILE_URL | sed "s/PLATFORM/$PLATFORM/")
 PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
-
-USAGE="Usage:\n curl -s "$DOWNLOAD_URL" | sudo bash /dev/stdin -o <Organisation Token> \n\t[-H <Hostname>] \n\t[-c <Category name>] \n\t[-x <Proxy address>] \n\t[-h for help]"
-
+USAGE="Usage: curl -s $DOWNLOAD_URL | sudo bash /dev/stdin {-o <Organization token> [-c <Category name>] [-H <Host name>] [-x <Proxy address>] | -h for Help}"
 TMP_FILE_PATH=`mktemp -d /tmp/sealion-agent.XXXX` || exit 1
 TMP_FILE_NAME=$TMP_FILE_PATH"/sealion-agent.tar.gz"
 TMP_DATA_NAME=$TMP_FILE_PATH"/sealion-data.tmp"
@@ -104,7 +102,7 @@ get_JSON_value()
 
 unset OPTIND
 
-while getopts a:t:i:p:o:x:c:v:hH: OPT ; do
+while getopts :a:t:i:p:o:x:c:v:hH: OPT ; do
     case "$OPT" in
         i)
             if [ "${OPTARG%/}" != "/usr/local/sealion-agent" ] ; then
@@ -127,7 +125,7 @@ while getopts a:t:i:p:o:x:c:v:hH: OPT ; do
             host=$OPTARG
         ;;
         h)
-            printf "$USAGE \n" >&1
+            echo $USAGE
             exit 0
         ;;
         o)
@@ -139,13 +137,13 @@ while getopts a:t:i:p:o:x:c:v:hH: OPT ; do
             category=$OPTARG
         ;;
         \?)
-            echo "Invalid argument -$OPTARG" >&2
-            printf "$USAGE \n" >&2
+            echo "Invalid option '-$OPTARG'" >&2
+            echo $USAGE
             exit 126
         ;;
         :)
-            echo "Option -$OPTARG requires an argument." >&2
-            printf "$USAGE \n" >&2
+            echo "Option '-$OPTARG' requires an argument" >&2
+            echo $USAGE
             exit 125
         ;;
     esac
@@ -153,13 +151,13 @@ done
 
 if [ -z $org_token ] ; then
     echo "Error: No organization token found. Aborting" >&2
-    printf "$USAGE \n" >&2
+    echo $USAGE
     exit 124
 fi
 
 if [[ $EUID != 0 && -z $agent_id ]] ; then
     echo "SeaLion agent installation requires super privilege" >&2
-    echo -e "Usage:\n curl -s "$DOWNLOAD_URL" | sudo bash /dev/stdin -o $org_token \n\t[-H <Hostname>] \n\t[-c <Category name>] \n\t[-x <Proxy address>] \n\t[-h for help]"
+    echo $USAGE
     exit 116
 fi
 
