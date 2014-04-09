@@ -45,7 +45,7 @@ DOWNLOAD_URL="<download url>"
 REGISTRATION_URL="<registration url>"
 TAR_FILE_URL=
 
-while getopts a:t:o:x:c:v:hH: OPT ; do
+while getopts a:t:i:p:o:x:c:v:hH: OPT ; do
     case "$OPT" in
         t)
             TAR_FILE_URL=$OPTARG
@@ -104,13 +104,20 @@ get_JSON_value()
 
 unset OPTIND
 
-while getopts a:t:o:x:c:v:hH: OPT ; do
+while getopts a:t:i:p:o:x:c:v:hH: OPT ; do
     case "$OPT" in
+        i)
+            if [ "${OPTARG%/}" != "/usr/local/sealion-agent" ] ; then
+                echo "Error: Cannot install to location other than '/usr/local/sealion-agent'"
+                exit 125
+            fi
+        ;;
         v)
             version=$OPTARG
         ;;
         x)
             HTTPPROXY=$OPTARG
+            HTTPPROXY=$(echo "$HTTPPROXY" | sed 's/https:\/\//http:\/\//')
             CURL_COMMAND_PROXY="-x $HTTPPROXY"
         ;;
         a)
@@ -222,10 +229,10 @@ else
     fi
 fi    
 
-if [ -f "$INSTALLATION_DIRECTORYetc/init.d/sealion" ] ; then
+if [ -f "/usr/local/sealion-agent/etc/init.d/sealion" ] ; then
     echo "Removing sealion-python"
-    "$INSTALLATION_DIRECTORYetc/init.d/sealion" stop
-    find "$INSTALLATION_DIRECTORY" -mindepth 1 -maxdepth 1 ! -name 'var' -exec rm -rf {} \; >/dev/null 2>&1
+    "/usr/local/sealion-agent/etc/init.d/sealion" stop
+    find "/usr/local/sealion-agent" -mindepth 1 -maxdepth 1 ! -name 'var' -exec rm -rf {} \; >/dev/null 2>&1
 fi
 
 echo "Extracting files to /usr/local/sealion-agent..." >&1

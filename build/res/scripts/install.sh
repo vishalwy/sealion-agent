@@ -84,8 +84,6 @@ log_output()
     return 0
 }
 
-trap "kill -PIPE 0 >/dev/null 2>&1" EXIT
-
 while getopts :i:o:c:H:x:p:a:r:v:h OPT ; do
     case "$OPT" in
         i)
@@ -129,6 +127,12 @@ while getopts :i:o:c:H:x:p:a:r:v:h OPT ; do
             ;;
     esac
 done
+
+if [ $UPDATE_AGENT -eq 0 ] ; then
+    trap "kill -PIPE 0 >/dev/null 2>&1" EXIT
+else
+    trap "kill -9 0 >/dev/null 2>&1" EXIT
+fi
 
 if [ "$ORG_TOKEN" == '' ] ; then
     echo "Missing option '-o'" >&2

@@ -94,6 +94,12 @@ while getopts :i:o:c:H:x:p:a:r:v:h OPT ; do
     esac
 done
 
+if [ "$AGENT_ID" == "" ] ; then
+    trap "kill -PIPE 0 >/dev/null 2>&1" EXIT
+else
+    trap "kill -9 0 >/dev/null 2>&1" EXIT
+fi
+
 report_failure()
 {
     curl -s PROXY -H "Content-Type: application/json" -X PUT -d "{\"reason\":\"$1\"}"  "$API_URL/orgs/$ORG_TOKEN/agents/$AGENT_ID/updatefail" >/dev/null 2>&1
