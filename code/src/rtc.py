@@ -163,7 +163,7 @@ class RTC(ThreadEx):
         
     def is_heartbeating(self):       
         t = int(time.time())        
-        is_beating = True if t - self.last_heartbeat < (24 * 60 * 60 * 1000) else False
+        is_beating = True if t - self.last_heartbeat < (60 * 60 * 1000) else False
         return is_beating
 
     def exe(self):        
