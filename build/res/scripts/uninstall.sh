@@ -52,7 +52,12 @@ log_output()
 }
 
 cd "$BASEDIR"
-trap "kill -9 0 >/dev/null 2>&1" EXIT
+
+if [[ -t 0 || -t 1 ]] ; then
+    trap "kill -PIPE 0 >/dev/null 2>&1" EXIT
+else
+    trap "kill -9 0 >/dev/null 2>&1" EXIT
+fi
 
 if [[ "$(id -u -n)" != "$USER_NAME" && $EUID -ne 0 ]] ; then
     echo "Error: You need to run this script as either root or $USER_NAME" >&2
