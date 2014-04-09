@@ -118,9 +118,9 @@ class sealion(Daemon):
                     
                     try:
                         os.remove(file_name)
-                        _log.info('Removed crash dump %s' % file_name)
+                        _log.info('Removed dump %s' % file_name)
                     except Exception as e:
-                        _log.error('Failed to remove crash dump %s; %s' % (file_name, str(e)))
+                        _log.error('Failed to remove dump %s; %s' % (file_name, str(e)))
 
                 if globals.stop_event.is_set():
                     _log.debug('CrashDumpSender received stop event')
@@ -203,15 +203,18 @@ class sealion(Daemon):
         self.set_procname('sealiond')
         is_update_only_mode = False
         crash_dump_details = self.get_crash_dump_details()
+        import helper
+        helper.terminatehook = self.termination_hook
+        from constructs import ThreadEx
+        
+        if crash_dump_details[1] > 0:
+            _log.info('Found %d dumps' % crash_dump_details[1])
+            ThreadEx(target = self.send_crash_dumps, name = 'CrashDumpSender').start()
         
         if crash_dump_details[0] == True:
             _log.info('Crash loop detected; Starting agent in update-only mode')
             is_update_only_mode = True
         
-        import helper
-        helper.terminatehook = self.termination_hook
-        from constructs import ThreadEx
-        crash_dump_details[1] > 0 and ThreadEx(target = self.send_crash_dumps, name = 'CrashDumpSender').start()
         import main
         main.start(is_update_only_mode)
         

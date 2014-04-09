@@ -247,9 +247,9 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         ret = self.status.SUCCESS
         
         if API.is_success(response):
-            _log.info('Sent crash dump @ %d' % data['timestamp'])
+            _log.info('Sent dump @ %d' % data['timestamp'])
         else:
-            ret = self.error('Failed to send crash dump ', response, True)
+            ret = self.error('Failed to send dump ', response, True)
         
         return ret
     
