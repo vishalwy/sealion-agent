@@ -244,7 +244,7 @@ check_dependency()
         INDEX=0
 
         for EXCEPTION in "${EXCEPTIONS[@]}" ; do
-            TRY_EXCEPTIONS="$TRY_EXCEPTIONS\nexcept $EXCEPTION as e:\n\tprint(str(e))\n\tsys.exit(${EXCEPTION_RET_CODES[$INDEX]})"
+            TRY_EXCEPTIONS="$TRY_EXCEPTIONS\nexcept $EXCEPTION as e:\n\tsys.stderr.write(str(e) + '\n')\n\tsys.exit(${EXCEPTION_RET_CODES[$INDEX]})"
             INDEX=$INDEX+1
         done
 

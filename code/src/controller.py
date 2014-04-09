@@ -53,7 +53,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         return False
     
     def is_rtc_heartbeating(self):
-        if api.is_authenticated == False:
+        if self.api.is_authenticated == False:
             return True
         
         if self.rtc == None or self.rtc.is_alive() == False:
