@@ -58,8 +58,13 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         
         if self.rtc == None or self.rtc.is_alive() == False:
             self.rtc = connection.Connection.get_rtc()
-        
-        return True if self.rtc == None else self.rtc.is_heartbeating()
+            
+        if self.rtc == None:
+            return True
+        else:
+            ret = self.rtc.is_heartbeating()
+            ret == False and self.rtc.update_heartbeat()
+            return ret
         
     def exe(self):        
         while 1:

@@ -185,7 +185,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         return ret
             
     def get_config(self):
-        response = self.exec_method('get', {}, self.get_url('agents/1'))
+        response = self.exec_method('get', {'retry_count': 0}, self.get_url('agents/1'))
         ret = self.status.SUCCESS
         
         if API.is_success(response):
