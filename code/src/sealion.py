@@ -100,7 +100,7 @@ class sealion(Daemon):
             for file in os.listdir(path):
                 file_name = path + file
 
-                if os.path.isfile(file_name) and re.match('^sealion-[0-9]+\.dmp$', file) != None:
+                if os.path.isfile(file_name) and re.match('^sealion-[0-9]+\.[0-9]+\.[0-9]+-[0-9]+\.dmp$', file) != None:
                     report = None
 
                     while 1:
@@ -172,17 +172,20 @@ class sealion(Daemon):
         import main        
         
     def get_crash_dump_details(self):
+        from globals import Globals
+        globals = Globals()
         t = int(time.time())
         path = self.crash_dump_path
         crash_loop_timeout = self.crash_loop_count * self.monit_interval
         file_count, loop_file_count = 0, 0
+        loop_regex = '^sealion-%s-[0-9]+\.dmp$' % globals.config.agent.agentVersion.replace('.', '\.')
         
         try:
             for f in os.listdir(path):
-                if os.path.isfile(path + f) and re.match('^sealion-[0-9]+\.dmp$', f) != None:
+                if os.path.isfile(path + f) and re.match('^sealion-[0-9]+\.[0-9]+\.[0-9]+-[0-9]+\.dmp$', f) != None:
                     file_count += 1
                     
-                    if t - os.path.getmtime(path + f) < crash_loop_timeout:
+                    if re.match(loop_regex, f) != None and t - os.path.getmtime(path + f) < crash_loop_timeout:
                         loop_file_count += 1
         except:
             pass
