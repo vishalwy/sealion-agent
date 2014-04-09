@@ -101,7 +101,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                         job.post_output()
                         finished_job_count += 1
 
-                    finished_job_count and _log.info('Finished execution of %d activities.' % finished_job_count)
+                    finished_job_count and _log.debug('Finished execution of %d activities.' % finished_job_count)
                     self.globals.stop_event.wait(5)
 
                     if self.globals.stop_event.is_set():

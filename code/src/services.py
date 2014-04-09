@@ -176,7 +176,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
                 activity['next_exec_timestamp'] = next_exec_timestamp + activity['details']['interval']
 
         jobs.sort(key = lambda job: job.exec_timestamp)
-        len(jobs) and _log.info('Scheduling %d activities', len(jobs))
+        len(jobs) and _log.debug('Scheduling %d activities', len(jobs))
 
         for job in jobs:
             self.queue.put(job)
