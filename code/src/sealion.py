@@ -43,7 +43,7 @@ class sealion(Daemon):
         from globals import Globals
         globals = Globals()
         timestamp = int(time.time() * 1000)
-        path = self.crash_dump_path + ('sealion-%d.dmp' % timestamp)
+        path = self.crash_dump_path + ('sealion-%s-%d.dmp' % (globals.config.agent.agentVersion, timestamp))
         dir = os.path.dirname(path)
         f = None
         
@@ -54,10 +54,13 @@ class sealion(Daemon):
                 'stack': stack_trace,
                 'orgToken': globals.config.agent.orgToken,
                 '_id': globals.config.agent._id,
+                'os': {'pythonVersion': globals.details['pythonVersion']},
                 'process': {
                     'uid': os.getuid(),
                     'gid': os.getgid(),
-                    'uptime': int(globals.get_run_time() * 1000)
+                    'uptime': int(globals.get_run_time() * 1000),
+                    'agentVersion': globals.config.agent.agentVersion,
+                    'isProxy': globals.details['isProxy']
                 }
             }
             f = open(path, 'w')
@@ -71,7 +74,7 @@ class sealion(Daemon):
     
     def read_dump(self, file_name):
         f, report = None, None
-        keys = ['timestamp', 'stack', 'orgToken', '_id', 'process']
+        keys = ['timestamp', 'stack', 'orgToken', '_id', 'os', 'process']
         
         try:
             f = open(file_name, 'r')
