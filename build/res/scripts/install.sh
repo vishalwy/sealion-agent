@@ -302,9 +302,7 @@ if [ $UPDATE_AGENT -eq 0 ] ; then
         echo "Install directory created at '$INSTALL_PATH'"
     fi
 
-    id -g $USER_NAME >/dev/null 2>&1
-
-    if [ $? -ne 0 ] ; then
+    if [ "$(grep "^$USER_NAME" /etc/group)" == "" ] ; then
         groupadd -r $USER_NAME >/dev/null 2>&1
         
         if [ $? -ne 0 ] ; then
@@ -320,7 +318,7 @@ if [ $UPDATE_AGENT -eq 0 ] ; then
     id $USER_NAME >/dev/null 2>&1
 
     if [ $? -ne 0 ] ; then
-        useradd -rMN -g $USER_NAME $USER_NAME >/dev/null 2>&1
+        useradd -rM -g $USER_NAME $USER_NAME >/dev/null 2>&1
         
         if [ $? -ne 0 ] ; then
             echo "Error: Cannot create user $USER_NAME" >&2

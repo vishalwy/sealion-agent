@@ -79,7 +79,7 @@ class AgentConfig(helper.Config):
         version = data.get('agentVersion')
              
         if version and version != self.data['agentVersion']:
-            hasattr(self, '_id') and globals.event_dispatcher.trigger('update_agent', data['agentVersion'])
+            hasattr(self, '_id') and globals.event_dispatcher.trigger('update_agent')
             del data['agentVersion']
             
         ret = helper.Config.update(self, data)

@@ -254,13 +254,19 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         
         return ret
     
-    def update_agent(self, event, version):
+    def update_agent(self, event = None):
         if self.updater != None:
             return
         
-        self.updater = ThreadEx(target = self.install_update, name = 'Updater', args = (version,))
-        self.updater.daemon = True
-        self.updater.start()
+        self.updater = True
+        version = self.get_agent_version()
+        
+        if (type(version) is str or type(version) is unicode) and version != self.globals.config.agent.agentVersion:
+            self.updater = ThreadEx(target = self.install_update, name = 'Updater', args = (version,))
+            self.updater.daemon = True
+            self.updater.start()
+        else:
+            self.updater = None
     
     def stop(self, stop_status = None):
         self.set_events(True, True)

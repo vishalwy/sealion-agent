@@ -108,7 +108,8 @@ report_failure()
 
 TMP_DATA_FILE=$(mktemp $TMP_DATA_FILE)
 log_output "Getting agent installer details..."
-RET=$(curl -s $PROXY -w "%{http_code}" -H "Content-Type: application/json" "$API_URL/orgs/$ORG_TOKEN/agentVersion" -o "$TMP_DATA_FILE" 2>/dev/null)
+SUB_URL=$([ "$AGENT_ID" != "" ] && echo "/agents/$AGENT_ID" || echo "")
+RET=$(curl -s $PROXY -w "%{http_code}" -H "Content-Type: application/json" "$API_URL/orgs/$ORG_TOKEN$SUB_URL/agentVersion" -o "$TMP_DATA_FILE" 2>/dev/null)
 
 if [[ $? -ne 0 || $RET -ne 200 ]] ; then
     log_output "Error: Failed to get agent installer details" 2

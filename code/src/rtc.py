@@ -94,7 +94,7 @@ class SocketIONamespace(BaseNamespace):
         self.rtc.update_heartbeat()
         
         try:
-            args[0]['agentVersion'] != self.globals.config.agent.agentVersion and self.api.update_agent(None, args[0]['agentVersion'])
+            args[0]['agentVersion'] != self.globals.config.agent.agentVersion and self.api.update_agent()
         except:
             pass
         

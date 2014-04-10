@@ -69,12 +69,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
     def exe(self):        
         while 1:
             if self.globals.is_update_only_mode == True:
-                version = self.api.get_agent_version()
-                version_type = type(version)
-
-                if (version_type is str or version_type is unicode) and version != self.globals.config.agent.agentVersion:
-                    self.api.update_agent(None, version)
-
+                self.api.update_agent()
                 _log.debug('%s waiting for stop event for %d seconds.' % (self.name, 5 * 60, ))
                 self.globals.stop_event.wait(5 * 60)
 
