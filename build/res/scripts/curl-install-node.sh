@@ -230,7 +230,7 @@ fi
 if [ -f "/usr/local/sealion-agent/etc/init.d/sealion" ] ; then
     echo "Removing sealion-python..."
     "/usr/local/sealion-agent/etc/init.d/sealion" stop >/dev/null 2>&1
-    find "/usr/local/sealion-agent/var/log" -mindepth 1 -maxdepth 1 -type f -exec mv "{}" "$(mktemp -u {}.old.XXXX)" \; 1>/dev/null 2>&1
+    find "/usr/local/sealion-agent/var/log" -mindepth 1 -maxdepth 1 -type f ! -name 'update.log' -exec mv "{}" "$(mktemp -u {}.old.XXXX)" \; 1>/dev/null 2>&1
     find "/usr/local/sealion-agent/var" -mindepth 1 -maxdepth 1 ! -name 'log' -exec rm -rf {} \; 1>/dev/null 2>&1
     find "/usr/local/sealion-agent" -mindepth 1 -maxdepth 1 ! -name 'var' -exec rm -rf {} \; >/dev/null 2>&1
 fi

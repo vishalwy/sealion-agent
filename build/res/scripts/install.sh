@@ -346,7 +346,7 @@ fi
 if [ $SEALION_NODE_FOUND -eq 1 ] ; then
     echo "Removing sealion-node..."
     "$INSTALL_PATH/etc/sealion" stop >/dev/null 2>&1
-    find "$INSTALL_PATH/var/log" -mindepth 1 -maxdepth 1 -type f -exec mv "{}" "$(mktemp -u {}.old.XXXX)" \; 1>/dev/null 2>&1
+    find "$INSTALL_PATH/var/log" -mindepth 1 -maxdepth 1 -type f ! -name 'update.log' -exec mv "{}" "$(mktemp -u {}.old.XXXX)" \; 1>/dev/null 2>&1
     find "$INSTALL_PATH/var" -mindepth 1 -maxdepth 1 ! -name 'log' -exec rm -rf "{}" \; 1>/dev/null 2>&1
     find "$INSTALL_PATH" -mindepth 1 -maxdepth 1 ! -name 'var' -exec rm -rf "{}" \; >/dev/null 2>&1
 fi
