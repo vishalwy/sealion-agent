@@ -10,6 +10,7 @@ DOWNLOAD_URL="<agent-download-url>"
 
 #script variables
 USAGE="Usage: curl -s $DOWNLOAD_URL | sudo bash /dev/stdin {-o <Organization token> [-c <Category name>] [-H <Host name>] [-x <Proxy address>] [-p <Python binary>] | -h for Help}"
+USER_NAME="sealion"
 
 #setup variables
 INSTALL_PATH="/usr/local/sealion-agent"
@@ -47,7 +48,9 @@ log_output()
     fi
 
     if [ "$UPDATE_LOG_FILE" == "" ] ; then
-        if [ -w "$INSTALL_PATH/var/log" ] ; then
+        DEST=$([ -f "$INSTALL_PATH/var/log/update.log" ] && echo "$INSTALL_PATH/var/log/update.log" || echo "$INSTALL_PATH/var/log")
+
+        if [[ "$(id -u -n)" == "$USER_NAME" && -w "$DEST" ]] ; then
             UPDATE_LOG_FILE="$INSTALL_PATH/var/log/update.log"
         else
             UPDATE_LOG_FILE=" "
@@ -82,17 +85,17 @@ while getopts :i:o:c:H:x:p:a:r:v:h OPT ; do
             ORG_TOKEN=$OPTARG
             ;;
         h)
-            echo $USAGE
+            log_output $USAGE
             exit 0
             ;;
         \?)
-            echo "Invalid option '-$OPTARG'" >&2
-            echo $USAGE
+            log_output "Invalid option '-$OPTARG'" 2
+            log_output $USAGE
             exit 126
             ;;
         :)
-            echo "Option '-$OPTARG' requires an argument" >&2
-            echo $USAGE
+            log_output "Option '-$OPTARG' requires an argument" 2
+            log_output $USAGE
             exit 125
             ;;
     esac
