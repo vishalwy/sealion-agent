@@ -3,6 +3,7 @@ __author__ = 'Vishal P.R'
 __email__ = 'hello@sealion.com'
 
 import sys
+import os
 import logging
 import requests
 import subprocess
@@ -11,7 +12,6 @@ import json
 import re
 import connection
 import globals
-import helper
 from constructs import *
 
 _log = logging.getLogger(__name__)
@@ -330,8 +330,8 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
             'download_url': re.sub('://api', '://agent', self.get_url()),
             'proxy': ('-x "%s"' % self.globals.proxy_url) if self.globals.details['isProxy'] else ''
         }       
-        subprocess.call(['bash', '-c', format % format_spec])
-        time.sleep(60)
+        subprocess.call(['bash', '-c', format % format_spec], preexec_fn = os.setpgrp)
+        time.sleep(30)
         _log.error('Failed to install update version %s' % version)
         self.updater = None
         
