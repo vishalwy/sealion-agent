@@ -243,7 +243,8 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         data = temp
         orgToken, agentId = data['orgToken'], data['_id']
         del data['orgToken'], data['_id']
-        response = self.exec_method('post', {'retry_count': 0}, self.get_url('orgs/%s/agents/%s/crashreport' % (orgToken, agentId)), data = data)    
+        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+        response = self.exec_method('post', {'retry_count': 0}, self.get_url('orgs/%s/agents/%s/crashreport' % (orgToken, agentId)), data = json.dumps(data), headers = headers)
         ret = self.status.SUCCESS
         
         if API.is_success(response):
