@@ -123,6 +123,7 @@ TAR_DOWNLOAD_URL=$(cat $TMP_DATA_FILE | grep '"agentDownloadURL"\s*:\s*"[^"]*"' 
 if [ $MAJOR_VERSION -le 2 ] ; then
     curl -s $PROXY "$DOWNLOAD_URL/curl-install-node.sh" 2>/dev/null | bash /dev/stdin "$@" -t $TAR_DOWNLOAD_URL 1> >( while read line; do log_output "${line}"; done ) 2> >( while read line; do log_output "${line}" 2; done )
     rm -f $TMP_DATA_FILE
+    sleep 2
     exit 0
 fi
 
