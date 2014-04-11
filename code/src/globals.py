@@ -56,7 +56,7 @@ class AgentConfig(helper.Config):
             'apiUrl': {'type': 'str,unicode', 'regex': '^https://[^\s:]+(:[0-9]+)?$' },
             'name': {'type': 'str,unicode',  'regex': '^.+$'},
             'category': {'type': 'str,unicode', 'regex': '^.+$', 'optional': True},
-            'agentVersion': {'type': 'str,unicode', 'regex': '^[0-9]+\.[0-9]+\.[0-9]+$'},
+            'agentVersion': {'type': 'str,unicode', 'regex': '^(\d+\.){0,2}(\d)+(\.[a-z0-9]+)?$'},
             'activities': {
                 'type': [{
                     '_id': {'type': 'str,unicode', 'regex': '^[a-zA-Z0-9]{24}$'}, 
