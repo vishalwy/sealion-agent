@@ -62,6 +62,7 @@ TARGET="bin/$TARGET"
 cd "$BASEDIR"
 rm -rf $TARGET >/dev/null 2>&1
 mkdir -p $TARGET/$OUTPUT/agent
+chmod +x $TARGET/$OUTPUT
 
 generate_scripts()
 {
