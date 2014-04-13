@@ -96,6 +96,7 @@ class sealion(Daemon):
         globals = Globals()
         api = API()
         path = self.crash_dump_path
+        agent_version_regex = globals.config.agent.schema['agentVersion'].get('regex', '.*')
         _log.debug('CrashDumpSender waiting for stop event for %d seconds' % crash_dump_timeout)
         globals.stop_event.wait(crash_dump_timeout)
         
@@ -103,7 +104,7 @@ class sealion(Daemon):
             for file in os.listdir(path):
                 file_name = path + file
 
-                if os.path.isfile(file_name) and re.match('^sealion-[0-9]+\.[0-9]+\.[0-9]+-[0-9]+\.dmp$', file) != None:
+                if os.path.isfile(file_name) and re.match('^sealion-%s-[0-9]+\.dmp$' % agent_version_regex, file) != None:
                     report = None
 
                     while 1:
@@ -182,10 +183,11 @@ class sealion(Daemon):
         crash_loop_timeout = self.crash_loop_count * self.monit_interval
         file_count, loop_file_count = 0, 0
         loop_regex = '^sealion-%s-[0-9]+\.dmp$' % globals.config.agent.agentVersion.replace('.', '\.')
+        agent_version_regex = globals.config.agent.schema['agentVersion'].get('regex', '.*')
         
         try:
             for f in os.listdir(path):
-                if os.path.isfile(path + f) and re.match('^sealion-[0-9]+\.[0-9]+\.[0-9]+-[0-9]+\.dmp$', f) != None:
+                if os.path.isfile(path + f) and re.match('^sealion-%s-[0-9]+\.dmp$' % agent_version_regex, f) != None:
                     file_count += 1
                     
                     if re.match(loop_regex, f) != None and t - os.path.getmtime(path + f) < crash_loop_timeout:
