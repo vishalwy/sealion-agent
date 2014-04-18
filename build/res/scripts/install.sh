@@ -300,6 +300,7 @@ if [ $UPDATE_AGENT -eq 0 ] ; then
     fi
 
     mkdir -p "$INSTALL_PATH/var/log"
+    chmod +x "$INSTALL_PATH"
 
     if [ $? -ne 0 ] ; then
         echo "Error: Cannot create installation directory at '$INSTALL_PATH'" >&2
