@@ -10,10 +10,11 @@ SCRIPT_ERR_INVALID_PYTHON=1
 SCRIPT_ERR_INCOMPATIBLE_PYTHON=2
 SCRIPT_ERR_FAILED_DEPENDENCY=3
 SCRIPT_ERR_INCOMPATIBLE_PLATFORM=4
-SCRIPT_ERR_INVALID_USAGE=6
-SCRIPT_ERR_FAILED_DIR_CREATE=7
-SCRIPT_ERR_FAILED_GROUP_CREATE=8
-SCRIPT_ERR_FAILED_USER_CREATE=9
+SCRIPT_ERR_COMMAND_NOT_FOUND=6
+SCRIPT_ERR_INVALID_USAGE=7
+SCRIPT_ERR_FAILED_DIR_CREATE=8
+SCRIPT_ERR_FAILED_GROUP_CREATE=9
+SCRIPT_ERR_FAILED_USER_CREATE=10
 
 #config variables
 API_URL="<api-url>"
@@ -24,7 +25,7 @@ BASEDIR=$(readlink -f "$0")
 BASEDIR=$(dirname "$BASEDIR")
 BASEDIR=${BASEDIR%/}
 USER_NAME="sealion"
-PYTHON=$(which python)
+PYTHON="python"
 DEFAULT_INSTALL_PATH="/usr/local/sealion-agent"
 INSTALL_AS_SERVICE=1
 SEALION_NODE_FOUND=0
@@ -97,36 +98,6 @@ if [ "`uname -s`" != "Linux" ] ; then
     exit $SCRIPT_ERR_INCOMPATIBLE_PLATFORM
 fi
 
-PYTHON_OK=0
-PYTHON=$(readlink -f "$PYTHON" 2>/dev/null)
-
-if [ -f "$PYTHON" ] ; then
-    case $("$PYTHON" --version 2>&1) in
-        *" 3."*)
-            PYTHON_OK=1
-            ;;
-        *" 2.6"*)
-            PYTHON_OK=1
-            ;;
-        *" 2.7"*)
-            PYTHON_OK=1
-            ;;
-    esac
-else
-    if [ "$PYTHON" == "" ] ; then
-        echo "Error: No python found" >&2
-    else
-        echo "Error: '$PYTHON' is not a valid python binary" >&2
-    fi
-
-    exit $SCRIPT_ERR_INVALID_PYTHON
-fi
-
-if [ $PYTHON_OK -eq 0 ] ; then
-    echo "Error: SeaLion agent requires python version 2.6 or above" >&2
-    exit $SCRIPT_ERR_INCOMPATIBLE_PYTHON
-fi
-
 update_agent_config()
 {
     KEY="$(echo "$1" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
@@ -169,6 +140,26 @@ install_service()
 check_dependency()
 {
     echo "Performing dependency check..."
+
+    if [ "$(which "$PYTHON")" == "" ] ; then
+        echo "Error: No python found" >&2
+        exit $SCRIPT_ERR_INVALID_PYTHON
+    fi
+
+    WHICH_COMMANDS=("sed" "curl" "printf" "readlink" "cat" "groupadd" "useradd" "find" "chown" "bash" "grep" "userdel" "groupdel")
+    MISSING_COMMANDS=""
+
+    for COMMAND in "${WHICH_COMMANDS[@]}" ; do
+        if [ "$(which "$COMMAND")" == "" ] ; then
+            MISSING_COMMANDS=$([ "$MISSING_COMMANDS" != "" ] && echo "$MISSING_COMMANDS, '$COMMAND'" || echo "'$COMMAND'")
+        fi
+    done
+
+    if [ "$MISSING_COMMANDS" != "" ] ; then
+        echo "Error: Command dependency check failed; Could not locate commands $MISSING_COMMANDS" >&2
+        exit $SCRIPT_ERR_COMMAND_NOT_FOUND
+    fi
+
     cd agent/lib
     PROXIES="{}"
     
@@ -176,10 +167,23 @@ check_dependency()
         PROXIES="{'https': '$PROXY'}"
     fi
 
-    GLOBALS=("import sys" "sys.path.insert(0, '.')" "sys.path.insert(0, 'websocket_client')" "sys.path.insert(0, 'socketio_client')" "sys.version_info[0] == 3 and sys.path.insert(0, 'httplib')")
-    STMTS=("import socketio_client" "import sqlite3" "import requests" "requests.get('$API_URL', proxies = $PROXIES, timeout = 10)")
-    EXCEPTIONS=('TypeError' 'ImportError' 'AttributeError')
-    EXCEPTION_RET_CODES=("$SCRIPT_ERR_FAILED_DEPENDENCY" "$SCRIPT_ERR_FAILED_DEPENDENCY" "$SCRIPT_ERR_FAILED_DEPENDENCY")
+    GLOBALS=(
+        "import sys" 
+        "sys.path.insert(0, '.')" 
+        "sys.path.insert(0, 'websocket_client')" 
+        "sys.path.insert(0, 'socketio_client')" 
+        "sys.version_info[0] == 3 and sys.path.insert(0, 'httplib')"
+    )
+    STMTS=(
+        "if float('%%d.%%d' %% (sys.version_info[0], sys.version_info[1])) < 2.6:\n\t\traise NotImplementedError('SeaLion agent requires python version 2.6 or above')" 
+        "import sqlite3" 
+        "import ssl" 
+        "import socketio_client" 
+        "import requests" 
+        "requests.get('$API_URL', proxies = $PROXIES, timeout = 10)"
+    )
+    EXCEPTIONS=("TypeError" "ImportError" "AttributeError" "NotImplementedError")
+    EXCEPTION_RET_CODES=("$SCRIPT_ERR_FAILED_DEPENDENCY" "$SCRIPT_ERR_FAILED_DEPENDENCY" "$SCRIPT_ERR_FAILED_DEPENDENCY" "$SCRIPT_ERR_INCOMPATIBLE_PYTHON")
     GLOBAL_STMTS=
     TRY_STMTS=
     TRY_EXCEPTIONS=
@@ -207,11 +211,14 @@ check_dependency()
         TRY_EXCEPTIONS="$TRY_EXCEPTIONS\nexcept:\n\tpass"
     fi
 
-    CODE=$(printf "$GLOBAL_STMTS\n$TRY_STMTS$TRY_EXCEPTIONS\n\nsys.exit($SCRIPT_ERR_SUCCESS)")
-    RET=$($PYTHON -c "$CODE" 2>&1)
+    CODE=$(printf "$GLOBAL_STMTS\n$TRY_STMTS$TRY_EXCEPTIONS\n\nprint('SCRIPT_ERR_SUCCESS')\nsys.exit($SCRIPT_ERR_SUCCESS)")
+    RET=$("$PYTHON" -c "$CODE" 2>&1)
     RET_CODE=$?
 
-    if [ $RET_CODE -ne $SCRIPT_ERR_SUCCESS ] ; then
+    if [[ $RET_CODE -eq $SCRIPT_ERR_SUCCESS && "$RET" != "SCRIPT_ERR_SUCCESS" ]] ; then
+        echo "Error: '$PYTHON' is not a valid python binary" >&2
+        exit $SCRIPT_ERR_INVALID_PYTHON
+    elif [ $RET_CODE -ne $SCRIPT_ERR_SUCCESS ] ; then
         echo "Error: Python package dependency check failed; $RET" >&2
         rm -rf *.pyc
         find . -type d -name '__pycache__' -exec rm -rf {} \; >/dev/null 2>&1
@@ -266,11 +273,10 @@ setup_config()
     eval sed "$ARGS" "\"$INSTALL_PATH/uninstall.sh\""
 }
 
-INSTALL_PATH=$(readlink -m "$INSTALL_PATH" 2>/dev/null)
+INSTALL_PATH=$(eval echo "$INSTALL_PATH")
 
-if [ $? -ne 0 ] ; then
-    echo "Error: '$INSTALL_PATH' is not a valid directory" >&2
-    exit $SCRIPT_ERR_INVALID_USAGE
+if [[ "$INSTALL_PATH" != "" && ${INSTALL_PATH:0:1} != "/" ]] ; then
+    INSTALL_PATH="$BASEDIR/$INSTALL_PATH"
 fi
 
 INSTALL_PATH=${INSTALL_PATH%/}
