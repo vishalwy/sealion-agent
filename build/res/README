@@ -22,7 +22,7 @@ Usage
 #   If not installed as a service, execute
     etc/init.d/sealion start|stop|restart|status
 
-Note:   You might want to add 'etc/init.d/sealion' to your system startup scripts if not installed as a service. 
+Note:   You might want to add 'etc/init.d/sealion start' to your system startup scripts if not installed as a service. 
         This will allow agent to run automatically on system startup.
 
 
@@ -40,12 +40,13 @@ Logging
 =======
 #   'var/log/sealion.log' contains log of SeaLion Agent. You may configure logging. 
     Refer 'etc/config.json.example' for details.
-#   'var/log/update.log' contains install/update logs.
+#   'var/log/update.log' contains update logs.
 
 
 Uninstall
 =========
 To uninstall agent, execute uninstall.sh
+
 Note: Uninstalling agent requires super privilege.
 
 

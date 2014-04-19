@@ -219,7 +219,7 @@ check_dependency()
         echo "Error: '$PYTHON' is not a valid python binary" >&2
         exit $SCRIPT_ERR_INVALID_PYTHON
     elif [ $RET_CODE -ne $SCRIPT_ERR_SUCCESS ] ; then
-        echo "Error: Python package dependency check failed; $RET" >&2
+        echo "Error: Python dependency check failed; $RET" >&2
         rm -rf *.pyc
         find . -type d -name '__pycache__' -exec rm -rf {} \; >/dev/null 2>&1
         exit $RET_CODE
