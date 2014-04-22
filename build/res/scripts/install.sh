@@ -146,7 +146,7 @@ check_dependency()
         exit $SCRIPT_ERR_INVALID_PYTHON
     fi
 
-    WHICH_COMMANDS=("sed" "curl" "printf" "readlink" "cat" "groupadd" "useradd" "find" "chown" "bash" "grep" "userdel" "groupdel")
+    WHICH_COMMANDS=("sed" "curl" "readlink" "cat" "groupadd" "useradd" "find" "chown" "bash" "grep" "userdel" "groupdel")
     MISSING_COMMANDS=""
 
     for COMMAND in "${WHICH_COMMANDS[@]}" ; do
@@ -175,7 +175,7 @@ check_dependency()
         "sys.version_info[0] == 3 and sys.path.insert(0, 'httplib')"
     )
     STMTS=(
-        "if float('%%d.%%d' %% (sys.version_info[0], sys.version_info[1])) < 2.6:\n\t\traise NotImplementedError('SeaLion agent requires python version 2.6 or above')" 
+        "if float('%d.%d' % (sys.version_info[0], sys.version_info[1])) < 2.6:\n\t\traise NotImplementedError('SeaLion agent requires python version 2.6 or above')" 
         "import sqlite3" 
         "import ssl" 
         "import socketio_client" 
@@ -211,7 +211,7 @@ check_dependency()
         TRY_EXCEPTIONS="$TRY_EXCEPTIONS\nexcept:\n\tpass"
     fi
 
-    CODE=$(printf "$GLOBAL_STMTS\n$TRY_STMTS$TRY_EXCEPTIONS\n\nprint('SCRIPT_ERR_SUCCESS')\nsys.exit($SCRIPT_ERR_SUCCESS)")
+    CODE=$(echo -e "$GLOBAL_STMTS\n$TRY_STMTS$TRY_EXCEPTIONS\n\nprint('SCRIPT_ERR_SUCCESS')\nsys.exit($SCRIPT_ERR_SUCCESS)")
     RET=$("$PYTHON" -c "$CODE" 2>&1)
     RET_CODE=$?
 

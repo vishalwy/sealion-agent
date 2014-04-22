@@ -298,7 +298,7 @@ class ThreadMonitor(SingletonType('ThreadMonitorMetaClass', (object, ), {})):
             elif ret['callback'] != -1:
                 terminatehook('Thread %d is not responding' % ret['thread_id'], Utils.get_stack_trace(ret['thread_id']))
                 _log.info('Agent terminating with status code %d.' % ret['callback'])
-                os._exit(ret[0])
+                os._exit(ret['callback'])
                
         self.thread = None
         
