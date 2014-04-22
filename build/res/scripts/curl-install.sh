@@ -158,7 +158,7 @@ if [ $? -ne 0 ] ; then
     exit 1
 fi
 
-$TMP_FILE_PATH/sealion-agent/install.sh "$@" -r curl 1> >( while read line; do log_output "${line}"; done ) 2> >( while read line; do log_output "${line}" 2; done )
+bash $TMP_FILE_PATH/sealion-agent/install.sh "$@" -r curl 1> >( while read line; do log_output "${line}"; done ) 2> >( while read line; do log_output "${line}" 2; done )
 RET=$?
 
 if [[ "$AGENT_ID" != "" && $RET -ne 0 ]] ; then
