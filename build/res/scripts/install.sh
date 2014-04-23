@@ -148,78 +148,28 @@ check_dependency()
 
     WHICH_COMMANDS=("sed" "curl" "readlink" "cat" "groupadd" "useradd" "find" "chown" "bash" "grep" "userdel" "groupdel")
     MISSING_COMMANDS=""
+    PADDING="      "
 
     for COMMAND in "${WHICH_COMMANDS[@]}" ; do
         if [ "$(which "$COMMAND")" == "" ] ; then
-            MISSING_COMMANDS=$([ "$MISSING_COMMANDS" != "" ] && echo "$MISSING_COMMANDS, '$COMMAND'" || echo "'$COMMAND'")
+            MISSING_COMMANDS=$([ "$MISSING_COMMANDS" != "" ] && echo "$MISSING_COMMANDS\n$PADDING Cannot locate command '$COMMAND'" || echo "$PADDING Cannot locate command '$COMMAND'")
         fi
     done
 
     if [ "$MISSING_COMMANDS" != "" ] ; then
-        echo "Error: Command dependency check failed; Could not locate commands $MISSING_COMMANDS" >&2
+        echo -e "Error: Command dependency check failed\n$MISSING_COMMANDS" >&2
         exit $SCRIPT_ERR_COMMAND_NOT_FOUND
     fi
 
     cd agent/lib
-    PROXIES="{}"
-    
-    if [ "$PROXY" != "" ] ; then
-        PROXIES="{'https': '$PROXY'}"
-    fi
-
-    GLOBALS=(
-        "import sys" 
-        "sys.path.insert(0, '.')" 
-        "sys.path.insert(0, 'websocket_client')" 
-        "sys.path.insert(0, 'socketio_client')" 
-        "sys.version_info[0] == 3 and sys.path.insert(0, 'httplib')"
-    )
-    STMTS=(
-        "if float('%d.%d' % (sys.version_info[0], sys.version_info[1])) < 2.6:\n\t\traise NotImplementedError('SeaLion agent requires python version 2.6 or above')" 
-        "import sqlite3" 
-        "import ssl" 
-        "import socketio_client" 
-        "import requests" 
-        "requests.get('$API_URL', proxies = $PROXIES, timeout = 10)"
-    )
-    EXCEPTIONS=("TypeError" "ImportError" "AttributeError" "NotImplementedError")
-    EXCEPTION_RET_CODES=("$SCRIPT_ERR_FAILED_DEPENDENCY" "$SCRIPT_ERR_FAILED_DEPENDENCY" "$SCRIPT_ERR_FAILED_DEPENDENCY" "$SCRIPT_ERR_INCOMPATIBLE_PYTHON")
-    GLOBAL_STMTS=
-    TRY_STMTS=
-    TRY_EXCEPTIONS=
-
-    for STMT in "${GLOBALS[@]}" ; do
-        GLOBAL_STMTS="$GLOBAL_STMTS$STMT\n"
-    done
-
-    for STMT in "${STMTS[@]}" ; do
-        if [ "$TRY_STMTS" == "" ] ; then
-            TRY_STMTS="try:"
-        fi
-
-        TRY_STMTS="$TRY_STMTS\n\t$STMT"
-    done
-
-    if [ "$TRY_STMTS" != "" ] ; then
-        INDEX=0
-
-        for EXCEPTION in "${EXCEPTIONS[@]}" ; do
-            TRY_EXCEPTIONS="$TRY_EXCEPTIONS\nexcept $EXCEPTION as e:\n\tprint(str(e))\n\tsys.exit(${EXCEPTION_RET_CODES[$INDEX]})"
-            INDEX=$INDEX+1
-        done
-
-        TRY_EXCEPTIONS="$TRY_EXCEPTIONS\nexcept:\n\tpass"
-    fi
-
-    CODE=$(echo -e "$GLOBAL_STMTS\n$TRY_STMTS$TRY_EXCEPTIONS\n\nprint('SCRIPT_ERR_SUCCESS')\nsys.exit($SCRIPT_ERR_SUCCESS)")
-    RET=$("$PYTHON" -c "$CODE" 2>&1)
+    RET=$("$PYTHON" ../bin/check_dependency.py $PROXY 2>&1)
     RET_CODE=$?
 
-    if [[ $RET_CODE -eq $SCRIPT_ERR_SUCCESS && "$RET" != "SCRIPT_ERR_SUCCESS" ]] ; then
+    if [[ $RET_CODE -eq $SCRIPT_ERR_SUCCESS && "$RET" != "Success" ]] ; then
         echo "Error: '$PYTHON' is not a valid python binary" >&2
         exit $SCRIPT_ERR_INVALID_PYTHON
     elif [ $RET_CODE -ne $SCRIPT_ERR_SUCCESS ] ; then
-        echo "Error: Python dependency check failed; $RET" >&2
+        echo -e "Error: Python dependency check failed\n$RET" >&2
         rm -rf *.pyc
         find . -type d -name '__pycache__' -exec rm -rf {} \; >/dev/null 2>&1
         exit $RET_CODE

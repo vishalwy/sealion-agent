@@ -75,6 +75,12 @@ generate_scripts()
     cp res/scripts/sealion $TARGET/$OUTPUT/agent/etc/init.d
     chmod +x $TARGET/$OUTPUT/agent/etc/init.d/sealion
     echo "Service script generated"
+    cp res/scripts/check_dependency.py $TARGET/$OUTPUT/agent/bin/
+    URL="$(echo "$API_URL" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
+    ARGS="-i 's/\(^api\_url\s*=\s*\)\(\"[^\"]\+\"\)/\1\"$URL\"/'"
+    eval sed "$ARGS" $TARGET/$OUTPUT/agent/bin/check_dependency.py
+    chmod +x $TARGET/$OUTPUT/agent/bin/check_dependency.py
+    echo "Dependency script generated"
     INSTALLER=$TARGET/$OUTPUT/install.sh
     CURL_INSTALLER=$TARGET/curl-install.sh
     CURL_INSTALLER_NODE=$TARGET/curl-install-node.sh
