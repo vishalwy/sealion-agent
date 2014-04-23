@@ -19,7 +19,7 @@ class SocketIOHandShakeError(Exception):
 class SocketIONamespace(BaseNamespace):
     def initialize(self):
         self.globals = globals.Globals()
-        self.api = api.API()
+        self.api = api.session
     
     def on_connect(self):        
         _log.info('SocketIO connected')
@@ -106,7 +106,7 @@ class SocketIONamespace(BaseNamespace):
 class RTC(ThreadEx):    
     def __init__(self):
         ThreadEx.__init__(self)
-        self.api = api.API()
+        self.api = api.session
         self.sio = None
         self.globals = globals.Globals()
         self.is_stop = False

@@ -17,7 +17,7 @@ class Connection(ThreadEx):
     def __init__(self):
         ThreadEx.__init__(self)
         self.globals = globals.Globals()
-        self.api = api.API()
+        self.api = api.session
         self.daemon = True
     
     def exe(self):

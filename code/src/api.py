@@ -28,7 +28,7 @@ class Status(Namespace):
     SESSION_CONFLICT = 8
     UNKNOWN = -1
 
-class API(SingletonType('APIMetaClass', (requests.Session, ), {})):    
+class API(requests.Session):    
     status = Status
     
     def __init__(self, *args, **kwargs):
@@ -344,4 +344,5 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         time.sleep(30)
         _log.error('Failed to install update version %s' % version)
         self.updater = None
-        
+
+session = API()

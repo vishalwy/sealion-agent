@@ -246,7 +246,7 @@ class Sender(ThreadEx):
     def __init__(self, off_store):
         ThreadEx.__init__(self)
         self.globals = globals.Globals()
-        self.api = api.API()
+        self.api = api.session
         self.off_store = off_store
         self.queue_max_size = 100
         self.ping_interval = 10

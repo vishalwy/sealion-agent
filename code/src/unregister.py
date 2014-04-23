@@ -15,12 +15,11 @@ sys.path.insert(0, exe_path + 'lib')
 import exit_status
 
 try:
-    from api import API
-    api = API()
+    import api
 except:
     sys.exit(exit_status.AGENT_ERR_SUCCESS)
 
-api.ping()
-status = api.unregister()
-sys.exit(exit_status.AGENT_ERR_SUCCESS if api.is_not_connected(status) == False else exit_status.AGENT_ERR_FAILED_CONNECT)
+api.session.ping()
+status = api.session.unregister()
+sys.exit(exit_status.AGENT_ERR_SUCCESS if api.session.is_not_connected(status) == False else exit_status.AGENT_ERR_FAILED_CONNECT)
 

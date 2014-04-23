@@ -92,9 +92,8 @@ class sealion(Daemon):
     def send_crash_dumps(self):        
         crash_dump_timeout = (self.crash_loop_count * self.monit_interval) + 10
         from globals import Globals
-        from api import API
+        import api
         globals = Globals()
-        api = API()
         path = self.crash_dump_path
         agent_version_regex = globals.config.agent.schema['agentVersion'].get('regex', '.*')
         _log.debug('CrashDumpSender waiting for stop event for %d seconds' % crash_dump_timeout)
@@ -114,7 +113,7 @@ class sealion(Daemon):
 
                         report = report if report != None else self.read_dump(file_name)
 
-                        if report == None or api.is_not_connected(api.send_crash_report(report)) == False:
+                        if report == None or api.session.is_not_connected(api.session.send_crash_report(report)) == False:
                             break
 
                         _log.debug('CrashDumpSender waiting for stop event for 10 seconds')
