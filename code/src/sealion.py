@@ -224,7 +224,7 @@ class sealion(Daemon):
             is_update_only_mode = True
         
         import main
-        main.start(is_update_only_mode)
+        main.run(is_update_only_mode)
         
     def cleanup(self):        
         try:
