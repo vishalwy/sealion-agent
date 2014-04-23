@@ -84,10 +84,10 @@ logger.setLevel(logging_level)
 for handler in logging.root.handlers:
     handler.setFormatter(formatter)
                
-def start(is_update_only_mode = False): 
+def run(is_update_only_mode = False): 
     os.nice(19)
     globals.is_update_only_mode = is_update_only_mode
     controller.start()
     
 if __name__ == "__main__":
-    start()
+    run()

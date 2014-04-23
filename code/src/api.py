@@ -97,6 +97,10 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         is_return_exception = options.get('is_return_exception', False)
         response, i, exception = None, 0, None
         
+        if type(kwargs.get('data')) is dict and kwargs.get('headers') == None:
+            kwargs['headers'] = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+            kwargs['data'] = json.dumps(kwargs['data'])
+        
         while retry_count == -1 or i <= retry_count:                
             if i > 0:
                 self.globals.stop_event.wait(retry_interval)
@@ -169,8 +173,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         data = self.globals.config.agent.get_dict(['orgToken', 'agentVersion'])
         data['timestamp'] = int(time.time() * 1000)
         data['platform'] = self.globals.details
-        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-        response = self.exec_method('post', kwargs, self.get_url('agents/' + self.globals.config.agent._id + '/sessions'), data = json.dumps(data), headers = headers)    
+        response = self.exec_method('post', kwargs, self.get_url('agents/' + self.globals.config.agent._id + '/sessions'), data = data)    
         ret = self.status.SUCCESS
         
         if API.is_success(response):
@@ -232,6 +235,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         
         if API.is_success(response):
             ret = response.json()['agentVersion']
+            _log.debug('Available agent version %s' % str(ret))
         else:
             ret = self.error('Failed to get agent version ', response, True)
             ret == self.status.MISMATCH and self.stop()
@@ -243,8 +247,7 @@ class API(SingletonType('APIMetaClass', (requests.Session, ), {})):
         data = temp
         orgToken, agentId = data['orgToken'], data['_id']
         del data['orgToken'], data['_id']
-        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-        response = self.exec_method('post', {'retry_count': 0}, self.get_url('orgs/%s/agents/%s/crashreport' % (orgToken, agentId)), data = json.dumps(data), headers = headers)
+        response = self.exec_method('post', {'retry_count': 0}, self.get_url('orgs/%s/agents/%s/crashreport' % (orgToken, agentId)), data = data)
         ret = self.status.SUCCESS
         
         if API.is_success(response):
