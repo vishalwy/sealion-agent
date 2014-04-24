@@ -64,11 +64,20 @@ log_output()
     return 0
 }
 
-if [[ -t 0 || -t 1 ]] ; then
-    trap "kill -PIPE 0 >/dev/null 2>&1" EXIT
-else
-    trap "kill -9 0 >/dev/null 2>&1" EXIT
-fi
+trap_exit()
+{
+    if [ "$(which pgrep)" == "" ] ; then
+        if [[ -t 0 || -t 1 ]] ; then
+            kill -PIPE 0 >/dev/null 2>&1
+        else
+            kill -9 0 >/dev/null 2>&1
+        fi
+    else
+        kill -9 $(pgrep -P $$) >/dev/null 2>&1
+    fi
+}
+
+trap trap_exit EXIT
 
 while getopts :i:o:c:H:x:p:a:r:v:h OPT ; do
     case "$OPT" in
