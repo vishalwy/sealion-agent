@@ -19,7 +19,6 @@ class SocketIOHandShakeError(Exception):
 class SocketIONamespace(BaseNamespace):
     def initialize(self):
         self.globals = globals.Globals()
-        self.api = api.session
     
     def on_connect(self):        
         _log.info('SocketIO connected')
@@ -29,8 +28,8 @@ class SocketIONamespace(BaseNamespace):
             self.rtc.stop()
             return
         
-        self.api.ping()
-        self.rtc.is_disconnected and self.api.get_config()
+        api.session.ping()
+        self.rtc.is_disconnected and api.session.get_config()
         self.rtc.is_disconnected = False
         
     def on_disconnect(self):
@@ -45,12 +44,12 @@ class SocketIONamespace(BaseNamespace):
     def on_activity_updated(self, *args):
         _log.info('SocketIO received Activity Updated event')
         self.rtc.update_heartbeat()
-        self.api.get_config()
+        api.session.get_config()
 
     def on_activitylist_in_category_updated(self, *args):
         _log.info('SocketIO received Activity list Updated event')
         self.rtc.update_heartbeat()
-        self.api.get_config()
+        api.session.get_config()
 
     def on_agent_removed(self, *args):
         _log.info('SocketIO received Agent Removed event')
@@ -58,15 +57,15 @@ class SocketIONamespace(BaseNamespace):
         
         try:
             if args[0].get('servers'):
-                (self.globals.config.agent._id in args[0]['servers']) and self.api.stop(self.api.status.NOT_FOUND)
+                (self.globals.config.agent._id in args[0]['servers']) and api.session.stop(api.Status.NOT_FOUND)
             else:
-                self.api.stop(self.api.status.NOT_FOUND)
+                api.session.stop(api.Status.NOT_FOUND)
         except:
             pass    
 
     def on_org_token_resetted(self, *args):
         _log.info('SocketIO received Organization Token Reset event')
-        self.api.stop()
+        api.session.stop()
 
     def on_server_category_changed(self, *args):
         _log.info('SocketIO received Category Changed event')
@@ -74,9 +73,9 @@ class SocketIONamespace(BaseNamespace):
         
         try:
             if args[0].get('servers'):
-                (self.globals.config.agent._id in args[0]['servers']) and self.api.get_config()
+                (self.globals.config.agent._id in args[0]['servers']) and api.session.get_config()
             else:
-                self.api.get_config()
+                api.session.get_config()
         except:
             pass
 
@@ -85,7 +84,7 @@ class SocketIONamespace(BaseNamespace):
         self.rtc.update_heartbeat()
         
         try:
-            (args[0]['activity'] in self.globals.config.agent.activities) and self.api.get_config()
+            (args[0]['activity'] in self.globals.config.agent.activities) and api.session.get_config()
         except:
             pass
         
@@ -94,19 +93,18 @@ class SocketIONamespace(BaseNamespace):
         self.rtc.update_heartbeat()
         
         try:
-            args[0]['agentVersion'] != self.globals.config.agent.agentVersion and self.api.update_agent()
+            args[0]['agentVersion'] != self.globals.config.agent.agentVersion and api.session.update_agent()
         except:
             pass
         
     def on_logout(self, *args):
         _log.info('SocketIO received Logout event')
         self.rtc.update_heartbeat()
-        self.api.stop(self.api.status.SESSION_CONFLICT)
+        api.session.stop(api.Status.SESSION_CONFLICT)
         
 class RTC(ThreadEx):    
     def __init__(self):
         ThreadEx.__init__(self)
-        self.api = api.session
         self.sio = None
         self.globals = globals.Globals()
         self.is_stop = False
@@ -122,7 +120,7 @@ class RTC(ThreadEx):
         SocketIONamespace.rtc = self
         kwargs = {
             'Namespace': SocketIONamespace,
-            'cookies': self.api.cookies,
+            'cookies': api.session.cookies,
             'hooks': {'response': self.on_response},
             'stream': True
         }
@@ -138,7 +136,7 @@ class RTC(ThreadEx):
         _log.debug('Waiting for SocketIO connection')
         
         try:
-            self.sio = SocketIO(self.api.get_url(), **kwargs)
+            self.sio = SocketIO(api.session.get_url(), **kwargs)
         except SocketIOHandShakeError as e:
             _log.error('Failed to connect SocketIO; %s' % str(e))
             return None

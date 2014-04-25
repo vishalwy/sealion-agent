@@ -23,7 +23,6 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
     def __init__(self):
         ThreadEx.__init__(self)
         self.globals = globals.Globals()
-        self.api = api.session
         self.rtc = None
         self.is_stop = False
         self.main_thread = threading.current_thread()
@@ -32,28 +31,28 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
     def handle_response(self, status):
         _log.debug('Handling response status %d.' % status)
         
-        if status == self.api.status.SUCCESS:
+        if status == api.Status.SUCCESS:
             return True
-        elif self.api.is_not_connected(status):
+        elif api.session.is_not_connected(status):
             _log.info('Failed to establish connection.')
-        elif status == self.api.status.NOT_FOUND:           
+        elif status == api.Status.NOT_FOUND:           
             try:
                 _log.info('Uninstalling agent.')
                 subprocess.Popen([self.globals.exe_path + 'uninstall.sh'])
             except:
                 _log.error('Failed to open uninstall script.')
                 
-        elif status == self.api.status.UNAUTHORIZED:
+        elif status == api.Status.UNAUTHORIZED:
             _log.error('Agent unauthorized to connect')
-        elif status == self.api.status.BAD_REQUEST:
+        elif status == api.Status.BAD_REQUEST:
             _log.error('Server marked the request as bad')
-        elif status == self.api.status.SESSION_CONFLICT:
+        elif status == api.Status.SESSION_CONFLICT:
             _log.error('Agent session conflict')
 
         return False
     
     def is_rtc_heartbeating(self):
-        if self.api.is_authenticated == False:
+        if api.session.is_authenticated == False:
             return True
         
         if self.rtc == None or self.rtc.is_alive() == False:
@@ -69,7 +68,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
     def exe(self):        
         while 1:
             if self.globals.is_update_only_mode == True:
-                self.api.update_agent()
+                api.session.update_agent()
                 _log.debug('%s waiting for stop event for %d seconds.' % (self.name, 5 * 60, ))
                 self.globals.stop_event.wait(5 * 60)
 
@@ -93,7 +92,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
 
                 while 1:              
                     if self.is_rtc_heartbeating() == False:
-                        self.api.get_config()
+                        api.session.get_config()
                     
                     finished_job_count = 0
 
@@ -110,7 +109,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                         job_producer.finish_jobs(None)
                         break
                         
-                self.handle_response(self.api.stop_status)
+                self.handle_response(api.session.stop_status)
                 break
 
         self.stop_threads()
@@ -120,16 +119,16 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         signal.alarm(1)
             
     def stop(self):
-        self.api.stop()
+        api.session.stop()
         self.is_stop = True
         helper.ThreadMonitor().register(callback = exit_status.AGENT_ERR_NOT_RESPONDING)
         
     def stop_threads(self):
         _log.debug('Stopping all threads.')
-        self.api.stop()
+        api.session.stop()
         connection.Connection.stop_rtc()
-        self.api.logout()
-        self.api.close()
+        api.session.logout()
+        api.session.close()
         threads = threading.enumerate()
         curr_thread = threading.current_thread()
 

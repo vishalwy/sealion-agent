@@ -42,7 +42,6 @@ except Exception as e:
     
 try:
     globals = Globals()
-    api = api.session
 except Exception as e:
     _log.error(str(e))
     sys.exit(exit_status.AGENT_ERR_FAILED_INITIALIZE)
@@ -76,7 +75,7 @@ for handler in logging.root.handlers:
         handler.addFilter(LoggingList(*logging_list))
         
 if hasattr(globals.config.agent, '_id') == False:   
-    if api.register(retry_count = 2, retry_interval = 10) != api.status.SUCCESS:
+    if api.session.register(retry_count = 2, retry_interval = 10) != api.Status.SUCCESS:
         sys.exit(exit_status.AGENT_ERR_FAILED_REGISTER)
         
 logger.setLevel(logging_level)

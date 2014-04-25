@@ -17,21 +17,20 @@ class Connection(ThreadEx):
     def __init__(self):
         ThreadEx.__init__(self)
         self.globals = globals.Globals()
-        self.api = api.session
         self.daemon = True
     
     def exe(self):
         while 1:
-            if self.attempt(retry_interval = 10) != self.api.status.BAD_REQUEST:
+            if self.attempt(retry_interval = 10) != api.Status.BAD_REQUEST:
                 break
     
     def attempt(self, retry_count = -1, retry_interval = 5):
         rtc_conn = None
         
         while rtc_conn == None:
-            status = self.api.authenticate(retry_count = retry_count, retry_interval = retry_interval)
+            status = api.session.authenticate(retry_count = retry_count, retry_interval = retry_interval)
         
-            if status == self.api.status.SUCCESS:
+            if status == api.Status.SUCCESS:
                 rtc_conn = rtc.RTC().connect()
             else:
                 break
@@ -42,10 +41,10 @@ class Connection(ThreadEx):
     def connect(self):        
         status = self.attempt(2)
         
-        if self.api.is_not_connected(status) and hasattr(self.globals.config.agent, 'activities') and hasattr(self.globals.config.agent, 'org'):
+        if api.session.is_not_connected(status) and hasattr(self.globals.config.agent, 'activities') and hasattr(self.globals.config.agent, 'org'):
             _log.info('Running in offline mode')
             self.start()
-            status = self.api.status.SUCCESS
+            status = api.Status.SUCCESS
             
         return status
     
@@ -53,7 +52,7 @@ class Connection(ThreadEx):
         self.reconnect()
     
     def reconnect(self):
-        if self.api.is_authenticated == False:
+        if api.session.is_authenticated == False:
             return
         
         if isinstance(threading.current_thread(), rtc.RTC):
@@ -62,7 +61,7 @@ class Connection(ThreadEx):
             reconnect_helper.start()
             return
         
-        self.api.is_authenticated = False
+        api.session.is_authenticated = False
         _log.info('Reauthenticating')
         rtc_thread = Connection.stop_rtc()
         

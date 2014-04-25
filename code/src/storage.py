@@ -246,7 +246,6 @@ class Sender(ThreadEx):
     def __init__(self, off_store):
         ThreadEx.__init__(self)
         self.globals = globals.Globals()
-        self.api = api.session
         self.off_store = off_store
         self.queue_max_size = 100
         self.ping_interval = 10
@@ -263,13 +262,13 @@ class Sender(ThreadEx):
         
             if self.last_ping_time - t > self.ping_interval:
                 self.last_ping_time = t
-                self.api.ping()
+                api.session.ping()
         
         return True
         
     def wait(self):
         if self.globals.post_event.is_set() == False:
-            timeout = self.ping_interval if self.api.is_authenticated else None
+            timeout = self.ping_interval if api.session.is_authenticated else None
             _log.debug('%s waiting for post event%s' % (self.name, ' for %d seconds' % timeout if timeout else ''))
             self.globals.post_event.wait(timeout)
         
@@ -337,13 +336,12 @@ class Sender(ThreadEx):
             
 class RealtimeSender(Sender):        
     def post_data(self, item):
-        api_status = self.api.status
         self.off_store.select_timestamp(item['data']['timestamp'])
-        status = self.api.post_data(item['activity'], item['data'])
+        status = api.session.post_data(item['activity'], item['data'])
 
-        if status == api_status.MISMATCH:
-            self.api.get_config()
-        elif (status == api_status.NOT_CONNECTED or status == api_status.NO_SERVICE or status == api_status.UNAUTHORIZED):
+        if status == api.Status.MISMATCH:
+            api.session.get_config()
+        elif (status == api.Status.NOT_CONNECTED or status == api.Status.NO_SERVICE or status == api.Status.UNAUTHORIZED):
             self.off_store.put(item['activity'], item['data'], Sender.store_put_callback)
             
     def queue_empty(self):
@@ -396,13 +394,13 @@ class HistoricSender(Sender):
         Sender.store_available(i != total_rows)
         
     def post_data(self, item):
-        row_id, api_status = item.get('row_id'), self.api.status
-        status = self.api.post_data(item['activity'], item['data'])
+        row_id = item.get('row_id')
+        status = api.session.post_data(item['activity'], item['data'])
 
-        if status == api_status.MISMATCH:
-            self.api.get_config()
+        if status == api.Status.MISMATCH:
+            api.session.get_config()
         
-        if (status != api_status.NOT_CONNECTED and status != api_status.NO_SERVICE and status != api_status.UNAUTHORIZED):
+        if (status != api.Status.NOT_CONNECTED and status != api.Status.NO_SERVICE and status != api.Status.UNAUTHORIZED):
             self.del_rows.append(row_id)
         else:
             Sender.store_available(True)
