@@ -66,14 +66,10 @@ log_output()
 
 trap_exit()
 {
-    if [ "$(which pgrep)" == "" ] ; then
-        if [[ -t 0 || -t 1 ]] ; then
-            kill -PIPE 0 >/dev/null 2>&1
-        else
-            kill -9 0 >/dev/null 2>&1
-        fi
+    if [[ -t 0 || -t 1 ]] ; then
+        kill -PIPE 0 >/dev/null 2>&1
     else
-        kill -9 $(pgrep -P $$) >/dev/null 2>&1
+        kill -9 0 >/dev/null 2>&1
     fi
 }
 
