@@ -16,6 +16,7 @@ import exit_status
 
 try:
     import api
+    api.create_session()
 except:
     sys.exit(exit_status.AGENT_ERR_SUCCESS)
 
