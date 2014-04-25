@@ -15,6 +15,7 @@ import globals
 from constructs import *
 
 _log = logging.getLogger(__name__)
+session = None
 
 class Status(Namespace):
     SUCCESS = 0
@@ -345,4 +346,6 @@ class API(requests.Session):
         _log.error('Failed to install update version %s' % version)
         self.updater = None
 
-session = API()
+def create_session():
+    global session
+    session = API()
