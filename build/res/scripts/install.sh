@@ -226,7 +226,7 @@ setup_config()
 INSTALL_PATH=$(eval echo "$INSTALL_PATH")
 
 if [[ "$INSTALL_PATH" != "" && ${INSTALL_PATH:0:1} != "/" ]] ; then
-    INSTALL_PATH="$BASEDIR/$INSTALL_PATH"
+    INSTALL_PATH="$(pwd)/$INSTALL_PATH"
 fi
 
 INSTALL_PATH=${INSTALL_PATH%/}
