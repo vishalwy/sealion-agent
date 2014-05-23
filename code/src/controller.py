@@ -2,6 +2,9 @@ __copyright__ = '(c) Webyog, Inc'
 __author__ = 'Vishal P.R'
 __email__ = 'hello@sealion.com'
 
+import sys
+import os
+import subprocess
 import logging
 import threading
 import subprocess
@@ -9,6 +12,7 @@ import signal
 import sys
 import time
 import api
+import rtc
 import storage
 import globals
 import connection
@@ -23,17 +27,17 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
     def __init__(self):
         ThreadEx.__init__(self)
         self.globals = globals.Globals()
-        self.rtc = None
         self.is_stop = False
         self.main_thread = threading.current_thread()
         self.activities = {}
+        self.updater = None
     
     def handle_response(self, status):
         _log.debug('Handling response status %d.' % status)
         
         if status == api.Status.SUCCESS:
             return True
-        elif api.session.is_not_connected(status):
+        elif api.API.is_not_connected(status):
             _log.info('Failed to establish connection.')
         elif status == api.Status.NOT_FOUND:           
             try:
@@ -51,24 +55,53 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
 
         return False
     
-    def is_rtc_heartbeating(self):
+    @staticmethod
+    def is_rtc_heartbeating():
         if api.session.is_authenticated == False:
             return True
         
-        if self.rtc == None or self.rtc.is_alive() == False:
-            self.rtc = connection.Connection.get_rtc()
-            
-        if self.rtc == None:
+        if rtc.session == None:
             return True
         else:
-            ret = self.rtc.is_heartbeating()
-            ret == False and self.rtc.update_heartbeat()
+            ret = rtc.session.is_heartbeating()
+            ret == False and rtc.session.update_heartbeat()
             return ret
+        
+    def update_agent(self, event = None):
+        if self.updater != None:
+            return
+        
+        self.updater = True
+        version = api.unauth_session.get_agent_version()
+        
+        if (type(version) is str or type(version) is unicode) and version != self.globals.config.agent.agentVersion:
+            self.updater = ThreadEx(target = self.install_update, name = 'Updater', args = (version,))
+            self.updater.daemon = True
+            self.updater.start()
+        else:
+            self.updater = None
+            
+    def install_update(self, version):
+        _log.info('Update found; Installing update version %s' % version)
+        format = 'curl -s %(proxy)s %(download_url)s | bash /dev/stdin -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" -v %(version)s %(proxy)s'
+        format_spec = {
+            'exe_path': self.globals.exe_path, 
+            'executable': sys.executable, 
+            'org_token': self.globals.config.agent.orgToken, 
+            'agent_id': self.globals.config.agent._id,
+            'version': version, 
+            'download_url': self.globals.get_url().replace('://api', '://agent'),
+            'proxy': ('-x "%s"' % self.globals.proxy_url) if self.globals.details['isProxy'] else ''
+        }       
+        subprocess.call(['bash', '-c', format % format_spec], preexec_fn = os.setpgrp)
+        time.sleep(30)
+        _log.error('Failed to install update version %s' % version)
+        self.updater = None
         
     def exe(self):        
         while 1:
             if self.globals.is_update_only_mode == True:
-                api.session.update_agent()
+                self.update_agent()
                 _log.debug('%s waiting for stop event for %d seconds.' % (self.name, 5 * 60, ))
                 self.globals.stop_event.wait(5 * 60)
 
@@ -77,6 +110,8 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                     self.globals.set_time_metric('stopping_time')
                     break
             else:
+                self.globals.event_dispatcher.bind('update_agent', self.update_agent)
+                
                 if self.handle_response(connection.Connection().connect()) == False:
                     self.globals.set_time_metric('stopping_time')
                     break
@@ -91,7 +126,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                 job_producer.start()
 
                 while 1:              
-                    if self.is_rtc_heartbeating() == False:
+                    if Controller.is_rtc_heartbeating() == False:
                         api.session.get_config()
                     
                     finished_job_count = 0
@@ -126,7 +161,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
     def stop_threads(self):
         _log.debug('Stopping all threads.')
         api.session.stop()
-        connection.Connection.stop_rtc()
+        rtc.session and rtc.session.stop()
         api.session.logout()
         api.session.close()
         threads = threading.enumerate()

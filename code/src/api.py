@@ -2,20 +2,17 @@ __copyright__ = '(c) Webyog, Inc'
 __author__ = 'Vishal P.R'
 __email__ = 'hello@sealion.com'
 
-import sys
-import os
 import logging
 import requests
-import subprocess
 import time
 import json
-import re
 import connection
 import globals
 from constructs import *
 
 _log = logging.getLogger(__name__)
 session = None
+unauth_session = None
 
 class Status(Namespace):
     SUCCESS = 0
@@ -30,16 +27,12 @@ class Status(Namespace):
     UNKNOWN = -1
 
 class API(requests.Session):    
-    status = Status
-    
     def __init__(self, *args, **kwargs):
         requests.Session.__init__(self, *args, **kwargs)
         self.globals = globals.Globals()
-        self.stop_status = self.status.SUCCESS
+        self.stop_status = Status.SUCCESS
         self.is_authenticated = False
-        self.updater = None
         self.is_conn_err = False
-        self.globals.event_dispatcher.bind('update_agent', self.update_agent)
             
     @staticmethod
     def is_success(response):
@@ -61,8 +54,8 @@ class API(requests.Session):
         temp = (message + '; ' + temp) if len(message) else temp
         _log.error(temp)
     
-    def is_not_connected(self, status):
-        if status == self.status.NOT_CONNECTED or status == self.status.NO_SERVICE:
+    def is_not_connected(status):
+        if status == Status.NOT_CONNECTED or status == Status.NO_SERVICE:
             return True
         
         return False
@@ -146,7 +139,7 @@ class API(requests.Session):
     def register(self, **kwargs):
         data = self.globals.config.agent.get_dict(['orgToken', 'name', 'category', 'agentVersion', ('ref', 'tarball')])
         response = self.exec_method('post', kwargs, self.get_url('agents'), data = data)    
-        ret = self.status.SUCCESS
+        ret = Status.SUCCESS
         
         if API.is_success(response):
             _log.info('Registration successful')
@@ -158,7 +151,7 @@ class API(requests.Session):
         return ret
     
     def unregister(self):
-        ret = self.status.SUCCESS
+        ret = Status.SUCCESS
         
         if hasattr(self.globals.config.agent, '_id') == False:
             return ret
@@ -175,7 +168,7 @@ class API(requests.Session):
         data['timestamp'] = int(time.time() * 1000)
         data['platform'] = self.globals.details
         response = self.exec_method('post', kwargs, self.get_url('agents/' + self.globals.config.agent._id + '/sessions'), data = data)    
-        ret = self.status.SUCCESS
+        ret = Status.SUCCESS
         
         if API.is_success(response):
             _log.info('Authentication successful')
@@ -190,7 +183,7 @@ class API(requests.Session):
             
     def get_config(self):
         response = self.exec_method('get', {'retry_count': 0}, self.get_url('agents/1'))
-        ret = self.status.SUCCESS
+        ret = Status.SUCCESS
         
         if API.is_success(response):
             _log.info('Config updation successful')
@@ -204,7 +197,7 @@ class API(requests.Session):
             
     def post_data(self, activity_id, data):
         response = self.exec_method('post', {'retry_count': 0}, self.get_url('agents/1/data/activities/' + activity_id), data = data)
-        ret = self.status.SUCCESS
+        ret = Status.SUCCESS
         
         if API.is_success(response):
             _log.debug('Sent activity (%s @ %d)' % (activity_id, data['timestamp']))
@@ -215,7 +208,7 @@ class API(requests.Session):
         return ret
     
     def logout(self):
-        ret = self.status.SUCCESS
+        ret = Status.SUCCESS
         
         if hasattr(self.globals.config.agent, '_id') == False or self.is_authenticated == False:
             return ret
@@ -239,7 +232,7 @@ class API(requests.Session):
             _log.debug('Available agent version %s' % str(ret))
         else:
             ret = self.error('Failed to get agent version ', response, True)
-            ret == self.status.MISMATCH and self.stop()
+            ret == Status.MISMATCH and self.stop()
         
         return ret
     
@@ -249,7 +242,7 @@ class API(requests.Session):
         orgToken, agentId = data['orgToken'], data['_id']
         del data['orgToken'], data['_id']
         response = self.exec_method('post', {'retry_count': 0}, self.get_url('orgs/%s/agents/%s/crashreport' % (orgToken, agentId)), data = data)
-        ret = self.status.SUCCESS
+        ret = Status.SUCCESS
         
         if API.is_success(response):
             _log.info('Sent dump @ %d' % data['timestamp'])
@@ -257,20 +250,6 @@ class API(requests.Session):
             ret = self.error('Failed to send dump ', response, True)
         
         return ret
-    
-    def update_agent(self, event = None):
-        if self.updater != None:
-            return
-        
-        self.updater = True
-        version = self.get_agent_version()
-        
-        if (type(version) is str or type(version) is unicode) and version != self.globals.config.agent.agentVersion:
-            self.updater = ThreadEx(target = self.install_update, name = 'Updater', args = (version,))
-            self.updater.daemon = True
-            self.updater.start()
-        else:
-            self.updater = None
     
     def stop(self, stop_status = None):
         self.set_events(True, True)
@@ -283,9 +262,9 @@ class API(requests.Session):
         
         if response == None:
             is_ignore_status == False and self.globals.stop_event.is_set() == False and self.set_events(post_event = False)
-            return self.status.NOT_CONNECTED
+            return Status.NOT_CONNECTED
         
-        status, ret, post_event, exec_func, args = response.status_code, self.status.UNKNOWN, True, None, ()
+        status, ret, post_event, exec_func, args = response.status_code, Status.UNKNOWN, True, None, ()
         
         try:
             code = response.json()['code']
@@ -294,34 +273,34 @@ class API(requests.Session):
             
         if status >= 500:
             post_event = False
-            ret = self.status.NO_SERVICE
+            ret = Status.NO_SERVICE
         elif status == 400:
-            ret = self.status.BAD_REQUEST
+            ret = Status.BAD_REQUEST
         elif status == 401:
             if code == 200004:
-                ret = self.status.MISMATCH
+                ret = Status.MISMATCH
             else:
-                if code == 200001 and self.stop_status == self.status.SUCCESS:
+                if code == 200001 and self.stop_status == Status.SUCCESS:
                     post_event = False
                     exec_func = connection.Connection().reconnect
                 else:
                     post_event = None
                     exec_func = self.stop
                     
-                ret = self.status.UNAUTHORIZED
+                ret = Status.UNAUTHORIZED
         elif status == 404:
             post_event = None
             exec_func = self.stop
-            args = (self.status.NOT_FOUND,)
-            ret = self.status.NOT_FOUND
+            args = (Status.NOT_FOUND,)
+            ret = Status.NOT_FOUND
         elif status == 409:
             if code == 204011:
-                ret = self.status.DATA_CONFLICT
+                ret = Status.DATA_CONFLICT
             else:
                 post_event = None
                 exec_func = self.stop
-                args = (self.status.SESSION_CONFLICT,)
-                ret = self.status.SESSION_CONFLICT
+                args = (Status.SESSION_CONFLICT,)
+                ret = Status.SESSION_CONFLICT
                 
         if is_ignore_status == False:
             self.set_events(post_event = post_event)
@@ -329,23 +308,12 @@ class API(requests.Session):
             
         return ret
     
-    def install_update(self, version):
-        _log.info('Update found; Installing update version %s' % version)
-        format = 'curl -s %(proxy)s %(download_url)s | bash /dev/stdin -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" -v %(version)s %(proxy)s'
-        format_spec = {
-            'exe_path': self.globals.exe_path, 
-            'executable': sys.executable, 
-            'org_token': self.globals.config.agent.orgToken, 
-            'agent_id': self.globals.config.agent._id,
-            'version': version, 
-            'download_url': re.sub('://api', '://agent', self.get_url()),
-            'proxy': ('-x "%s"' % self.globals.proxy_url) if self.globals.details['isProxy'] else ''
-        }       
-        subprocess.call(['bash', '-c', format % format_spec], preexec_fn = os.setpgrp)
-        time.sleep(30)
-        _log.error('Failed to install update version %s' % version)
-        self.updater = None
-
 def create_session():
     global session
     session = API()
+    return session
+
+def create_unauth_session():
+    global unauth_session
+    unauth_session = API()
+    return unauth_session

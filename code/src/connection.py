@@ -25,23 +25,21 @@ class Connection(ThreadEx):
                 break
     
     def attempt(self, retry_count = -1, retry_interval = 5):
-        rtc_conn = None
+        rtc.create_session()
         
-        while rtc_conn == None:
+        while 1:
             status = api.session.authenticate(retry_count = retry_count, retry_interval = retry_interval)
         
-            if status == api.Status.SUCCESS:
-                rtc_conn = rtc.RTC().connect()
-            else:
+            if status == api.Status.SUCCESS and rtc.session.connect() != None:
                 break
             
-        rtc_conn and rtc_conn.start()
+        rtc.session and rtc.session.start()
         return status
         
     def connect(self):        
         status = self.attempt(2)
         
-        if api.session.is_not_connected(status) and hasattr(self.globals.config.agent, 'activities') and hasattr(self.globals.config.agent, 'org'):
+        if api.API.is_not_connected(status) and hasattr(self.globals.config.agent, 'activities') and hasattr(self.globals.config.agent, 'org'):
             _log.info('Running in offline mode')
             self.start()
             status = api.Status.SUCCESS
@@ -63,27 +61,12 @@ class Connection(ThreadEx):
         
         api.session.is_authenticated = False
         _log.info('Reauthenticating')
-        rtc_thread = Connection.stop_rtc()
         
-        if rtc_thread:
+        if rtc.session:
             _log.info('Waiting for SocketIO to disconnect')
             helper.ThreadMonitor().register(callback = exit_status.AGENT_ERR_RESTART)
-            rtc_thread.join()
+            rtc.session.join()
             helper.ThreadMonitor().unregister()
                 
         self.start()
-        
-    @staticmethod
-    def get_rtc():
-        for thread in threading.enumerate():
-            if isinstance(thread, rtc.RTC):
-                return thread
-        
-        return None
-        
-    @staticmethod
-    def stop_rtc():
-        rtc_thread = Connection.get_rtc()
-        rtc_thread and rtc_thread.stop()
-        return rtc_thread
 

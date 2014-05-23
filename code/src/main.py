@@ -43,6 +43,7 @@ except Exception as e:
 try:
     globals = Globals()
     api.create_session()
+    api.create_unauth_session()
 except Exception as e:
     _log.error(str(e))
     sys.exit(exit_status.AGENT_ERR_FAILED_INITIALIZE)

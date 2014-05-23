@@ -12,6 +12,7 @@ from socketio_client import SocketIO, BaseNamespace
 from constructs import *
 
 _log = logging.getLogger(__name__)
+session = None
 
 class SocketIOHandShakeError(Exception):
     pass
@@ -183,3 +184,7 @@ class RTC(ThreadEx):
                 connection.Connection().reconnect()
                 break
 
+def create_session():
+    global session
+    session = RTC()
+    return session
