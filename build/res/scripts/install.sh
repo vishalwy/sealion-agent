@@ -146,7 +146,7 @@ check_dependency()
         exit $SCRIPT_ERR_INVALID_PYTHON
     fi
 
-    WHICH_COMMANDS=("sed" "curl" "readlink" "cat" "groupadd" "useradd" "find" "chown" "bash" "grep" "userdel" "groupdel")
+    WHICH_COMMANDS=("sed" "readlink" "cat" "groupadd" "useradd" "find" "chown" "bash" "grep" "userdel" "groupdel")
     MISSING_COMMANDS=""
     PADDING="      "
 

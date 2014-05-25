@@ -43,8 +43,8 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
             try:
                 _log.info('Uninstalling agent.')
                 subprocess.Popen([self.globals.exe_path + 'uninstall.sh'])
-            except:
-                _log.error('Failed to open uninstall script.')
+            except Exception as e:
+                _log.error('Failed to open uninstall script; %s' % str(e))
                 
         elif status == api.Status.UNAUTHORIZED:
             _log.error('Agent unauthorized to connect')
@@ -133,16 +133,16 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         return True
             
     def install_update(self, version_details, temp_dir):
-        _log.info('Installing update version %s', version_details['agentVersion'])
-        format_spec = {
-            'temp_dir': temp_dir, 
-            'exe_path': self.globals.exe_path, 
-            'executable': sys.executable, 
-            'org_token': self.globals.config.agent.orgToken, 
-            'agent_id': self.globals.config.agent._id
-        }
-        format = '"%(temp_dir)s/sealion-agent/install.sh" -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" && rm -rf "%(temp_dir)s"'
-        subprocess.call(['bash', '-c', format % format_spec], preexec_fn = os.setpgrp)
+        try:
+            _log.info('Installing update version %s', version_details['agentVersion'])
+            subprocess.call([self.globals.exe_path + 'bin/update.sh', 
+                '-o', self.globals.config.agent.orgToken, 
+                '-a', self.globals.config.agent._id,
+                '-p', sys.executable,
+                '-i', temp_dir])
+        except Exception as e:
+            _log.error('Failed to open update script script; %s' % str(e))
+        
         time.sleep(5)
         _log.error('Failed to install update version %s' % version_details['agentVersion'])
         

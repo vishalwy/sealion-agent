@@ -5,6 +5,7 @@
 #Email      : hello@sealion.com
 
 if [ "$#" != "2" ]; then
+    echo "Usage: $0 <PID> <Monit interval>"
     exit 1
 fi
 
