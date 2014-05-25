@@ -26,21 +26,23 @@ class Connection(ThreadEx):
     
     def attempt(self, retry_count = -1, retry_interval = 5):
         rtc.create_session()
+        status = api.Status.UNKNOWN
         
         while 1:
             status = api.session.authenticate(retry_count = retry_count, retry_interval = retry_interval)
         
-            if status == api.Status.SUCCESS and rtc.session.connect() != None:
+            if status != api.Status.SUCCESS:
+                break
+            elif rtc.session.connect() != None:
+                rtc.session.start()
                 break
             
-        rtc.session and rtc.session.start()
         return status
         
     def connect(self):        
-        status = self.attempt(2)
+        status = self.attempt(retry_count = 2)
         
         if api.API.is_not_connected(status) and hasattr(self.globals.config.agent, 'activities') and hasattr(self.globals.config.agent, 'org'):
-            _log.info('Running in offline mode')
             self.start()
             status = api.Status.SUCCESS
             

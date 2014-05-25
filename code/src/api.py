@@ -54,6 +54,7 @@ class API(requests.Session):
         temp = (message + '; ' + temp) if len(message) else temp
         _log.error(temp)
     
+    @staticmethod
     def is_not_connected(status):
         if status == Status.NOT_CONNECTED or status == Status.NO_SERVICE:
             return True
@@ -228,8 +229,8 @@ class API(requests.Session):
         response = self.exec_method('get', {'retry_count': 0}, url, params = {'agentVersion': data['agentVersion']})
         
         if API.is_success(response):
-            ret = response.json()['agentVersion']
-            _log.debug('Available agent version %s' % str(ret))
+            ret = response.json()
+            _log.debug('Available agent version %s' % ret['agentVersion'])
         else:
             ret = self.error('Failed to get agent version ', response, True)
             ret == Status.MISMATCH and self.stop()

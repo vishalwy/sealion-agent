@@ -3,7 +3,7 @@ __author__ = 'Vishal P.R'
 __email__ = 'hello@sealion.com'
 
 import sys
-import os
+import tempfile
 import subprocess
 import logging
 import threading
@@ -72,31 +72,79 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
             return
         
         self.updater = True
-        version = api.unauth_session.get_agent_version()
+        version_details = api.unauth_session.get_agent_version()
         
-        if (type(version) is str or type(version) is unicode) and version != self.globals.config.agent.agentVersion:
-            self.updater = ThreadEx(target = self.install_update, name = 'Updater', args = (version,))
+        if type(version_details) is dict and version_details['agentVersion'] != self.globals.config.agent.agentVersion:
+            self.updater = ThreadEx(target = self.agent_updater_proc, name = 'Updater', args = (version_details,))
             self.updater.daemon = True
             self.updater.start()
         else:
             self.updater = None
             
-    def install_update(self, version):
-        _log.info('Update found; Installing update version %s' % version)
-        format = 'curl -s %(proxy)s %(download_url)s | bash /dev/stdin -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" -v %(version)s %(proxy)s'
+    def agent_updater_proc(self, version_details):
+        temp_dir = helper.Utils.get_safe_path(self.globals.exe_path + 'tmp/')
+        temp_dir = tempfile.mkdtemp(dir = temp_dir)
+        temp_dir = temp_dir[:-1] if temp_dir[len(temp_dir) - 1] == '/' else temp_dir
+        self.download_update(version_details, temp_dir) and self.install_update(version_details, temp_dir)
+        subprocess.call(['bash', '-c', 'rm -rf "%s"' % temp_dir])
+        self.updater = None
+        
+    def download_update(self, version_details, temp_dir):
+        download_url = version_details['agentDownloadURL']
+        filename = '%s/%s' % (temp_dir, download_url.split('/')[-1])
+        _log.info('Update found; Downloading update version %s to %s' % (version_details['agentVersion'], filename))
+        f = open(filename, 'wb')
+        response = api.unauth_session.exec_method('get', {'retry_count': 0}, download_url, stream = True)
+        
+        if api.API.is_success(response) == False:
+            api.unauth_session.error('Failed to download the update', response, True)
+            f and f.close()
+            return False
+            
+        is_completed = False
+        
+        try:
+            for chunk in response.iter_content(chunk_size = 1024):
+                if self.globals.stop_event.is_set():
+                    _log.info('%s received stop event' % self.name)
+                    break
+
+                if chunk:
+                    f.write(chunk)
+                    f.flush()
+
+            is_completed = True
+        except Exception as e:
+            _log.error(str(e))
+        finally:
+            f.close()
+            
+        if is_completed == True:
+            _log.info('Update version %s is succesfully downloaded to %s' % (version_details['agentVersion'], filename))
+        else:
+            _log.info('Aborted downloading update %s', version_details['agentVersion'])
+            return False
+               
+        if subprocess.call(['tar', '-xf', "%s" % filename, '--directory=%s' % temp_dir]):
+            _log.error('Failed to extract update from  %s' % filename)
+            return False
+        
+        _log.debug('Extracted update from %s to %s' % (filename, temp_dir))
+        return True
+            
+    def install_update(self, version_details, temp_dir):
+        _log.info('Installing update version %s', version_details['agentVersion'])
         format_spec = {
+            'temp_dir': temp_dir, 
             'exe_path': self.globals.exe_path, 
             'executable': sys.executable, 
             'org_token': self.globals.config.agent.orgToken, 
-            'agent_id': self.globals.config.agent._id,
-            'version': version, 
-            'download_url': self.globals.get_url().replace('://api', '://agent'),
-            'proxy': ('-x "%s"' % self.globals.proxy_url) if self.globals.details['isProxy'] else ''
-        }       
+            'agent_id': self.globals.config.agent._id
+        }
+        format = '"%(temp_dir)s/sealion-agent/install.sh" -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" && rm -rf "%(temp_dir)s"'
         subprocess.call(['bash', '-c', format % format_spec], preexec_fn = os.setpgrp)
-        time.sleep(30)
-        _log.error('Failed to install update version %s' % version)
-        self.updater = None
+        time.sleep(5)
+        _log.error('Failed to install update version %s' % version_details['agentVersion'])
         
     def exe(self):        
         while 1:
