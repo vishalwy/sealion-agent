@@ -92,13 +92,15 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
             'org_token': self.globals.config.agent.orgToken, 
             'agent_id': self.globals.config.agent._id,
             'version': version_details['agentVersion'], 
-            'download_url': self.globals.get_url().replace('://api', '://agent'),
+            'download_url': api.session.get_url().replace('://api', '://agent'),
             'proxy': ('-x "%s"' % self.globals.proxy_url) if self.globals.details['isProxy'] else ''
         }       
         
         try:
             f = open(curllike)
             f.close()
+            import pdb
+            pdb.set_trace()
             subprocess.call(['bash', '-c', format % format_spec], preexec_fn = os.setpgrp)
             time.sleep(30)
             _log.error('Failed to install update version %s' % version_details['agentVersion'])
