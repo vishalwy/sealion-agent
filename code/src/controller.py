@@ -9,6 +9,7 @@ import threading
 import subprocess
 import signal
 import sys
+import os
 import time
 import api
 import rtc
@@ -83,9 +84,11 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
     def install_update(self, version_details):
         _log.info('Update found; Installing update version %s' % version_details['agentVersion'])
         curllike = self.globals.exe_path + 'bin/curlike.py'
-        downloader = 'URL_CALLER="\\"%s\\" \\"%s\\""' % (sys.executable, curllike)
-        format = '%(downloader)s $URL_CALLER -s %(proxy)s %(download_url)s | %(downloader)s bash /dev/stdin -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" -v %(version)s %(proxy)s'
+        downloader = '"%s" "%s"' % (sys.executable, curllike)
+        url_caller = 'URL_CALLER=\'%s\'' % downloader
+        format = '%(url_caller)s %(downloader)s -s %(proxy)s %(download_url)s | %(url_caller)s bash /dev/stdin -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" -v %(version)s %(proxy)s'
         format_spec = {
+            'url_caller': url_caller,
             'downloader': downloader,
             'exe_path': self.globals.exe_path, 
             'executable': sys.executable, 
