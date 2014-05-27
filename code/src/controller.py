@@ -102,8 +102,6 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         try:
             f = open(curllike)
             f.close()
-            import pdb
-            pdb.set_trace()
             subprocess.call(['bash', '-c', format % format_spec], preexec_fn = os.setpgrp)
             time.sleep(30)
             _log.error('Failed to install update version %s' % version_details['agentVersion'])

@@ -7,4 +7,5 @@
 build/bin/
 code/var/
 code/etc/
+code/bin/
 __pycache__/
