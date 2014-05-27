@@ -83,8 +83,8 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
     def install_update(self, version_details):
         _log.info('Update found; Installing update version %s' % version_details['agentVersion'])
         curllike = self.globals.exe_path + 'bin/curlike.py'
-        downloader = 'DOWNLOADER_PGM="\\"%s\\" \\"%s\\""' % (sys.executable, curllike)
-        format = '%(downloader)s $DOWNLOADER_PGM -s %(proxy)s %(download_url)s | %(downloader)s bash /dev/stdin -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" -v %(version)s %(proxy)s'
+        downloader = 'URL_CALLER="\\"%s\\" \\"%s\\""' % (sys.executable, curllike)
+        format = '%(downloader)s $URL_CALLER -s %(proxy)s %(download_url)s | %(downloader)s bash /dev/stdin -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" -v %(version)s %(proxy)s'
         format_spec = {
             'downloader': downloader,
             'exe_path': self.globals.exe_path, 

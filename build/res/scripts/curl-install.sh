@@ -11,7 +11,7 @@ DOWNLOAD_URL="<agent-download-url>"
 #script variables
 USAGE="Usage: curl -s $DOWNLOAD_URL | sudo bash /dev/stdin {-o <Organization token> [-c <Category name>] [-H <Host name>] [-x <Proxy address>] [-p <Python binary>] | -h for Help}"
 USER_NAME="sealion"
-DOWNLOADER_PGM=$([ "$DOWNLOADER_PGM" == "" ] && echo "$DOWNLOADER_PGM" || echo "curl")
+URL_CALLER=$([ "$URL_CALLER" == "" ] && echo "$URL_CALLER" || echo "curl")
 
 #setup variables
 INSTALL_PATH="/usr/local/sealion-agent"
@@ -20,6 +20,12 @@ TMP_DATA_FILE="/tmp/sealion-agent.response.XXXX"
 PROXY=
 AGENT_ID=
 ORG_TOKEN=
+
+call_url()
+{
+    bash -c "$URL_CALLER $@"
+    return $?
+}
 
 log_output()
 {
@@ -109,13 +115,13 @@ done
 
 report_failure()
 {
-    curl -s PROXY -H "Content-Type: application/json" -X PUT -d "{\"reason\":\"$1\"}"  "$API_URL/orgs/$ORG_TOKEN/agents/$AGENT_ID/updatefail" >/dev/null 2>&1
+    call_url -s $PROXY -H "Content-Type: application/json" -X PUT -d "{\"reason\":\"$1\"}"  "$API_URL/orgs/$ORG_TOKEN/agents/$AGENT_ID/updatefail" >/dev/null 2>&1
 }
 
 TMP_DATA_FILE=$(mktemp $TMP_DATA_FILE)
 log_output "Getting agent installer details..."
 SUB_URL=$([ "$AGENT_ID" != "" ] && echo "/agents/$AGENT_ID" || echo "")
-RET=$(curl -s $PROXY -w "%{http_code}" -H "Content-Type: application/json" "$API_URL/orgs/$ORG_TOKEN$SUB_URL/agentVersion" -o "$TMP_DATA_FILE" 2>/dev/null)
+RET=$(call_url -s $PROXY -w "%{http_code}" -H "Content-Type: application/json" "$API_URL/orgs/$ORG_TOKEN$SUB_URL/agentVersion" -o "$TMP_DATA_FILE" 2>/dev/null)
 
 if [[ $? -ne 0 || $RET -ne 200 ]] ; then
     log_output "Error: Failed to get agent installer details" 2
@@ -128,7 +134,7 @@ MAJOR_VERSION=$(echo $VERSION | grep '^[0-9]\+' -o)
 TAR_DOWNLOAD_URL=$(cat $TMP_DATA_FILE | grep '"agentDownloadURL"\s*:\s*"[^"]*"' -o |  sed 's/"agentDownloadURL"\s*:\s*"\([^"]*\)"/\1/')
 
 if [ $MAJOR_VERSION -le 2 ] ; then
-    curl -s $PROXY "$DOWNLOAD_URL/curl-install-node.sh" 2>/dev/null | bash /dev/stdin "$@" -t $TAR_DOWNLOAD_URL 1> >( while read line; do log_output "${line}"; done ) 2> >( while read line; do log_output "${line}" 2; done )
+    call_url -s $PROXY "$DOWNLOAD_URL/curl-install-node.sh" 2>/dev/null | bash /dev/stdin "$@" -t $TAR_DOWNLOAD_URL 1> >( while read line; do log_output "${line}"; done ) 2> >( while read line; do log_output "${line}" 2; done )
     rm -f $TMP_DATA_FILE
     sleep 2
     exit 0
@@ -139,7 +145,7 @@ TMP_FILE_PATH=$(mktemp -d $TMP_FILE_PATH)
 TMP_FILE_PATH=${TMP_FILE_PATH%/}
 TMP_FILE_NAME="$TMP_FILE_PATH/sealion-agent.tar.gz"
 log_output "Downloading agent installer..."
-RET=$(curl -s $PROXY -w "%{http_code}" $TAR_DOWNLOAD_URL -o $TMP_FILE_NAME 2>/dev/null)
+RET=$(call_url -s $PROXY -w "%{http_code}" $TAR_DOWNLOAD_URL -o $TMP_FILE_NAME 2>/dev/null)
 
 if [[ $? -ne 0 || $RET -eq 404 ]] ; then
     log_output "Error: Failed to download agent installer" 2

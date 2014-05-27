@@ -69,8 +69,8 @@ generate_scripts()
     cp res/scripts/uninstall.sh $TARGET/$OUTPUT/agent/
     chmod +x $TARGET/$OUTPUT/agent/uninstall.sh
     echo "Uninstaller generated"
-    cp res/scripts/update.sh $TARGET/$OUTPUT/agent/bin/
-    chmod +x $TARGET/$OUTPUT/agent/bin/update.sh
+    cp res/scripts/curlike.py $TARGET/$OUTPUT/agent/bin/
+    chmod +x $TARGET/$OUTPUT/agent/bin/curlike.py
     echo "Update script generated"
     cp res/scripts/monit.sh $TARGET/$OUTPUT/agent/bin/
     chmod +x $TARGET/$OUTPUT/agent/bin/monit.sh
