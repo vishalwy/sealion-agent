@@ -337,6 +337,7 @@ else
         setup_config
         ln -sf "$SERVICE_FILE" "$INSTALL_PATH/etc/sealion"
     else
+        find "$INSTALL_PATH" -mindepth 1 -maxdepth 1 ! -name 'var' ! -name 'etc' -exec rm -rf "{}" \; >/dev/null 2>&1
         find agent/ -mindepth 1 -maxdepth 1 ! -name 'etc' -exec cp -r {} "$INSTALL_PATH" \;
         update_agent_config "agentVersion" $VERSION
         update_agent_config "apiUrl" $API_URL
