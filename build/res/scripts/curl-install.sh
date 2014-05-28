@@ -11,7 +11,7 @@ DOWNLOAD_URL="<agent-download-url>"
 #script variables
 USAGE="Usage: curl -s $DOWNLOAD_URL | sudo bash /dev/stdin {-o <Organization token> [-c <Category name>] [-H <Host name>] [-x <Proxy address>] [-p <Python binary>] | -h for Help}"
 USER_NAME="sealion"
-URL_CALLER=$([ "$URL_CALLER" == "" ] && echo "$URL_CALLER" || echo "curl")
+URL_CALLER=$([ "$URL_CALLER" != "" ] && echo "$URL_CALLER" || echo "curl")
 
 #setup variables
 INSTALL_PATH="/usr/local/sealion-agent"
@@ -23,7 +23,19 @@ ORG_TOKEN=
 
 call_url()
 {
-    bash -c "$URL_CALLER $@"
+    ARGS=("$@")
+    PARAMS=""
+
+    for ARG in "${ARGS[@]}" ; do
+        if [ "${ARG:0:1}" != "\"" ] ; then
+            PARAMS="$PARAMS \"$ARG\""
+        else
+            PARAMS="$PARAMS $ARG"
+        fi
+    done
+
+    PARAMS="$URL_CALLER $PARAMS"
+    bash -c "$PARAMS"
     return $?
 }
 
@@ -88,7 +100,7 @@ while getopts :i:o:c:H:x:p:a:r:v:h OPT ; do
             INSTALL_PATH=$OPTARG
             ;;
         x)
-            PROXY="-x '$OPTARG'"
+            PROXY="-x $OPTARG"
             ;;
         a)
             AGENT_ID=$OPTARG

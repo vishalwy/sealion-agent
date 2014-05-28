@@ -162,7 +162,7 @@ check_dependency()
     fi
 
     cd agent/lib
-    RET=$("$PYTHON" ../bin/check_dependency.py $PROXY 2>&1)
+    RET=$("$PYTHON" ../bin/check_dependency.py "$PROXY" 2>&1)
     RET_CODE=$?
 
     if [[ $RET_CODE -eq $SCRIPT_ERR_SUCCESS && "$RET" != "Success" ]] ; then

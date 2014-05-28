@@ -84,12 +84,10 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
     def install_update(self, version_details):
         _log.info('Update found; Installing update version %s' % version_details['agentVersion'])
         curllike = self.globals.exe_path + 'bin/curlike.py'
-        downloader = '"%s" "%s"' % (sys.executable, curllike)
-        url_caller = 'URL_CALLER=\'%s\'' % downloader
-        format = '%(url_caller)s %(downloader)s -s %(proxy)s %(download_url)s | %(url_caller)s bash /dev/stdin -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" -v %(version)s %(proxy)s'
+        url_caller = '"%s" "%s"' % (sys.executable, curllike)
+        format = '%(url_caller)s -s %(proxy)s %(download_url)s | bash /dev/stdin -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" -v %(version)s %(proxy)s'
         format_spec = {
             'url_caller': url_caller,
-            'downloader': downloader,
             'exe_path': self.globals.exe_path, 
             'executable': sys.executable, 
             'org_token': self.globals.config.agent.orgToken, 
@@ -97,12 +95,15 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
             'version': version_details['agentVersion'], 
             'download_url': self.globals.get_url().replace('://api', '://agent'),
             'proxy': ('-x "%s"' % self.globals.proxy_url) if self.globals.details['isProxy'] else ''
-        }       
+        }
         
         try:
             f = open(curllike)
             f.close()
-            subprocess.call(['bash', '-c', format % format_spec], preexec_fn = os.setpgrp)
+            environ = {}
+            environ.update(os.environ)
+            environ['URL_CALLER'] = url_caller
+            subprocess.call(['bash', '-c', format % format_spec], preexec_fn = os.setpgrp, env = environ)
             time.sleep(30)
             _log.error('Failed to install update version %s' % version_details['agentVersion'])
         except Exception as e:

@@ -46,7 +46,7 @@ try:
                 kwargs['proxies']['http'] = sys.argv[i]
             elif arg == '-H':
                 i += 1
-                kwargs['headers'] = kwargs['headers'] or {}
+                kwargs['headers'] = kwargs.get('headers') or {}
                 iterator = iter([str.strip() for str in sys.argv[i].split(':')])
                 kwargs['headers'].update(dict(zip(iterator, iterator)))
             elif arg == '-X':
