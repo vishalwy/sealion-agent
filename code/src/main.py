@@ -88,7 +88,15 @@ for handler in logging.root.handlers:
 def run(is_update_only_mode = False): 
     os.nice(19)
     globals.is_update_only_mode = is_update_only_mode
-    controller.start()
+    _log.info('Agent starting up.')
+    _log.info('Using python binary at %s.' % sys.executable)
+    _log.info('Python version : %s.' % globals.details['pythonVersion'])
+    _log.info('Agent version  : %s.' % globals.config.agent.agentVersion)   
+    controller.run()
+    _log.info('Agent shutting down with status code 0.')
+    _log.debug('Took %f seconds to shutdown.' % (globals.get_stoppage_time()))
+    _log.info('Ran for %s hours.' %  globals.get_run_time_str())
+    sys.exit(0)
     
 if __name__ == "__main__":
     run()

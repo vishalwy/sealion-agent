@@ -217,17 +217,7 @@ def dump_stack_traces():
     finally:
         f and f.close()
         
-def stop(status = 0):
-    _log.info('Agent shutting down with status code %d.' % status)
-    _log.debug('Took %f seconds to shutdown.' % (globals.Globals().get_stoppage_time()))
-    _log.info('Ran for %s hours.' %  globals.Globals().get_run_time_str())
-    sys.exit(status)
-    
-def start():
-    _log.info('Agent starting up.')
-    _log.info('Using python binary at %s.' % sys.executable)
-    _log.info('Python version : %s.' % globals.Globals().details['pythonVersion'])
-    _log.info('Agent version  : %s.' % globals.Globals().config.agent.agentVersion)
+def run():
     controller = Controller()
     signal.signal(signal.SIGALRM, sig_handler)
     signal.signal(signal.SIGTERM, sig_handler)
@@ -242,5 +232,3 @@ def start():
         if controller.is_stop == True:
             controller.join()
             break
-
-    stop()
