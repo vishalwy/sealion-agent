@@ -6,6 +6,7 @@ __email__ = 'hello@sealion.com'
 
 import sys
 import os.path
+import re
 
 exe_path = os.path.dirname(os.path.abspath(__file__))
 exe_path = exe_path[:-1] if exe_path[len(exe_path) - 1] == '/' else exe_path
@@ -17,10 +18,17 @@ if sys.version_info[0] == 3:
     
 import requests
 
-i, arg_len, write_out_code, f, url = 0, len(sys.argv), False, sys.stdout, ''
+i, arg_len, write_out_code, output_file, urls, f = 0, len(sys.argv), False, '', [], None
 kwargs = {'stream': True, 'allow_redirects': False}
 session = requests.Session()
 method = session.get
+
+def exception_hook(type, value, tb):
+    if f != None and f != sys.stdout:
+        f.close()
+        os.remove(output_file)
+
+sys.excepthook = exception_hook
 
 try:
     while i < arg_len:
@@ -53,26 +61,42 @@ try:
                     write_out_code = True
             elif arg == '-o':
                 i += 1
-                f = open(sys.argv[i], 'wb')
+                output_file = sys.argv[i]
             elif arg == '-L':
                 kwargs['allow_redirects'] = True
         else:
-            url = arg
+            url = arg.strip()
+            
+            if url:
+                url = url if re.match('https?://.*', url) else 'http://' + url
+                urls.append(url)
 
         i += 1
 except IndexError:
-    sys.stderr.write('Error: ' + sys.argv[i - 1] + 'requires an argument')
+    sys.stderr.write('Error: ' + sys.argv[i - 1] + 'requires an argument\n')
     sys.exit(1)
 except Exception as e:
-    sys.stderr.write('Error: ' + str(e))
+    sys.stderr.write('Error: ' + str(e) + '\n')
     sys.exit(1)
-                
-response = method(url, **kwargs)  
+    
+if len(urls) == 0:
+    sys.stderr.write('Error: please specify atleast one URL\n')
+    sys.exit(1)
+                    
+try:
+    f = sys.stdout if not output_file else open(output_file, 'wb')
+    
+    for url in urls:
+        response = method(url, **kwargs)  
 
-for chunk in response.iter_content(chunk_size = 1024):
-    if chunk:
-        f.write(chunk)
-        f.flush()
-        
-f != sys.stdout and f.close()
-write_out_code and sys.stdout.write('%d' % response.status_code)
+        for chunk in response.iter_content(chunk_size = 1024):
+            if chunk:
+                f.write(chunk)
+                f.flush()
+
+        write_out_code and sys.stdout.write('%d' % response.status_code)
+except Exception as e:
+    sys.stderr.write('Error: ' + str(e) + '\n')    
+    sys.exit(1)
+    
+f != None and f != sys.stdout and f.close()
