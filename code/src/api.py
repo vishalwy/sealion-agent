@@ -282,7 +282,7 @@ class API(requests.Session):
         elif status == 409:
             if code == 204011:
                 ret = Status.DATA_CONFLICT
-            else:
+            elif code == 204012:
                 post_event = None
                 exec_func = self.stop
                 args = (Status.SESSION_CONFLICT,)
