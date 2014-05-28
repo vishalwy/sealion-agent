@@ -73,7 +73,7 @@ class OfflineStore(ThreadEx):
             self.conn = sqlite3.connect(self.db_file)
             _log.debug('Created %s at %s' % (self.name, self.db_file))
         except Exception as e:
-            _log.error('Failed to create %s at %s; %s' % (self.name, self.db_file, str(e)))
+            _log.error('Failed to create %s at %s; %s' % (self.name, self.db_file, unicode(e)))
             self.conn_event.set()
             return
             
@@ -159,7 +159,7 @@ class OfflineStore(ThreadEx):
             _log.debug('Inserted activity (%s @ %d) to %s' % (activity, data['timestamp'], self.name))
             callback and callback()
         except Exception as e:
-            _log.error('Failed to insert row to %s; %s' % (self.name, str(e)))
+            _log.error('Failed to insert row to %s; %s' % (self.name, unicode(e)))
         
         return True
     
@@ -177,7 +177,7 @@ class OfflineStore(ThreadEx):
             self.conn.commit()
             _log.debug('Inserted %d rows to %s' % (self.pending_insert_row_count, self.name))
         except Exception as e:
-            _log.error('Failed to insert rows to %s; %s' % (self.name, str(e)))
+            _log.error('Failed to insert rows to %s; %s' % (self.name, unicode(e)))
         
         return True
     
@@ -189,7 +189,7 @@ class OfflineStore(ThreadEx):
             self.cursor.execute('SELECT COUNT(*) FROM data')
             total_rows = self.cursor.fetchone()[0]
         except Exception as e:
-            _log.error('Failed to retreive rows from %s; %s' % (self.name, str(e)))
+            _log.error('Failed to retreive rows from %s; %s' % (self.name, unicode(e)))
             return True
         
         _log.debug('Retreived %d out of %d rows from %s' % (len(rows), total_rows, self.name))
@@ -203,7 +203,7 @@ class OfflineStore(ThreadEx):
             self.conn.commit()
             _log.debug('Deleted %d records from %s' % (self.cursor.rowcount, self.name))
         except Exception as e:
-            _log.error('Failed to delete rows from %s; %s' % (self.name, str(e)))
+            _log.error('Failed to delete rows from %s; %s' % (self.name, unicode(e)))
         
         return True
     
@@ -213,7 +213,7 @@ class OfflineStore(ThreadEx):
             self.conn.commit()
             _log.debug('Deleted %d records from %s' % (self.cursor.rowcount, self.name))
         except Exception as e:
-            _log.error('Failed to delete rows from %s; %s' % (self.name, str(e)))
+            _log.error('Failed to delete rows from %s; %s' % (self.name, unicode(e)))
         
         return True
     

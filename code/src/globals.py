@@ -123,7 +123,7 @@ class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
             'type': uname[0],
             'kernel': uname[2],
             'arch': platform.machine(),
-            'pythonVersion': '%s %s' % (platform.python_implementation(), '.'.join([str(i) for i in sys.version_info])),
+            'pythonVersion': '%s %s' % (platform.python_implementation(), '.'.join([unicode(i) for i in sys.version_info])),
             'cpuCount': multiprocessing.cpu_count(),
             'isProxy': True if self.proxy_url else False,
             'dist': {
@@ -146,7 +146,7 @@ class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
         return time.time() - self.metric['stopping_time']
     
     def get_run_time_str(self):
-        return str(datetime.now() - datetime.fromtimestamp(self.metric['starting_time']))
+        return unicode(datetime.now() - datetime.fromtimestamp(self.metric['starting_time']))
     
     def get_url(self, path = ''):
         path.strip()

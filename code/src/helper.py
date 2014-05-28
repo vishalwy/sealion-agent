@@ -46,7 +46,7 @@ class Utils(Namespace):
                     break
                     
             if flag == True:
-                if regex != None and re.match(regex, str(d)) == None:
+                if regex != None and re.match(regex, unicode(d)) == None:
                     return False
                 elif (d_type_name == 'str' or d_type_name == 'unicode') and is_regex == True:
                     try:
@@ -150,7 +150,7 @@ class Config:
         try:
             return self.data[attr]
         except KeyError as e:
-            raise AttributeError(str(e))
+            raise AttributeError(unicode(e))
         finally:
             self.lock.release()
         

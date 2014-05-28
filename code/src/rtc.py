@@ -139,10 +139,10 @@ class RTC(ThreadEx):
         try:
             self.sio = SocketIO(self.globals.get_url(), **kwargs)
         except SocketIOHandShakeError as e:
-            _log.error('Failed to connect SocketIO; %s' % str(e))
+            _log.error('Failed to connect SocketIO; %s' % unicode(e))
             return None
         except Exception as e:
-            _log.error(str(e))
+            _log.error(unicode(e))
         
         return self
     
@@ -170,11 +170,11 @@ class RTC(ThreadEx):
             try:
                 self.sio.wait()
             except SocketIOHandShakeError as e:
-                _log.error('Failed to connect SocketIO; %s' % str(e))
+                _log.error('Failed to connect SocketIO; %s' % unicode(e))
                 connection.Connection().reconnect()
                 break
             except Exception as e:
-                _log.error(str(e))
+                _log.error(unicode(e))
             
             if self.is_stop == True or self.globals.stop_event.is_set():
                 _log.debug('%s received stop event' % self.name)

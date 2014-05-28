@@ -47,9 +47,9 @@ class API(requests.Session):
             try:
                 response_json = response.json()
                 code = response_json['code']
-                temp = 'Error ' + str(code) + '; ' + response_json['message']
+                temp = 'Error ' + unicode(code) + '; ' + response_json['message']
             except:
-                temp = 'Error ' + str(response.status_code)
+                temp = 'Error ' + unicode(response.status_code)
         
         temp = (message + '; ' + temp) if len(message) else temp
         _log.error(temp)
@@ -91,7 +91,7 @@ class API(requests.Session):
             try:
                 response = method(timeout = 10, *args, **kwargs)
             except Exception as e:
-                _log.error(str(e))
+                _log.error(unicode(e))
                 exception = e
                 
             if response != None and response.status_code < 500:

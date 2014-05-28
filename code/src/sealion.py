@@ -123,7 +123,7 @@ class sealion(Daemon):
                         os.remove(file_name)
                         _log.info('Removed dump %s' % file_name)
                     except Exception as e:
-                        _log.error('Failed to remove dump %s; %s' % (file_name, str(e)))
+                        _log.error('Failed to remove dump %s; %s' % (file_name, unicode(e)))
 
                 if globals.stop_event.is_set():
                     _log.debug('CrashDumpSender received stop event')
@@ -141,7 +141,7 @@ class sealion(Daemon):
             buff.value = proc_name.encode('utf-8')
             libc.prctl(15, byref(buff), 0, 0, 0)
         except Exception as e:
-            _log.error('Failed to set process name; %s' % str(e))
+            _log.error('Failed to set process name; %s' % unicode(e))
         
     def initialize(self):        
         try:
@@ -153,10 +153,10 @@ class sealion(Daemon):
                 os.setuid(user.pw_uid)
                 os.environ['HOME'] = '/'
         except KeyError as e:
-            sys.stderr.write('Failed to find user %s; %s\n' % (self.user_name, str(e)))
+            sys.stderr.write('Failed to find user %s; %s\n' % (self.user_name, unicode(e)))
             sys.exit(exit_status.AGENT_ERR_FAILED_FIND_USER)
         except Exception as e:
-            sys.stderr.write('Failed to change the group or user to %s; %s\n' % (self.user_name, str(e)))
+            sys.stderr.write('Failed to change the group or user to %s; %s\n' % (self.user_name, unicode(e)))
             sys.exit(exit_status.AGENT_ERR_FAILED_CHANGE_GROUP_OR_USER)
             
         try:
@@ -168,7 +168,7 @@ class sealion(Daemon):
             f = open(self.pidfile, 'w');
             f.close()
         except Exception as e:
-            sys.stderr.write(str(e) + '\n')
+            sys.stderr.write(unicode(e) + '\n')
             sys.exit(exit_status.AGENT_ERR_FAILED_PID_FILE)
         
         sys.excepthook = self.exception_hook
@@ -203,9 +203,9 @@ class sealion(Daemon):
     
     def run(self): 
         try:
-            self.monit_pid = subprocess.Popen([exe_path + 'bin/monit.sh', str(os.getpid()), '%d' % self.monit_interval], preexec_fn = os.setpgrp).pid
+            self.monit_pid = subprocess.Popen([exe_path + 'bin/monit.sh', unicode(os.getpid()), '%d' % self.monit_interval], preexec_fn = os.setpgrp).pid
         except Exception as e:
-            _log.error('Failed to open monitoring script; %s' % str(e))
+            _log.error('Failed to open monitoring script; %s' % unicode(e))
         
         self.set_procname('sealiond')
         is_update_only_mode = False

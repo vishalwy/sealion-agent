@@ -37,7 +37,7 @@ try:
     lf.setFormatter(formatter)
     logger.addHandler(lf)
 except Exception as e:
-    sys.stderr.write('Failed to open the log file; %s\n' % str(e))
+    sys.stderr.write('Failed to open the log file; %s\n' % unicode(e))
     sys.exit(exit_status.AGENT_ERR_FAILED_OPEN_LOG)
     
 try:
@@ -45,7 +45,7 @@ try:
     api.create_session()
     api.create_unauth_session()
 except Exception as e:
-    _log.error(str(e))
+    _log.error(unicode(e))
     sys.exit(exit_status.AGENT_ERR_FAILED_INITIALIZE)
     
 class LoggingList(logging.Filter):

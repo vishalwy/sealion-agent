@@ -53,7 +53,7 @@ class Daemon(object):
             sys.exit(exit_status.AGENT_ERR_SUCCESS)
         
         atexit.register(self.cleanup)
-        pid = str(os.getpid())
+        pid = unicode(os.getpid())
         
         with open(self.pidfile, 'w+') as f:
             f.write('%s\n' % pid)
@@ -84,14 +84,14 @@ class Daemon(object):
                 os.kill(pid, signal.SIGTERM)
                 time.sleep(0.5)
         except OSError as err:
-            err = str(err)
+            err = unicode(err)
             
             if err.find('No such process') > 0:
                 if os.path.exists(self.pidfile):
                     try:
                         os.remove(self.pidfile)
                     except Exception as e:
-                        sys.stderr.write(str(e) + '\n')
+                        sys.stderr.write(unicode(e) + '\n')
                         sys.exit(exit_status.AGENT_ERR_FAILED_PID_FILE)
                     
                 sys.stdout.write('%s stopped successfully\n' % self.__class__.__name__)

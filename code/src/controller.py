@@ -44,7 +44,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                 _log.info('Uninstalling agent.')
                 subprocess.Popen([self.globals.exe_path + 'uninstall.sh'])
             except Exception as e:
-                _log.error('Failed to open uninstall script; %s' % str(e))
+                _log.error('Failed to open uninstall script; %s' % unicode(e))
                 
         elif status == api.Status.UNAUTHORIZED:
             _log.error('Agent unauthorized to connect')
@@ -106,7 +106,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
             time.sleep(30)
             _log.error('Failed to install update version %s' % version_details['agentVersion'])
         except Exception as e:
-            _log.error('Failed to open curlike script; %s' % str(e))
+            _log.error('Failed to open curlike script; %s' % unicode(e))
         
         self.updater = None
         
@@ -183,7 +183,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
 
         for thread in threads:
             if thread.ident != curr_thread.ident and thread.ident != self.main_thread.ident and thread.daemon != True:
-                _log.debug('Waiting for %s.' % str(thread))
+                _log.debug('Waiting for %s.' % unicode(thread))
                 thread.join()
 
 def sig_handler(signum, frame):    
@@ -212,7 +212,7 @@ def dump_stack_traces():
         f.write(trace)
         _log.info('Stack trace saved at %s' % path)
     except Exception as e:
-        _log.error('Failed to save stack trace; %s' % str(e))
+        _log.error('Failed to save stack trace; %s' % unicode(e))
     finally:
         f and f.close()
         
