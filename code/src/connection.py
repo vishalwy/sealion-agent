@@ -42,7 +42,7 @@ class Connection(ThreadEx):
     def connect(self):        
         status = self.attempt(retry_count = 2)
         
-        if api.API.is_not_connected(status) and hasattr(self.globals.config.agent, 'activities') and hasattr(self.globals.config.agent, 'org'):
+        if api.is_not_connected(status) and hasattr(self.globals.config.agent, 'activities') and hasattr(self.globals.config.agent, 'org'):
             self.start()
             status = api.Status.SUCCESS
             

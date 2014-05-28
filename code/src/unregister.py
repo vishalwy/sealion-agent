@@ -22,5 +22,5 @@ except:
 
 api.session.ping()
 status = api.session.unregister()
-sys.exit(exit_status.AGENT_ERR_SUCCESS if api.API.is_not_connected(status) == False else exit_status.AGENT_ERR_FAILED_CONNECT)
+sys.exit(exit_status.AGENT_ERR_SUCCESS if api.is_not_connected(status) == False else exit_status.AGENT_ERR_FAILED_CONNECT)
 

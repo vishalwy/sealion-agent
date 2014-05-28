@@ -54,13 +54,6 @@ class API(requests.Session):
         temp = (message + '; ' + temp) if len(message) else temp
         _log.error(temp)
     
-    @staticmethod
-    def is_not_connected(status):
-        if status == Status.NOT_CONNECTED or status == Status.NO_SERVICE:
-            return True
-        
-        return False
-    
     def set_events(self, stop_event = None, post_event = None):
         if stop_event == True and self.globals.stop_event.is_set() == False:
             _log.debug('Setting stop event')
@@ -75,14 +68,6 @@ class API(requests.Session):
         elif post_event == False and self.globals.post_event.is_set() == True and self.globals.stop_event.is_set() == False:
             _log.debug('Resetting post event')
             self.globals.post_event.clear()
-    
-    def get_url(self, path = ''):
-        path.strip()
-        
-        if len(path):
-            path = path if path[0] == '/' else ('/' + path)
-                  
-        return self.globals.config.agent.apiUrl + path
     
     def exec_method(self, method, options = {}, *args, **kwargs):
         method = getattr(self, method)
@@ -127,7 +112,7 @@ class API(requests.Session):
         if is_ping_server == False:
             self.set_events(post_event = True)
         else:
-            response = self.exec_method('get', {'retry_count': 0, 'is_return_exception': True}, self.get_url())
+            response = self.exec_method('get', {'retry_count': 0, 'is_return_exception': True}, self.globals.get_url())
             
             if response[0] != None and response[0].status_code < 500:
                 _log.debug('Ping server successful')
@@ -139,7 +124,7 @@ class API(requests.Session):
     
     def register(self, **kwargs):
         data = self.globals.config.agent.get_dict(['orgToken', 'name', 'category', 'agentVersion', ('ref', 'tarball')])
-        response = self.exec_method('post', kwargs, self.get_url('agents'), data = data)    
+        response = self.exec_method('post', kwargs, self.globals.get_url('agents'), data = data)    
         ret = Status.SUCCESS
         
         if API.is_success(response):
@@ -157,7 +142,7 @@ class API(requests.Session):
         if hasattr(self.globals.config.agent, '_id') == False:
             return ret
         
-        response = self.exec_method('delete', {'retry_count': 2}, self.get_url('orgs/%s/servers/%s' % (self.globals.config.agent.orgToken, self.globals.config.agent._id)))
+        response = self.exec_method('delete', {'retry_count': 2}, self.globals.get_url('orgs/%s/servers/%s' % (self.globals.config.agent.orgToken, self.globals.config.agent._id)))
         
         if API.is_success(response) == False:
             ret = self.error('Failed to unregister agent', response)
@@ -168,7 +153,7 @@ class API(requests.Session):
         data = self.globals.config.agent.get_dict(['orgToken', 'agentVersion'])
         data['timestamp'] = int(time.time() * 1000)
         data['platform'] = self.globals.details
-        response = self.exec_method('post', kwargs, self.get_url('agents/' + self.globals.config.agent._id + '/sessions'), data = data)    
+        response = self.exec_method('post', kwargs, self.globals.get_url('agents/' + self.globals.config.agent._id + '/sessions'), data = data)    
         ret = Status.SUCCESS
         
         if API.is_success(response):
@@ -183,7 +168,7 @@ class API(requests.Session):
         return ret
             
     def get_config(self):
-        response = self.exec_method('get', {'retry_count': 0}, self.get_url('agents/1'))
+        response = self.exec_method('get', {'retry_count': 0}, self.globals.get_url('agents/1'))
         ret = Status.SUCCESS
         
         if API.is_success(response):
@@ -197,7 +182,7 @@ class API(requests.Session):
         return ret
             
     def post_data(self, activity_id, data):
-        response = self.exec_method('post', {'retry_count': 0}, self.get_url('agents/1/data/activities/' + activity_id), data = data)
+        response = self.exec_method('post', {'retry_count': 0}, self.globals.get_url('agents/1/data/activities/' + activity_id), data = data)
         ret = Status.SUCCESS
         
         if API.is_success(response):
@@ -214,7 +199,7 @@ class API(requests.Session):
         if hasattr(self.globals.config.agent, '_id') == False or self.is_authenticated == False:
             return ret
         
-        response = self.exec_method('delete', {'retry_count': 0, 'is_ignore_stop_event': True}, self.get_url('agents/1/sessions/1'))
+        response = self.exec_method('delete', {'retry_count': 0, 'is_ignore_stop_event': True}, self.globals.get_url('agents/1/sessions/1'))
         
         if API.is_success(response):
             _log.info('Logout successful')
@@ -225,7 +210,7 @@ class API(requests.Session):
     
     def get_agent_version(self):
         data = self.globals.config.agent.get_dict([('orgToken', ''), ('_id', ''), ('agentVersion', '')])
-        url = self.get_url('orgs/%s/agents/%s/agentVersion' % (data['orgToken'], data['_id']))
+        url = self.globals.get_url('orgs/%s/agents/%s/agentVersion' % (data['orgToken'], data['_id']))
         response = self.exec_method('get', {'retry_count': 0}, url, params = {'agentVersion': data['agentVersion']})
         
         if API.is_success(response):
@@ -242,7 +227,7 @@ class API(requests.Session):
         data = temp
         orgToken, agentId = data['orgToken'], data['_id']
         del data['orgToken'], data['_id']
-        response = self.exec_method('post', {'retry_count': 0}, self.get_url('orgs/%s/agents/%s/crashreport' % (orgToken, agentId)), data = data)
+        response = self.exec_method('post', {'retry_count': 0}, self.globals.get_url('orgs/%s/agents/%s/crashreport' % (orgToken, agentId)), data = data)
         ret = Status.SUCCESS
         
         if API.is_success(response):
@@ -308,6 +293,12 @@ class API(requests.Session):
             exec_func and exec_func(*args)
             
         return ret
+    
+def is_not_connected(status):
+    if status == Status.NOT_CONNECTED or status == Status.NO_SERVICE:
+        return True
+
+    return False
     
 def create_session():
     global session

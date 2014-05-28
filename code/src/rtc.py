@@ -137,7 +137,7 @@ class RTC(ThreadEx):
         _log.debug('Waiting for SocketIO connection')
         
         try:
-            self.sio = SocketIO(api.session.get_url(), **kwargs)
+            self.sio = SocketIO(self.globals.get_url(), **kwargs)
         except SocketIOHandShakeError as e:
             _log.error('Failed to connect SocketIO; %s' % str(e))
             return None

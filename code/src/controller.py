@@ -37,7 +37,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         
         if status == api.Status.SUCCESS:
             return True
-        elif api.API.is_not_connected(status):
+        elif api.is_not_connected(status):
             _log.info('Failed to establish connection.')
         elif status == api.Status.NOT_FOUND:           
             try:
@@ -95,7 +95,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
             'org_token': self.globals.config.agent.orgToken, 
             'agent_id': self.globals.config.agent._id,
             'version': version_details['agentVersion'], 
-            'download_url': api.session.get_url().replace('://api', '://agent'),
+            'download_url': self.globals.get_url().replace('://api', '://agent'),
             'proxy': ('-x "%s"' % self.globals.proxy_url) if self.globals.details['isProxy'] else ''
         }       
         

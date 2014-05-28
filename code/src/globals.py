@@ -147,4 +147,12 @@ class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
     
     def get_run_time_str(self):
         return str(datetime.now() - datetime.fromtimestamp(self.metric['starting_time']))
+    
+    def get_url(self, path = ''):
+        path.strip()
+        
+        if len(path):
+            path = path if path[0] == '/' else ('/' + path)
+                  
+        return self.config.agent.apiUrl + path
         

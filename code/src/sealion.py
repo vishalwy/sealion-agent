@@ -113,7 +113,7 @@ class sealion(Daemon):
 
                         report = report if report != None else self.read_dump(file_name)
 
-                        if report == None or api.API.is_not_connected(api.unauth_session.send_crash_report(report)) == False:
+                        if report == None or api.is_not_connected(api.unauth_session.send_crash_report(report)) == False:
                             break
 
                         _log.debug('CrashDumpSender waiting for stop event for 10 seconds')
