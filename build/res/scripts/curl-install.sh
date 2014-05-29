@@ -27,15 +27,11 @@ call_url()
     PARAMS=""
 
     for ARG in "${ARGS[@]}" ; do
-        if [ "${ARG:0:1}" != "\"" ] ; then
-            PARAMS="$PARAMS \"$ARG\""
-        else
-            PARAMS="$PARAMS $ARG"
-        fi
+        ARG=${ARG//\"/\\\"}
+        PARAMS="$PARAMS \"$ARG\""
     done
 
-    PARAMS="$URL_CALLER $PARAMS"
-    bash -c "$PARAMS"
+    bash -c "$URL_CALLER $PARAMS"
     return $?
 }
 

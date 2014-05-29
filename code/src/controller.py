@@ -100,12 +100,18 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         try:
             f = open(curllike)
             f.close()
-            environ = {}
-            environ.update(os.environ)
-            environ['URL_CALLER'] = url_caller
-            subprocess.call(['bash', '-c', format % format_spec], preexec_fn = os.setpgrp, env = environ)
-            time.sleep(30)
-            _log.error('Failed to install update version %s' % version_details['agentVersion'])
+            
+            try:
+                environ = {}
+                environ.update(os.environ)
+                environ['URL_CALLER'] = url_caller
+                subprocess.call(['bash', '-c', format % format_spec], preexec_fn = os.setpgrp, env = environ)
+                time.sleep(5)
+                raise Exception('')
+            except Exception as e:
+                error = unicode(e)
+                error = '; ' + error if error else ''
+                _log.error('Failed to install update version %s%s' % (version_details['agentVersion'], error))
         except Exception as e:
             _log.error('Failed to open curlike script; %s' % unicode(e))
         
