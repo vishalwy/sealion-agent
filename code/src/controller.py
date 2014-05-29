@@ -96,24 +96,20 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
             'download_url': self.globals.get_url().replace('://api', '://agent'),
             'proxy': ('-x "%s"' % self.globals.proxy_url) if self.globals.details['isProxy'] else ''
         }
-        
+            
         try:
             f = open(curllike)
             f.close()
-            
-            try:
-                environ = {}
-                environ.update(os.environ)
-                environ['URL_CALLER'] = url_caller
-                subprocess.call(['bash', '-c', format % format_spec], preexec_fn = os.setpgrp, env = environ)
-                time.sleep(5)
-                raise Exception('')
-            except Exception as e:
-                error = unicode(e)
-                error = '; ' + error if error else ''
-                _log.error('Failed to install update version %s%s' % (version_details['agentVersion'], error))
+            environ = {}
+            environ.update(os.environ)
+            environ['URL_CALLER'] = url_caller
+            subprocess.call(['bash', '-c', format % format_spec], preexec_fn = os.setpgrp, env = environ)
+            time.sleep(5)
+            raise Exception('')
         except Exception as e:
-            _log.error('Failed to open curlike script; %s' % unicode(e))
+            error = unicode(e)
+            error = '; ' + error if error else ''
+            _log.error('Failed to install update version %s%s' % (version_details['agentVersion'], error))
         
         self.updater = None
         

@@ -5,19 +5,17 @@
 #Email      : hello@sealion.com
 
 #script variables
-USAGE="Usage: $0 {-v <version> [-s <sub domain>]} | -h"
+USAGE="Usage: $0 {-v <version> [-d <domain>]} | -h"
 
 #config variables
-SUBDOMAIN=
-API_URL="https://api.sealion.com"
-AGENT_URL="https://agent.sealion.com"
-TARGET="sealion.com"
+DEFAULT_DOMAIN="sealion.com"
+DOMAIN=$DEFAULT_DOMAIN
 VERSION=
 
-while getopts :s:v:h OPT ; do
+while getopts :d:v:h OPT ; do
     case "$OPT" in
-        s)
-            SUBDOMAIN=$OPTARG
+        d)
+            DOMAIN=$OPTARG
             ;;
         v)
             VERSION=$OPTARG
@@ -39,8 +37,9 @@ while getopts :s:v:h OPT ; do
     esac
 done
 
+TARGET=$DOMAIN
 VERSION="$(echo "$VERSION" | sed -e 's/^\s*//' -e 's/\s*$//')"
-SUBDOMAIN="$(echo "$SUBDOMAIN" | sed -e 's/^\s*//' -e 's/\s*$//')"
+DOMAIN="$(echo "$DOMAIN" | sed -e 's/^\s*//' -e 's/\s*$//')"
 
 if [ "$VERSION" == "" ] ; then
     echo "Please specify a valid version for the build"
@@ -48,11 +47,14 @@ if [ "$VERSION" == "" ] ; then
     exit 1
 fi
 
-if [ "$SUBDOMAIN" != "" ] ; then
-    API_URL="https://api-$SUBDOMAIN.sealion.com"
-    AGENT_URL="https://agent-$SUBDOMAIN.sealion.com"
-    TARGET="$SUBDOMAIN.sealion.com"
+if [ "$DOMAIN" != "$DEFAULT_DOMAIN" ] ; then
+    DOMAIN="-$DOMAIN"
+else
+    DOMAIN=".$DOMAIN"
 fi
+
+API_URL="https://api$DOMAIN"
+AGENT_URL="https://agent$DOMAIN"
 
 BASEDIR=$(readlink -f "$0")
 BASEDIR=$(dirname "$BASEDIR")
