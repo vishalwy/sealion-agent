@@ -124,7 +124,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                     _log.debug('%s received stop event.', self.name)
                     self.globals.set_time_metric('stopping_time')
                     break
-                elif self.globals.get_run_time() > 60 * 60:
+                elif self.globals.get_run_time() >= 30 * 60:
                     helper.Utils.restart_agent('No updates available')
             else:
                 self.globals.event_dispatcher.bind('update_agent', self.update_agent)
