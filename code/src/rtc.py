@@ -175,6 +175,7 @@ class RTC(ThreadEx):
                 break
             except Exception as e:
                 _log.error(unicode(e))
+                self.is_disconnected = True
             
             if self.is_stop == True or self.globals.stop_event.is_set():
                 _log.debug('%s received stop event' % self.name)
