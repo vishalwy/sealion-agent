@@ -96,6 +96,7 @@ class sealion(Daemon):
         globals = Globals()
         path = self.crash_dump_path
         agent_version_regex = globals.config.agent.schema['agentVersion'].get('regex', '.*')
+        agent_version_regex = re.sub('^\^?([^\$]+)\$?$', '\g<1>', agent_version_regex)
         _log.debug('CrashDumpSender waiting for stop event for %d seconds' % crash_dump_timeout)
         globals.stop_event.wait(crash_dump_timeout)
         
@@ -183,6 +184,7 @@ class sealion(Daemon):
         file_count, loop_file_count = 0, 0
         loop_regex = '^sealion-%s-[0-9]+\.dmp$' % globals.config.agent.agentVersion.replace('.', '\.')
         agent_version_regex = globals.config.agent.schema['agentVersion'].get('regex', '.*')
+        agent_version_regex = re.sub('^\^?([^\$]+)\$?$', '\g<1>', agent_version_regex)
         
         try:
             for f in os.listdir(path):
