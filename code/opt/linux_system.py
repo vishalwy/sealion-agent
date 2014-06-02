@@ -22,7 +22,7 @@ def get_data():
         'diskWrites': []
     }
     
-    data.update(dict(zip(['loadAvg1Min', 'loadAvg5Min', 'loadAvg15Min'], get_load_avg())))
+    data['loadAvg1Min'], data['loadAvg5Min'], data['loadAvg15Min'] = get_load_avg()
     
     for cpu, usage in get_cpu_usage().items():
         data['cpuUsage'].append({'name': cpu, 'value': usage})
