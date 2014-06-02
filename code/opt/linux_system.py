@@ -3,6 +3,12 @@ import os
 import multiprocessing
 import time
 
+class NetError(Exception):
+    pass
+
+class DiskError(Exception):
+    pass
+
 def get_data():
     data = {
         'loadAvg1Min': 0,
