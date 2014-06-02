@@ -33,6 +33,7 @@
 
 import re
 import subprocess
+import time
 
 
 
@@ -44,6 +45,35 @@ def rx_tx_bytes(interface):  # by reading /proc
             return (rx_bytes, tx_bytes)
     raise NetError('interface not found: %r' % interface)
 
+def rx_tx_bytes_persec(interface, sample_duration=1):  # by reading /proc
+    with open('/proc/net/dev') as f1:
+        with open('/proc/net/dev') as f2:
+            content1 = f1.read()
+            time.sleep(sample_duration)
+            content2 = f2.read()
+            
+    for line in content1.splitlines():
+        if interface in line:
+            found = True
+            data = line.split('%s:' % interface)[1].split()
+            rx_bytes1 = int(data[0])
+            tx_bytes1 = int(data[8])
+            break
+    
+    if not found:
+        raise NetError('interface not found: %r' % interface)
+    
+    for line in content2.splitlines():
+        if interface in line:
+            found = True
+            data = line.split('%s:' % interface)[1].split()
+            rx_bytes2 = int(data[0])
+            tx_bytes2 = int(data[8])
+            break
+    
+    rx_bytes_per_sec = (rx_bytes2 - rx_bytes1) / float(sample_duration)
+    tx_bytes_per_sec = (tx_bytes2 - tx_bytes1) / float(sample_duration)   
+    return (rx_bytes_per_sec, tx_bytes_per_sec)
 
 def rx_tx_bits(interface):  # by reading /proc
     rx_bytes, tx_bytes = rx_tx_bytes(interface)

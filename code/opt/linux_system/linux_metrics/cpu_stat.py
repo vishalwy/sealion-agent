@@ -31,7 +31,7 @@
 
 
 import time
-
+import multiprocessing
 
 
 def cpu_times():
@@ -64,20 +64,15 @@ def cpu_percents(sample_duration=1):
     on SMP systems, these are aggregates of all processors/cores.
     """
     
+    keys = ['user', 'nice', 'system', 'idle', 'iowait', 'irq', 'softirq']
     deltas = __cpu_time_deltas(sample_duration)
-    total = sum(deltas)
-    percents = [100 - (100 * (float(total - x) / total)) for x in deltas]
-
-    return {
-        'user': percents[0],
-        'nice': percents[1],
-        'system': percents[2],
-        'idle': percents[3],
-        'iowait': percents[4],
-        'irq': percents[5],
-        'softirq': percents[6],
-    }
-
+    ret = []
+    
+    for delta in deltas:
+        total = sum(delta)
+        ret.append(dict(zip(keys, [100 - (100 * (float(total - x) / total)) for x in delta])))
+    
+    return ret
 
 
 def procs_running():
@@ -162,14 +157,20 @@ def __cpu_time_deltas(sample_duration):
     
     with open('/proc/stat') as f1:
         with open('/proc/stat') as f2:
-            line1 = f1.readline()
+            content1 = f1.read()
             time.sleep(sample_duration)
-            line2 = f2.readline()
+            content2 = f2.read()
+            
+    cpu_count = multiprocessing.cpu_count()
+    deltas, lines1, lines2 = [], content1.splitlines(), content2.splitlines()
+    i, cpu_count = (1, cpu_count + 1) if cpu_count > 1 else (0, 1)
     
-    deltas = [int(b) - int(a) for a, b in zip(line1.split()[1:], line2.split()[1:])]
+    while i < cpu_count:
+        deltas.append([int(b) - int(a) for a, b in zip(lines1[i].split()[1:], lines2[i].split()[1:])])
+        i += 1
     
     return deltas
-    
+        
     
     
 def __proc_stat(stat):
