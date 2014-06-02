@@ -59,18 +59,18 @@ def cpu_percents(sample_duration=1):
     
     elapsed cpu time samples taken at 'sample_time (seconds)' apart.
     
-    cpu modes: 'user', 'nice', 'system', 'idle', 'iowait', 'irq', 'softirq'
+    cpu modes: 'user', 'nice', 'system', 'idle', 'iowait', 'irq', 'softirq', 'steal'
     
     on SMP systems, these are aggregates of all processors/cores.
     """
     
-    keys = ['user', 'nice', 'system', 'idle', 'iowait', 'irq', 'softirq']
+    keys = ['us', 'ni', 'sy', 'id', 'wa', 'hi', 'si', 'st']
     deltas = __cpu_time_deltas(sample_duration)
-    ret = []
+    ret = {}
     
-    for delta in deltas:
-        total = sum(delta)
-        ret.append(dict(zip(keys, [100 - (100 * (float(total - x) / total)) for x in delta])))
+    for key in deltas:
+        total = sum(deltas[key])
+        ret[key] = dict(zip(keys, [100 - (100 * (float(total - x) / total)) for x in deltas[key]]))
     
     return ret
 
@@ -162,11 +162,13 @@ def __cpu_time_deltas(sample_duration):
             content2 = f2.read()
             
     cpu_count = multiprocessing.cpu_count()
-    deltas, lines1, lines2 = [], content1.splitlines(), content2.splitlines()
+    deltas, lines1, lines2 = {}, content1.splitlines(), content2.splitlines()
     i, cpu_count = (1, cpu_count + 1) if cpu_count > 1 else (0, 1)
     
     while i < cpu_count:
-        deltas.append([int(b) - int(a) for a, b in zip(lines1[i].split()[1:], lines2[i].split()[1:])])
+        line_split1 = lines1[i].split()
+        line_split2 = lines2[i].split()
+        deltas[line_split1[0]] = [int(b) - int(a) for a, b in zip(line_split1[1:], line_split2[1:])]
         i += 1
     
     return deltas

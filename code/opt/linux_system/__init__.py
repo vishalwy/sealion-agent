@@ -16,6 +16,11 @@ def get_data():
     }
     
     data.update(dict(zip(['loadAvg1Min', 'loadAvg5Min', 'loadAvg15Min'], lm.cpu_stat.load_avg())))
+    cpu_usage = lm.cpu_stat.cpu_percents()
+    
+    for cpu in cpu_usage:
+        filtered_dict = dict([(key, value) for key, value in cpu_usage[cpu].items() if key in ['us', 'ni', 'sy', 'id', 'wa', 'st']])
+        data['cpuUsage'].append({'name': cpu, 'value': filtered_dict})
     
     for file in os.listdir('/sys/class/net/'):
         if file != 'lo':
