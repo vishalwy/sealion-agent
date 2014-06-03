@@ -295,7 +295,7 @@ class API(requests.Session):
         return ret
     
 def is_not_connected(status):
-    if status == Status.NOT_CONNECTED or status == Status.NO_SERVICE:
+    if status == Status.NOT_CONNECTED or status == Status.NO_SERVICE or status == Status.UNKNOWN:
         return True
 
     return False
