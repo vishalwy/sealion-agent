@@ -21,6 +21,8 @@ class JobStatus(Namespace):
     TIMED_OUT = 2
 
 class Job:    
+    executer = None
+    
     def __init__(self, activity, store):
         self.activity = activity
         self.status = JobStatus.NOT_RUNNING
@@ -30,13 +32,27 @@ class Job:
         self.exec_timestamp = activity['next_exec_timestamp']
         self.details = self.activity['details']
         self.store = store
+        
+    @staticmethod
+    def start_executer():
+        if Job.executer == None:
+            Job.executer == subprocess.Popen([globals.Globals().exe_path + 'bin/execute.sh'], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+        elif Job.executer.poll() != None:
+            os.waitpid(-1 * Job.executer.pid, os.WUNTRACED)
+            Job.executer == subprocess.Popen([globals.Globals().exe_path + 'bin/execute.sh'])
+        
+        return Job.executer
 
     def start(self):
         self.timestamp = int(time.time() * 1000)
 
         if self.activity['is_whitelisted'] == True:
             _log.debug('Executing activity(%s @ %d)' % (self.details['_id'], self.timestamp))
-            self.output_file = tempfile.TemporaryFile()
+            self.output_file = tempfile.NamedTemporaryFile()
+            Job.start_executer()
+            Job.executer.stdin.write('%s\n%s\n' % (self.details['command'], self.output_file.name))
+            pid = int(Job.executer.readline())
+            
             self.process = subprocess.Popen(['bash', '-c', self.details['command']], stdout = self.output_file, stderr = self.output_file, preexec_fn = os.setpgrp)
             self.status = JobStatus.RUNNING
         else:
@@ -112,6 +128,10 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
 
         self.timeout = int(self.timeout * 1000)
         self.globals.event_dispatcher.bind('get_activity_funct', self.get_activity_funct)
+        
+    def start(self):
+        Job.start_executer()
+        ThreadEx.start()
 
     def is_in_whitelist(self, command):
         whitelist = []
