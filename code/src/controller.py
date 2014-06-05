@@ -57,7 +57,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
     
     @staticmethod
     def is_rtc_heartbeating():
-        if api.session.is_authenticated == False:
+        if api.session.is_authenticated() == False:
             return True
         
         if rtc.session == None:

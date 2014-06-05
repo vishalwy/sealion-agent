@@ -25,13 +25,18 @@ class Status(Namespace):
     UNAUTHORIZED = 7
     SESSION_CONFLICT = 8
     UNKNOWN = -1
+    
+class AuthStatus(Namespace):
+    UNAUTHORIZED = 0
+    AUTHENTICATING = 1
+    AUTHENTICATED = 2
 
 class API(requests.Session):    
     def __init__(self, *args, **kwargs):
         requests.Session.__init__(self, *args, **kwargs)
         self.globals = globals.Globals()
         self.stop_status = Status.SUCCESS
-        self.is_authenticated = False
+        self.auth_status = AuthStatus.UNAUTHORIZED
         self.is_conn_err = False
             
     @staticmethod
@@ -101,7 +106,7 @@ class API(requests.Session):
                 
             i += 0 if (retry_count == -1 and i > 0) else 1
             
-        if response == None and self.is_authenticated == True:
+        if response == None and self.is_authenticated():
             self.is_conn_err = True
         
         return response if is_return_exception == False else (response, exception)
@@ -116,7 +121,7 @@ class API(requests.Session):
             
             if response[0] != None and response[0].status_code < 500:
                 _log.debug('Ping server successful')
-                self.is_authenticated and self.set_events(post_event = True)
+                self.is_authenticated() and self.set_events(post_event = True)
             else:
                 API.print_error('Failed to ping server', response[0])
             
@@ -160,7 +165,7 @@ class API(requests.Session):
             _log.info('Authentication successful')
             self.globals.config.agent.update(response.json())
             self.globals.config.agent.save()
-            self.is_authenticated = True
+            self.auth_status = AuthStatus.AUTHENTICATED
             self.set_events(post_event = True)
         else:
             ret = self.error('Authentication failed. ', response)
@@ -196,13 +201,14 @@ class API(requests.Session):
     def logout(self):
         ret = Status.SUCCESS
         
-        if hasattr(self.globals.config.agent, '_id') == False or self.is_authenticated == False:
+        if hasattr(self.globals.config.agent, '_id') == False or self.is_authenticated() == False:
             return ret
         
         response = self.exec_method('delete', {'retry_count': 0, 'is_ignore_stop_event': True}, self.globals.get_url('agents/1/sessions/1'))
         
         if API.is_success(response):
             _log.info('Logout successful')
+            self.auth_status = AuthStatus.UNAUTHORIZED
         else:
             ret = self.error('Logout failed. ', response, True)
 
@@ -267,6 +273,7 @@ class API(requests.Session):
                 ret = Status.MISMATCH
             else:
                 if code == 200001 and self.stop_status == Status.SUCCESS:
+                    self.auth_status = AuthStatus.UNAUTHORIZED
                     post_event = False
                     exec_func = connection.Connection().reconnect
                 else:
@@ -293,6 +300,9 @@ class API(requests.Session):
             exec_func and exec_func(*args)
             
         return ret
+    
+    def is_authenticated(self):
+        return True if self.auth_status == AuthStatus.AUTHENTICATED else False
     
 def is_not_connected(status):
     if status == Status.NOT_CONNECTED or status == Status.NO_SERVICE or status == Status.UNKNOWN:

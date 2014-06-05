@@ -30,13 +30,14 @@ class Job:
         self.exec_timestamp = activity['next_exec_timestamp']
         self.details = self.activity['details']
         self.store = store
+        self.globals = globals.Globals()
 
     def start(self):
         self.timestamp = int(time.time() * 1000)
 
         if self.activity['is_whitelisted'] == True:
             _log.debug('Executing activity(%s @ %d)' % (self.details['_id'], self.timestamp))
-            self.output_file = tempfile.TemporaryFile()
+            self.output_file = tempfile.TemporaryFile(dir = self.globals.temp_path)
             self.process = subprocess.Popen(['bash', '-c', self.details['command']], stdout = self.output_file, stderr = self.output_file, preexec_fn = os.setpgrp)
             self.status = JobStatus.RUNNING
         else:
