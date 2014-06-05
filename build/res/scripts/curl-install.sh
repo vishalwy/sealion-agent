@@ -126,6 +126,19 @@ report_failure()
     call_url -s $PROXY -H "Content-Type: application/json" -X PUT -d "{\"reason\":\"$1\"}"  "$API_URL/orgs/$ORG_TOKEN/agents/$AGENT_ID/updatefail" >/dev/null 2>&1
 }
 
+INSTALL_PATH=$(eval echo "$INSTALL_PATH")
+
+if [[ "$INSTALL_PATH" != "" && ${INSTALL_PATH:0:1} != "/" ]] ; then
+    INSTALL_PATH="$(pwd)/$INSTALL_PATH"
+fi
+
+INSTALL_PATH=${INSTALL_PATH%/}
+
+if [ "$AGENT_ID" != "" ] ; then
+    TMP_FILE_PATH="$INSTALL_PATH$TMP_FILE_PATH"
+    TMP_DATA_FILE="$INSTALL_PATH$TMP_DATA_FILE"
+fi
+
 TMP_DATA_FILE=$(mktemp $TMP_DATA_FILE)
 log_output "Getting agent installer details..."
 SUB_URL=$([ "$AGENT_ID" != "" ] && echo "/agents/$AGENT_ID" || echo "")
