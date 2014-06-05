@@ -22,7 +22,7 @@ class JobStatus(Namespace):
     
 class Executer(ThreadEx):
     jobs = {}
-    self.jobs_lock = threading.RLock()
+    jobs_lock = threading.RLock()
     
     def __init__(self, store):
         ThreadEx.__init__(self)
@@ -31,36 +31,44 @@ class Executer(ThreadEx):
         self.store = store
         self.globals = globals.Globals()
         
+        try:
+            self.timeout = self.globals.config.sealion.commandTimeout
+        except:
+            self.timeout = 30
+
+        self.timeout = int(self.timeout * 1000)
+        
     def add_job(self, job):
-        self.jobs_lock.acquire()
-        self.jobs['%d' % t] = job.start()
+        Executer.jobs_lock.acquire()
+        t = job.start()
+        Executer.jobs['%d' % t] = job
         self.write(job)
-        self.jobs_lock.release()
+        Executer.jobs_lock.release()
         
     def update_job(self, timestamp, data):
-        self.jobs_lock.acquire()
-        self.jobs['%d' % timestamp].update(data)
-        self.jobs_lock.release()
+        Executer.jobs_lock.acquire()
+        Executer.jobs['%d' % timestamp].update(data)
+        Executer.jobs_lock.release()
 
     def finish_jobs(self, activities = []):
         finished_jobs = []
-        self.jobs_lock.acquire()
+        Executer.jobs_lock.acquire()
         t = int(time.time() * 1000)
 
-        for job_timestamp in self.jobs.keys():
-            job = self.jobs[job_timestamp]
+        for job_timestamp in Executer.jobs.keys():
+            job = Executer.jobs[job_timestamp]
             
-            if job.details['_id'] in activities:
-                job.stop() and _log.info('Killed activity (%s @ %d)' % (job.details['_id'], job.timestamp))
+            if job.exec_details['_id'] in activities:
+                job.stop() and _log.info('Killed activity (%s @ %d)' % (job.exec_details['_id'], job.timestamp))
                 job.close_file()
-            elif t - job.timestamp > self.timeout:
-                job.stop() and _log.info('Killed activity (%s @ %d) as it exceeded timeout' % (job.details['_id'], job.timestamp))
+            elif t - job.exec_details['timestamp'] > self.timeout:
+                job.stop() and _log.info('Killed activity (%s @ %d) as it exceeded timeout' % (job.exec_details['_id'], job.timestamp))
 
-            if job.get_status() != JobStatus.RUNNING:
+            if job.status != JobStatus.RUNNING:
                 finished_jobs.append(job)
                 del self.jobs[job_timestamp]
 
-        self.jobs_lock.release()
+        Executer.jobs_lock.release()
         return finished_jobs
         
     def exe(self):
@@ -89,7 +97,7 @@ class Executer(ThreadEx):
         
     def read(self):
         data = self.process.stdout.readline().split()
-        self.update_job(data[0], {data[1]: data[2]})
+        self.update_job(int(data[0]), {data[1]: data[2]})
         
 
 class Job:    
@@ -103,7 +111,7 @@ class Job:
             'pid': -1,
             'return_code': 0
         }
-        self.exec_details.update(dict([detail for detail in activity['details'] if detail[0] in ['_id', 'command']]))
+        self.exec_details.update(dict([detail for detail in activity['details'].items() if detail[0] in ['_id', 'command']]))
         self.store = store
 
     def start(self):
@@ -112,10 +120,10 @@ class Job:
 
         if self.is_whitelisted == True:
             _log.debug('Executing activity(%s @ %d)' % (self.exec_details['_id'], t))
-            self.exec_details['output_file'] = tempfile.NamedTemporaryFile(dir = self.globals.temp_path)
+            self.exec_details['output_file'] = tempfile.NamedTemporaryFile(dir = globals.Globals().temp_path)
             self.status = JobStatus.RUNNING
         else:
-            _log.info('Activity %s is blocked by whitelist' % self.details['_id'])
+            _log.info('Activity %s is blocked by whitelist' % self.exec_details['_id'])
 
         return t
 
@@ -155,8 +163,8 @@ class Job:
         self.close_file()
 
         if data:
-            _log.debug('Pushing activity (%s @ %d) to %s' % (self.details['_id'], self.timestamp, self.store.__class__.__name__))
-            self.store.push(self.details['_id'], data)
+            _log.debug('Pushing activity (%s @ %d) to %s' % (self.exec_details['_id'], self.exec_details['timestamp'], self.store.__class__.__name__))
+            self.store.push(self.exec_details['_id'], data)
 
     def close_file(self):
         self.exec_details['output_file'] and self.exec_details['output_file'].close()
@@ -175,13 +183,6 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
         self.store = store
         self.consumer_count = 0
         self.executer = Executer(store)
-
-        try:
-            self.timeout = self.globals.config.sealion.commandTimeout
-        except:
-            self.timeout = 30
-
-        self.timeout = int(self.timeout * 1000)
         self.globals.event_dispatcher.bind('get_activity_funct', self.get_activity_funct)
 
     def is_in_whitelist(self, command):
