@@ -44,6 +44,7 @@ fi
 DOWNLOAD_URL="<download url>"
 REGISTRATION_URL="<registration url>"
 TAR_FILE_URL=
+SEALION_PYTHON_FOUND=0
 
 while getopts :a:t:i:p:o:x:c:v:hH: OPT ; do
     case "$OPT" in
@@ -233,6 +234,7 @@ if [ -f "/usr/local/sealion-agent/etc/init.d/sealion" ] ; then
     find "/usr/local/sealion-agent/var/log" -mindepth 1 -maxdepth 1 -type f -regextype sed ! -regex '\(.*/update\.log\)\|\(.*/.\+\.old\..\+\)' -exec mv "{}" "$(mktemp -u {}.old.XXXX)" \; 1>/dev/null 2>&1
     find "/usr/local/sealion-agent/var" -mindepth 1 -maxdepth 1 ! -name 'log' -exec rm -rf {} \; 1>/dev/null 2>&1
     find "/usr/local/sealion-agent" -mindepth 1 -maxdepth 1 ! -name 'var' -exec rm -rf {} \; >/dev/null 2>&1
+    SEALION_PYTHON_FOUND=1
 fi
 
 echo "Extracting files to /usr/local/sealion-agent..." >&1
@@ -359,6 +361,9 @@ fi
 
 if [ $is_root -eq 1 ] ; then
     chown -R $USERNAME:$USERNAME etc/config
+elif [ $SEALION_PYTHON_FOUND -eq 1 ]
+    mkdir "/usr/local/sealion-agent/etc/init.d"
+    ln -sf "/usr/local/sealion-agent/etc/sealion" "/usr/local/sealion-agent/etc/init.d/sealion"
 fi 
 
     

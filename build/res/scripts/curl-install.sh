@@ -134,7 +134,7 @@ fi
 
 INSTALL_PATH=${INSTALL_PATH%/}
 
-if [ "$AGENT_ID" != "" ] ; then
+if [[ "$AGENT_ID" != "" && -w "$INSTALL_PATH" ]] ; then
     TMP_FILE_PATH="$INSTALL_PATH$TMP_FILE_PATH"
     TMP_DATA_FILE="$INSTALL_PATH$TMP_DATA_FILE"
     mkdir -p "${TMP_FILE_PATH%/*}"
