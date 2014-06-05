@@ -361,7 +361,7 @@ fi
 
 if [ $is_root -eq 1 ] ; then
     chown -R $USERNAME:$USERNAME etc/config
-elif [ $SEALION_PYTHON_FOUND -eq 1 ]
+elif [ $SEALION_PYTHON_FOUND -eq 1 ] ; then
     mkdir "/usr/local/sealion-agent/etc/init.d"
     ln -sf "/usr/local/sealion-agent/etc/sealion" "/usr/local/sealion-agent/etc/init.d/sealion"
 fi 
