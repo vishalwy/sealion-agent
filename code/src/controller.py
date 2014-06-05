@@ -148,7 +148,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                     
                     finished_job_count = 0
 
-                    for job in job_producer.finish_jobs():
+                    for job in job_producer.executer.finish_jobs():
                         job.post_output()
                         finished_job_count += 1
 

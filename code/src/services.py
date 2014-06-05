@@ -19,83 +19,138 @@ class JobStatus(Namespace):
     NOT_RUNNING = 0
     RUNNING = 1
     TIMED_OUT = 2
-
-class Job:    
-    executer = None
     
-    def __init__(self, activity, store):
-        self.activity = activity
-        self.status = JobStatus.NOT_RUNNING
-        self.timestamp = 0
-        self.process = None
-        self.output_file = None
-        self.exec_timestamp = activity['next_exec_timestamp']
-        self.details = self.activity['details']
+class Executer(ThreadEx):
+    jobs = {}
+    self.jobs_lock = threading.RLock()
+    
+    def __init__(self, store):
+        ThreadEx.__init__(self)
+        self.exec_process = None
+        self.process_lock = threading.RLock()
         self.store = store
         self.globals = globals.Globals()
         
-    @staticmethod
-    def start_executer():
-        if Job.executer == None:
-            Job.executer == subprocess.Popen([globals.Globals().exe_path + 'bin/execute.sh'], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
-        elif Job.executer.poll() != None:
-            os.waitpid(-1 * Job.executer.pid, os.WUNTRACED)
-            Job.executer == subprocess.Popen([globals.Globals().exe_path + 'bin/execute.sh'])
+    def add_job(self, job):
+        self.jobs_lock.acquire()
+        self.jobs['%d' % t] = job.start()
+        self.write(job)
+        self.jobs_lock.release()
         
-        return Job.executer
+    def update_job(self, timestamp, data):
+        self.jobs_lock.acquire()
+        self.jobs['%d' % timestamp].update(data)
+        self.jobs_lock.release()
+
+    def finish_jobs(self, activities = []):
+        finished_jobs = []
+        self.jobs_lock.acquire()
+        t = int(time.time() * 1000)
+
+        for job_timestamp in self.jobs.keys():
+            job = self.jobs[job_timestamp]
+            
+            if job.details['_id'] in activities:
+                job.stop() and _log.info('Killed activity (%s @ %d)' % (job.details['_id'], job.timestamp))
+                job.close_file()
+            elif t - job.timestamp > self.timeout:
+                job.stop() and _log.info('Killed activity (%s @ %d) as it exceeded timeout' % (job.details['_id'], job.timestamp))
+
+            if job.get_status() != JobStatus.RUNNING:
+                finished_jobs.append(job)
+                del self.jobs[job_timestamp]
+
+        self.jobs_lock.release()
+        return finished_jobs
+        
+    def exe(self):
+        while 1:
+            try:
+                self.read()
+            finally:
+                if self.globals.stop_event.is_set():
+                    break
+                    
+        self.process.terminate()
+        
+    @property
+    def process(self):
+        self.process_lock.acquire()
+        
+        if self.exec_process == None or self.exec_process.poll() != None:
+            self.exec_process and os.waitpid(-1 * self.exec_process.pid, os.WUNTRACED)
+            self.exec_process = subprocess.Popen([globals.Globals().exe_path + 'bin/execute.sh'], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+        
+        self.process_lock.release()
+        return self.exec_process
+    
+    def write(self, job):
+        self.process.stdin.write('%d %s: %s\n' % (job.exec_details['timestamp'], job.exec_details['output_file'].name, job.exec_details['command']))
+        
+    def read(self):
+        data = self.process.stdout.readline().split()
+        self.update_job(data[0], {data[1]: data[2]})
+        
+
+class Job:    
+    def __init__(self, activity, store):
+        self.is_whitelisted = activity['is_whitelisted']
+        self.exec_timestamp = activity['next_exec_timestamp']
+        self.status = JobStatus.NOT_RUNNING
+        self.exec_details = {
+            'timestamp': 0,
+            'output_file': None,
+            'pid': -1,
+            'return_code': 0
+        }
+        self.exec_details.update(dict([detail for detail in activity['details'] if detail[0] in ['_id', 'command']]))
+        self.store = store
 
     def start(self):
-        self.timestamp = int(time.time() * 1000)
+        t = int(time.time() * 1000)
+        self.exec_details['timestamp'] = t
 
-        if self.activity['is_whitelisted'] == True:
-            _log.debug('Executing activity(%s @ %d)' % (self.details['_id'], self.timestamp))
-            self.output_file = tempfile.NamedTemporaryFile(dir = self.globals.temp_path)
-            Job.start_executer()
-            Job.executer.stdin.write('%s\n%s\n' % (self.details['command'], self.output_file.name))
-            pid = int(Job.executer.readline())
-            
-            self.process = subprocess.Popen(['bash', '-c', self.details['command']], stdout = self.output_file, stderr = self.output_file, preexec_fn = os.setpgrp)
+        if self.is_whitelisted == True:
+            _log.debug('Executing activity(%s @ %d)' % (self.exec_details['_id'], t))
+            self.exec_details['output_file'] = tempfile.NamedTemporaryFile(dir = self.globals.temp_path)
             self.status = JobStatus.RUNNING
         else:
             _log.info('Activity %s is blocked by whitelist' % self.details['_id'])
 
-        return self
+        return t
 
     def stop(self):
         try:
-            os.killpg(self.process.pid, signal.SIGKILL)
-            os.waitpid(-1 * self.process.pid, os.WUNTRACED)
+            os.kill(self.exec_details['pid'], signal.SIGTERM)
             self.status = JobStatus.TIMED_OUT
-            self.process.returncode = 0
             return True
         except:
             return False
-
-    def get_status(self):
-        if self.status == JobStatus.RUNNING and self.process.poll() != None:
+        
+    def update(self, data):
+        self.exec_details.update(data)
+        
+        if 'return_code' in data:
             self.status = JobStatus.NOT_RUNNING
-
-            try:
-                os.waitpid(-1 * self.process.pid, os.WUNTRACED)
-            except:
-                pass
-
-        return self.status
 
     def post_output(self):
         data = None
 
-        if self.process == None:
-            data = {'timestamp': self.timestamp, 'returnCode': 0, 'data': 'Command blocked by whitelist.'}
-        elif self.get_status() == JobStatus.TIMED_OUT:
-            data = {'timestamp': self.timestamp, 'returnCode': 0, 'data': 'Command exceeded timeout.'}
-        elif self.output_file:
-            self.output_file.seek(0, os.SEEK_SET)
-            data = {'timestamp': self.timestamp, 'returnCode': self.process.returncode, 'data': self.output_file.read(256 * 1024)}
+        if self.exec_details['pid'] == None:
+            data = {'timestamp': self.exec_details['timestamp'], 'returnCode': 0, 'data': 'Command blocked by whitelist.'}
+        elif self.status == JobStatus.TIMED_OUT:
+            data = {'timestamp': self.exec_details['timestamp'], 'returnCode': 0, 'data': 'Command exceeded timeout.'}
+        elif self.exec_details['output_file']:
+            self.exec_details['output_file'].seek(0, os.SEEK_SET)
+            data = {
+                'timestamp': self.exec_details['timestamp'], 
+                'returnCode': self.exec_details['return_code'], 
+                'data': self.exec_details['output_file'].read(256 * 1024)
+            }
 
             if not data['data']:
                 data['data'] = 'No output produced'
-                _log.debug('No output/error found for activity (%s @ %d)' % (self.details['_id'], self.timestamp))
+                _log.debug('No output/error found for activity (%s @ %d)' % (self.exec_details['_id'], self.exec_details['timestamp']))
 
         self.close_file()
 
@@ -104,8 +159,8 @@ class Job:
             self.store.push(self.details['_id'], data)
 
     def close_file(self):
-        self.output_file and self.output_file.close()
-        self.output_file = None
+        self.exec_details['output_file'] and self.exec_details['output_file'].close()
+        self.exec_details['output_file'] = None
 
         
 class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
@@ -113,14 +168,13 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
         ThreadEx.__init__(self)
         self.prev_time = time.time()
         self.globals = globals.Globals()
-        self.jobs = []
-        self.jobs_lock = threading.RLock()
         self.activities_lock = threading.RLock()
         self.activities = {}
         self.queue = queue.Queue()
         self.sleep_interval = 5
         self.store = store
         self.consumer_count = 0
+        self.executer = Executer(store)
 
         try:
             self.timeout = self.globals.config.sealion.commandTimeout
@@ -129,10 +183,6 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
 
         self.timeout = int(self.timeout * 1000)
         self.globals.event_dispatcher.bind('get_activity_funct', self.get_activity_funct)
-        
-    def start(self):
-        Job.start_executer()
-        ThreadEx.start()
 
     def is_in_whitelist(self, command):
         whitelist = []
@@ -150,39 +200,6 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
                     break
 
         return is_whitelisted
-    
-    def add_job(self, job):
-        self.jobs_lock.acquire()
-        t = time.time()
-        
-        if t - self.prev_time < 0.250:
-            time.sleep(0.250 - (t - self.prev_time))
-            
-        self.prev_time = t
-        self.jobs.append(job.start())
-        self.jobs_lock.release()
-
-    def finish_jobs(self, activities = []):
-        finished_jobs = []
-        running_jobs = []
-        self.jobs_lock.acquire()
-        t = int(time.time() * 1000)
-
-        for job in self.jobs:
-            if activities == None or (job.details['_id'] in activities):
-                job.stop() and _log.info('Killed activity (%s @ %d)' % (job.details['_id'], job.timestamp))
-                job.close_file()
-            elif t - job.timestamp > self.timeout:
-                job.stop() and _log.info('Killed activity (%s @ %d) as it exceeded timeout' % (job.details['_id'], job.timestamp))
-
-            if job.get_status() != JobStatus.RUNNING:
-                finished_jobs.append(job)
-            else:
-                running_jobs.append(job)
-
-        self.jobs = running_jobs
-        self.jobs_lock.release()
-        return finished_jobs
 
     def schedule_activities(self):
         self.activities_lock.acquire()
@@ -254,6 +271,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
         _log.info('%d started; %d updated; %d stopped' % (start_count, update_count, stop_count))
         
     def exe(self):        
+        self.executer.start()
         self.set_activities();
         self.globals.event_dispatcher.bind('set_activities', self.set_activities)
         
@@ -313,4 +331,4 @@ class JobConsumer(ThreadEx):
 
             t = time.time()
             job.exec_timestamp - t > 0 and time.sleep(job.exec_timestamp - t)
-            self.job_producer.add_job(job)
+            self.job_producer.executer.add_job(job)
