@@ -32,6 +32,7 @@ class Job:
         self.exec_timestamp = activity['next_exec_timestamp']
         self.details = self.activity['details']
         self.store = store
+        self.globals = globals.Globals()
         
     @staticmethod
     def start_executer():
@@ -48,7 +49,7 @@ class Job:
 
         if self.activity['is_whitelisted'] == True:
             _log.debug('Executing activity(%s @ %d)' % (self.details['_id'], self.timestamp))
-            self.output_file = tempfile.NamedTemporaryFile()
+            self.output_file = tempfile.NamedTemporaryFile(dir = self.globals.temp_path)
             Job.start_executer()
             Job.executer.stdin.write('%s\n%s\n' % (self.details['command'], self.output_file.name))
             pid = int(Job.executer.readline())

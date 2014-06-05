@@ -27,6 +27,7 @@ class Connection(ThreadEx):
     def attempt(self, retry_count = -1, retry_interval = 5):
         rtc.create_session()
         status = api.Status.UNKNOWN
+        api.session.auth_status = api.AuthStatus.AUTHENTICATING
         
         while 1:
             status = api.session.authenticate(retry_count = retry_count, retry_interval = retry_interval)
@@ -52,16 +53,20 @@ class Connection(ThreadEx):
         self.reconnect()
     
     def reconnect(self):
-        if api.session.is_authenticated == False:
+        curr_thread = threading.current_thread()
+        helper_thread_name = 'ReconnectHelper'
+        
+        if api.session.auth_status != api.AuthStatus.UNAUTHORIZED and curr_thread.name != helper_thread_name:
             return
         
+        api.session.auth_status = api.AuthStatus.AUTHENTICATING
+        
         if isinstance(threading.current_thread(), rtc.RTC):
-            reconnect_helper = ThreadEx(target = self.reconnect_helper, name = 'ReconnectHelper')
+            reconnect_helper = ThreadEx(target = self.reconnect_helper, name = helper_thread_name)
             reconnect_helper.daemon = True
             reconnect_helper.start()
             return
         
-        api.session.is_authenticated = False
         _log.info('Reauthenticating')
         
         if rtc.session:
