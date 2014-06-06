@@ -146,7 +146,12 @@ check_dependency()
         exit $SCRIPT_ERR_INVALID_PYTHON
     fi
 
-    WHICH_COMMANDS=("sed" "readlink" "cat" "groupadd" "useradd" "find" "chown" "bash" "grep" "userdel" "groupdel")
+    WHICH_COMMANDS=("sed" "readlink" "cat" "find" "chown" "bash" "grep")
+
+    if [ $UPDATE_AGENT -eq 0 ] ; then
+        WHICH_COMMANDS=("${WHICH_COMMANDS[@]}" "groupadd" "useradd" "userdel" "groupdel")
+    fi
+
     MISSING_COMMANDS=""
     PADDING="      "
 
