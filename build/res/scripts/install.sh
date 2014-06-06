@@ -351,7 +351,7 @@ echo "Starting agent..."
 RET=$?
 
 if [[ $UPDATE_AGENT -eq 0 && $RET -eq 0 ]] ; then
-    URL="$(echo "$API_URL" | sed 's/api-//')"
+    URL="$(echo "$API_URL" | sed 's/api\(\.\|-\)//')"
     echo "Please continue on $URL"
 fi
 
