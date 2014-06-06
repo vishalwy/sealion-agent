@@ -92,7 +92,7 @@ class Executer(ThreadEx):
             except:
                 pass
             
-            self.exec_process = subprocess.Popen([globals.Globals().exe_path + 'src/execute.sh'], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+            self.exec_process = subprocess.Popen(['bash', globals.Globals().exe_path + 'src/execute.sh'], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, preexec_fn = os.setpgrp)
         
         self.process_lock.release()
         return self.exec_process
