@@ -20,91 +20,6 @@ class JobStatus(Namespace):
     RUNNING = 1
     TIMED_OUT = 2
     
-class Executer(ThreadEx):
-    jobs = {}
-    jobs_lock = threading.RLock()
-    
-    def __init__(self, store):
-        ThreadEx.__init__(self)
-        self.exec_process = None
-        self.process_lock = threading.RLock()
-        self.store = store
-        self.globals = globals.Globals()
-        
-        try:
-            self.timeout = self.globals.config.sealion.commandTimeout
-        except:
-            self.timeout = 30
-
-        self.timeout = int(self.timeout * 1000)
-        
-    def add_job(self, job):
-        Executer.jobs_lock.acquire()
-        time.sleep(0.001)
-        t = job.start()
-        Executer.jobs['%d' % t] = job
-        self.write(job)
-        Executer.jobs_lock.release()
-        
-    def update_job(self, timestamp, data):
-        Executer.jobs_lock.acquire()
-        Executer.jobs['%d' % timestamp].update(data)
-        Executer.jobs_lock.release()
-
-    def finish_jobs(self, activities = []):
-        finished_jobs = []
-        Executer.jobs_lock.acquire()
-        t = int(time.time() * 1000)
-
-        for job_timestamp in Executer.jobs.keys():
-            job = Executer.jobs[job_timestamp]
-            
-            if job.exec_details['_id'] in activities:
-                job.stop() and _log.info('Killed activity (%s @ %d)' % (job.exec_details['_id'], job.timestamp))
-                job.close_file()
-            elif t - job.exec_details['timestamp'] > self.timeout:
-                job.stop() and _log.info('Killed activity (%s @ %d) as it exceeded timeout' % (job.exec_details['_id'], job.timestamp))
-
-            if job.status != JobStatus.RUNNING:
-                finished_jobs.append(job)
-                del self.jobs[job_timestamp]
-
-        Executer.jobs_lock.release()
-        return finished_jobs
-        
-    def exe(self):
-        while 1:
-            try:
-                self.read()
-            finally:
-                if self.globals.stop_event.is_set():
-                    break
-                    
-        self.process.terminate()
-        
-    @property
-    def process(self):
-        self.process_lock.acquire()
-        
-        if self.exec_process == None or self.exec_process.poll() != None:
-            try:
-                self.exec_process and os.waitpid(-1 * self.exec_process.pid, os.WUNTRACED)
-            except:
-                pass
-            
-            self.exec_process = subprocess.Popen(['bash', globals.Globals().exe_path + 'src/execute.sh'], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, preexec_fn = os.setpgrp)
-        
-        self.process_lock.release()
-        return self.exec_process
-    
-    def write(self, job):
-        self.process.stdin.write('%d %s: %s\n' % (job.exec_details['timestamp'], job.exec_details['output_file'].name, job.exec_details['command']))
-        
-    def read(self):
-        data = self.process.stdout.readline().split()
-        self.update_job(int(data[0]), {data[1]: data[2]})
-        
-
 class Job:    
     def __init__(self, activity, store):
         self.is_whitelisted = activity['is_whitelisted']
@@ -178,6 +93,90 @@ class Job:
             self.exec_details['output_file'] = None
         except:
             pass
+    
+class Executer(ThreadEx):
+    jobs = {}
+    jobs_lock = threading.RLock()
+    
+    def __init__(self, store):
+        ThreadEx.__init__(self)
+        self.exec_process = None
+        self.process_lock = threading.RLock()
+        self.store = store
+        self.globals = globals.Globals()
+        
+        try:
+            self.timeout = self.globals.config.sealion.commandTimeout
+        except:
+            self.timeout = 30
+
+        self.timeout = int(self.timeout * 1000)
+        
+    def add_job(self, job):
+        Executer.jobs_lock.acquire()
+        time.sleep(0.001)
+        t = job.start()
+        Executer.jobs['%d' % t] = job
+        self.write(job)
+        Executer.jobs_lock.release()
+        
+    def update_job(self, timestamp, data):
+        Executer.jobs_lock.acquire()
+        Executer.jobs['%d' % timestamp].update(data)
+        Executer.jobs_lock.release()
+
+    def finish_jobs(self, activities = []):
+        finished_jobs = []
+        Executer.jobs_lock.acquire()
+        t = int(time.time() * 1000)
+
+        for job_timestamp in Executer.jobs.keys():
+            job = Executer.jobs[job_timestamp]
+            
+            if job.exec_details['_id'] in activities:
+                job.stop() and _log.info('Killed activity (%s @ %d)' % (job.exec_details['_id'], job.timestamp))
+                job.close_file()
+            elif t - job.exec_details['timestamp'] > self.timeout:
+                job.stop() and _log.info('Killed activity (%s @ %d) as it exceeded timeout' % (job.exec_details['_id'], job.timestamp))
+
+            if job.status != JobStatus.RUNNING:
+                finished_jobs.append(job)
+                del self.jobs[job_timestamp]
+
+        Executer.jobs_lock.release()
+        return finished_jobs
+        
+    def exe(self):
+        while 1:
+            try:
+                self.read()
+            finally:
+                if self.globals.stop_event.is_set():
+                    break
+           
+        self.process.terminate()
+            
+    @property
+    def process(self):
+        self.process_lock.acquire()
+        
+        if self.exec_process == None or self.exec_process.poll() != None:
+            try:
+                self.exec_process and os.waitpid(-1 * self.exec_process.pid, os.WUNTRACED)
+            except:
+                pass
+            
+            self.exec_process = subprocess.Popen(['bash', globals.Globals().exe_path + 'src/execute.sh'], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, preexec_fn = os.setpgrp)
+        
+        self.process_lock.release()
+        return self.exec_process
+    
+    def write(self, job):
+        self.process.stdin.write('%d %s: %s\n' % (job.exec_details['timestamp'], job.exec_details['output_file'].name, job.exec_details['command']))
+        
+    def read(self):
+        data = self.process.stdout.readline().split()
+        self.update_job(int(data[0]), {data[1]: data[2]})
         
 class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
     def __init__(self, store):
