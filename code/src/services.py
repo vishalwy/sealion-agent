@@ -40,6 +40,7 @@ class Executer(ThreadEx):
         
     def add_job(self, job):
         Executer.jobs_lock.acquire()
+        time.sleep(0.001)
         t = job.start()
         Executer.jobs['%d' % t] = job
         self.write(job)
@@ -86,8 +87,12 @@ class Executer(ThreadEx):
         self.process_lock.acquire()
         
         if self.exec_process == None or self.exec_process.poll() != None:
-            self.exec_process and os.waitpid(-1 * self.exec_process.pid, os.WUNTRACED)
-            self.exec_process = subprocess.Popen([globals.Globals().exe_path + 'bin/execute.sh'], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+            try:
+                self.exec_process and os.waitpid(-1 * self.exec_process.pid, os.WUNTRACED)
+            except:
+                pass
+            
+            self.exec_process = subprocess.Popen([globals.Globals().exe_path + 'src/execute.sh'], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
         
         self.process_lock.release()
         return self.exec_process
@@ -167,9 +172,12 @@ class Job:
             self.store.push(self.exec_details['_id'], data)
 
     def close_file(self):
-        self.exec_details['output_file'] and self.exec_details['output_file'].close()
-        self.exec_details['output_file'] = None
-
+        try:
+            self.exec_details['output_file'] and self.exec_details['output_file'].close()
+            os.remove(self.exec_details['output_file'].name)
+            self.exec_details['output_file'] = None
+        except:
+            pass
         
 class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
     def __init__(self, store):
@@ -241,7 +249,6 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
                     cur_activity['next_exec_timestamp'] = t
                     _log.info('Updating activity %s' % activity_id)
                     update_count += 1
-                    t += 0.250
             else:
                 self.activities[activity_id] = {
                     'details': activity,
@@ -250,7 +257,6 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
                 }
                 _log.info('Starting activity %s' % activity_id)
                 start_count += 1
-                t += 0.250
                 
             activity_ids.append(activity_id)
             
@@ -286,8 +292,8 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
 
         self.stop_consumers()
         
-    def start_consumers(self, count = 16):
-        count = min(16, count)
+    def start_consumers(self, count):
+        count = min(5, count)
         count - self.consumer_count > 0 and _log.info('Starting %d job consumers' % (count - self.consumer_count))
         
         while self.consumer_count < count:
