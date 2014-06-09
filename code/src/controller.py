@@ -85,7 +85,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         _log.info('Update found; Installing update version %s' % version_details['agentVersion'])
         curllike = self.globals.exe_path + 'bin/curlike.py'
         url_caller = '"%s" "%s"' % (sys.executable, curllike)
-        format = '%(url_caller)s -s %(proxy)s %(download_url)s | URL_CALLER=\'%(url_caller)s\' bash /dev/stdin -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" -v %(version)s %(proxy)s'
+        format = '%(url_caller)s -s %(proxy)s %(download_url)s | bash /dev/stdin -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" -v %(version)s %(proxy)s'
         format_spec = {
             'url_caller': url_caller,
             'exe_path': self.globals.exe_path, 
@@ -100,7 +100,10 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         try:
             f = open(curllike)
             f.close()
-            subprocess.call(['bash', '-c', format % format_spec], preexec_fn = os.setpgrp)
+            environ = {}
+            environ.update(os.environ)
+            environ['URL_CALLER'] = url_caller
+            subprocess.call(['bash', '-c', format % format_spec], preexec_fn = os.setpgrp, env = environ)
             time.sleep(5)
             raise Exception('')
         except Exception as e:

@@ -11,7 +11,8 @@ DOWNLOAD_URL="<agent-download-url>"
 #script variables
 USAGE="Usage: curl -s $DOWNLOAD_URL | sudo bash /dev/stdin {-o <Organization token> [-c <Category name>] [-H <Host name>] [-x <Proxy address>] [-p <Python binary>] | -h for Help}"
 USER_NAME="sealion"
-URL_CALLER=$([ "$URL_CALLER" != "" ] && echo "$URL_CALLER" || echo "curl")
+ORIG_URL_CALLER=$([ "$URL_CALLER" != "" ] && echo "$URL_CALLER" || echo "curl")
+unset -v URL_CALLER
 
 #setup variables
 INSTALL_PATH="/usr/local/sealion-agent"
