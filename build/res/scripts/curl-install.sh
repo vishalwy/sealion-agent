@@ -32,7 +32,7 @@ call_url()
         PARAMS="$PARAMS \"$ARG\""
     done
 
-    bash -c "$URL_CALLER $PARAMS"
+    bash -c "$ORIG_URL_CALLER $PARAMS"
     return $?
 }
 
