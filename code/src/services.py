@@ -16,15 +16,17 @@ from constructs import *
 _log = logging.getLogger(__name__)
 
 class JobStatus(Namespace):
-    NOT_RUNNING = 0
-    RUNNING = 1
-    TIMED_OUT = 2
+    INITIALIZED = 0
+    BLOCKED = 1
+    RUNNING = 2
+    TIMED_OUT = 3
+    FINISHED = 4
     
 class Job:    
     def __init__(self, activity, store):
         self.is_whitelisted = activity['is_whitelisted']
         self.exec_timestamp = activity['next_exec_timestamp']
-        self.status = JobStatus.NOT_RUNNING
+        self.status = JobStatus.INITIALIZED
         self.exec_details = {
             'timestamp': 0,
             'output_file': None,
@@ -34,7 +36,7 @@ class Job:
         self.exec_details.update(dict([detail for detail in activity['details'].items() if detail[0] in ['_id', 'command']]))
         self.store = store
 
-    def start(self):
+    def prepare(self):
         t = int(time.time() * 1000)
         self.exec_details['timestamp'] = t
 
@@ -44,12 +46,13 @@ class Job:
             self.status = JobStatus.RUNNING
         else:
             _log.info('Activity %s is blocked by whitelist' % self.exec_details['_id'])
+            self.status = JobStatus.BLOCKED
 
         return t
 
-    def stop(self):
+    def kill(self):
         try:
-            os.kill(self.exec_details['pid'], signal.SIGTERM)
+            self.exec_details['pid'] != -1 and os.kill(self.exec_details['pid'], signal.SIGTERM)
             self.status = JobStatus.TIMED_OUT
             return True
         except:
@@ -59,16 +62,18 @@ class Job:
         self.exec_details.update(data)
         
         if 'return_code' in data:
-            self.status = JobStatus.NOT_RUNNING
+            self.status = JobStatus.FINISHED 
 
     def post_output(self):
         data = None
 
-        if self.exec_details['pid'] == None:
+        if self.status == JobStatus.RUNNING and self.exec_details['pid'] == -1:
+            data = {'timestamp': self.exec_details['timestamp'], 'returnCode': 0, 'data': 'Failed to retreive execution status.'}
+        elif self.status == JobStatus.BLOCKED:
             data = {'timestamp': self.exec_details['timestamp'], 'returnCode': 0, 'data': 'Command blocked by whitelist.'}
         elif self.status == JobStatus.TIMED_OUT:
             data = {'timestamp': self.exec_details['timestamp'], 'returnCode': 0, 'data': 'Command exceeded timeout.'}
-        elif self.exec_details['output_file']:
+        elif self.status == JobStatus.FINISHED and self.exec_details['output_file']:
             self.exec_details['output_file'].seek(0, os.SEEK_SET)
             data = {
                 'timestamp': self.exec_details['timestamp'], 
@@ -115,7 +120,7 @@ class Executer(ThreadEx):
     def add_job(self, job):
         Executer.jobs_lock.acquire()
         time.sleep(0.001)
-        t = job.start()
+        t = job.prepare()
         Executer.jobs['%d' % t] = job
         self.write(job)
         Executer.jobs_lock.release()
@@ -134,10 +139,10 @@ class Executer(ThreadEx):
             job = Executer.jobs[job_timestamp]
             
             if job.exec_details['_id'] in activities:
-                job.stop() and _log.info('Killed activity (%s @ %d)' % (job.exec_details['_id'], job.timestamp))
+                job.kill() and _log.info('Killed activity (%s @ %d)' % (job.exec_details['_id'], job.exec_details['timestamp']))
                 job.close_file()
             elif t - job.exec_details['timestamp'] > self.timeout:
-                job.stop() and _log.info('Killed activity (%s @ %d) as it exceeded timeout' % (job.exec_details['_id'], job.timestamp))
+                job.kill() and _log.info('Killed activity (%s @ %d) as it exceeded timeout' % (job.exec_details['_id'], job.exec_details['timestamp']))
 
             if job.status != JobStatus.RUNNING:
                 finished_jobs.append(job)
@@ -162,11 +167,13 @@ class Executer(ThreadEx):
         
         if self.exec_process == None or self.exec_process.poll() != None:
             try:
+                self.exec_process.stdout.close()
                 self.exec_process and os.waitpid(-1 * self.exec_process.pid, os.WUNTRACED)
             except:
                 pass
             
-            self.exec_process = subprocess.Popen(['bash', globals.Globals().exe_path + 'src/execute.sh'], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, preexec_fn = os.setpgrp)
+            output_file = tempfile.TemporaryFile(dir = globals.Globals().temp_path)
+            self.exec_process = subprocess.Popen(['bash', globals.Globals().exe_path + 'src/execute.sh'], stdin = subprocess.PIPE, stdout = output_file, stderr = subprocess.STDOUT, preexec_fn = os.setpgrp)
         
         self.process_lock.release()
         return self.exec_process
@@ -175,6 +182,7 @@ class Executer(ThreadEx):
         self.process.stdin.write('%d %s: %s\n' % (job.exec_details['timestamp'], job.exec_details['output_file'].name, job.exec_details['command']))
         
     def read(self):
+        self.process.stdout.seek(0, os.SEEK_SET)
         data = self.process.stdout.readline().split()
         self.update_job(int(data[0]), {data[1]: data[2]})
         
