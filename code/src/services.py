@@ -172,8 +172,7 @@ class Executer(ThreadEx):
             except:
                 pass
             
-            output_file = tempfile.TemporaryFile(dir = globals.Globals().temp_path)
-            self.exec_process = subprocess.Popen(['bash', globals.Globals().exe_path + 'src/execute.sh'], stdin = subprocess.PIPE, stdout = output_file, stderr = subprocess.STDOUT, preexec_fn = os.setpgrp)
+            self.exec_process = subprocess.Popen(['bash', globals.Globals().exe_path + 'src/execute.sh'], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, preexec_fn = os.setpgrp, bufsize = 1)
         
         self.process_lock.release()
         return self.exec_process
@@ -182,7 +181,6 @@ class Executer(ThreadEx):
         self.process.stdin.write('%d %s: %s\n' % (job.exec_details['timestamp'], job.exec_details['output_file'].name, job.exec_details['command']))
         
     def read(self):
-        self.process.stdout.seek(0, os.SEEK_SET)
         data = self.process.stdout.readline().split()
         self.update_job(int(data[0]), {data[1]: data[2]})
         
