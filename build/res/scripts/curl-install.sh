@@ -143,10 +143,10 @@ fi
 TMP_DATA_FILE=$(mktemp "$TMP_DATA_FILE")
 log_output "Getting agent installer details..."
 SUB_URL=$([ "$AGENT_ID" != "" ] && echo "/agents/$AGENT_ID" || echo "")
-RET=$(call_url -s $PROXY -w "%{http_code}" -H "Content-Type: application/json" "$API_URL/orgs/$ORG_TOKEN$SUB_URL/agentVersion" -o "$TMP_DATA_FILE" 2>/dev/null)
+RET=$(call_url -s $PROXY -w "%{http_code}" -H "Content-Type: application/json" "$API_URL/orgs/$ORG_TOKEN$SUB_URL/agentVersion" -o "$TMP_DATA_FILE" 2>&1)
 
-if [[ $? -ne 0 || $RET -ne 200 ]] ; then
-    log_output "Error: Failed to get agent installer details" 2
+if [[ $? -ne 0 || "$RET" != "200" ]] ; then
+    log_output "Error: Failed to get agent installer details; $RET" 2
     rm -f "$TMP_DATA_FILE"
     exit 117
 fi
@@ -167,10 +167,10 @@ TMP_FILE_PATH=$(mktemp -d "$TMP_FILE_PATH")
 TMP_FILE_PATH=${TMP_FILE_PATH%/}
 TMP_FILE_NAME="$TMP_FILE_PATH/sealion-agent.tar.gz"
 log_output "Downloading agent installer..."
-RET=$(call_url -s $PROXY -w "%{http_code}" $TAR_DOWNLOAD_URL -o "$TMP_FILE_NAME" 2>/dev/null)
+RET=$(call_url -s $PROXY -w "%{http_code}" $TAR_DOWNLOAD_URL -o "$TMP_FILE_NAME" 2>&1)
 
-if [[ $? -ne 0 || $RET -eq 404 ]] ; then
-    log_output "Error: Failed to download agent installer" 2
+if [[ $? -ne 0 || "$RET" != "404" ]] ; then
+    log_output "Error: Failed to download agent installer; $RET" 2
 
     if [ "$RET" == "404" ] ; then
         report_failure 5
@@ -184,10 +184,10 @@ if [[ $? -ne 0 || $RET -eq 404 ]] ; then
     exit 117
 fi
 
-tar -xf "$TMP_FILE_NAME" --directory="$TMP_FILE_PATH" >/dev/null 2>&1
+RET=$(tar -xf "$TMP_FILE_NAME" --directory="$TMP_FILE_PATH" 2>&1)
 
 if [ $? -ne 0 ] ; then
-    log_output "Error: Failed to extract files" 2
+    log_output "Error: Failed to extract files; $RET" 2
     rm -rf "$TMP_FILE_PATH"
     exit 1
 fi
