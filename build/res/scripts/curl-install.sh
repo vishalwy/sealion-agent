@@ -169,7 +169,7 @@ TMP_FILE_NAME="$TMP_FILE_PATH/sealion-agent.tar.gz"
 log_output "Downloading agent installer..."
 RET=$(call_url -s $PROXY -w "%{http_code}" $TAR_DOWNLOAD_URL -o "$TMP_FILE_NAME" 2>&1)
 
-if [[ $? -ne 0 || "$RET" != "404" ]] ; then
+if [[ $? -ne 0 || "$RET" == "404" ]] ; then
     log_output "Error: Failed to download agent installer; $RET" 2
 
     if [ "$RET" == "404" ] ; then
