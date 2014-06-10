@@ -133,13 +133,11 @@ class Executer(ThreadEx):
         time.sleep(0.001)
         t = job.prepare()
         Executer.jobs['%d' % t] = job
+        Executer.jobs_lock.release()
         
         if job.is_plugin == False:
             self.write(job)
-            Executer.jobs_lock.release()
-        else:
-            Executer.jobs_lock.release()
-            
+        else:            
             try:
                 plugin = __import__(job.exec_details['command'])
                 job.update(dict(zip(('return_code', 'output'), plugin.get_data())))
