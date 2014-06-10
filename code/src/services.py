@@ -141,7 +141,7 @@ class Executer(ThreadEx):
             Executer.jobs_lock.release()
             
             try:
-                plugin = __import__(self.globals.plugin_path + job.exec_details['command'], level = 0)
+                plugin = __import__(job.exec_details['command'])
                 job.update(dict(zip(('return_code', 'output'), plugin.get_data())))
             except:
                 pass

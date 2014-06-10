@@ -17,6 +17,8 @@ sys.path.insert(0, exe_path + 'lib')
 
 if sys.version_info[0] == 3:
     sys.path.insert(0, exe_path + 'lib/httplib')
+    
+sys.path.insert(0, exe_path + 'opt')
 
 import helper
 import controller
