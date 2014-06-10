@@ -27,9 +27,10 @@ class Job:
         self.is_whitelisted = activity['is_whitelisted']
         self.exec_timestamp = activity['next_exec_timestamp']
         self.status = JobStatus.INITIALIZED
+        self.is_plugin = True if activity['details']['service'] == 'Plugins' else False
         self.exec_details = {
             'timestamp': 0,
-            'output_file': None,
+            'output': None,
             'pid': -1,
             'return_code': 0
         }
@@ -38,11 +39,13 @@ class Job:
 
     def prepare(self):
         t = int(time.time() * 1000)
-        self.exec_details['timestamp'] = t
 
         if self.is_whitelisted == True:
             _log.debug('Executing activity(%s @ %d)' % (self.exec_details['_id'], t))
-            self.exec_details['output_file'] = tempfile.NamedTemporaryFile(dir = globals.Globals().temp_path)
+            
+            if not self.is_plugin:
+                self.exec_details['output'] = tempfile.NamedTemporaryFile(dir = globals.Globals().temp_path)
+                
             self.status = JobStatus.RUNNING
         else:
             _log.info('Activity %s is blocked by whitelist' % self.exec_details['_id'])
@@ -59,10 +62,11 @@ class Job:
             return False
         
     def update(self, data):
-        self.exec_details.update(data)
+        if type(data) is dict:
+            self.exec_details.update(data)
         
-        if 'return_code' in data:
-            self.status = JobStatus.FINISHED 
+            if 'return_code' in data:
+                self.status = JobStatus.FINISHED 
 
     def post_output(self):
         data = None
@@ -73,18 +77,22 @@ class Job:
             data = {'timestamp': self.exec_details['timestamp'], 'returnCode': 0, 'data': 'Command blocked by whitelist.'}
         elif self.status == JobStatus.TIMED_OUT:
             data = {'timestamp': self.exec_details['timestamp'], 'returnCode': 0, 'data': 'Command exceeded timeout.'}
-        elif self.status == JobStatus.FINISHED and self.exec_details['output_file']:
-            self.exec_details['output_file'].seek(0, os.SEEK_SET)
+        elif self.status == JobStatus.FINISHED and self.exec_details['output']:
             data = {
                 'timestamp': self.exec_details['timestamp'], 
-                'returnCode': self.exec_details['return_code'], 
-                'data': self.exec_details['output_file'].read(256 * 1024)
+                'returnCode': self.exec_details['return_code']
             }
-
-            if not data['data']:
-                data['data'] = 'No output produced'
-                _log.debug('No output/error found for activity (%s @ %d)' % (self.exec_details['_id'], self.exec_details['timestamp']))
-
+            
+            if type(self.exec_details['output']) is dict:
+                data['data'] = self.exec_details['output']
+            else:
+                self.exec_details['output'].seek(0, os.SEEK_SET)
+                data['data'] = self.exec_details['output'].read(256 * 1024)
+                
+                if not data['data']:
+                    data['data'] = 'No output produced'
+                    _log.debug('No output/error found for activity (%s @ %d)' % (self.exec_details['_id'], self.exec_details['timestamp']))
+                
         self.close_file()
 
         if data:
@@ -93,11 +101,13 @@ class Job:
 
     def close_file(self):
         try:
-            self.exec_details['output_file'] and self.exec_details['output_file'].close()
-            os.remove(self.exec_details['output_file'].name)
-            self.exec_details['output_file'] = None
+            if self.exec_details['output'] and type(self.exec_details['output']) is not dict:
+                self.exec_details['output'] and self.exec_details['output'].close()
+                os.remove(self.exec_details['output'].name)
         except:
             pass
+        
+        self.exec_details['output'] = None
     
 class Executer(ThreadEx):
     jobs = {}
@@ -122,8 +132,22 @@ class Executer(ThreadEx):
         time.sleep(0.001)
         t = job.prepare()
         Executer.jobs['%d' % t] = job
-        self.write(job)
-        Executer.jobs_lock.release()
+        
+        if job.is_plugin == False:
+            self.write(job)
+            Executer.jobs_lock.release()
+        else:
+            Executer.jobs_lock.release()
+            
+            try:
+                plugin = __import_(self.globals.plugin_path + job.exec_details['command'], level = 0)
+                return_code, data = plugin.get_data()
+                
+                
+                
+                job.update({'return_code': plugin.get_data()})
+            except:
+                pass
         
     def update_job(self, timestamp, data):
         Executer.jobs_lock.acquire()
@@ -183,7 +207,7 @@ class Executer(ThreadEx):
     
     def write(self, job):
         try:
-            self.process.stdin.write('%d %s: %s\n' % (job.exec_details['timestamp'], job.exec_details['output_file'].name, job.exec_details['command']))
+            self.process.stdin.write('%d %s: %s\n' % (job.exec_details['timestamp'], job.exec_details['output'].name, job.exec_details['command']))
         except:
             pass
         
@@ -208,9 +232,11 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
         self.executer = Executer(store)
         self.globals.event_dispatcher.bind('get_activity_funct', self.get_activity_funct)
 
-    def is_in_whitelist(self, command):
-        whitelist = []
-        is_whitelisted = True
+    def is_in_whitelist(self, activity):
+        whitelist, is_whitelisted, command = [], True, activity['command']
+        
+        if activity['service'] == 'Plugins':
+            return True
 
         if hasattr(self.globals.config.sealion, 'whitelist'):
             whitelist = self.globals.config.sealion.whitelist
@@ -260,14 +286,14 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
                 
                 if details['interval'] != activity['interval'] or details['command'] != activity['command']:
                     cur_activity['details'] = activity
-                    cur_activity['is_whitelisted'] = self.is_in_whitelist(activity['command'])
+                    cur_activity['is_whitelisted'] = self.is_in_whitelist(activity)
                     cur_activity['next_exec_timestamp'] = t
                     _log.info('Updating activity %s' % activity_id)
                     update_count += 1
             else:
                 self.activities[activity_id] = {
                     'details': activity,
-                    'is_whitelisted': self.is_in_whitelist(activity['command']),
+                    'is_whitelisted': self.is_in_whitelist(activity),
                     'next_exec_timestamp': t
                 }
                 _log.info('Starting activity %s' % activity_id)
