@@ -158,8 +158,12 @@ class Executer(ThreadEx):
             finally:
                 if self.globals.stop_event.is_set():
                     break
-           
-        self.process.terminate()
+        
+        try:
+            self.process.terminate()
+            os.waitpid(-1 * self.exec_process.pid, os.WUNTRACED)
+        except:
+            pass
             
     @property
     def process(self):
@@ -178,11 +182,17 @@ class Executer(ThreadEx):
         return self.exec_process
     
     def write(self, job):
-        self.process.stdin.write('%d %s: %s\n' % (job.exec_details['timestamp'], job.exec_details['output_file'].name, job.exec_details['command']))
+        try:
+            self.process.stdin.write('%d %s: %s\n' % (job.exec_details['timestamp'], job.exec_details['output_file'].name, job.exec_details['command']))
+        except:
+            pass
         
     def read(self):
-        data = self.process.stdout.readline().split()
-        self.update_job(int(data[0]), {data[1]: data[2]})
+        try:
+            data = self.process.stdout.readline().split()
+            self.update_job(int(data[0]), {data[1]: data[2]})
+        except:
+            pass
         
 class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
     def __init__(self, store):
