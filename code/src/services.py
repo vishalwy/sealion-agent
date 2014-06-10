@@ -39,6 +39,7 @@ class Job:
 
     def prepare(self):
         t = int(time.time() * 1000)
+        self.exec_details['timestamp'] = t
 
         if self.is_whitelisted == True:
             _log.debug('Executing activity(%s @ %d)' % (self.exec_details['_id'], t))
@@ -140,12 +141,8 @@ class Executer(ThreadEx):
             Executer.jobs_lock.release()
             
             try:
-                plugin = __import_(self.globals.plugin_path + job.exec_details['command'], level = 0)
-                return_code, data = plugin.get_data()
-                
-                
-                
-                job.update({'return_code': plugin.get_data()})
+                plugin = __import__(self.globals.plugin_path + job.exec_details['command'], level = 0)
+                job.update(dict(zip(('return_code', 'output'), plugin.get_data())))
             except:
                 pass
         

@@ -60,7 +60,8 @@ class AgentConfig(helper.Config):
             'activities': {
                 'type': [{
                     '_id': {'type': 'str,unicode', 'regex': '^[a-zA-Z0-9]{24}$'}, 
-                    'name': {'type': 'str,unicode', 'regex': '^.+$'}, 
+                    'name': {'type': 'str,unicode', 'regex': '^.+$'},
+                    'service': {'type': 'str,unicode', 'regex': '^.+$'},
                     'command': {'type': 'str,unicode', 'regex': '^.+$'},
                     'interval': {'type': 'int'}
                 }],
