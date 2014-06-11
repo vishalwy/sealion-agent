@@ -146,12 +146,17 @@ check_dependency()
         exit $SCRIPT_ERR_INVALID_PYTHON
     fi
 
-    WHICH_COMMANDS=("sed" "readlink" "cat" "groupadd" "useradd" "find" "chown" "bash" "grep" "userdel" "groupdel")
+    WHICH_COMMANDS=("sed" "readlink" "cat" "find" "chown" "bash" "grep")
+
+    if [ $UPDATE_AGENT -eq 0 ] ; then
+        WHICH_COMMANDS=("${WHICH_COMMANDS[@]}" "groupadd" "useradd" "userdel" "groupdel")
+    fi
+
     MISSING_COMMANDS=""
     PADDING="      "
 
     for COMMAND in "${WHICH_COMMANDS[@]}" ; do
-        if [ "$(which "$COMMAND")" == "" ] ; then
+        if [ "$(which $COMMAND 2>/dev/null)" == "" ] ; then
             MISSING_COMMANDS=$([ "$MISSING_COMMANDS" != "" ] && echo "$MISSING_COMMANDS\n$PADDING Cannot locate command '$COMMAND'" || echo "$PADDING Cannot locate command '$COMMAND'")
         fi
     done
@@ -303,7 +308,7 @@ if [ $SEALION_NODE_FOUND -eq 1 ] ; then
     "$INSTALL_PATH/etc/sealion" stop >/dev/null 2>&1
     find "$INSTALL_PATH/var/log" -mindepth 1 -maxdepth 1 -type f -regextype sed ! -regex '\(.*/update\.log\)\|\(.*/.\+\.old\..\+\)' -exec mv "{}" "$(mktemp -u {}.old.XXXX)" \; 1>/dev/null 2>&1
     find "$INSTALL_PATH/var" -mindepth 1 -maxdepth 1 ! -name 'log' -exec rm -rf "{}" \; 1>/dev/null 2>&1
-    find "$INSTALL_PATH" -mindepth 1 -maxdepth 1 ! -name 'var' -name 'tmp' -exec rm -rf "{}" \; >/dev/null 2>&1
+    find "$INSTALL_PATH" -mindepth 1 -maxdepth 1 ! -name 'var' ! -name 'tmp' -exec rm -rf "{}" \; >/dev/null 2>&1
 fi
 
 if [ -f "$SERVICE_FILE" ] ; then
@@ -351,7 +356,7 @@ echo "Starting agent..."
 RET=$?
 
 if [[ $UPDATE_AGENT -eq 0 && $RET -eq 0 ]] ; then
-    URL="$(echo "$API_URL" | sed 's/api-//')"
+    URL="$(echo "$API_URL" | sed 's/api\(\.\|-\)//')"
     echo "Please continue on $URL"
 fi
 

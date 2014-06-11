@@ -11,7 +11,8 @@ DOWNLOAD_URL="<agent-download-url>"
 #script variables
 USAGE="Usage: curl -s $DOWNLOAD_URL | sudo bash /dev/stdin {-o <Organization token> [-c <Category name>] [-H <Host name>] [-x <Proxy address>] [-p <Python binary>] | -h for Help}"
 USER_NAME="sealion"
-URL_CALLER=$([ "$URL_CALLER" != "" ] && echo "$URL_CALLER" || echo "curl")
+ORIG_URL_CALLER=$([ "$URL_CALLER" != "" ] && echo "$URL_CALLER" || echo "curl")
+unset -v URL_CALLER
 
 #setup variables
 INSTALL_PATH="/usr/local/sealion-agent"
@@ -31,7 +32,7 @@ call_url()
         PARAMS="$PARAMS \"$ARG\""
     done
 
-    bash -c "$URL_CALLER $PARAMS"
+    bash -c "$ORIG_URL_CALLER $PARAMS"
     return $?
 }
 
@@ -133,44 +134,43 @@ if [[ "$INSTALL_PATH" != "" && ${INSTALL_PATH:0:1} != "/" ]] ; then
 fi
 
 INSTALL_PATH=${INSTALL_PATH%/}
-
-if [[ "$AGENT_ID" != "" && -w "$INSTALL_PATH" ]] ; then
-    TMP_FILE_PATH="$INSTALL_PATH$TMP_FILE_PATH"
-    TMP_DATA_FILE="$INSTALL_PATH$TMP_DATA_FILE"
-    mkdir -p "${TMP_FILE_PATH%/*}"
-fi
-
-TMP_DATA_FILE=$(mktemp $TMP_DATA_FILE)
+TMP_DATA_FILE=$(mktemp "$TMP_DATA_FILE")
 log_output "Getting agent installer details..."
 SUB_URL=$([ "$AGENT_ID" != "" ] && echo "/agents/$AGENT_ID" || echo "")
-RET=$(call_url -s $PROXY -w "%{http_code}" -H "Content-Type: application/json" "$API_URL/orgs/$ORG_TOKEN$SUB_URL/agentVersion" -o "$TMP_DATA_FILE" 2>/dev/null)
+RET=$(call_url -s $PROXY -w "%{http_code}" -H "Content-Type: application/json" "$API_URL/orgs/$ORG_TOKEN$SUB_URL/agentVersion" -o "$TMP_DATA_FILE" 2>&1)
 
-if [[ $? -ne 0 || $RET -ne 200 ]] ; then
-    log_output "Error: Failed to get agent installer details" 2
-    rm -f $TMP_DATA_FILE
+if [[ $? -ne 0 || "$RET" != "200" ]] ; then
+    log_output "Error: Failed to get agent installer details; $RET" 2
+    rm -f "$TMP_DATA_FILE"
     exit 117
 fi
 
-VERSION=$(cat $TMP_DATA_FILE | grep '"agentVersion"\s*:\s*"[^"]*"' -o |  sed 's/"agentVersion"\s*:\s*"\([^"]*\)"/\1/')
+VERSION=$(cat "$TMP_DATA_FILE" | grep '"agentVersion"\s*:\s*"[^"]*"' -o |  sed 's/"agentVersion"\s*:\s*"\([^"]*\)"/\1/')
 MAJOR_VERSION=$(echo $VERSION | grep '^[0-9]\+' -o)
-TAR_DOWNLOAD_URL=$(cat $TMP_DATA_FILE | grep '"agentDownloadURL"\s*:\s*"[^"]*"' -o |  sed 's/"agentDownloadURL"\s*:\s*"\([^"]*\)"/\1/')
+TAR_DOWNLOAD_URL=$(cat "$TMP_DATA_FILE" | grep '"agentDownloadURL"\s*:\s*"[^"]*"' -o |  sed 's/"agentDownloadURL"\s*:\s*"\([^"]*\)"/\1/')
 
 if [ $MAJOR_VERSION -le 2 ] ; then
     call_url -s $PROXY "$DOWNLOAD_URL/curl-install-node.sh" 2>/dev/null | bash /dev/stdin "$@" -t $TAR_DOWNLOAD_URL 1> >( while read line; do log_output "${line}"; done ) 2> >( while read line; do log_output "${line}" 2; done )
-    rm -f $TMP_DATA_FILE
+    RET=$?
+    rm -f "$TMP_DATA_FILE"
     sleep 2
-    exit 0
+
+    if [[ "$AGENT_ID" != "" && $RET -ne 0 ]] ; then
+        report_failure $RET
+    fi
+
+    exit $RET
 fi
 
-rm -f $TMP_DATA_FILE
-TMP_FILE_PATH=$(mktemp -d $TMP_FILE_PATH)
+rm -f "$TMP_DATA_FILE"
+TMP_FILE_PATH=$(mktemp -d "$TMP_FILE_PATH")
 TMP_FILE_PATH=${TMP_FILE_PATH%/}
 TMP_FILE_NAME="$TMP_FILE_PATH/sealion-agent.tar.gz"
 log_output "Downloading agent installer..."
-RET=$(call_url -s $PROXY -w "%{http_code}" $TAR_DOWNLOAD_URL -o $TMP_FILE_NAME 2>/dev/null)
+RET=$(call_url -s $PROXY -w "%{http_code}" $TAR_DOWNLOAD_URL -o "$TMP_FILE_NAME" 2>&1)
 
-if [[ $? -ne 0 || $RET -eq 404 ]] ; then
-    log_output "Error: Failed to download agent installer" 2
+if [[ $? -ne 0 || "$RET" == "404" ]] ; then
+    log_output "Error: Failed to download agent installer; $RET" 2
 
     if [ "$RET" == "404" ] ; then
         report_failure 5
@@ -180,24 +180,24 @@ if [[ $? -ne 0 || $RET -eq 404 ]] ; then
         "$INSTALL_PATH/etc/sealion" start
     fi
 
-    rm -rf $TMP_FILE_PATH
+    rm -rf "$TMP_FILE_PATH"
     exit 117
 fi
 
-tar -xf $TMP_FILE_NAME --directory="$TMP_FILE_PATH" >/dev/null 2>&1
+RET=$(tar -xf "$TMP_FILE_NAME" --directory="$TMP_FILE_PATH" 2>&1)
 
 if [ $? -ne 0 ] ; then
-    log_output "Error: Failed to extract files" 2
-    rm -rf $TMP_FILE_PATH
+    log_output "Error: Failed to extract files; $RET" 2
+    rm -rf "$TMP_FILE_PATH"
     exit 1
 fi
 
-bash $TMP_FILE_PATH/sealion-agent/install.sh "$@" -r curl 1> >( while read line; do log_output "${line}"; done ) 2> >( while read line; do log_output "${line}" 2; done )
+bash "$TMP_FILE_PATH/sealion-agent/install.sh" "$@" -r curl 1> >( while read line; do log_output "${line}"; done ) 2> >( while read line; do log_output "${line}" 2; done )
 RET=$?
 
 if [[ "$AGENT_ID" != "" && $RET -ne 0 ]] ; then
     report_failure $RET
-    rm -rf $TMP_FILE_PATH
+    rm -rf "$TMP_FILE_PATH"
 
     if [[ -f "$INSTALL_PATH/bin/sealion-node" && -f "$INSTALL_PATH/etc/sealion" ]] ; then
         "$INSTALL_PATH/etc/sealion" start
@@ -206,6 +206,6 @@ if [[ "$AGENT_ID" != "" && $RET -ne 0 ]] ; then
     exit 123
 fi
 
-rm -rf $TMP_FILE_PATH
+rm -rf "$TMP_FILE_PATH"
 exit 0
 
