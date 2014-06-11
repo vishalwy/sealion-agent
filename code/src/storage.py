@@ -498,6 +498,7 @@ class Sender(ThreadEx):
         Returns:
             True if data available else False
         """
+        
         Sender.off_store_lock.acquire()
         
         if is_available == None:
@@ -514,42 +515,76 @@ class Sender(ThreadEx):
         return is_available
         
     def exe(self):       
-        is_perform_gc = False
+        """
+        Method that runs in the new thread.
+        This also performs gc at some intervals depending on the queue size
+        """
+        
+        is_perform_gc = False  #determines when we need to perform a forced gc. its not optimized and frequency varies
         
         while 1:
-            if self.wait() == False:
+            if self.wait() == False:  #wait for the events
                 break
                 
             try:
-                item = self.queue.get(True, 5)
-                is_perform_gc = True
+                item = self.queue.get(True, 5)  #get the item from sending queue, blocks for a max of 5 seconds
+                is_perform_gc = True  #set the gc flag as we have retreived an item and can be collected
                 
-                if Sender.validate_funct(item['activity']) == None:
+                if Sender.validate_funct(item['activity']) == None:  #validate the activity, it might be possible that we are trying to send an non permitted activity 
                     _log.debug('Discarding activity %s' % item['activity'])                    
                     continue
             except:
-                if is_perform_gc == True:
+                if is_perform_gc == True:  #we are here means the queue is empty and it is a good time to gc 
                     _log.debug('GC collected %d unreachables' % gc.collect())
                     is_perform_gc = False
                 
-                self.queue_empty()
+                self.queue_empty()  #carry out any additional operations on queue empty
                 continue
                 
-            self.post_data(item)
+            self.post_data(item)  #post the data 
                 
-        self.cleanup()
+        self.cleanup()  #perform any cleanup
     
     def queue_empty(self):
+        """
+        Method that is called when the sending queue is empty.
+        Dervied class should implement this to perform additional operations.
+        """
+        
         pass
     
     def cleanup(self):
+        """
+        Method that is called before the thread exits.
+        Dervied class should implement this to perform additional operations.
+        """
+        
         pass
     
     def post_data(self, item):
+        """
+        Method to post the data.
+        Dervied class should implement this to post the data.
+        
+        Args:
+            item: item to be sent
+        """
+        
         pass
             
-class RealtimeSender(Sender):        
+class RealtimeSender(Sender): 
+    """
+    Class implementing real time sending of data as the activities are executed.
+    """
+    
     def post_data(self, item):
+        """
+        Method to post the data.
+        
+        Args:
+            item: item to be sent
+        """
+        
         self.off_store.select_timestamp = item['data']['timestamp']
         status = api.session.post_data(item['activity'], item['data'])
 
