@@ -1,5 +1,5 @@
 """
-Abstracts the storage mechanism. It implements online and offline storage.
+Abstracts the storage mechanism. This module implements online and offline storage.
 """
 
 __copyright__ = '(c) Webyog, Inc'
@@ -17,7 +17,7 @@ import globals
 import api
 from constructs import *
 
-_log = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)  #module level logging
 
 class OfflineStore(ThreadEx):    
     """
@@ -26,8 +26,12 @@ class OfflineStore(ThreadEx):
     """
     
     def __init__(self):
+        """
+        Constructor.
+        """
+        
         ThreadEx.__init__(self)  #initialize base class
-        self.globals = globals.Globals()  #save a reference to Globals for ease of use
+        self.globals = globals.Globals()  #save a reference to Globals for optimized access
         self.db_file = self.globals.db_path  #sqlite db file path; same property is used as absolute path to the filename once offline store is started
         self.conn = None  #sqlite db connection;
         self.conn_event = threading.Event()  #event to synchronize connection made in the thread
@@ -200,7 +204,7 @@ class OfflineStore(ThreadEx):
                 is_bulk_insert = True
                 
         if is_bulk_insert == False:  #if it is not a bulk insert then we need to commit any pending transaction before performing the task
-            self.pending_insert_row_count and getattr(self, 'insert_bulk')(**{'rows': []})  #an empty list will actually do the trick as the default mode is to commit immediately
+            self.pending_insert_row_count and getattr(self, 'insert_bulk')(**{'rows': []})  #an empty list will do the trick as the default mode is to commit immediately
             self.pending_insert_row_count = 0  #no more pending transaction
         else:
             return True  #added row to transaction
@@ -425,13 +429,20 @@ class Sender(ThreadEx):
     validate_funct = None  #the function that validates the activity before processing
     
     def __init__(self, off_store):
+        """
+        Constructor.
+        
+        Args:
+            off_store: offline store instance
+        """
+        
         ThreadEx.__init__(self)  #initialize base class
         self.globals = globals.Globals()  #save reference to Globals for optimized access
         self.off_store = off_store  #offline store instance to be used
         self.queue_max_size = 100  #max sending queue count
         self.ping_interval = 10  #the ping interval for retry after an failed api request
         self.queue = queue.Queue(self.queue_max_size)  #sending queue
-        self.last_ping_time = int(time.time())  #saved the last time api was pinged
+        self.last_ping_time = int(time.time())  #saves the last time api was pinged
         
     def push(self, item):
         """
@@ -585,20 +596,35 @@ class RealtimeSender(Sender):
             item: item to be sent
         """
         
+        #update the timestamp limit for selecting rows to the last real time data retreived.
+        #this will prevent any data sent to offline store due to queue overflow being sent before real time queue clears up
         self.off_store.select_timestamp = item['data']['timestamp']
+        
         status = api.session.post_data(item['activity'], item['data'])
 
-        if status == api.Status.MISMATCH:
+        if status == api.Status.MISMATCH:  #a mismatch status indicates that we missed a config update event, so we are doing it now
             api.session.get_config()
-        elif api.is_not_connected(status) == True or status == api.Status.UNAUTHORIZED:
+        elif api.is_not_connected(status) == True or status == api.Status.UNAUTHORIZED:  #save to offline store if the api session is not connected or unauthorized
             self.off_store.put(item['activity'], item['data'], Sender.store_put_callback)
             
     def queue_empty(self):
+        """
+        Method that is called when the sending queue is empty.
+        The method updates the timestamp limit for selecting rows.
+        """
+        
+        #update the timestamp limit for selecting rows to the current timestamp.
+        #this will start sending any data stored already in offline store
         self.off_store.select_timestamp = int(time.time() * 1000)
             
     def cleanup(self):
+        """
+        Method that is called before the thread exits.
+        This method cleans up the items in the queue and puts it into offline store.
+        """
+        
         _log.debug('%s cleaning up queue' % self.name)
-        self.off_store.set_bulk_insert(True)
+        self.off_store.set_bulk_insert(True)  #enable bulk insert so that the queue is cleaned up quickly
         rows = []
             
         while 1:
@@ -607,80 +633,148 @@ class RealtimeSender(Sender):
             except:
                 break
                 
-        len(rows) and self.off_store.put_bulk(rows)
-        self.off_store.stop()
+        len(rows) and self.off_store.put_bulk(rows)  #bulk insert any rows
+        self.off_store.stop()  #signal offline store to stop
     
 class HistoricSender(Sender):
+    """
+    Class implements sending offline data available in sqlite as a result of real time sender queue overflow, or network failure.
+    """
+    
     def __init__(self, off_store):
-        Sender.__init__(self, off_store)
-        self.del_rows = []
-        self.queue_max_size = 50
+        """
+        Constructor.
+        
+        Args:
+            off_store: offline store instance
+        """
+        
+        Sender.__init__(self, off_store)  #initialize base class
+        self.del_rows = []  #keeps the sqlite row_ids of deleted rows
+        self.queue_max_size = 50  #maximum size of the sending queue
         
     def queue_empty(self):
-        if len(self.del_rows):
-            self.off_store.rem(self.del_rows, [])
-            self.del_rows = []
+        """
+        Method that is called when the sending queue is empty.
+        """
         
-        if Sender.store_available():
+        if len(self.del_rows):  #if we have any rows to delete from sqlite
+            self.off_store.rem(self.del_rows, [])
+            self.del_rows = []  #no more rows to delete
+        
+        if Sender.store_available():  #get the rows into the queue if we have rows available in offline store
             self.off_store.get(self.queue_max_size, self.store_get_callback)
         
     def store_get_callback(self, rows, total_rows):
+        """
+        A callback method used to retreive the rows from the offline store.
+        
+        Args:
+            rows: list of tuples representing a row in sqlite table
+            total_rows: total number of rows available in sqlite table
+        """
+        
         row_count, i = len(rows), 0
         
-        while i < row_count:            
+        while i < row_count:  #push all the rows retreived into the sending queue          
             data = {
                 'timestamp': rows[i][2],
                 'returnCode': rows[i][3],
                 'data': rows[i][4]
             }
             
-            if self.push({'row_id': rows[i][0], 'activity': rows[i][1], 'data': data}) == False:
+            if self.push({'row_id': rows[i][0], 'activity': rows[i][1], 'data': data}) == False:  #push rows to the sending queue until it fails
                 break
                 
             i += 1
         
         _log.debug('Pushed %d rows to %s from %s' % (i, self.name, self.off_store.__class__.__name__))
-        Sender.store_available(i != total_rows)
+        Sender.store_available(i != total_rows)  #update the store availability
         
     def post_data(self, item):
-        row_id = item.get('row_id')
+        """
+        Method to post the data.
+        
+        Args:
+            item: item to be sent
+        """
+        
+        row_id = item.get('row_id')  #sqlite row_id used to delete the row once it has been sent
         status = api.session.post_data(item['activity'], item['data'])
 
-        if status == api.Status.MISMATCH:
+        if status == api.Status.MISMATCH:  #a mismatch status indicates that we missed a config update event, so we are doing it now
             api.session.get_config()
         
+        #delete from offline store if data was sent; we consider it is sent if api session is connected and is not unauthorized.
+        #no need to check for any other status code.
         if api.is_not_connected(status) == False and status != api.Status.UNAUTHORIZED:
             self.del_rows.append(row_id)
         else:
-            Sender.store_available(True)
+            Sender.store_available(True)  #if sending failed, we need to mark offline store as available
             
     def cleanup(self):
+        """
+        Method that is called before the thread exits.
+        This method deletes any rows from sqlite.
+        """
+        
         _log.debug('%s cleaning up deleted rows' % self.name)
         len(self.del_rows) and self.off_store.rem(self.del_rows, [])
 
 class Storage:
+    """
+    Class abstracts OfflineStore, RealtimeSender and HistoricSender and provides public methods to operate on them
+    """
+    
     def __init__(self):
-        self.globals = globals.Globals()
-        self.off_store = OfflineStore()
-        self.realtime_sender = RealtimeSender(self.off_store)
-        self.historic_sender = HistoricSender(self.off_store)
+        """
+        Constructor.
+        """
+        
+        self.globals = globals.Globals()  #save a reference to Globals for optimized access
+        self.off_store = OfflineStore()  #offline store
+        self.realtime_sender = RealtimeSender(self.off_store)  #real time sender
+        self.historic_sender = HistoricSender(self.off_store)  #historic sender
         
     def start(self):        
-        if self.off_store.start() == False:
+        """
+        Public method to start offline store and the two sender instances
+        """
+        
+        if self.off_store.start() == False:  #cannot start offline store
             return False
         
+        #we trigger an event and some other module respond to the event with function used to validate activities
         self.globals.event_dispatcher.trigger('get_activity_funct', lambda x: [True, setattr(Sender, 'validate_funct', x)][0])
+        
+        #start senders
         self.realtime_sender.start()
         self.historic_sender.start()
         return True
     
     def push(self, activity, data):
-        if self.globals.stop_event.is_set():
+        """
+        Public method to push the data for sending.
+        The method first attempts to push it in real time sender queue, on failure it puts it in offline store.
+        
+        Args:
+            activity: activity id of the data
+            data: data to send
+        """
+        
+        if self.globals.stop_event.is_set():  #check whether we need to stop
             return
         
-        if self.realtime_sender.push({'activity': activity, 'data': data}) == False:
-            self.off_store.put(activity, data, Sender.store_put_callback)
+        if self.realtime_sender.push({'activity': activity, 'data': data}) == False:  #try to push data to real time sender
+            self.off_store.put(activity, data, Sender.store_put_callback)  #on failure push it to sqlite table
         
     def clear_offline_data(self, exclude_activities = []):
+        """
+        Public method to clear sqlite table.
+        
+        Args:
+            exclude_activities: activity ids to be exclued from deletion
+        """
+        
         self.off_store.clr(exclude_activities)
 
