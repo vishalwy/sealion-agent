@@ -165,18 +165,14 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                 break
 
         self.stop()
+        helper.ThreadMonitor().register(callback = exit_status.AGENT_ERR_NOT_RESPONDING)
         self.stop_threads()
-
         _log.debug('%s generating SIGALRM', self.name)
         signal.alarm(1)
             
     def stop(self):
-        if self.is_stop:
-            return
-        
         self.is_stop = True
         api.session.stop()
-        helper.ThreadMonitor().register(callback = exit_status.AGENT_ERR_NOT_RESPONDING)
         
     def stop_threads(self):
         _log.debug('Stopping all threads.')
