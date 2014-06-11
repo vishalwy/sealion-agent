@@ -134,13 +134,6 @@ if [[ "$INSTALL_PATH" != "" && ${INSTALL_PATH:0:1} != "/" ]] ; then
 fi
 
 INSTALL_PATH=${INSTALL_PATH%/}
-
-if [[ "$AGENT_ID" != "" && -w "$INSTALL_PATH" ]] ; then
-    TMP_FILE_PATH="$INSTALL_PATH$TMP_FILE_PATH"
-    TMP_DATA_FILE="$INSTALL_PATH$TMP_DATA_FILE"
-    mkdir -p "${TMP_FILE_PATH%/*}"
-fi
-
 TMP_DATA_FILE=$(mktemp "$TMP_DATA_FILE")
 log_output "Getting agent installer details..."
 SUB_URL=$([ "$AGENT_ID" != "" ] && echo "/agents/$AGENT_ID" || echo "")
