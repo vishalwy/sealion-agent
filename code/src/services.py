@@ -84,7 +84,7 @@ class Job:
                 'returnCode': self.exec_details['return_code']
             }
             
-            if type(self.exec_details['output']) is dict:
+            if self.is_plugin:
                 data['data'] = self.exec_details['output']
             else:
                 self.exec_details['output'].seek(0, os.SEEK_SET)
@@ -140,16 +140,16 @@ class Executer(ThreadEx):
         else:            
             try:
                 plugin = __import__(job.exec_details['command'])
-                job.update(dict(zip(('return_code', 'output'), plugin.get_data())))
-            except:
-                pass
+                job.update({'return_code': 0, 'output': plugin.get_data()})
+            except Exception as e:
+                job.update({'return_code': 1, 'output': unicode(e)})
         
     def update_job(self, timestamp, data):
         Executer.jobs_lock.acquire()
         Executer.jobs['%d' % timestamp].update(data)
         Executer.jobs_lock.release()
 
-    def finish_jobs(self, activities = []):
+    def finish_jobs(self):
         finished_jobs = []
         Executer.jobs_lock.acquire()
         t = int(time.time() * 1000)
@@ -157,10 +157,7 @@ class Executer(ThreadEx):
         for job_timestamp in Executer.jobs.keys():
             job = Executer.jobs[job_timestamp]
             
-            if job.exec_details['_id'] in activities:
-                job.kill() and _log.info('Killed activity (%s @ %d)' % (job.exec_details['_id'], job.exec_details['timestamp']))
-                job.close_file()
-            elif t - job.exec_details['timestamp'] > self.timeout:
+            if t - job.exec_details['timestamp'] > self.timeout:
                 job.kill() and _log.info('Killed activity (%s @ %d) as it exceeded timeout' % (job.exec_details['_id'], job.exec_details['timestamp']))
 
             if job.status != JobStatus.RUNNING:
@@ -190,6 +187,7 @@ class Executer(ThreadEx):
         
         if self.exec_process == None or self.exec_process.poll() != None:
             try:
+                self.exec_process.stdin.close()
                 self.exec_process.stdout.close()
                 self.exec_process and os.waitpid(-1 * self.exec_process.pid, os.WUNTRACED)
             except:

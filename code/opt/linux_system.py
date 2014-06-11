@@ -43,7 +43,7 @@ def get_data():
             data['diskReads'].append({'name': device, 'value': disk_reads})
             data['diskWrites'].append({'name': device, 'value': disk_writes})
     
-    return 0, data
+    return data
 
 def get_load_avg():
     with open('/proc/loadavg') as f:

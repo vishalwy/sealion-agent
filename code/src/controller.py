@@ -158,7 +158,6 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                     if self.globals.stop_event.is_set():
                         _log.debug('%s received stop event.', self.name)
                         self.globals.set_time_metric('stopping_time')
-                        job_producer.finish_jobs(None)
                         break
                         
                 self.handle_response(api.session.stop_status)

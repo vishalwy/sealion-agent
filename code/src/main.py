@@ -98,6 +98,7 @@ def run(is_update_only_mode = False):
     _log.info('Agent shutting down with status code 0.')
     _log.debug('Took %f seconds to shutdown.' % (globals.get_stoppage_time()))
     _log.info('Ran for %s hours.' %  globals.get_run_time_str())
+    helper.emit_terminate()
     sys.exit(0)
     
 if __name__ == "__main__":

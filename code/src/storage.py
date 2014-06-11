@@ -6,6 +6,7 @@ import logging
 import threading
 import time
 import gc
+import json
 import sqlite3
 import helper
 import globals
@@ -154,7 +155,7 @@ class OfflineStore(ThreadEx):
     
     def insert(self, activity, data, callback = None):
         try:
-            self.cursor.execute('INSERT INTO data VALUES(?, ?, ?, ?)', (activity, data['timestamp'], data['returnCode'], data['data']))
+            self.cursor.execute('INSERT INTO data VALUES(?, ?, ?, ?)', (activity, data['timestamp'], data['returnCode'], json.dumps(data['data'])))
             self.conn.commit()
             _log.debug('Inserted activity (%s @ %d) to %s' % (activity, data['timestamp'], self.name))
             callback and callback()
@@ -168,7 +169,7 @@ class OfflineStore(ThreadEx):
             for row in rows:
                 activity = row['activity']
                 data = row['data']
-                self.cursor.execute('INSERT OR IGNORE INTO data VALUES(?, ?, ?, ?)', (activity, data['timestamp'], data['returnCode'], data['data']))
+                self.cursor.execute('INSERT OR IGNORE INTO data VALUES(?, ?, ?, ?)', (activity, data['timestamp'], data['returnCode'], json.dumps(data['data'])))
                 self.pending_insert_row_count += self.cursor.rowcount
                 
             if is_commit == False:
@@ -183,9 +184,12 @@ class OfflineStore(ThreadEx):
     
     def select(self, limit, callback):        
         try:
-            timestamp = self.select_timestamp()
-            self.cursor.execute('SELECT ROWID, * FROM data WHERE timestamp <= %d ORDER BY timestamp LIMIT %d' % (timestamp, limit))
-            rows = self.cursor.fetchall()
+            rows = []
+            self.cursor.execute('SELECT ROWID, * FROM data WHERE timestamp <= %d ORDER BY timestamp LIMIT %d' % (self.select_timestamp(), limit))
+            
+            for row_id, activity, timestamp, return_code, output in self.cursor.fetchone():
+                rows.append((row_id, activity, timestamp, return_code, json.loads(output)))
+            
             self.cursor.execute('SELECT COUNT(*) FROM data')
             total_rows = self.cursor.fetchone()[0]
         except Exception as e:
