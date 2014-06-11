@@ -117,9 +117,11 @@ class Executer(ThreadEx):
     def __init__(self, store):
         ThreadEx.__init__(self)
         self.exec_process = None
+        self.is_stop = False
         self.process_lock = threading.RLock()
         self.store = store
         self.globals = globals.Globals()
+        self.globals.event_dispatcher.bind('terminate', self.stop)
         
         try:
             self.timeout = self.globals.config.sealion.commandTimeout
@@ -175,24 +177,13 @@ class Executer(ThreadEx):
                 if self.globals.stop_event.is_set():
                     break
         
-        try:
-            self.process.terminate()
-            os.waitpid(-1 * self.exec_process.pid, os.WUNTRACED)
-        except:
-            pass
+        self.stop()
             
     @property
     def process(self):
         self.process_lock.acquire()
         
-        if self.exec_process == None or self.exec_process.poll() != None:
-            try:
-                self.exec_process.stdin.close()
-                self.exec_process.stdout.close()
-                self.exec_process and os.waitpid(-1 * self.exec_process.pid, os.WUNTRACED)
-            except:
-                pass
-            
+        if self.wait() and self.is_stop == False:
             self.exec_process = subprocess.Popen(['bash', globals.Globals().exe_path + 'src/execute.sh'], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, preexec_fn = os.setpgrp, bufsize = 1)
         
         self.process_lock.release()
@@ -210,6 +201,31 @@ class Executer(ThreadEx):
             self.update_job(int(data[0]), {data[1]: data[2]})
         except:
             pass
+        
+    def wait(self, is_force = False):        
+        is_terminated = True
+        
+        try:
+            if self.exec_process.poll() == None: #running
+                if is_force:
+                    os.kill(self.exec_process.pid, signal.SIGTERM)
+                else:
+                    is_terminated = False
+                
+            if is_terminated == True:
+                os.waitpid(self.exec_process.pid, os.WUNTRACED)
+                self.exec_process.stdin.close()
+                self.exec_process.stdout.close()
+        except:
+            pass
+                
+        return is_terminated
+        
+    def stop(self, event = None):
+        self.process_lock.acquire()
+        self.is_stop = True
+        self.wait(True)
+        self.process_lock.release()
         
 class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
     def __init__(self, store):

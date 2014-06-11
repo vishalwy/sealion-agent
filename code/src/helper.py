@@ -20,7 +20,7 @@ def default_termination_hook(message, stack_trace):
     message and sys.stderr.write(message + '\n')
     stack_trace and sys.stderr.write(stack_trace)
     
-def emit_terminate(is_gracefull = True, message = '', stack_trace = ''):
+def notify_terminate(is_gracefull = True, message = '', stack_trace = ''):
     event_dispatcher.trigger('terminate')
     is_gracefull == False and terminatehook(message, stack_trace)
 
@@ -125,7 +125,7 @@ class Utils(Namespace):
     
     @staticmethod
     def restart_agent(message = '', stack_trace = ''):
-        emit_terminate(False, message, stack_trace)
+        notify_terminate(False, message, stack_trace)
         _log.info('Restarting agent.')
         os.execl(sys.executable, sys.executable, *sys.argv)
      
@@ -300,7 +300,7 @@ class ThreadMonitor(SingletonType('ThreadMonitorMetaClass', (object, ), {})):
             elif ret['callback'] == exit_status.AGENT_ERR_RESTART:
                Utils.restart_agent('Thread %d is not responding' % ret['thread_id'], Utils.get_stack_trace(ret['thread_id']))
             elif ret['callback'] != -1:
-                emit_terminate(False, 'Thread %d is not responding' % ret['thread_id'], Utils.get_stack_trace(ret['thread_id']))
+                notify_terminate(False, 'Thread %d is not responding' % ret['thread_id'], Utils.get_stack_trace(ret['thread_id']))
                 _log.info('Agent terminating with status code %d.' % ret['callback'])
                 os._exit(ret['callback'])
                
