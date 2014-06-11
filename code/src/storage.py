@@ -187,9 +187,14 @@ class OfflineStore(ThreadEx):
             rows = []
             self.cursor.execute('SELECT ROWID, * FROM data WHERE timestamp <= %d ORDER BY timestamp LIMIT %d' % (self.select_timestamp(), limit))
             
-            for row_id, activity, timestamp, return_code, output in self.cursor.fetchone():
-                rows.append((row_id, activity, timestamp, return_code, json.loads(output)))
-            
+            while 1:
+                row = self.cursor.fetchone()
+                
+                if not row:
+                    break
+                    
+                rows.append((row[0], row[1], row[2], row[3], json.loads(row[4])))
+                
             self.cursor.execute('SELECT COUNT(*) FROM data')
             total_rows = self.cursor.fetchone()[0]
         except Exception as e:

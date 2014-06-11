@@ -171,13 +171,11 @@ class Executer(ThreadEx):
         
     def exe(self):
         while 1:
-            try:
-                self.read()
-            finally:
-                if self.globals.stop_event.is_set():
-                    break
-        
-        self.stop()
+            self.read()
+            
+            if self.is_stop:
+                _log.debug('%s received stop event' % self.name)
+                break
             
     @property
     def process(self):
@@ -193,14 +191,18 @@ class Executer(ThreadEx):
         try:
             self.process.stdin.write('%d %s: %s\n' % (job.exec_details['timestamp'], job.exec_details['output'].name, job.exec_details['command']))
         except:
-            pass
+            return False
+        
+        return True
         
     def read(self):
         try:
             data = self.process.stdout.readline().split()
             self.update_job(int(data[0]), {data[1]: data[2]})
         except:
-            pass
+            return False
+        
+        return True
         
     def wait(self, is_force = False):        
         is_terminated = True

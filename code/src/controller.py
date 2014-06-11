@@ -31,6 +31,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         self.main_thread = threading.current_thread()
         self.activities = {}
         self.updater = None
+        self.job_producer = None
     
     def handle_response(self, status):
         _log.debug('Handling response status %d.' % status)
@@ -134,13 +135,13 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                     break
                     
                 store = storage.Storage()
-                job_producer = services.JobProducer(store)
+                self.job_producer = services.JobProducer(store)
 
                 if store.start() == False:
                     self.globals.set_time_metric('stopping_time')
                     break
                     
-                job_producer.start()
+                self.job_producer.start()
 
                 while 1:              
                     if Controller.is_rtc_heartbeating() == False:
@@ -148,7 +149,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                     
                     finished_job_count = 0
 
-                    for job in job_producer.executer.finish_jobs():
+                    for job in self.job_producer.executer.finish_jobs():
                         job.post_output()
                         finished_job_count += 1
 
@@ -163,21 +164,24 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                 self.handle_response(api.session.stop_status)
                 break
 
+        self.stop()
         self.stop_threads()
-        self.is_stop = True
 
         _log.debug('%s generating SIGALRM', self.name)
         signal.alarm(1)
             
     def stop(self):
-        api.session.stop()
+        if self.is_stop:
+            return
+        
         self.is_stop = True
+        api.session.stop()
         helper.ThreadMonitor().register(callback = exit_status.AGENT_ERR_NOT_RESPONDING)
         
     def stop_threads(self):
         _log.debug('Stopping all threads.')
-        api.session.stop()
         rtc.session and rtc.session.stop()
+        self.job_producer and self.job_producer.executer and self.job_producer.executer.stop()
         api.session.logout()
         api.session.close()
         threads = threading.enumerate()
