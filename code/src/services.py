@@ -284,7 +284,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
         
     def set_activities(self, event = None):
         activities = self.globals.config.agent.activities
-        start_count, update_count, stop_count, activity_ids = 0, 0, 0, []
+        start_count, update_count, stop_count, plugin_count, activity_ids = 0, 0, 0, 0, []
         self.activities_lock.acquire()        
         t = time.time()
         
@@ -309,7 +309,8 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
                 }
                 _log.info('Starting activity %s' % activity_id)
                 start_count += 1
-                
+            
+            plugin_count += 1 if activity['service'] == 'Plugins' else 0 
             activity_ids.append(activity_id)
             
         deleted_activity_ids = [activity_id for activity_id in self.activities if (activity_id in activity_ids) == False]
@@ -321,8 +322,9 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
             
         self.store.clear_offline_data(activity_ids)
         self.activities_lock.release()
-        self.start_consumers(len(activity_ids))    
-        self.stop_consumers(len(activity_ids))
+        consumer_count = (1 if len(activity_ids) - plugin_count > 0 else 0) + plugin_count
+        self.start_consumers(consumer_count)    
+        self.stop_consumers(consumer_count)
         
         if start_count + update_count > 0:
             self.schedule_activities()
@@ -345,7 +347,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
         self.stop_consumers()
         
     def start_consumers(self, count):
-        count = min(5, count)
+        count = min(8, count)
         count - self.consumer_count > 0 and _log.info('Starting %d job consumers' % (count - self.consumer_count))
         
         while self.consumer_count < count:
