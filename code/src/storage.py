@@ -139,7 +139,7 @@ class OfflineStore(ThreadEx):
             Timestamp limit for selecting rows
         """
         
-        self.select_timestamp_lock.acquire()
+        self.select_timestamp_lock.acquire()  #this has to be atomic as multiple threads reads/writes
         timestamp = self.select_max_timestamp
         self.select_timestamp_lock.release()    
         return timestamp
@@ -150,7 +150,7 @@ class OfflineStore(ThreadEx):
         Property to set the timestamp limit for selecting rows. 
         """
         
-        self.select_timestamp_lock.acquire()
+        self.select_timestamp_lock.acquire()  #this has to be atomic as multiple threads reads/writes
         self.select_max_timestamp = timestamp
         self.select_timestamp_lock.release()
         
@@ -511,7 +511,7 @@ class Sender(ThreadEx):
             True if data available else False
         """
         
-        Sender.off_store_lock.acquire()
+        Sender.off_store_lock.acquire()  #this has to be atomic as multiple threads reads/writes
         
         if is_available == None:
             is_available = Sender.store_data_available  #retreive status
