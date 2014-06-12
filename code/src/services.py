@@ -1,3 +1,8 @@
+"""
+Abstracts activity execution.
+Implements JobStatus, Job, Executer, JobProducer and JobConsumer
+"""
+
 __copyright__ = '(c) Webyog, Inc'
 __author__ = 'Vishal P.R'
 __email__ = 'hello@sealion.com'
@@ -13,105 +18,166 @@ import tempfile
 import globals
 from constructs import *
 
-_log = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)  #module level logging
 
 class JobStatus(Namespace):
-    INITIALIZED = 0
-    BLOCKED = 1
-    RUNNING = 2
-    TIMED_OUT = 3
-    FINISHED = 4
+    """
+    Used as an enumeration of job state
+    """
+    
+    INITIALIZED = 0  #the initial state when job is instantiated
+    BLOCKED = 1  #job has been blocked by whitelist
+    RUNNING = 2  #job is in running state
+    TIMED_OUT = 3  #job didnt finish in the timeout
+    FINISHED = 4  #job finished
     
 class Job:    
+    """
+    Represents a job, that can be executed
+    """
+    
     def __init__(self, activity, store):
-        self.is_whitelisted = activity['is_whitelisted']
-        self.exec_timestamp = activity['next_exec_timestamp']
-        self.status = JobStatus.INITIALIZED
-        self.is_plugin = True if activity['details']['service'] == 'Plugins' else False
+        """
+        Constructor
+        
+        Args:
+            activity: dict representing the activity to be executed
+            store: Storage instance used to post data
+        """
+        
+        self.is_whitelisted = activity['is_whitelisted']  #is this job allowed to execute
+        self.exec_timestamp = activity['next_exec_timestamp']  #timestamp at which the job should execute
+        self.status = JobStatus.INITIALIZED  #current job state
+        self.is_plugin = True if activity['details']['service'] == 'Plugins' else False  #is this job a plugin or a commandline
+        
+        #dict containing job execution details
         self.exec_details = {
-            'timestamp': 0,
-            'output': None,
-            'pid': -1,
-            'return_code': 0
+            'timestamp': 0,  #actual timestamp when the job started
+            'output': None,  #output of the job, file handle for commandline job, dict for successful pugin execution, str for failed pugin execution. 
+            'pid': -1,  #process id if it is a commandline job
+            'return_code': 0  #return code of the job,
+            '_id': activity['details']['_id']  #activity id
+            'command': activity['details']['command']  #command to be executed for commandline job, else the python module name for plugin job
         }
-        self.exec_details.update(dict([detail for detail in activity['details'].items() if detail[0] in ['_id', 'command']]))
-        self.store = store
+        
+        self.store = store  #Storage instance used to post data
 
     def prepare(self):
+        """
+        Public method to prepare the job for execution.
+        This sets the execution timestamp.
+        
+        Returns:
+            Execution start timestamp of the job
+        """
+        
         t = int(time.time() * 1000)
-        self.exec_details['timestamp'] = t
+        self.exec_details['timestamp'] = t  #set the exec timestamp
 
-        if self.is_whitelisted == True:
+        if self.is_whitelisted == True:  #if the job is whitelisted
             _log.debug('Executing activity(%s @ %d)' % (self.exec_details['_id'], t))
             
+            #if it is not a plugin job, then we create a temperory file to capture the output
+            #a plugin job return the data directly
             if not self.is_plugin:
                 self.exec_details['output'] = tempfile.NamedTemporaryFile(dir = globals.Globals().temp_path)
                 
-            self.status = JobStatus.RUNNING
+            self.status = JobStatus.RUNNING  #change the state to running
         else:
             _log.info('Activity %s is blocked by whitelist' % self.exec_details['_id'])
-            self.status = JobStatus.BLOCKED
+            self.status = JobStatus.BLOCKED  #change the state to blocked
 
         return t
 
     def kill(self):
-        try:
-            self.exec_details['pid'] != -1 and os.kill(self.exec_details['pid'], signal.SIGTERM)
-            self.status = JobStatus.TIMED_OUT
-            return True
+        """
+        Public method to kill the job
+        
+        Returns:
+            True on success else False
+        """
+        
+        self.status = JobStatus.TIMED_OUT  #change the state to timed out
+        
+        try:            
+            #kill the job, it is possible that the pid does not exist by the time we execute this statement
+            self.exec_details['pid'] != -1 and os.kill(self.exec_details['pid'], signal.SIGTERM) 
         except:
             return False
         
-    def update(self, data):
-        if type(data) is dict:
-            self.exec_details.update(data)
+        return True
         
-            if 'return_code' in data:
+    def update(self, details):
+        """
+        Public method to update execution details fo the job 
+        
+        Args:
+            details: dict containing the details to be updated
+        """
+        
+        if type(details) is dict:
+            self.exec_details.update(details)
+        
+            if 'return_code' in details:  #if return_code is in the details then we assume the the job is finished
                 self.status = JobStatus.FINISHED 
 
     def post_output(self):
+        """
+        Public method to post the output to storage
+        """
+        
         data = None
 
-        if self.status == JobStatus.RUNNING and self.exec_details['pid'] == -1:
+        if self.status == JobStatus.RUNNING and self.exec_details['pid'] == -1:  #commandline job who's pid is unknown
             data = {'timestamp': self.exec_details['timestamp'], 'returnCode': 0, 'data': 'Failed to retreive execution status.'}
-        elif self.status == JobStatus.BLOCKED:
+        elif self.status == JobStatus.BLOCKED:  #commandline job that is blocked by whitelist
             data = {'timestamp': self.exec_details['timestamp'], 'returnCode': 0, 'data': 'Command blocked by whitelist.'}
-        elif self.status == JobStatus.TIMED_OUT:
+        elif self.status == JobStatus.TIMED_OUT:  #job that failed to complete execution in given time
             data = {'timestamp': self.exec_details['timestamp'], 'returnCode': 0, 'data': 'Command exceeded timeout.'}
-        elif self.status == JobStatus.FINISHED and self.exec_details['output']:
+        elif self.status == JobStatus.FINISHED and self.exec_details['output']:  #a finished job with valid output
             data = {
                 'timestamp': self.exec_details['timestamp'], 
                 'returnCode': self.exec_details['return_code']
             }
             
-            if self.is_plugin:
+            if self.is_plugin:  #for a plugin job, output is the data
                 data['data'] = self.exec_details['output']
             else:
+                #for a commandline job, output is the file containing data
                 self.exec_details['output'].seek(0, os.SEEK_SET)
                 data['data'] = self.exec_details['output'].read(256 * 1024)
                 
-                if not data['data']:
+                if not data['data']:  #if the file is empty
                     data['data'] = 'No output produced'
                     _log.debug('No output/error found for activity (%s @ %d)' % (self.exec_details['_id'], self.exec_details['timestamp']))
                 
-        self.close_file()
+        self.close_file()  #close the file so that it is removed from the disk
 
-        if data:
+        if data:  #push the data to store
             _log.debug('Pushing activity (%s @ %d) to %s' % (self.exec_details['_id'], self.exec_details['timestamp'], self.store.__class__.__name__))
             self.store.push(self.exec_details['_id'], data)
 
     def close_file(self):
+        """
+        Public method to close the output file if any
+        """
+        
         try:
-            if self.exec_details['output'] and type(self.exec_details['output']) is not dict:
-                self.exec_details['output'] and self.exec_details['output'].close()
-                os.remove(self.exec_details['output'].name)
+            #close the file. it is possible that output is not a file, in that case it will raise an exception which is ignored
+            self.exec_details['output'].close()
+            os.remove(self.exec_details['output'].name)
         except:
             pass
         
         self.exec_details['output'] = None
     
 class Executer(ThreadEx):
-    jobs = {}
+    """
+    A wrapper class that creates a bash subprocess for commandline job execution
+    It executes the commandline by writing to the bash script and gets the status in a blocking read
+    """
+    
+    jobs = {}  #dict to keep track of the scheduled jobs
     jobs_lock = threading.RLock()
     
     def __init__(self, store):
@@ -229,7 +295,7 @@ class Executer(ThreadEx):
         self.wait(True)
         self.process_lock.release()
         
-class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
+class JobProducer(ThreadEx):
     def __init__(self, store):
         ThreadEx.__init__(self)
         self.prev_time = time.time()

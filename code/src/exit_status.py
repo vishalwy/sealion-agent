@@ -1,3 +1,7 @@
+"""
+Exit codes for the agent.
+"""
+
 __copyright__ = '(c) Webyog, Inc'
 __author__ = 'Vishal P.R'
 __email__ = 'hello@sealion.com'
