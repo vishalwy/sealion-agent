@@ -1,5 +1,6 @@
 """
-Abstracts the storage mechanism. This module implements online and offline storage.
+Abstracts the online and offline storage mechanism.
+This module implements OfflineStore, Sender, RealtimeSender, HistoricSender and Storage classes
 """
 
 __copyright__ = '(c) Webyog, Inc'
@@ -585,7 +586,7 @@ class Sender(ThreadEx):
             
 class RealtimeSender(Sender): 
     """
-    Class implementing real time sending of data as the activities are executed.
+    Implements real time sending of data as the activities are executed.
     """
     
     def post_data(self, item):
@@ -638,7 +639,7 @@ class RealtimeSender(Sender):
     
 class HistoricSender(Sender):
     """
-    Class implements sending offline data available in sqlite as a result of real time sender queue overflow, or network failure.
+    Implements sending offline data available in sqlite as a result of real time sender queue overflow, or network failure.
     """
     
     def __init__(self, off_store):
@@ -723,7 +724,7 @@ class HistoricSender(Sender):
 
 class Storage:
     """
-    Class abstracts OfflineStore, RealtimeSender and HistoricSender and provides public methods to operate on them
+    Abstracts OfflineStore, RealtimeSender and HistoricSender and provides public methods to operate on them
     """
     
     def __init__(self):
@@ -744,7 +745,7 @@ class Storage:
         if self.off_store.start() == False:  #cannot start offline store
             return False
         
-        #we trigger an event and some other module respond to the event with function used to validate activities
+        #trigger an event and some other module respond to the event with function used to validate activities
         self.globals.event_dispatcher.trigger('get_activity_funct', lambda x: [True, setattr(Sender, 'validate_funct', x)][0])
         
         #start senders

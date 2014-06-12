@@ -1,3 +1,8 @@
+"""
+Abstracts configuration and globals for SeaLion agent.
+Implements SealionConfig, AgentConfig and Globals
+"""
+
 __copyright__ = '(c) Webyog, Inc'
 __author__ = 'Vishal P.R'
 __email__ = 'hello@sealion.com'
@@ -14,12 +19,25 @@ import helper
 from datetime import datetime
 from constructs import *
 
-_log = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)  #module level logging
 
 class SealionConfig(helper.Config):
+    """
+    Implements configurable settings for the agent.
+    """
+    
     def __init__(self, file):
-        helper.Config.__init__(self)
-        self.file = file
+        """
+        Constructor.
+        
+        Args:
+            file: file containing the settings in JSON format
+        """
+        
+        helper.Config.__init__(self)  #initialize base class
+        self.file = file  #settings file
+        
+        #schema defining possible keys and values for this class. check helper.Config for details
         self.schema = {
             'whitelist': {'type': ['str,unicode'], 'optional': True, 'is_regex': True},
             'env': {
@@ -37,19 +55,44 @@ class SealionConfig(helper.Config):
         }
         
     def set(self, data = None):
-        ret = helper.Config.set(self, data)
-        variables = self.data['env'] if ('env' in self.data) else []
+        """
+        Method to set the config.
         
-        for i in range(0, len(variables)):
+        Args:
+            data: dict containing new config
+            
+        Returns:
+            True on success, an error string on failure
+        """
+        
+        ret = helper.Config.set(self, data)  #call the base class version
+        variables = self.data.get('env', [])  #get environment variable defined
+        
+        #loop through the variables and export in the current environment
+        #this will help one to hide passwords and such information from the command
+        for i in range(0, len(variables)): 
             for key in variables[i]:
                 os.environ[key] = variables[i][key]
             
         return ret        
         
 class AgentConfig(helper.Config):
+    """
+    Implements private settings for the agent.
+    """
+    
     def __init__(self, file):
-        helper.Config.__init__(self)
-        self.file = file
+        """
+        Constructor.
+        
+        Args:
+            file: file containing the settings in JSON format
+        """
+        
+        helper.Config.__init__(self)  #initialize base class
+        self.file = file  #settings file
+        
+        #schema defining possible keys and values for this class. check helper.Config for details
         self.schema = {
             'orgToken': {'type': 'str,unicode', 'depends': ['name'], 'regex': '^[a-zA-Z0-9\-]{36}$'},
             '_id': {'type': 'str,unicode', 'depends': ['agentVersion'], 'regex': '^[a-zA-Z0-9]{24}$', 'optional': True},
@@ -74,53 +117,71 @@ class AgentConfig(helper.Config):
         }
         
     def update(self, data):   
-        if ('category' in data):
+        """
+        Method to update the config.
+        
+        Args:
+            data: dict containing new config
+            
+        Returns:
+            True on success, an error string on failure
+        """
+        
+        if 'category' in data:  #delete the category key from data since category in the settings file is the name, and data['category'] is the id
             del data['category']
             
         globals = Globals()
         version = data.get('agentVersion')
              
-        if version and version != self.data['agentVersion']:
-            hasattr(self, '_id') and globals.event_dispatcher.trigger('update_agent')
-            del data['agentVersion']
+        if version and version != self.data['agentVersion']:  #if the agent version mismatch we need to update the agent
+            hasattr(self, '_id') and globals.event_dispatcher.trigger('update_agent')  #trigger an event so that the other module can install the update
+            del data['agentVersion']  #delete the key as we want only the updater script to modify it
             
-        ret = helper.Config.update(self, data)
-        globals.event_dispatcher.trigger('set_activities')
+        ret = helper.Config.update(self, data)  #call the base class version
+        globals.event_dispatcher.trigger('set_activities')  #trigger an event so that the other modules can act on the new activities
         return ret
 
 class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
+    """
+    Implements global variables as a singleton class
+    """
+    
     def __init__(self):
+        """
+        Constructor
+        """
+        
         cur_time = time.time()
-        self.metric = {'starting_time': cur_time, 'stopping_time': cur_time}
-        exe_path = os.path.dirname(os.path.abspath(__file__))
-        exe_path = exe_path[:-1] if exe_path[len(exe_path) - 1] == '/' else exe_path
-        self.exe_path = exe_path[:exe_path.rfind('/') + 1]
-        self.db_path = helper.Utils.get_safe_path(self.exe_path + 'var/db/')
-        self.temp_path = helper.Utils.get_safe_path(self.exe_path + 'tmp/')
-        self.is_update_only_mode = False
+        self.metric = {'starting_time': cur_time, 'stopping_time': cur_time}  #save the timestamps
+        exe_path = os.path.dirname(os.path.abspath(__file__))  #absolute path to the directory of this module
+        exe_path = exe_path[:-1] if exe_path[len(exe_path) - 1] == '/' else exe_path  #remove the trailing /
+        self.exe_path = exe_path[:exe_path.rfind('/') + 1]  #absolute path of the base dir, as it is one level up
+        self.db_path = helper.Utils.get_safe_path(self.exe_path + 'var/db/')  #absolute path to database dir
+        self.temp_path = helper.Utils.get_safe_path(self.exe_path + 'tmp/')  #absolute path to temporary dir
+        self.is_update_only_mode = False  #no update only mode
         self.config = EmptyClass()
-        self.config.sealion = SealionConfig(helper.Utils.get_safe_path(self.exe_path + 'etc/config.json'))
-        self.config.agent = AgentConfig(helper.Utils.get_safe_path(self.exe_path + 'etc/agent.json'))
-        ret = self.config.sealion.set()
+        self.config.sealion = SealionConfig(helper.Utils.get_safe_path(self.exe_path + 'etc/config.json'))  #instance of configurable settings
+        self.config.agent = AgentConfig(helper.Utils.get_safe_path(self.exe_path + 'etc/agent.json'))  #instance of private settings
+        ret = self.config.sealion.set()  #load the config from the file
         
-        if ret != True:
+        if ret != True:  #raise an exception on error
             raise RuntimeError(ret)
         
-        ret = self.config.agent.set()
+        ret = self.config.agent.set()  #load private config from the file
         
-        if ret != True:
+        if ret != True:  #raise an exception on error
             raise RuntimeError(ret)
         
-        self.activities = None
-        self.stop_event = threading.Event()
-        self.post_event = threading.Event()
-        self.event_dispatcher = helper.event_dispatcher
-        self.proxy_url = requests.utils.get_environ_proxies(self.config.agent.apiUrl).get('https', '')
-        uname = platform.uname()
-        dist = platform.linux_distribution()
+        self.stop_event = threading.Event()  #event that tells whether the agent should stop
+        self.post_event = threading.Event()  #event that tell whether the api.session can request
+        self.event_dispatcher = helper.event_dispatcher  #event dispatcher for communication across modules
+        self.proxy_url = requests.utils.get_environ_proxies(self.config.agent.apiUrl).get('https', '')  #proxy url for api
+        uname = platform.uname()  #platform uname
+        dist = platform.linux_distribution()  #platform distribution
         dist = dist if dist[0] else platform.linux_distribution(supported_dists = ['system'])
         dist = dist if dist[0] else ('Unknown', 'Unknown', 'Unknown')
         
+        #various system details
         self.details = {
             'type': uname[0],
             'kernel': uname[2],
@@ -136,21 +197,69 @@ class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
         }
         
     def get_run_time(self):
+        """
+        Public method to get the total run time.
+        
+        Returns:
+            Run time in seconds
+        """
+        
         return time.time() - self.metric['starting_time']
     
     def set_time_metric(self, metric):
+        """
+        Public method to set the time metric.
+        
+        Args:
+            metric: the metric to set
+        """
+        
         self.metric[metric] = time.time()
         
     def get_time_metric(self, metric):
+        """
+        Public method to get the time metric.
+        
+        Args:
+            metric: the metric to get
+            
+        Returns:
+            The value for the metric given.
+        """
+        
         return self.metric[metric]
         
     def get_stoppage_time(self):
+        """
+        Public method to get time taken to stop the agent.
+        
+        Returns:
+            Time taken in seconds
+        """
+        
         return time.time() - self.metric['stopping_time']
     
     def get_run_time_str(self):
+        """
+        Public method to get the total run time as a readable string.
+        
+        Returns:
+            A string representing the total run time.
+        """
+        
         return unicode(datetime.now() - datetime.fromtimestamp(self.metric['starting_time']))
     
     def get_url(self, path = ''):
+        """
+        Public method to get the complete url for the given path.
+        
+        Args:
+            path: the url to be concatenated
+            
+        Returns:
+            The complete url
+        """
+        
         path.strip()
         
         if len(path):
