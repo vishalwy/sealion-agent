@@ -1,3 +1,8 @@
+"""
+Utility functions and classes.
+Implements Utils, Config, ThreadMonitor and notify_terminate
+"""
+
 __copyright__ = '(c) Webyog, Inc'
 __author__ = 'Vishal P.R'
 __email__ = 'hello@sealion.com'
@@ -13,50 +18,87 @@ import traceback
 import exit_status
 from constructs import *
 
-_log = logging.getLogger(__name__)
-event_dispatcher = EventDispatcher()
+_log = logging.getLogger(__name__)  #module wise logging
+event_dispatcher = EventDispatcher()  #global event dispatcher instance for cross module communication
 
 def default_termination_hook(message, stack_trace):
+    """
+    Default hook function called before termination.
+    
+    Args:
+        message: the message to be writen to stderr
+        stack_trace: any stack_trace to be writen to stderr
+    """
+    
     message and sys.stderr.write(message + '\n')
     stack_trace and sys.stderr.write(stack_trace)
     
 def notify_terminate(is_gracefull = True, message = '', stack_trace = ''):
-    event_dispatcher.trigger('terminate')
+    """
+    Function called to notify 'terminate' event and terminatehook.
+    
+    Args:
+        is_gracefull: if this is False, it will invoke terminatehook
+        message: the message to be writen to stderr
+        stack_trace: any stack_trace to be writen to stderr
+    """
+    
+    event_dispatcher.trigger('terminate')  #trigger the event so that modules can cleanup
     is_gracefull == False and terminatehook(message, stack_trace)
 
-terminatehook = default_termination_hook
+terminatehook = default_termination_hook  #terminate hook called for disgraceful shutdown
    
 class Utils(Namespace):
+    """
+    Wrapper for utility functions
+    """
+    
     @staticmethod
     def sanitize_type(d, schema, is_delete_extra = True, regex = None, is_regex = False, file = None):
+        """
+        Static function to cleanup a dict, list or string against a schema given.
+        This function works in conjunction with sanitize_dict.
+        Together it validates and does cleanup a dict
+        
+        Args:
+            d: item to be sanitized
+            schema: the schema defining the rules for the item
+            is_delete_extra: delete any extra items found inside the item
+            regex: regex to match
+            is_regex: is item a regex
+            file: filename where the item read from
+        """
+        
+        #get the type name of the item to sanitized and the schema
         d_type_name = type(d).__name__
         schema_type_name = type(schema).__name__
 
-        if d_type_name == 'dict' and schema_type_name == 'dict':
+        if d_type_name == 'dict' and schema_type_name == 'dict':  #a dict is delegated to sanitize_dict
             return Utils.sanitize_dict(d, schema, is_delete_extra, file)
-        elif d_type_name == 'list' and schema_type_name == 'list':
-            for i in range(0, len(d)):
+        elif d_type_name == 'list' and schema_type_name == 'list':  #if it is a list
+            for i in range(0, len(d)):  #sanitize each item in the list
                 if Utils.sanitize_type(d[i], schema[0], is_delete_extra, regex, is_regex, file) == False:
-                    return False
+                    return False  #failure
                 
-            return True
-        elif schema_type_name == 'str':
-            types = schema.split(',')
-            flag = False
+            return True  #sanitized the list
+        elif schema_type_name == 'str':  #if it is a string
+            types = schema.split(',')  #a string can be unicode or str, thus we get the types
+            flag = False  #flag indicates whether it match with any type given
             
+            #match against the types given
             for i in range(0, len(types)):
                 if d_type_name == types[i]:
                     flag = True
                     break
                     
-            if flag == True:
-                if regex != None and re.match(regex, unicode(d)) == None:
+            if flag == True:  #matched
+                if regex != None and re.match(regex, unicode(d)) == None:  #if regex is given, match the regex
                     return False
-                elif (d_type_name == 'str' or d_type_name == 'unicode') and is_regex == True:
+                elif (d_type_name == 'str' or d_type_name == 'unicode') and is_regex == True:  #if it is to be considered as a regex, then compile and check
                     try:
                         re.compile(d)
                     except:
-                        return False
+                        return False  #failure
                 
             return flag
         
@@ -64,9 +106,22 @@ class Utils(Namespace):
 
     @staticmethod
     def sanitize_dict(d, schema, is_delete_extra = True, file = None):
+        """
+        Static function to cleanup a dict against the schema given.
+        This function works in conjunction with sanitize_type.
+        Together it validates and does cleanup of a dict
+        
+        Args:
+            d: dict to be sanitized
+            schema: the schema defining the rules for the dict
+            is_delete_extra: delete any extra items found inside the dict
+            file: filename where the dict read from
+        """
+        
         ret = 1
 
-        if is_delete_extra == True:  
+        #delete any extra keys
+        if is_delete_extra == True:
             keys = list(d.keys())
             
             if ('.' in schema) and len(schema.keys()) == 1 and len(keys) == 1:
