@@ -183,19 +183,15 @@ class Executer(ThreadEx):
     jobs = {}  #dict to keep track of active jobs
     jobs_lock = threading.RLock()  #thread lock to manipulate jobs
     
-    def __init__(self, store):
+    def __init__(self):
         """
         Constructor
-        
-        Args:
-            store: Storage instance
         """
         
         ThreadEx.__init__(self)  #inititalize the base class
         self.exec_process = None  #bash process instance
         self.process_lock = threading.RLock()  #thread lock for bash process instance
         self.is_stop = False  #stop flag for the thread
-        self.store = store  #Storage instance
         self.globals = globals.Globals()  #reference to Globals for optimized access
         self.globals.event_dispatcher.bind('terminate', self.stop)  #bind to terminate event so that we can terminate bash process
         
@@ -382,143 +378,207 @@ class Executer(ThreadEx):
         self.wait(True)  #terminate the bash subprocess and wait
         self.process_lock.release()
         
-class JobProducer(ThreadEx):
+class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
+    """
+    Produces job for an activity and schedules them using a queue.
+    """
+    
     def __init__(self, store):
-        ThreadEx.__init__(self)
-        self.prev_time = time.time()
-        self.globals = globals.Globals()
-        self.activities_lock = threading.RLock()
-        self.activities = {}
-        self.queue = queue.Queue()
-        self.sleep_interval = 5
-        self.store = store
-        self.consumer_count = 0
-        self.executer = Executer(store)
+        """
+        Constructor
+        
+        Args:
+            store: Storage instance.
+        """
+        
+        ThreadEx.__init__(self)  #initialize the base class
+        self.globals = globals.Globals()  #store reference to Globals for optmized access
+        self.activities_lock = threading.RLock()  #threading lock for updating activities
+        self.activities = {}  #dict of activities 
+        self.queue = queue.Queue()  #job queue
+        self.sleep_interval = 5  #how much time should the thread sleep before scheduling
+        self.store = store  #storage instance
+        self.consumer_count = 0  #total number of job consumers running
+        self.executer = Executer()  #executer instance for running commandline activities
         self.globals.event_dispatcher.bind('get_activity_funct', self.get_activity_funct)
 
     def is_in_whitelist(self, activity):
-        whitelist, is_whitelisted, command = [], True, activity['command']
+        """
+        Method checks whether an activity is allowed to run by looking up in a whitelist
         
-        if activity['service'] == 'Plugins':
+        Args:
+            activity: dict representing the activity to be checked
+            
+        Returns:
+            True if the activity is whitelsited else False
+        """
+        
+        whitelist, command = [], activity['command']
+        
+        if activity['service'] == 'Plugins':  #always execute plugin activities
             return True
 
-        if hasattr(self.globals.config.sealion, 'whitelist'):
+        if hasattr(self.globals.config.sealion, 'whitelist'):  #read the whitelist from config
             whitelist = self.globals.config.sealion.whitelist
+            
+        is_whitelisted = False if len(whitelist) else True  #an empty whitelist implies that all activities are allowed to run
 
-        if len(whitelist):
-            is_whitelisted = False
-
-            for i in range(0, len(whitelist)):
-                if re.match(whitelist[i], command):
-                    is_whitelisted = True
-                    break
+        #find out whether the activity is whitelisted
+        for i in range(0, len(whitelist)):
+            if re.match(whitelist[i], command):
+                is_whitelisted = True
+                break
 
         return is_whitelisted
 
     def schedule_activities(self):
-        self.activities_lock.acquire()
+        """
+        Method to schedule the activity based on their interval
+        """
+        
+        self.activities_lock.acquire()  #this has to be atomic as multiple threads reads/writes
         t, jobs = time.time(), []
 
         for activity_id in self.activities:
             activity = self.activities[activity_id]
-            next_exec_timestamp = activity['next_exec_timestamp']
 
-            if next_exec_timestamp <= t + self.sleep_interval:                
-                jobs.append(Job(activity, self.store))
-                activity['next_exec_timestamp'] = next_exec_timestamp + activity['details']['interval']
+            #whether the activity interval expired
+            #we have to put the job in the queue if the execution timestamp comes before the scheduler runs again
+            if activity['next_exec_timestamp'] <= t + self.sleep_interval:
+                jobs.append(Job(activity, self.store))  #add a job for the activity
+                activity['next_exec_timestamp'] = activity['next_exec_timestamp'] + activity['details']['interval']  #update the next execution timestamp
 
-        jobs.sort(key = lambda job: job.exec_timestamp)
+        jobs.sort(key = lambda job: job.exec_timestamp)  #sort the jobs based on the execution timestamp
         len(jobs) and _log.debug('Scheduling %d activities', len(jobs))
 
-        for job in jobs:
+        for job in jobs:  #scheudle the jobs
             self.queue.put(job)
 
         self.activities_lock.release()
         
-    def set_activities(self, event = None):
+    def set_activities(self, *args, **kwargs):
+        """
+        Method updates the dict containing the activities.
+        It also starts Job consumers
+        """
+        
         activities = self.globals.config.agent.activities
         start_count, update_count, stop_count, plugin_count, activity_ids = 0, 0, 0, 0, []
-        self.activities_lock.acquire()        
-        t = time.time()
+        self.activities_lock.acquire()  #this has to be atomic as multiple threads reads/writes
+        t = time.time()  #current time is the next execution time for any activity started or updated
         
         for activity in activities:
             activity_id = activity['_id']
             cur_activity = self.activities.get(activity_id)
             
-            if cur_activity:
+            if cur_activity:  #if we already have the activity in the dict
                 details = cur_activity['details']
                 
+                #if interval or command modified
                 if details['interval'] != activity['interval'] or details['command'] != activity['command']:
                     cur_activity['details'] = activity
-                    cur_activity['is_whitelisted'] = self.is_in_whitelist(activity)
-                    cur_activity['next_exec_timestamp'] = t
+                    cur_activity['is_whitelisted'] = self.is_in_whitelist(activity)  #check whether the activity is allowed to run
+                    cur_activity['next_exec_timestamp'] = t  #execute the activity immediately
                     _log.info('Updating activity %s' % activity_id)
                     update_count += 1
             else:
+                #add a new activity
                 self.activities[activity_id] = {
                     'details': activity,
-                    'is_whitelisted': self.is_in_whitelist(activity),
-                    'next_exec_timestamp': t
+                    'is_whitelisted': self.is_in_whitelist(activity),  #check whether the activity is allowed to run
+                    'next_exec_timestamp': t  #execute the activity immediately
                 }
                 _log.info('Starting activity %s' % activity_id)
                 start_count += 1
             
-            plugin_count += 1 if activity['service'] == 'Plugins' else 0 
-            activity_ids.append(activity_id)
+            plugin_count += 1 if activity['service'] == 'Plugins' else 0  #count the number of plugins, it affect the number of job consumers
+            activity_ids.append(activity_id)  #keep track of available activity ids
             
-        deleted_activity_ids = [activity_id for activity_id in self.activities if (activity_id in activity_ids) == False]
+        #find any activities in the dict that is not in the activity_ids list
+        deleted_activity_ids = [activity_id for activity_id in self.activities if activity_id not in activity_ids]
         
+        #delete the activities from the dict
         for activity_id in deleted_activity_ids:
             _log.info('Stopping activity %s' % activity_id)
             del self.activities[activity_id]
             stop_count += 1
             
-        self.store.clear_offline_data(activity_ids)
+        self.store.clear_offline_data(activity_ids)  #delete any activites from offline store if it is not in current activity list
         self.activities_lock.release()
+        
+        #calculate the job consumer count and run the required number of job consumers
+        #it assumes that every plugin activity gets an individual thread and all commandline activities shares one thread
         consumer_count = (1 if len(activity_ids) - plugin_count > 0 else 0) + plugin_count
         self.start_consumers(consumer_count)    
         self.stop_consumers(consumer_count)
         
-        if start_count + update_count > 0:
+        if start_count + update_count > 0:  #immediately schedule any added/updated activities
             self.schedule_activities()
         
         _log.info('%d started; %d updated; %d stopped' % (start_count, update_count, stop_count))
         
     def exe(self):        
-        self.executer.start()
-        self.set_activities();
-        self.globals.event_dispatcher.bind('set_activities', self.set_activities)
+        """
+        Method runs in a new thread.
+        """
         
-        while 1:
+        self.executer.start()  #start the executer for bash suprocess
+        self.set_activities();  #set ativities dict
+        self.globals.event_dispatcher.bind('set_activities', self.set_activities)  #bind to 'set_activities' event so that we can update our activities dict
+        
+        while 1:  #schedule the activities every sleep_interval seconds
             self.schedule_activities()
             self.globals.stop_event.wait(self.sleep_interval)
 
-            if self.globals.stop_event.is_set():
+            if self.globals.stop_event.is_set():  #do we need to stop
                 _log.debug('%s received stop event' % self.name)
                 break
 
-        self.stop_consumers()
+        self.stop_consumers()  #stop the consumers
         
     def start_consumers(self, count):
-        count = min(8, count)
+        """
+        Method to start job consumers.
+        
+        Args:
+            count: count of total consumers to run
+        """
+        
+        count = min(8, count)  #limit the number of consumers
         count - self.consumer_count > 0 and _log.info('Starting %d job consumers' % (count - self.consumer_count))
         
-        while self.consumer_count < count:
+        while self.consumer_count < count:  #start consumers
             self.consumer_count += 1
             JobConsumer().start()
 
     def stop_consumers(self, count = 0):
+        """
+        Method to stop job consumers.
+        
+        Args:
+            count: count of total consumers to run
+        """
+        
         self.consumer_count - count > 0 and _log.info('Stopping %d job consumers' % (self.consumer_count - count))
         
-        while self.consumer_count > count:
-            self.queue.put(None)
+        while self.consumer_count > count:  #stop consumers
+            self.queue.put(None)  #put None in the job queue and the job consumer getting it will stop
             self.consumer_count -= 1
             
-    def get_activity_funct(self, event, callback):
+    def get_activity_funct(self, *args, **kwargs):
+        """
+        Callback method to supply get_activity function
+        """
+        
+        callback = args[1]
         callback(self.get_activity)
                 
     def get_activity(self, activity):
-        self.activities_lock.acquire()
+        """
+        Method to get acitity from the dict
+        """
+        
+        self.activities_lock.acquire()  #this has to be atomic as multiple threads reads/writes
         
         try:      
             return self.activities.get(activity)
@@ -526,23 +586,31 @@ class JobProducer(ThreadEx):
             self.activities_lock.release()
 
 class JobConsumer(ThreadEx):
-    unique_id = 1
+    """
+    Class to consume the jobs produced in the queue
+    """
+    
+    unique_id = 1  #unique id for consumers
     
     def __init__(self):
-        ThreadEx.__init__(self)
-        self.job_producer = JobProducer()
-        self.globals = globals.Globals()
-        self.name = '%s-%d' % (self.__class__.__name__, JobConsumer.unique_id)
-        JobConsumer.unique_id += 1
+        """
+        Constructor
+        """
+        
+        ThreadEx.__init__(self)  #initialize the base class
+        self.job_producer = JobProducer()  #job producer
+        self.globals = globals.Globals()  #save the reference to Globals for optimized access
+        self.name = '%s-%d' % (self.__class__.__name__, JobConsumer.unique_id)  #set the name
+        JobConsumer.unique_id += 1  #increment the id
 
     def exe(self):       
-        while 1:
-            job = self.job_producer.queue.get()
+        while 1:  #wait on job queue
+            job = self.job_producer.queue.get()  #blocking wait
 
-            if self.globals.stop_event.is_set() or job == None:
+            if self.globals.stop_event.is_set() or job == None:  #need to stop
                 _log.debug('%s received stop event' % self.name)
                 break
 
-            t = time.time()
-            job.exec_timestamp - t > 0 and time.sleep(job.exec_timestamp - t)
-            self.job_producer.executer.add_job(job)
+            t = time.time()  #get the current time
+            job.exec_timestamp - t > 0 and time.sleep(job.exec_timestamp - t)  #sleep till the execution time reaches
+            self.job_producer.executer.add_job(job)  #add the job to executer
