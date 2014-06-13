@@ -20,6 +20,11 @@ sys.path.insert(0, exe_path + 'lib/websocket_client')
 sys.path.insert(0, exe_path + 'src')
 sys.path.insert(0, exe_path + 'lib')
 
+#to avoid the bug reported at http://bugs.python.org/issue13684 we use a stable httplib version available with CPython 2.7.3
+#since httplib has been renamed to http, we have to add that also in the path so that import can find it
+if sys.version_info[0] == 3:
+    sys.path.insert(0, exe_path + 'lib/httplib')
+
 import exit_status
 
 try:  #it is possible that the agent was removed from the UI, in that case it already had removed config files. so import api can raise an exception
