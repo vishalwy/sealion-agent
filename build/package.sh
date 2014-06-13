@@ -74,6 +74,9 @@ generate_scripts()
     cp res/scripts/curlike.py $TARGET/$OUTPUT/agent/bin/
     chmod +x $TARGET/$OUTPUT/agent/bin/curlike.py
     echo "Update script generated"
+    cp res/scripts/unregister.py $TARGET/$OUTPUT/agent/bin/
+    chmod +x $TARGET/$OUTPUT/agent/bin/unregister.py
+    echo "Unregister script generated"
     cp res/scripts/monit.sh $TARGET/$OUTPUT/agent/bin/
     chmod +x $TARGET/$OUTPUT/agent/bin/monit.sh
     echo "Monit script generated"
@@ -125,11 +128,11 @@ generate_scripts()
     echo "Generated README"
 }
 
-find ../code/ -mindepth 1 -maxdepth 1 -type d ! -name 'etc' -exec cp -r {} $TARGET/$OUTPUT/agent \;
+find ../code/ -mindepth 1 -maxdepth 1 -type d -regextype sed ! -regex '.*/\(\(etc\)\|\(tmp\)\|\(bin\)\|\(var\)\)' -exec cp -r {} $TARGET/$OUTPUT/agent \;
 cp -r res/etc $TARGET/$OUTPUT/agent
 mkdir -p $TARGET/$OUTPUT/agent/etc/init.d
 mkdir -p $TARGET/$OUTPUT/agent/bin
 generate_scripts
-tar -zcvf "$TARGET/$OUTPUT-$VERSION-noarch.tar.gz" --exclude="*.pyc" --exclude="var" --exclude="__pycache__" --exclude="*~" --exclude-vcs --exclude-backups --directory=$TARGET $OUTPUT/
+tar -zcvf "$TARGET/$OUTPUT-$VERSION-noarch.tar.gz" --exclude="*.pyc" --exclude="__pycache__" --exclude="*~" --exclude-vcs --exclude-backups --directory=$TARGET $OUTPUT/
 rm -rf $TARGET/$OUTPUT
 
