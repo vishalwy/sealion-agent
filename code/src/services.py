@@ -55,8 +55,8 @@ class Job:
             'timestamp': 0,  #actual timestamp when the job started
             'output': None,  #output of the job, file handle for commandline job, dict for successful pugin execution, str for failed pugin execution. 
             'pid': -1,  #process id if it is a commandline job
-            'return_code': 0  #return code of the job,
-            '_id': activity['details']['_id']  #activity id
+            'return_code': 0,  #return code of the job
+            '_id': activity['details']['_id'],  #activity id
             'command': activity['details']['command']  #command to be executed for commandline job, else the python module name for plugin job
         }
         
@@ -100,8 +100,11 @@ class Job:
         self.status = JobStatus.TIMED_OUT  #change the state to timed out
         
         try:            
+            if self.exec_details['pid'] == -1:
+                raise
+            
             #kill the job, it is possible that the pid does not exist by the time we execute this statement
-            self.exec_details['pid'] != -1 and os.kill(self.exec_details['pid'], signal.SIGTERM) 
+            os.kill(self.exec_details['pid'], signal.SIGTERM) 
         except:
             return False
         
@@ -177,57 +180,96 @@ class Executer(ThreadEx):
     It executes the commandline by writing to the bash script and gets the status in a blocking read
     """
     
-    jobs = {}  #dict to keep track of the scheduled jobs
-    jobs_lock = threading.RLock()
+    jobs = {}  #dict to keep track of active jobs
+    jobs_lock = threading.RLock()  #thread lock to manipulate jobs
     
     def __init__(self, store):
-        ThreadEx.__init__(self)
-        self.exec_process = None
-        self.is_stop = False
-        self.process_lock = threading.RLock()
-        self.store = store
-        self.globals = globals.Globals()
-        self.globals.event_dispatcher.bind('terminate', self.stop)
+        """
+        Constructor
         
+        Args:
+            store: Storage instance
+        """
+        
+        ThreadEx.__init__(self)  #inititalize the base class
+        self.exec_process = None  #bash process instance
+        self.process_lock = threading.RLock()  #thread lock for bash process instance
+        self.is_stop = False  #stop flag for the thread
+        self.store = store  #Storage instance
+        self.globals = globals.Globals()  #reference to Globals for optimized access
+        self.globals.event_dispatcher.bind('terminate', self.stop)  #bind to terminate event so that we can terminate bash process
+        
+        #use the job timeout defined in the config if we have one
         try:
             self.timeout = self.globals.config.sealion.commandTimeout
         except:
             self.timeout = 30
 
-        self.timeout = int(self.timeout * 1000)
+        self.timeout = int(self.timeout * 1000)  #convert to millisec
         
     def add_job(self, job):
-        Executer.jobs_lock.acquire()
-        time.sleep(0.001)
+        """
+        Public method to execute the job.
+        This method writes the commandline job to bash, it directly executes the plugin job.
+        
+        Args:
+            job: the job to be executed
+        """
+        
+        Executer.jobs_lock.acquire()  #this has to be atomic as multiple threads reads/writes
+        time.sleep(0.001)  #sleep for a millisec so that we dont end up with multiple jobs wih same timestamp
+        
+        #prepare the job and add it to the dict
         t = job.prepare()
         Executer.jobs['%d' % t] = job
-        Executer.jobs_lock.release()
         
-        if job.is_plugin == False:
+        Executer.jobs_lock.release()  #we can safely release the lock as the rest the code in the function need not be atomic
+        
+        if job.is_plugin == False:  #write commandline job to bash
             self.write(job)
         else:            
             try:
+                #we load the plugin and calls the get_data function and updates the job with the data
+                #this can raise exception
                 plugin = __import__(job.exec_details['command'])
                 job.update({'return_code': 0, 'output': plugin.get_data()})
             except Exception as e:
+                #on failure we set the return_code to non zero so that output can be interpreted as error string
                 job.update({'return_code': 1, 'output': unicode(e)})
         
-    def update_job(self, timestamp, data):
-        Executer.jobs_lock.acquire()
-        Executer.jobs['%d' % timestamp].update(data)
+    def update_job(self, timestamp, details):
+        """
+        Public method to update the job with the details
+        
+        Args:
+            timestamp: timestamp of the job to be updated
+            details: dict containing the details to be updated
+        """
+        
+        Executer.jobs_lock.acquire()  #this has to be atomic as multiple threads reads/writes
+        Executer.jobs['%d' % timestamp].update(details)
         Executer.jobs_lock.release()
 
     def finish_jobs(self):
-        finished_jobs = []
-        Executer.jobs_lock.acquire()
-        t = int(time.time() * 1000)
+        """
+        Public method to get a list of finished jobs.
+        A side effect of this method is that it kills any job exceeding the timeout
+        
+        Returns:
+            The list of finished jobs.
+        """
+        
+        finished_jobs = []  #list of finished jobs
+        Executer.jobs_lock.acquire()   #this has to be atomic as multiple threads reads/writes
+        t = int(time.time() * 1000)  #get the timestamp so that we can check the timeout
 
-        for job_timestamp in Executer.jobs.keys():
+        for job_timestamp in Executer.jobs.keys():  #loop throgh the jobs
             job = Executer.jobs[job_timestamp]
             
-            if t - job.exec_details['timestamp'] > self.timeout:
+            if t - job.exec_details['timestamp'] > self.timeout:  #if it exceeds the timeout
                 job.kill() and _log.info('Killed activity (%s @ %d) as it exceeded timeout' % (job.exec_details['_id'], job.exec_details['timestamp']))
 
+            #collect the job if it is not running and remove it from the dict
             if job.status != JobStatus.RUNNING:
                 finished_jobs.append(job)
                 del self.jobs[job_timestamp]
@@ -236,17 +278,27 @@ class Executer(ThreadEx):
         return finished_jobs
         
     def exe(self):
+        "Method executes in a new thread."
+        
         while 1:
-            self.read()
+            self.read()  #blocking read from bash suprocess
             
-            if self.is_stop:
+            if self.is_stop:  #should we stop now
                 _log.debug('%s received stop event' % self.name)
                 break
             
     @property
     def process(self):
-        self.process_lock.acquire()
+        """
+        Property to get the bash process instance
         
+        Returns:
+            Bash process instance
+        """
+        
+        self.process_lock.acquire()  #this has to be atomic as multiple threads reads/writes
+ 
+        #self.wait returns True if the bash suprocess is terminated, in that case we will create a new bash process instance
         if self.wait() and self.is_stop == False:
             self.exec_process = subprocess.Popen(['bash', globals.Globals().exe_path + 'src/execute.sh'], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, preexec_fn = os.setpgrp, bufsize = 1)
         
@@ -254,7 +306,18 @@ class Executer(ThreadEx):
         return self.exec_process
     
     def write(self, job):
+        """
+        Public method to write the commandline job to the bash subprocess
+        
+        Args:
+            job: the commandline job to be executed
+            
+        Returns:
+            True on success else False
+        """
+        
         try:
+            #it is possible that the pipe is broken or the subprocess was terminated
             self.process.stdin.write('%d %s: %s\n' % (job.exec_details['timestamp'], job.exec_details['output'].name, job.exec_details['command']))
         except:
             return False
@@ -262,7 +325,15 @@ class Executer(ThreadEx):
         return True
         
     def read(self):
+        """
+        Method to read from bash subprocess and update the job details
+        
+        Returns:
+            True on success else False
+        """
+        
         try:
+            #it is possible that the pipe is broken or the subprocess was terminated
             data = self.process.stdout.readline().split()
             self.update_job(int(data[0]), {data[1]: data[2]})
         except:
@@ -270,16 +341,28 @@ class Executer(ThreadEx):
         
         return True
         
-    def wait(self, is_force = False):        
-        is_terminated = True
+    def wait(self, is_force = False): 
+        """
+        Method to wait for the bash subprocess if it was terminated, to avoid zombies
+        This method is not thread safe.
+        
+        Args:
+            is_force: if it is True, it terminates the process before waiting
+            
+        Returns:
+            True if the process is terminated else False
+        """
+        
+        is_terminated = True  #is the bash subprocess terminated
         
         try:
-            if self.exec_process.poll() == None: #running
-                if is_force:
+            if self.exec_process.poll() == None:  #if the process is running
+                if is_force:  #kill the process
                     os.kill(self.exec_process.pid, signal.SIGTERM)
                 else:
-                    is_terminated = False
+                    is_terminated = False  #process still running
                 
+            #wait for the process if it is terminated
             if is_terminated == True:
                 os.waitpid(self.exec_process.pid, os.WUNTRACED)
                 self.exec_process.stdin.close()
@@ -289,10 +372,14 @@ class Executer(ThreadEx):
                 
         return is_terminated
         
-    def stop(self, event = None):
-        self.process_lock.acquire()
+    def stop(self, *args, **kwargs):
+        """
+        Public method to stop the thread.
+        """
+        
+        self.process_lock.acquire()  #this has to be atomic as multiple threads reads/writes
         self.is_stop = True
-        self.wait(True)
+        self.wait(True)  #terminate the bash subprocess and wait
         self.process_lock.release()
         
 class JobProducer(ThreadEx):
