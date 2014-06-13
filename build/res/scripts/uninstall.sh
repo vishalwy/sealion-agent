@@ -23,7 +23,7 @@ fi
 
 if [ -f "src/unregister.py" ] ; then
     echo "Unregistering agent..."
-    python src/unregister.py >/dev/null 2>&1
+    python bin/unregister.py >/dev/null 2>&1
 
     if [ $? -ne 0 ] ; then
         echo "Error: Failed to unregister agent" >&2
