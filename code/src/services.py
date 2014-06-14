@@ -315,7 +315,8 @@ class Executer(ThreadEx):
         try:
             #it is possible that the pipe is broken or the subprocess was terminated
             self.process.stdin.write('%d %s: %s\n' % (job.exec_details['timestamp'], job.exec_details['output'].name, job.exec_details['command']))
-        except:
+        except Exception as e:
+            _log.error('Failed to write to bash; %s' % unicode(e))
             return False
         
         return True
@@ -330,9 +331,17 @@ class Executer(ThreadEx):
         
         try:
             #it is possible that the pipe is broken or the subprocess was terminated
-            data = self.process.stdout.readline().split()
-            self.update_job(int(data[0]), {data[1]: data[2]})
-        except:
+            line = self.process.stdout.readline()
+            data = line.split()
+            
+            if data[0] == 'warning:':
+                _log.warn(line[line.find(' ') + 1:])
+            elif data[0].isdigit():
+                self.update_job(int(data[0]), {data[1]: data[2]})
+            else:
+                _log.error('Executer bash process returned: %s' % line)
+        except Exception as e:
+            _log.error('Failed to read from bash; %s' % unicode(e))
             return False
         
         return True
@@ -343,7 +352,7 @@ class Executer(ThreadEx):
         This method is not thread safe.
         
         Args:
-            is_force: if it is True, it terminates the process before waiting
+            is_force: if it is True, it terminates the process and then waits
             
         Returns:
             True if the process is terminated else False
@@ -360,6 +369,7 @@ class Executer(ThreadEx):
                 
             #wait for the process if it is terminated
             if is_terminated == True:
+                is_force == False and _log.error('Executer bash process %d was terminated', self.exec_process.pid)
                 os.waitpid(self.exec_process.pid, os.WUNTRACED)
                 self.exec_process.stdin.close()
                 self.exec_process.stdout.close()

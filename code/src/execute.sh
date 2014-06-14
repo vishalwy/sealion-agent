@@ -5,6 +5,10 @@ read TIMESTAMP OUTPUT COMMAND <<<$(echo 0 1 2)
 PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
 SETSID=$('which setsid' 2>/dev/null)
 
+if [ "SETSID" == "" ] ; then
+    echo "warning: setsid not available"
+fi
+
 while read -r LINE ; do
     ACTIVITY=(${LINE%%:*})
     ACTIVITY=("${ACTIVITY[@]}" "${LINE#*:}")
