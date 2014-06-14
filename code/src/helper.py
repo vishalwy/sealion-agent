@@ -56,7 +56,7 @@ class Utils(Namespace):
     @staticmethod
     def sanitize_type(d, schema, is_delete_extra = True, regex = None, is_regex = False, file = None):
         """
-        Static function to cleanup a dict, list or string against a schema given.
+        Public static function to cleanup a dict, list or string against a schema given.
         This function works in conjunction with sanitize_dict.
         Together it validates and does cleanup a dict
         
@@ -110,7 +110,7 @@ class Utils(Namespace):
     @staticmethod
     def sanitize_dict(d, schema, is_delete_extra = True, file = None):
         """
-        Static function to cleanup a dict against the schema given.
+        Public static function to cleanup a dict against the schema given.
         This function works in conjunction with sanitize_type.
         Together it validates and does cleanup of a dict
         
@@ -182,7 +182,7 @@ class Utils(Namespace):
     @staticmethod
     def get_safe_path(path):
         """
-        Static function to create path if path does not exists
+        Public static function to create path if path does not exists
         
         Args:
             path: path to create.
@@ -201,7 +201,7 @@ class Utils(Namespace):
     @staticmethod
     def restart_agent(message = '', stack_trace = ''):
         """
-        Static function to restart agent.
+        Public static function to restart agent.
         This function replaces the current process with a new executable image.
         
         Args:
@@ -216,7 +216,7 @@ class Utils(Namespace):
     @staticmethod
     def get_stack_trace(thread_ident = None):
         """
-        Static function to get the stack trace of threads.
+        Public static function to get the stack trace of threads.
         
         Args:
             thread_ident: thread identifier of the thread for which it should retreive stack trace.
@@ -288,7 +288,7 @@ class Config:
     @staticmethod
     def parse(file, is_data = False):
         """
-        Static function to parse the given file.
+        Public static function to parse the given file.
         
         Args:
             file: the filename or the dict object to parse
