@@ -1,3 +1,8 @@
+"""
+Use this as the main script to run agent as a daemon.
+It gives a commandline interface to the program, makes the process daemon, sets up crash dump handling and starts monitoring script.
+"""
+
 __copyright__ = '(c) Webyog, Inc'
 __author__ = 'Vishal P.R'
 __email__ = 'hello@sealion.com'
@@ -13,33 +18,55 @@ import subprocess
 import json
 import re
 
+#get the exe path, which is the absolute path to the parent directory of the module's direcotry
 exe_path = os.path.dirname(os.path.abspath(__file__))
 exe_path = exe_path[:-1] if exe_path[len(exe_path) - 1] == '/' else exe_path
 exe_path = exe_path[:exe_path.rfind('/') + 1]
-sys.path.insert(0, exe_path + 'src') 
-sys.path.insert(0, exe_path)
 
-if sys.version_info[0] == 3:
-    sys.path.insert(0, exe_path + 'lib/httplib')
+#add module lookup paths to sys.path so that import can find them
+#we are inserting at the begining of sys.path so that we can be sure that we are importing the right module
+sys.path.insert(0, exe_path + 'src') 
 
 import exit_status
 from daemon import Daemon
 
-_log = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)  #module level logging
 
-class sealion(Daemon):
-    def __init__(self, pidfile, stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
-        Daemon.__init__(self, pidfile, stdin, stdout, stderr)
-        self.user_name = 'sealion'
-        self.monit_interval = 30
-        self.crash_loop_count = 5
-        self.monit_pid = -1
+class SeaLion(Daemon):
+    """
+    Subclass implementing agent as a daemon.
+    """
+    
+    def __init__(self, *args, **kwargs):
+        """
+        Constructor.
+        """
+        
+        Daemon.__init__(self, *args, **kwargs)  #initialize the base class
+        self.user_name = 'sealion'  #user name for daemon
+        self.monit_interval = 30  #monitoring interval for monit.sh
+        self.crash_loop_count = 5  #count of crash dumps to determine crash loop
+        self.monit_pid = -1  #pid of monit.sh
     
     @property
     def crash_dump_path(self):
+        """
+        Propery returning crash dump path
+        
+        Returns:
+            Absolute path tp crash dump directory
+        """
+        
         return '%svar/crash/' % exe_path 
     
     def save_dump(self, stack_trace):
+        """
+        Method to save the stack trace as a crash dump.
+        
+        Args:
+            stack_trace: stack trace of exception
+        """
+        
         from globals import Globals
         globals = Globals()
         timestamp = int(time.time() * 1000)
@@ -133,7 +160,7 @@ class sealion(Daemon):
             pass
     
     def set_procname(self, proc_name = None):
-        proc_name = proc_name if proc_name else self.__class__.__name__
+        proc_name = proc_name if proc_name else self.daemon_name
         
         try:
             from ctypes import cdll, byref, create_string_buffer
@@ -201,7 +228,7 @@ class sealion(Daemon):
     def exception_hook(self, type, value, tb):
         if type != SystemExit:
             import helper
-            helper.Utils.restart_agent('%s crashed' % self.__class__.__name__, ''.join(traceback.format_exception(type, value, tb)))
+            helper.Utils.restart_agent('%s crashed' % self.daemon_name, ''.join(traceback.format_exception(type, value, tb)))
     
     def run(self): 
         try:
@@ -252,7 +279,7 @@ def sig_handler(signum, frame):
         sys.exit(exit_status.AGENT_ERR_SUCCESS)
     
 signal.signal(signal.SIGINT, sig_handler)
-daemon = sealion(exe_path + 'var/run/sealion.pid')
+daemon = SeaLion(exe_path + 'var/run/sealion.pid')
 is_print_usage = False
 
 if len(sys.argv) == 2:
@@ -271,6 +298,6 @@ else:
     is_print_usage = True
     
 if is_print_usage == True:
-    sys.stdout.write('Usage: %s start|stop|restart|status\n' % daemon.__class__.__name__)
+    sys.stdout.write('Usage: %s start|stop|restart|status\n' % daemon.daemon_name)
     
 sys.exit(exit_status.AGENT_ERR_SUCCESS)
