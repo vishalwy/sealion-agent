@@ -56,7 +56,7 @@ class SealionConfig(helper.Config):
         
     def set(self, data = None):
         """
-        Method to set the config.
+        Public method to set the config.
         
         Args:
             data: dict containing new config
@@ -118,7 +118,7 @@ class AgentConfig(helper.Config):
         
     def update(self, data):   
         """
-        Method to update the config.
+        Public method to update the config.
         
         Args:
             data: dict containing new config

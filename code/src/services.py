@@ -259,7 +259,7 @@ class Executer(ThreadEx):
         Executer.jobs_lock.acquire()   #this has to be atomic as multiple threads reads/writes
         t = int(time.time() * 1000)  #get the timestamp so that we can check the timeout
 
-        for job_timestamp in Executer.jobs.keys():  #loop throgh the jobs
+        for job_timestamp in list(Executer.jobs.keys()):  #loop throgh the jobs
             job = Executer.jobs[job_timestamp]
             
             if t - job.exec_details['timestamp'] > self.timeout:  #if it exceeds the timeout
@@ -268,7 +268,7 @@ class Executer(ThreadEx):
             #collect the job if it is not running and remove it from the dict
             if job.status != JobStatus.RUNNING:
                 finished_jobs.append(job)
-                del self.jobs[job_timestamp]
+                del Executer.jobs[job_timestamp]
 
         Executer.jobs_lock.release()
         return finished_jobs
