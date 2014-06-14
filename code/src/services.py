@@ -336,10 +336,10 @@ class Executer(ThreadEx):
             
             if data[0] == 'warning:':
                 _log.warn(line[line.find(' ') + 1:])
-            elif data[0].isdigit():
-                self.update_job(int(data[0]), {data[1]: data[2]})
+            elif data[0] == 'data:':
+                self.update_job(int(data[1]), {data[2]: data[3]})
             else:
-                _log.error('Executer bash process returned: %s' % line)
+                _log.error('Executer bash process returned \'%s\'' % line)
         except Exception as e:
             _log.error('Failed to read from bash; %s' % unicode(e))
             return False

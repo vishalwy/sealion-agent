@@ -26,7 +26,7 @@ while read -r LINE ; do
         }
 
         trap "kill_children" SIGTERM
-        echo "${ACTIVITY[$TIMESTAMP]} pid $BASHPID"
+        echo "data: ${ACTIVITY[$TIMESTAMP]} pid $BASHPID"
 
         if [ "SETSID" != "" ] ; then
             bash -c "${ACTIVITY[$COMMAND]}" 1>"${ACTIVITY[$OUTPUT]}" 2>"${ACTIVITY[$OUTPUT]}" &
@@ -36,6 +36,6 @@ while read -r LINE ; do
 
         SESSION_PID=$!
         wait
-        echo "${ACTIVITY[$TIMESTAMP]} return_code $?"
+        echo "data: ${ACTIVITY[$TIMESTAMP]} return_code $?"
     ) &
 done
