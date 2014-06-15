@@ -123,7 +123,7 @@ except IndexError:
     sys.stderr.write('Error: ' + sys.argv[i - 1] + 'requires an argument\n')
     sys.exit(1)
 except Exception as e:
-    sys.stderr.write('Error: ' + unicode(e) + '\n')
+    sys.stderr.write('Error: ' + str(e) + '\n')
     sys.exit(1)
     
 if len(urls) == 0:  #no urls specified
@@ -144,7 +144,7 @@ try:
 
         sys.stdout.write(format_output(response))  #write out variable
 except Exception as e:
-    sys.stderr.write('Error: ' + unicode(e) + '\n')    
+    sys.stderr.write('Error: ' + str(e) + '\n')    
     sys.exit(1)
     
 f != None and f != sys.stdout and f.close()  #close output file

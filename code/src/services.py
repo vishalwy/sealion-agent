@@ -148,7 +148,7 @@ class Job:
             else:
                 #for a commandline job, output is the file containing data
                 self.exec_details['output'].seek(0, os.SEEK_SET)
-                data['data'] = self.exec_details['output'].read(256 * 1024)
+                data['data'] = self.exec_details['output'].read(256 * 1024).decode('utf-8', 'ignore')
                 
                 if not data['data']:  #if the file is empty
                     data['data'] = 'No output produced'
@@ -297,7 +297,7 @@ class Executer(ThreadEx):
  
         #self.wait returns True if the bash suprocess is terminated, in that case we will create a new bash process instance
         if self.wait() and self.is_stop == False:
-            self.exec_process = subprocess.Popen(['bash', globals.Globals().exe_path + 'src/execute.sh'], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, preexec_fn = os.setpgrp, bufsize = 1)
+            self.exec_process = subprocess.Popen(['bash', globals.Globals().exe_path + 'src/execute.sh'], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, preexec_fn = os.setpgrp)
         
         self.process_lock.release()
         return self.exec_process
@@ -315,7 +315,7 @@ class Executer(ThreadEx):
         
         try:
             #it is possible that the pipe is broken or the subprocess was terminated
-            self.process.stdin.write('%d %s: %s\n' % (job.exec_details['timestamp'], job.exec_details['output'].name, job.exec_details['command']))
+            self.process.stdin.write(('%d %s: %s\n' % (job.exec_details['timestamp'], job.exec_details['output'].name, job.exec_details['command'])).encode('utf-8'))
         except Exception as e:
             _log.error('Failed to write to bash; %s' % str(e))
             return False
@@ -332,7 +332,7 @@ class Executer(ThreadEx):
         
         try:
             #it is possible that the pipe is broken or the subprocess was terminated
-            line = self.process.stdout.readline()
+            line = self.process.stdout.readline().decode('utf-8')
             data = line.split()
             
             if data[0] == 'warning:':  #bash has given some warning
