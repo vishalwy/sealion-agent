@@ -5,7 +5,7 @@
 #It also enable parallel process execution using multiple CPU cores. 
 
 #trap exit, and send signal to sub-shell jobs, which in turn kills their children
-trap "kill -SIGTERM $(jobs -p)" EXIT
+trap "kill -SIGTERM $(jobs -p) >/dev/null 2>&1" EXIT
 
 #initialize the indexes of each column in the line read from stdin
 TIMESTAMP=0  #unique timestamp of the activity
@@ -41,9 +41,9 @@ while read -r LINE ; do
             #Function to kill children.
             
             if [ $NO_SETSID -eq 0 ] ; then  #kill process group if we have setsid
-                kill -SIGKILL -- -$SESSION_PID
+                kill -SIGKILL -- -$SESSION_PID  >/dev/null 2>&1
             else 
-                kill -SIGKILL $SESSION_PID
+                kill -SIGKILL $SESSION_PID >/dev/null 2>&1
             fi
         }
 
