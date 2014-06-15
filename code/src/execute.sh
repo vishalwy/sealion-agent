@@ -13,12 +13,15 @@ OUTPUT=1  #filename of output
 COMMAND=2  #command to be executed, this has to be the last index as a command can have spaces in it
 
 PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin  #common paths found in various linux distros
-SETSID=$('which setsid' 2>/dev/null)  #check whether we have setsid available
+
+#check whether we have setsid available
+type setsid >/dev/null 2>&1
+NO_SETSID=$?
 
 #if setsid is not available we wont be able to run the activities in a new session
 #which means, we wont be able to kill the process tree if the command timeout
-if [ "SETSID" == "" ] ; then
-    echo "warning: setsid not available"
+if [ NO_SETSID -ne 0  ] ; then
+    echo "warning: Cannot run commands as process group; setsid not available"
 fi
 
 #continuously read line from stdin, blocking read.
@@ -37,7 +40,7 @@ while read -r LINE ; do
         {
             #Function to kill children.
             
-            if [ "SETSID" != "" ] ; then  #kill process group if we have setsid
+            if [ NO_SETSID -eq 0 ] ; then  #kill process group if we have setsid
                 kill -SIGKILL -- -$SESSION_PID
             else 
                 kill -SIGKILL $SESSION_PID
@@ -47,7 +50,7 @@ while read -r LINE ; do
         trap "kill_children" SIGTERM  #kill children on exit
         echo "data: ${ACTIVITY[$TIMESTAMP]} pid $BASHPID"  #write out the process id for tracking purpose
 
-        if [ "SETSID" != "" ] ; then  #run it in a new session
+        if [ NO_SETSID -eq 0 ] ; then  #run it in a new session
             setsid bash -c "${ACTIVITY[$COMMAND]}" 1>"${ACTIVITY[$OUTPUT]}" 2>"${ACTIVITY[$OUTPUT]}" &
         else
             bash -c "${ACTIVITY[$COMMAND]}" 1>"${ACTIVITY[$OUTPUT]}" 2>"${ACTIVITY[$OUTPUT]}" &
