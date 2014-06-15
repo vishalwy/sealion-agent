@@ -9,7 +9,6 @@ __email__ = 'hello@sealion.com'
 
 import logging
 import time
-import gc
 import globals
 import api
 import connection
@@ -210,10 +209,6 @@ class RTC(ThreadEx):
             'hooks': {'response': self.on_response},  #hook for response
             'stream': True  #for long polling
         }
-        
-        if self.sio != None:
-            self.sio = None
-            _log.debug('GC collected %d unreachables' % gc.collect())
         
         #socket-io by default uses websocket transport, but websockets wont work behind a proxy
         #we force xhr polling in such cases

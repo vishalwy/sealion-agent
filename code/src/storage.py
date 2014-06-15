@@ -10,7 +10,6 @@ __email__ = 'hello@sealion.com'
 import logging
 import threading
 import time
-import gc
 import json
 import sqlite3
 import helper
@@ -532,24 +531,17 @@ class Sender(ThreadEx):
         This also performs gc at some intervals depending on the queue size
         """
         
-        is_perform_gc = False  #determines when we need to perform a forced gc. its not optimized and frequency varies
-        
         while 1:
             if self.wait() == False:  #wait for the events
                 break
                 
             try:
                 item = self.queue.get(True, 5)  #get the item from sending queue, blocks for a max of 5 seconds
-                is_perform_gc = True  #set the gc flag as we have retreived an item and can be collected
                 
                 if Sender.validate_funct(item['activity']) == None:  #validate the activity, it might be possible that we are trying to send an non permitted activity 
                     _log.debug('Discarding activity %s' % item['activity'])                    
                     continue
-            except:
-                if is_perform_gc == True:  #we are here means the queue is empty and it is a good time to gc 
-                    _log.debug('GC collected %d unreachables' % gc.collect())
-                    is_perform_gc = False
-                
+            except:               
                 self.queue_empty()  #carry out any additional operations on queue empty
                 continue
                 

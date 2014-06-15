@@ -12,6 +12,7 @@ import os
 import sys
 import logging
 import logging.handlers
+import gc
 
 #get the exe path, which is the absolute path to the parent directory of the module's direcotry
 exe_path = os.path.dirname(os.path.abspath(__file__))
@@ -40,7 +41,7 @@ from globals import Globals
 from constructs import *
 
 _log = logging.getLogger(__name__)  #module level logging
-
+gc.set_threshold(50, 5, 5)  #set gc threshold
 logging_list = []  #modules to log for
 logging_level = logging.INFO  #default logging level
 
