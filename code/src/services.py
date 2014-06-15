@@ -177,7 +177,8 @@ class Job:
 class Executer(ThreadEx):
     """
     A wrapper class that creates a bash subprocess for commandline job execution
-    It executes the commandline by writing to the bash script and gets the status in a blocking read
+    It executes the commandline by writing to the bash script and gets the status in a blocking read.
+    For more details checkout execute.sh
     """
     
     jobs = {}  #dict to keep track of active jobs
@@ -334,11 +335,11 @@ class Executer(ThreadEx):
             line = self.process.stdout.readline()
             data = line.split()
             
-            if data[0] == 'warning:':
+            if data[0] == 'warning:':  #bash has given some warning
                 _log.warn(line[line.find(' ') + 1:])
-            elif data[0] == 'data:':
+            elif data[0] == 'data:':  #data
                 self.update_job(int(data[1]), {data[2]: data[3]})
-            else:
+            else:  #anything else is considered as an error
                 _log.error('Executer bash process returned \'%s\'' % line)
         except Exception as e:
             _log.error('Failed to read from bash; %s' % unicode(e))
