@@ -20,7 +20,7 @@ NO_SETSID=$?
 
 #if setsid is not available we wont be able to run the activities in a new session
 #which means, we wont be able to kill the process tree if the command timeout
-if [ NO_SETSID -ne 0  ] ; then
+if [ $NO_SETSID -ne 0  ] ; then
     echo "warning: Cannot run commands as process group; setsid not available"
 fi
 
@@ -40,7 +40,7 @@ while read -r LINE ; do
         {
             #Function to kill children.
             
-            if [ NO_SETSID -eq 0 ] ; then  #kill process group if we have setsid
+            if [ $NO_SETSID -eq 0 ] ; then  #kill process group if we have setsid
                 kill -SIGKILL -- -$SESSION_PID
             else 
                 kill -SIGKILL $SESSION_PID
@@ -50,7 +50,7 @@ while read -r LINE ; do
         trap "kill_children" SIGTERM  #kill children on exit
         echo "data: ${ACTIVITY[$TIMESTAMP]} pid $BASHPID"  #write out the process id for tracking purpose
 
-        if [ NO_SETSID -eq 0 ] ; then  #run it in a new session
+        if [ $NO_SETSID -eq 0 ] ; then  #run it in a new session
             setsid bash -c "${ACTIVITY[$COMMAND]}" 1>"${ACTIVITY[$OUTPUT]}" 2>"${ACTIVITY[$OUTPUT]}" &
         else
             bash -c "${ACTIVITY[$COMMAND]}" 1>"${ACTIVITY[$OUTPUT]}" 2>"${ACTIVITY[$OUTPUT]}" &

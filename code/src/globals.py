@@ -186,7 +186,7 @@ class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
             'type': uname[0],
             'kernel': uname[2],
             'arch': platform.machine(),
-            'pythonVersion': '%s %s' % (platform.python_implementation(), '.'.join([unicode(i) for i in sys.version_info])),
+            'pythonVersion': '%s %s' % (platform.python_implementation(), '.'.join([str(i) for i in sys.version_info])),
             'cpuCount': multiprocessing.cpu_count(),
             'isProxy': True if self.proxy_url else False,
             'dist': {
@@ -247,7 +247,7 @@ class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
             A string representing the total run time.
         """
         
-        return unicode(datetime.now() - datetime.fromtimestamp(self.metric['starting_time']))
+        return str(datetime.now() - datetime.fromtimestamp(self.metric['starting_time']))
     
     def get_url(self, path = ''):
         """

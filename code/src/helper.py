@@ -95,7 +95,7 @@ class Utils(Namespace):
                     break
                     
             if flag == True:  #matched
-                if regex != None and re.match(regex, unicode(d)) == None:  #if regex is given, match the regex
+                if regex != None and re.match(regex, str(d)) == None:  #if regex is given, match the regex
                     return False
                 elif (d_type_name == 'str' or d_type_name == 'unicode') and is_regex == True:  #if it is to be considered as a regex, then compile and check
                     try:
@@ -262,7 +262,7 @@ class Config:
         try:
             return self.data[attr]
         except KeyError as e:
-            raise AttributeError(unicode(e))
+            raise AttributeError(str(e))
         finally:
             self.lock.release()
         

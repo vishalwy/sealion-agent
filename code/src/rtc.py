@@ -227,10 +227,10 @@ class RTC(ThreadEx):
             #instantiate socket-io
             self.sio = SocketIO(self.globals.get_url(), **kwargs)
         except SocketIOHandShakeError as e:
-            _log.error('Failed to connect SocketIO; %s' % unicode(e))
+            _log.error('Failed to connect SocketIO; %s' % str(e))
             return None
         except Exception as e:
-            _log.error(unicode(e))
+            _log.error(str(e))
         
         return self
     
@@ -279,11 +279,11 @@ class RTC(ThreadEx):
             try:
                 self.sio.wait()  #wait an process socket-io events
             except SocketIOHandShakeError as e:  #a handshake error happens when authentication fails
-                _log.error('Failed to connect SocketIO; %s' % unicode(e))
+                _log.error('Failed to connect SocketIO; %s' % str(e))
                 connection.Connection().reconnect()  #reauthenticate
                 break
             except Exception as e:
-                _log.error(unicode(e))
+                _log.error(str(e))
                 self.is_disconnected = True  #for any other exception we set the disconnect flag, so that we can call config again
             
             if self.is_stop == True or self.globals.stop_event.is_set():  #do we need to stop

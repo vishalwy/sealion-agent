@@ -171,7 +171,7 @@ class SeaLion(Daemon):
                         os.remove(file_name)  #remove the dump as we sent it
                         _log.info('Removed dump %s' % file_name)
                     except Exception as e:
-                        _log.error('Failed to remove dump %s; %s' % (file_name, unicode(e)))
+                        _log.error('Failed to remove dump %s; %s' % (file_name, str(e)))
 
                 if globals.stop_event.is_set():  #do we need to stop now
                     _log.debug('CrashDumpSender received stop event')
@@ -193,7 +193,7 @@ class SeaLion(Daemon):
             buff.value = proc_name.encode('utf-8')
             libc.prctl(15, byref(buff), 0, 0, 0)
         except Exception as e:
-            _log.error('Failed to set process name; %s' % unicode(e))
+            _log.error('Failed to set process name; %s' % str(e))
         
     def initialize(self):        
         """
@@ -211,10 +211,10 @@ class SeaLion(Daemon):
                 os.setuid(user.pw_uid)  #set user id
                 os.environ['HOME'] = '/'  #reset the environment
         except KeyError as e:
-            sys.stderr.write('Failed to find user %s; %s\n' % (self.user_name, unicode(e)))
+            sys.stderr.write('Failed to find user %s; %s\n' % (self.user_name, str(e)))
             sys.exit(exit_status.AGENT_ERR_FAILED_FIND_USER)
         except Exception as e:
-            sys.stderr.write('Failed to change the group or user to %s; %s\n' % (self.user_name, unicode(e)))
+            sys.stderr.write('Failed to change the group or user to %s; %s\n' % (self.user_name, str(e)))
             sys.exit(exit_status.AGENT_ERR_FAILED_CHANGE_GROUP_OR_USER)
             
         try:
@@ -223,7 +223,7 @@ class SeaLion(Daemon):
             f = open(self.pidfile, 'w');
             f.close()
         except Exception as e:
-            sys.stderr.write(unicode(e) + '\n')
+            sys.stderr.write(str(e) + '\n')
             sys.exit(exit_status.AGENT_ERR_FAILED_PID_FILE)
         
         sys.excepthook = self.exception_hook  #set the exception hook so that we can generate crash dumps
@@ -280,9 +280,9 @@ class SeaLion(Daemon):
         
         try:
             #monit.sh to restart agent if it is killed
-            self.monit_pid = subprocess.Popen([exe_path + 'bin/monit.sh', unicode(os.getpid()), '%d' % self.monit_interval], preexec_fn = os.setpgrp).pid
+            self.monit_pid = subprocess.Popen([exe_path + 'bin/monit.sh', str(os.getpid()), '%d' % self.monit_interval], preexec_fn = os.setpgrp).pid
         except Exception as e:
-            _log.error('Failed to open monitoring script; %s' % unicode(e))
+            _log.error('Failed to open monitoring script; %s' % str(e))
         
         self.set_procname('sealiond')  #set process name for display purpose
         is_update_only_mode = False
