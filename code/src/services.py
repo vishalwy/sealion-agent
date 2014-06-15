@@ -232,7 +232,7 @@ class Executer(ThreadEx):
                 job.update({'return_code': 0, 'output': plugin.get_data()})
             except Exception as e:
                 #on failure we set the return_code to non zero so that output can be interpreted as error string
-                job.update({'return_code': 1, 'output': str(e)})
+                job.update({'return_code': 1, 'output': unicode(e)})
         
     def update_job(self, timestamp, details):
         """
@@ -317,7 +317,7 @@ class Executer(ThreadEx):
             #it is possible that the pipe is broken or the subprocess was terminated
             self.process.stdin.write(('%d %s: %s\n' % (job.exec_details['timestamp'], job.exec_details['output'].name, job.exec_details['command'])).encode('utf-8'))
         except Exception as e:
-            _log.error('Failed to write to bash; %s' % str(e))
+            _log.error('Failed to write to bash; %s' % unicode(e))
             return False
         
         return True
@@ -342,7 +342,7 @@ class Executer(ThreadEx):
             else:  #anything else is considered as an error
                 _log.error('Executer bash process returned \'%s\'' % line)
         except Exception as e:
-            _log.error('Failed to read from bash; %s' % str(e))
+            _log.error('Failed to read from bash; %s' % unicode(e))
             return False
         
         return True

@@ -21,6 +21,7 @@ exe_path = exe_path[:exe_path.rfind('/') + 1]
 
 #add module lookup paths to sys.path so that import can find them
 #we are inserting at the begining of sys.path so that we can be sure that we are importing the right module
+sys.path.insert(0, exe_path + 'src')
 sys.path.insert(0, exe_path + 'lib')
 
 #to avoid the bug reported at http://bugs.python.org/issue13684 we use a stable httplib version available with CPython 2.7.3
@@ -29,6 +30,7 @@ if sys.version_info[0] == 3:
     sys.path.insert(0, exe_path + 'lib/httplib')    
     
 import requests
+from constructs import unicode
 
 i, arg_len, output_format, output_file, urls, f = 0, len(sys.argv), '', '', [], None
 
@@ -123,7 +125,7 @@ except IndexError:
     sys.stderr.write('Error: ' + sys.argv[i - 1] + 'requires an argument\n')
     sys.exit(1)
 except Exception as e:
-    sys.stderr.write('Error: ' + str(e) + '\n')
+    sys.stderr.write('Error: ' + unicode(e) + '\n')
     sys.exit(1)
     
 if len(urls) == 0:  #no urls specified
@@ -144,7 +146,7 @@ try:
 
         sys.stdout.write(format_output(response))  #write out variable
 except Exception as e:
-    sys.stderr.write('Error: ' + str(e) + '\n')    
+    sys.stderr.write('Error: ' + unicode(e) + '\n')    
     sys.exit(1)
     
 f != None and f != sys.stdout and f.close()  #close output file

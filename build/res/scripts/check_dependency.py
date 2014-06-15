@@ -14,10 +14,17 @@ if float('%d.%d' % (sys.version_info[0], sys.version_info[1])) < 2.6:
     sys.stderr.write(PADDING + 'SeaLion agent requires python version 2.6 or above\n')
     sys.exit(ERR_INCOMPATIBLE_PYTHON)
     
+#Python 2.x vs 3.x
+try:
+    unicode = unicode
+except:
+    def unicode(object, *args, **kwargs):
+        return str(object)
+    
 try:
     import os.path
 except Exception as e:
-    sys.stderr.write(str(e) + '\n')
+    sys.stderr.write(unicode(e) + '\n')
     sys.exit(ERR_FAILED_DEPENDENCY)
     
 exe_path = os.path.dirname(os.path.abspath(__file__))
@@ -60,7 +67,7 @@ for module in modules:
     try:
         __import__(module)
     except (ImportError, TypeError, AttributeError) as e:
-        errors.append(str(e))
+        errors.append(unicode(e))
     except:
         pass
     
@@ -70,13 +77,13 @@ except ImportError:
     try:
         __import__('Queue')
     except ImportError as e:
-        errors.append(str(e))
+        errors.append(unicode(e))
 
 try:
     proxies = {'https': sys.argv[1]} if len(sys.argv) == 2 else {}
     requests.get(api_url, proxies = proxies, timeout = 10)
 except (ImportError, TypeError, AttributeError) as e:
-    errors.append(str(e))
+    errors.append(unicode(e))
 except:
     pass
 

@@ -13,11 +13,21 @@ import logging
 
 #Python 2.x vs 3.x
 try:
-    import queue as t
+    import queue as t_queue
 except ImportError:
-    import Queue as t
+    import Queue as t_queue
     
-queue = t  #export symbol queue 
+#Python 2.x vs 3.x
+try:
+    t_unicode = unicode
+except:
+    def unicode_3_x(object, *args, **kwargs):
+        return str(object)
+    
+    t_unicode = unicode_3_x
+    
+queue = t_queue  #export symbol queue 
+unicode = t_unicode  #export symbol unicode
 _log = logging.getLogger(__name__)  #module level logging
 
 class EmptyClass:
