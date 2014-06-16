@@ -26,6 +26,7 @@ exe_path = exe_path[:exe_path.rfind('/') + 1]
 #add module lookup paths to sys.path so that import can find them
 #we are inserting at the begining of sys.path so that we can be sure that we are importing the right module
 sys.path.insert(0, exe_path + 'src') 
+sys.path.insert(0, exe_path + 'lib') 
 
 import exit_status
 from daemon import Daemon
