@@ -1,51 +1,81 @@
+"""
+Plugin to collect Linux system metrics.
+This module should have get_data function that returns the data.
+"""
+
 import re
 import os
 import multiprocessing
 import time
 
 class NetError(Exception):
+    """
+    Class representing network releated exception.
+    """
+    
     pass
 
 class DiskError(Exception):
+    """
+    Class representing disk releated exception.
+    """
+    
     pass
 
 def get_data():
+    """
+    Function to get the data this module provides.
+    
+    Returns:
+        dict containing data.
+    """
+    
     data = {
-        'loadAvg1Min': 0,
-        'loadAvg5Min': 0,
-        'loadAvg15Min': 0,
-        'cpuUsage': [],
-        'memUsage': {},
-        'networkReads': [],
-        'networkWrites': [],
-        'diskReads': [],
-        'diskWrites': []
+        'loadAvg1Min': 0,  #load average 1 min
+        'loadAvg5Min': 0,  #load average 5 min
+        'loadAvg15Min': 0,  #load average 15 min
+        'cpuUsage': [],  #usage distribution for each cpu
+        'memUsage': {},  #memory usage 
+        'networkReads': [],  #network reads per second for each interface
+        'networkWrites': [],  #network writes per second for each interface
+        'diskReads': [],  #disk reads per second for each disk
+        'diskWrites': []  #disk writes per second for each disk
     }
     
-    data['loadAvg1Min'], data['loadAvg5Min'], data['loadAvg15Min'] = get_load_avg()
+    data['loadAvg1Min'], data['loadAvg5Min'], data['loadAvg15Min'] = get_load_avg()  #get load avg
     
+    #get the cpu usage for each cpu found
     for cpu, usage in get_cpu_usage().items():
         data['cpuUsage'].append({'name': cpu, 'value': usage})
         
-    data['memUsage'].update(get_mem_usage())
+    data['memUsage'].update(get_mem_usage())  #memory usage
     
+    #find network read and write for each interface
     for file in os.listdir('/sys/class/net/'):
         if file != 'lo':
             interface = file
-            network_reads, network_writes = get_net_rw(interface)
+            network_reads, network_writes = get_net_rw(interface)  #get reads and writes for this interface
             data['networkReads'].append({'name': interface, 'value': network_reads})
             data['networkWrites'].append({'name': interface, 'value': network_writes})
     
+    #find disk read and write for each logical disk
     with open('/proc/partitions') as f:
         for line in re.findall('^\s*[0-9]+\s+[1-9]+.*$', f.read(), flags = re.MULTILINE):
             device = re.search('\s([^\s]+)$', line).group(1).strip()
-            disk_reads, disk_writes = get_disk_rw(device)
+            disk_reads, disk_writes = get_disk_rw(device)  #get reads and writes for this partition
             data['diskReads'].append({'name': device, 'value': disk_reads})
             data['diskWrites'].append({'name': device, 'value': disk_writes})
     
     return data
 
 def get_load_avg():
+    """
+    Function to get load avg.
+    
+    Returns:
+        
+    """
+    
     with open('/proc/loadavg') as f:
         line = f.readline()
     
