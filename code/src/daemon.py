@@ -14,6 +14,7 @@ import atexit
 import signal
 import os.path
 import exit_status
+from constructs import unicode
 
 class Daemon(object):
     """
