@@ -23,7 +23,8 @@ except:
     
 try:
     import os.path
-except Exception as e:
+except Exception:
+    e = sys.exc_info()[1]
     sys.stderr.write(unicode(e) + '\n')
     sys.exit(ERR_FAILED_DEPENDENCY)
     
@@ -66,7 +67,8 @@ modules = [
 for module in modules:
     try:
         __import__(module)
-    except (ImportError, TypeError, AttributeError) as e:
+    except (ImportError, TypeError, AttributeError):
+        e = sys.exc_info()[1]
         errors.append(unicode(e))
     except:
         pass
@@ -76,13 +78,15 @@ try:
 except ImportError:
     try:
         __import__('Queue')
-    except ImportError as e:
+    except ImportError:
+        e = sys.exc_info()[1]
         errors.append(unicode(e))
 
 try:
     proxies = {'https': sys.argv[1]} if len(sys.argv) == 2 else {}
     requests.get(api_url, proxies = proxies, timeout = 10)
-except (ImportError, TypeError, AttributeError) as e:
+except (ImportError, TypeError, AttributeError):
+    e = sys.exc_info()[1]
     errors.append(unicode(e))
 except:
     pass
