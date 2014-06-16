@@ -1,5 +1,10 @@
 #!/usr/bin/python
 
+"""
+Script to perform dependency check for SeaLion agent.
+It checks for any missing module in the Python version.
+"""
+
 __copyright__ = '(c) Webyog, Inc'
 __author__ = 'Vishal P.R'
 __email__ = 'hello@sealion.com'

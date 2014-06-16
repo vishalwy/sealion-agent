@@ -8,20 +8,6 @@ import os
 import multiprocessing
 import time
 
-class NetError(Exception):
-    """
-    Class representing network releated exception.
-    """
-    
-    pass
-
-class DiskError(Exception):
-    """
-    Class representing disk releated exception.
-    """
-    
-    pass
-
 def get_data():
     """
     Function to get the data this module provides.
@@ -51,20 +37,23 @@ def get_data():
     data['memUsage'].update(get_mem_usage())  #memory usage
     
     #find network read and write for each interface
-    for file in os.listdir('/sys/class/net/'):
-        if file != 'lo':
-            interface = file
-            network_reads, network_writes = get_net_rw(interface)  #get reads and writes for this interface
-            data['networkReads'].append({'name': interface, 'value': network_reads})
-            data['networkWrites'].append({'name': interface, 'value': network_writes})
-    
+    for interface, rw in get_net_rw([file for file in os.listdir('/sys/class/net/') if file != 'lo']).items():
+        data['networkReads'].append({'name': interface, 'value': rw['reads']})
+        data['networkWrites'].append({'name': interface, 'value': rw['writes']})
+        
+        
+    for interface, rw in get_net_rw([file for file in os.listdir('/sys/class/net/') if file != 'lo']).items():
+        data['networkReads'].append({'name': interface, 'value': rw['reads']})
+        data['networkWrites'].append({'name': interface, 'value': rw['writes']})
+        
+        
     #find disk read and write for each logical disk
     with open('/proc/partitions') as f:
-        for line in re.findall('^\s*[0-9]+\s+[1-9]+.*$', f.read(), flags = re.MULTILINE):
-            device = re.search('\s([^\s]+)$', line).group(1).strip()
-            disk_reads, disk_writes = get_disk_rw(device)  #get reads and writes for this partition
-            data['diskReads'].append({'name': device, 'value': disk_reads})
-            data['diskWrites'].append({'name': device, 'value': disk_writes})
+        devices = [re.search('\s([^\s]+)$', line).group(1).strip() for line in re.findall('^\s*[0-9]+\s+[1-9]+.*$', f.read(), flags = re.MULTILINE)]
+        
+        for device, rw in get_disk_rw(devices).items():
+            data['diskReads'].append({'name': device, 'value': rw['reads']})
+            data['diskWrites'].append({'name': device, 'value': rw['writes']})
     
     return data
 
@@ -165,12 +154,12 @@ def get_mem_usage():
         'cached': mem_cached
     }
 
-def get_net_rw(interface, sampling_duration = 1):
+def get_net_rw(interfaces = [], sampling_duration = 1):
     """
     Function to get network reads and writes for the duration given.
     
     Args:
-        interface: the interface for which the read should be done.
+        interfaces: the interfaces for which the collection should be done.
         sampling_duration: time in seconds between the two collection.
     
     Returns:
@@ -183,35 +172,30 @@ def get_net_rw(interface, sampling_duration = 1):
             time.sleep(sampling_duration)
             content2 = f2.read()
             
+    data = dict(zip(interfaces, [dict(zip(['reads', 'writes'], [0, 0])) for interface in interfaces]))
+            
     for line in content1.splitlines():
-        if interface in line:
-            found = True
-            data = line.split('%s:' % interface)[1].split()
-            r_bytes1 = int(data[0])
-            w_bytes1 = int(data[8])
+        for interface in [interface_x for interface_x in interfaces if interface_x in line]:
+            fields = line.split('%s:' % interface)[1].split()
+            data[interface]['reads'] = int(fields[0])
+            data[interface]['writes'] = int(fields[8])
             break
-    
-    if not found:
-        raise NetError('interface not found: %r' % interface)
     
     for line in content2.splitlines():
-        if interface in line:
-            found = True
-            data = line.split('%s:' % interface)[1].split()
-            r_bytes2 = int(data[0])
-            w_bytes2 = int(data[8])
+        for interface in [interface_x for interface_x in interfaces if interface_x in line]:
+            fields = line.split('%s:' % interface)[1].split()
+            data[interface]['reads'] = (int(fields[0]) - data[interface]['reads']) / float(sampling_duration)
+            data[interface]['writes'] = (int(fields[8]) - data[interface]['writes']) / float(sampling_duration)
             break
     
-    r_bytes_per_sec = (r_bytes2 - r_bytes1) / float(sampling_duration)
-    w_bytes_per_sec = (w_bytes2 - w_bytes1) / float(sampling_duration)   
-    return (r_bytes_per_sec, w_bytes_per_sec)
+    return data
 
-def get_disk_rw(device, sampling_duration = 1):
+def get_disk_rw(devices = [], sampling_duration = 1):
     """
     Function to get disk reads and writes for the duration given.
     
     Args:
-        disk: logical partition
+        devices: devices for which the collection should be done.
         sampling_duration: time in seconds between the two collection.
     
     Returns:
@@ -223,25 +207,22 @@ def get_disk_rw(device, sampling_duration = 1):
             content1 = f1.read()
             time.sleep(sampling_duration)
             content2 = f2.read()
-    sep = '%s ' % device
-    found = False
-    for line in content1.splitlines():
-        if sep in line:
-            found = True
-            fields = line.strip().split(sep)[1].split()
-            num_reads1 = int(fields[0])
-            num_writes1 = int(fields[4])
-            break
             
-    if not found:
-        raise DiskError('device not found: %r' % device)
+    data = dict(zip(devices, [dict(zip(['reads', 'writes'], [0, 0])) for device in devices]))
+
+    for line in content1.splitlines():
+        for device in [device_x for device_x in devices if '%s ' % device_x in line]:
+            fields = line.strip().split('%s ' % device)[1].split()
+            data[device]['reads'] = int(fields[0])
+            data[device]['writes'] = int(fields[4])
+            break
     
     for line in content2.splitlines():
-        if sep in line:
-            fields = line.strip().split(sep)[1].split()
-            num_reads2 = int(fields[0])
-            num_writes2 = int(fields[4])
+        for device in [device_x for device_x in devices if '%s ' % device_x in line]:
+            fields = line.strip().split('%s ' % device)[1].split()
+            data[device]['reads'] = (int(fields[0]) - data[device]['reads']) / float(sampling_duration)
+            data[device]['writes'] = (int(fields[4]) - data[device]['writes']) / float(sampling_duration)
             break            
-    reads_per_sec = (num_reads2 - num_reads1) / float(sampling_duration)
-    writes_per_sec = (num_writes2 - num_writes1) / float(sampling_duration)   
-    return (reads_per_sec, writes_per_sec)
+            
+    return data
+
