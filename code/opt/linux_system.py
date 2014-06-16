@@ -112,8 +112,8 @@ def get_cpu_usage(*args):
     """
     Generator to get the cpu usage in percentage for the sampling duration given.
         
-    Returns:
-        A dict containing cpu usage percents for each cpu
+    Yields:
+        dict containing cpu usage percents for each cpu
     """
     
     keys = ['us', 'ni', 'sy', 'id', 'wa', 'hi', 'si', 'st']  #usage % to be returned
@@ -147,7 +147,7 @@ def get_cpu_usage(*args):
         del data[key]['hi']
         del data[key]['si']
     
-    yield  data
+    yield data
 
 def get_net_rw(sampling_duration):
     """
@@ -156,8 +156,8 @@ def get_net_rw(sampling_duration):
     Args:
         sampling_duration: time in seconds between the two collection.
     
-    Returns:
-        A dict containing network read and writes for each interface.
+    Yields:
+        dict containing network read and writes for each interface.
     """
     
     interfaces = [file for file in os.listdir('/sys/class/net/') if file != 'lo']  #network interfaces
@@ -194,8 +194,8 @@ def get_disk_rw(sampling_duration):
     Args:
         sampling_duration: time in seconds between the two collection.
     
-    Returns:
-        A dict containing disk reads and writes for each device.
+    Yields:
+        dict containing disk reads and writes for each device.
     """
     
     #get te list of devices
