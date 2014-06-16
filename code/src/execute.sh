@@ -4,6 +4,10 @@
 #This is an attempt to reduce the memory overhead in fork-exec as bash consumes less memory compared to Python.
 #It also enable parallel process execution using multiple CPU cores. 
 
+#Copyright  : (c) Webyog, Inc
+#Author     : Vishal P.R
+#Email      : hello@sealion.com
+
 #trap exit, and send signal to sub-shell jobs, which in turn kills their children
 trap "kill -SIGTERM $(jobs -p) >/dev/null 2>&1" EXIT
 

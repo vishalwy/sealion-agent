@@ -332,7 +332,7 @@ class Executer(ThreadEx):
         
         try:
             #it is possible that the pipe is broken or the subprocess was terminated
-            line = self.process.stdout.readline().decode('utf-8')
+            line = self.process.stdout.readline().decode('utf-8', 'replace').rstrip()
             data = line.split()
             
             if data[0] == 'warning:':  #bash has given some warning
