@@ -73,7 +73,7 @@ def get_load_avg():
     Function to get load avg.
     
     Returns:
-        
+        [loadAvg1Min, loadAvg5Min, loadAvg15Min]
     """
     
     with open('/proc/loadavg') as f:
@@ -82,29 +82,55 @@ def get_load_avg():
     return [float(x) for x in line.split()[:3]]
 
 def get_cpu_usage(sampling_duration = 1):
-    keys = ['us', 'ni', 'sy', 'id', 'wa', 'hi', 'si', 'st']
-    deltas = get_cpu_usage_deltas(sampling_duration)
+    """
+    Function to get the cpu usage in percentage for the sampling duration given.
+    
+    Args:
+        sampling_duration: time in seconds between the two collection.
+        
+    Returns:
+        A dict containing cpu usage percents for each cpu
+    """
+    
+    keys = ['us', 'ni', 'sy', 'id', 'wa', 'hi', 'si', 'st']  #usage % to be returned
+    deltas = get_cpu_usage_deltas(sampling_duration)  #get the usage deltas
     ret = {}
     
     for key in deltas:
+        #calculate the percentage
         total = sum(deltas[key])
         ret[key] = dict(zip(keys, [100 - (100 * (float(total - x) / total)) for x in deltas[key]]))
+        
+        #delete additional keys
         del ret[key]['hi']
         del ret[key]['si']
     
     return  ret
 
 def get_cpu_usage_deltas(sampling_duration = 1):
+    """
+    Helper function to get cpu usage deltas.
+    
+    Args:
+        sampling_duration: time in seconds between the two collection.
+        
+    Returns:
+        A dict containing cpu usage delta for each cpu
+    """
+    
     with open('/proc/stat') as f1:
         with open('/proc/stat') as f2:
-            content1 = f1.read()
+            content1 = f1.read()  #read stat for first collection
             time.sleep(sampling_duration)
-            content2 = f2.read()
+            content2 = f2.read()  #read stat for second collection
             
-    cpu_count = multiprocessing.cpu_count()
+    cpu_count = multiprocessing.cpu_count()  #total number of cpu cores available
     deltas, lines1, lines2 = {}, content1.splitlines(), content2.splitlines()
+    
+    #if only one cpu available, read only the first line, else read total cpu count lines starting from the second line
     i, cpu_count = (1, cpu_count + 1) if cpu_count > 1 else (0, 1)
     
+    #extract deltas
     while i < cpu_count:
         line_split1 = lines1[i].split()
         line_split2 = lines2[i].split()
@@ -114,6 +140,13 @@ def get_cpu_usage_deltas(sampling_duration = 1):
     return deltas
 
 def get_mem_usage():
+    """
+    Function to get memory usage.
+    
+    Returns:
+        dict containing memory usage stats
+    """
+    
     with open('/proc/meminfo') as f:
         for line in f:
             if line.startswith('MemTotal:'):
@@ -133,6 +166,17 @@ def get_mem_usage():
     }
 
 def get_net_rw(interface, sampling_duration = 1):
+    """
+    Function to get network reads and writes for the duration given.
+    
+    Args:
+        interface: the interface for which the read should be done.
+        sampling_duration: time in seconds between the two collection.
+    
+    Returns:
+        tuple containing reads and writes
+    """
+        
     with open('/proc/net/dev') as f1:
         with open('/proc/net/dev') as f2:
             content1 = f1.read()
@@ -163,6 +207,17 @@ def get_net_rw(interface, sampling_duration = 1):
     return (r_bytes_per_sec, w_bytes_per_sec)
 
 def get_disk_rw(device, sampling_duration = 1):
+    """
+    Function to get disk reads and writes for the duration given.
+    
+    Args:
+        disk: logical partition
+        sampling_duration: time in seconds between the two collection.
+    
+    Returns:
+        tuple containing reads and writes
+    """
+    
     with open('/proc/diskstats') as f1:
         with open('/proc/diskstats') as f2:
             content1 = f1.read()
