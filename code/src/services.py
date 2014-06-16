@@ -148,7 +148,7 @@ class Job:
             else:
                 #for a commandline job, output is the file containing data
                 self.exec_details['output'].seek(0, os.SEEK_SET)
-                data['data'] = self.exec_details['output'].read(256 * 1024).decode('utf-8', 'ignore')
+                data['data'] = self.exec_details['output'].read(256 * 1024).decode('utf-8', 'replace')
                 
                 if not data['data']:  #if the file is empty
                     data['data'] = 'No output produced'
