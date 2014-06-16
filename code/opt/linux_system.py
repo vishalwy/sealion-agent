@@ -121,7 +121,7 @@ def get_cpu_usage(*args):
     with open('/proc/stat') as f1:
         with open('/proc/stat') as f2:
             content1 = f1.read()  #first collection
-            yield  #yield so that caller can put delay before sampling again
+            yield {}  #yield so that caller can put delay before sampling again
             content2 = f2.read()  #second collection
             
     cpu_count = multiprocessing.cpu_count()  #total number of cpu cores available
@@ -165,7 +165,7 @@ def get_net_rw(sampling_duration):
     with open('/proc/net/dev') as f1:
         with open('/proc/net/dev') as f2:
             content1 = f1.read()  #first collection
-            yield  #yield so that caller can put delay before sampling again
+            yield {}  #yield so that caller can put delay before sampling again
             content2 = f2.read()  #second collection
             
     #initialize the dict with interfaces and values
@@ -205,7 +205,7 @@ def get_disk_rw(sampling_duration):
     with open('/proc/diskstats') as f1:
         with open('/proc/diskstats') as f2:
             content1 = f1.read()  #first collection
-            yield  #yield so that caller can put delay before sampling again
+            yield {}  #yield so that caller can put delay before sampling again
             content2 = f2.read()  #second collection
             
     #initialize the dict with interfaces and values
