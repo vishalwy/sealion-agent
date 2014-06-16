@@ -31,7 +31,7 @@ import exit_status
 from daemon import Daemon
 import helper
 from globals import Globals
-from constructs import *
+from constructs import unicode, ThreadEx
 
 _log = logging.getLogger(__name__)  #module level logging
 
