@@ -157,10 +157,10 @@ try:
         #retreive data chunkwise and write it to file
         for chunk in response.iter_content(chunk_size = 1024):
             if chunk:
-                if f == sys.stdout:
-                    f.buffer.write(chunk)
-                else:
+                try:
                     f.write(chunk)
+                except:
+                    f.buffer.write(chunk)
                     
                 f.flush()
 
