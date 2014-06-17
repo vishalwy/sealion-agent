@@ -43,6 +43,22 @@ kwargs = {
 session = requests.Session()
 method = session.get  #default request method
 
+def convert_special(data):
+    """
+    Function to convert specail charecters.
+    
+    Args:
+        data: string to be converted.
+        
+    Returns:
+        converted string
+    """
+    
+    try:
+        return data.encode('utf8').decode('unicode-escape').replace('%%', '%')
+    except:
+        return data.encode('utf8').decode('string-escape').replace('%%', '%')
+
 def format_output(response):
     """
     Function to format the output when -w is specified.
@@ -63,7 +79,7 @@ def format_output(response):
         
         return ret
     
-    return re.sub('%{[a-zA-Z0-9_]+}', eval_variable, output_format.decode('string-escape').replace('%%', '%'))
+    return re.sub('%{[a-zA-Z0-9_]+}', eval_variable, convert_special(output_format))
 
 def exception_hook(*args, **kwargs):
     """
@@ -141,7 +157,11 @@ try:
         #retreive data chunkwise and write it to file
         for chunk in response.iter_content(chunk_size = 1024):
             if chunk:
-                f.write(chunk)
+                if f == sys.stdout:
+                    f.buffer.write(chunk)
+                else:
+                    f.write(chunk)
+                    
                 f.flush()
 
         sys.stdout.write(format_output(response))  #write out variable
