@@ -52,6 +52,13 @@ while read -r LINE ; do
         }
 
         trap "kill_children" SIGTERM  #kill children on exit
+
+        if [ "$BASHPID" == "" ] ; then  #for bash versions where BASHPID does not exist
+            read BASHPID </proc/self/stat
+            BASHPID=($BASHPID)
+            BASHPID=${BASHPID[4]}  #pid is at the 4th index
+        fi
+
         echo "data: ${ACTIVITY[$TIMESTAMP]} pid $BASHPID"  #write out the process id for tracking purpose
 
         if [ $NO_SETSID -eq 0 ] ; then  #run it in a new session
