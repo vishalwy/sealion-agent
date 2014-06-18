@@ -247,8 +247,8 @@ class OfflineStore(ThreadEx):
         if is_existing_table == True:  #we need to validate the schema for existing table
             try:
                 self.cursor.execute('PRAGMA TABLE_INFO(data)')
-                schema = set([col if col[-1] == 0 else col[:-1] + (1,) for col in schema])
-                cur_schema = set([col if col[-1] == 0 else col[:-1] + (1,) for col in self.cursor.fetchall()])
+                schema = set([col[:3] + (1 if col[-1] else 0,) for col in schema])
+                cur_schema = set([col[:3] + (1 if col[-1] else 0,) for col in self.cursor.fetchall()])
 
                 if len(schema - cur_schema) > 0 or len(cur_schema - schema) > 0:  #check if existing schema and proposed schema are same
                     return False
