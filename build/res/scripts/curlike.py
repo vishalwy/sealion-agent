@@ -138,7 +138,7 @@ try:
 
         i += 1  #next option
 except IndexError:
-    sys.stderr.write('Error: ' + sys.argv[i - 1] + 'requires an argument\n')
+    sys.stderr.write('Error: ' + sys.argv[i - 1] + ' requires an argument\n')
     sys.exit(1)
 except Exception as e:
     sys.stderr.write('Error: ' + unicode(e) + '\n')
