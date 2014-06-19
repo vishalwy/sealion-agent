@@ -283,7 +283,7 @@ class Executer(ThreadEx):
             if self.is_stop:  #should we stop now
                 _log.debug('%s received stop event' % self.name)
                 break
-            
+                
     @property
     def process(self):
         """
@@ -374,6 +374,7 @@ class Executer(ThreadEx):
                 os.waitpid(self.exec_process.pid, os.WUNTRACED)
                 self.exec_process.stdin.close()
                 self.exec_process.stdout.close()
+                self.exec_process = None
         except:
             pass
                 
@@ -546,6 +547,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
                 break
 
         self.stop_consumers()  #stop the consumers
+        self.executer.stop()  #stop executer for suprocess
         
     def start_consumers(self, count):
         """

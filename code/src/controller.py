@@ -43,7 +43,6 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         self.is_stop = False  #flag determines to stop the execution of controller
         self.main_thread = threading.current_thread()  #reference for main thread
         self.updater = None  #updater thread
-        self.job_producer = None  #JobProducer instance
     
     def handle_response(self, status):
         """
@@ -189,13 +188,13 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                     break
                     
                 store = storage.Storage()  #Storage instance
-                self.job_producer = services.JobProducer(store)  #JobProducer instance
+                job_producer = services.JobProducer(store)  #JobProducer instance
 
                 if store.start() == False:  #try to start the store
                     self.globals.set_time_metric('stopping_time')
                     break
                     
-                self.job_producer.start()  #start job producer
+                job_producer.start()  #start job producer
 
                 while 1:              
                     if Controller.is_rtc_heartbeating() == False:  #check socket-io heartbeat. if it is not beating we need to call the config
@@ -204,7 +203,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                     finished_job_count = 0  #count of finished jobs in this iteration
 
                     #get the finished jobs and post the output
-                    for job in self.job_producer.executer.finish_jobs():
+                    for job in job_producer.executer.finish_jobs():
                         job.post_output()
                         finished_job_count += 1
 
@@ -224,7 +223,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         #monitor current thread to prevent agent from hanging, as the next stmt waits for all the threads to stop
         helper.ThreadMonitor().register(callback = exit_status.AGENT_ERR_NOT_RESPONDING)
         self.stop_threads()  
-        
+        self.is_stop = True
         _log.debug('%s generating SIGALRM', self.name)
         signal.alarm(1)  #generate signal to wake up the main thread
             
@@ -233,7 +232,6 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         Public method to stop the controller and in turn the agent.
         """
         
-        self.is_stop = True
         api.session.stop()  #set the global stop event
         
     def stop_threads(self):
@@ -243,7 +241,6 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         
         _log.debug('Stopping all threads.')
         rtc.session and rtc.session.stop()  #stop socket-io
-        self.job_producer and self.job_producer.executer and self.job_producer.executer.stop()  #stop executer subprocess
         api.session.logout()  #logout from currrent session 
         api.session.close()  #close the session, so that any blocking operation in the session is aborted immediately
         threads = threading.enumerate()
