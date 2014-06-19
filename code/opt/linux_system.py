@@ -1,89 +1,95 @@
+"""
+Plugin to collect Linux system metrics.
+This module should have get_data function that returns the data.
+"""
+
+__copyright__ = '(c) Webyog, Inc'
+__author__ = 'Vishal P.R'
+__email__ = 'hello@sealion.com'
+
 import re
 import os
 import multiprocessing
 import time
 
-class NetError(Exception):
-    pass
-
-class DiskError(Exception):
-    pass
-
 def get_data():
+    """
+    Function to get the data this module provides.
+    
+    Returns:
+        dict containing data.
+    """
+    
     data = {
-        'loadAvg1Min': 0,
-        'loadAvg5Min': 0,
-        'loadAvg15Min': 0,
-        'cpuUsage': [],
-        'memUsage': {},
-        'networkReads': [],
-        'networkWrites': [],
-        'diskReads': [],
-        'diskWrites': []
+        'loadAvg1Min': 0,  #load average 1 min
+        'loadAvg5Min': 0,  #load average 5 min
+        'loadAvg15Min': 0,  #load average 15 min
+        'cpuUsage': [],  #usage distribution for each cpu
+        'memUsage': {},  #memory usage 
+        'networkReads': [],  #network reads per second for each interface
+        'networkWrites': [],  #network writes per second for each interface
+        'diskReads': [],  #disk reads per second for each disk
+        'diskWrites': []  #disk writes per second for each disk
     }
     
-    data['loadAvg1Min'], data['loadAvg5Min'], data['loadAvg15Min'] = get_load_avg()
+    #metrics that doesnt need sampling
+    data['loadAvg1Min'], data['loadAvg5Min'], data['loadAvg15Min'] = get_load_avg()  #get load avg
+    data['memUsage'].update(get_mem_usage())  #memory usage
     
-    for cpu, usage in get_cpu_usage().items():
+    #metrics that needs sampling
+    #they are written as a generator so that we can sleep before collection again
+    sampling_duration = 1
+    cpu_usage_gen = get_cpu_usage(sampling_duration)  #generator for cpu usage
+    net_rw_gen = get_net_rw(sampling_duration)  #generator for network read write
+    disk_rw_gen = get_disk_rw(sampling_duration)  #generator for disk read write
+        
+    while 1:  #now start sampling, whenever we have walid data, we can exit the loop
+        cpu_usage = next(cpu_usage_gen)
+        net_rw = next(net_rw_gen)
+        disk_rw = next(disk_rw_gen)
+        
+        if cpu_usage or net_rw or disk_rw:  #we have valid data
+            break
+        
+        time.sleep(sampling_duration)
+    
+    #append cpu usage for each cpu core
+    for cpu, usage in cpu_usage.items():
         data['cpuUsage'].append({'name': cpu, 'value': usage})
         
-    data['memUsage'].update(get_mem_usage())
-    
-    for file in os.listdir('/sys/class/net/'):
-        if file != 'lo':
-            interface = file
-            network_reads, network_writes = get_net_rw(interface)
-            data['networkReads'].append({'name': interface, 'value': network_reads})
-            data['networkWrites'].append({'name': interface, 'value': network_writes})
-    
-    with open('/proc/partitions') as f:
-        for line in re.findall('^\s*[0-9]+\s+[1-9]+.*$', f.read(), flags = re.MULTILINE):
-            device = re.search('\s([^\s]+)$', line).group(1).strip()
-            disk_reads, disk_writes = get_disk_rw(device)
-            data['diskReads'].append({'name': device, 'value': disk_reads})
-            data['diskWrites'].append({'name': device, 'value': disk_writes})
+    #append network read and write for each interface
+    for interface, rw in net_rw.items():
+        data['networkReads'].append({'name': interface, 'value': rw['reads']})
+        data['networkWrites'].append({'name': interface, 'value': rw['writes']})        
+        
+    #append disk read and write for each logical disk
+    for device, rw in disk_rw.items():
+        data['diskReads'].append({'name': device, 'value': rw['reads']})
+        data['diskWrites'].append({'name': device, 'value': rw['writes']})
     
     return data
 
 def get_load_avg():
+    """
+    Function to get load avg.
+    
+    Returns:
+        [loadAvg1Min, loadAvg5Min, loadAvg15Min]
+    """
+    
     with open('/proc/loadavg') as f:
         line = f.readline()
     
     return [float(x) for x in line.split()[:3]]
 
-def get_cpu_usage(sampling_duration = 1):
-    keys = ['us', 'ni', 'sy', 'id', 'wa', 'hi', 'si', 'st']
-    deltas = get_cpu_usage_deltas(sampling_duration)
-    ret = {}
-    
-    for key in deltas:
-        total = sum(deltas[key])
-        ret[key] = dict(zip(keys, [100 - (100 * (float(total - x) / total)) for x in deltas[key]]))
-        del ret[key]['hi']
-        del ret[key]['si']
-    
-    return  ret
-
-def get_cpu_usage_deltas(sampling_duration = 1):
-    with open('/proc/stat') as f1:
-        with open('/proc/stat') as f2:
-            content1 = f1.read()
-            time.sleep(sampling_duration)
-            content2 = f2.read()
-            
-    cpu_count = multiprocessing.cpu_count()
-    deltas, lines1, lines2 = {}, content1.splitlines(), content2.splitlines()
-    i, cpu_count = (1, cpu_count + 1) if cpu_count > 1 else (0, 1)
-    
-    while i < cpu_count:
-        line_split1 = lines1[i].split()
-        line_split2 = lines2[i].split()
-        deltas[line_split1[0]] = [int(b) - int(a) for a, b in zip(line_split1[1:], line_split2[1:])]
-        i += 1
-    
-    return deltas
-
 def get_mem_usage():
+    """
+    Function to get memory usage.
+    
+    Returns:
+        dict containing memory usage stats
+    """
+    
     with open('/proc/meminfo') as f:
         for line in f:
             if line.startswith('MemTotal:'):
@@ -102,61 +108,121 @@ def get_mem_usage():
         'cached': mem_cached
     }
 
-def get_net_rw(interface, sampling_duration = 1):
+def get_cpu_usage(*args):
+    """
+    Generator to get the cpu usage in percentage for the sampling duration given.
+        
+    Yields:
+        dict containing cpu usage percents for each cpu
+    """
+    
+    keys = ['us', 'ni', 'sy', 'id', 'wa', 'hi', 'si', 'st']  #usage % to be returned
+    
+    with open('/proc/stat') as f1:
+        with open('/proc/stat') as f2:
+            content1 = f1.read()  #first collection
+            yield {}  #yield so that caller can put delay before sampling again
+            content2 = f2.read()  #second collection
+            
+    cpu_count = multiprocessing.cpu_count()  #total number of cpu cores available
+    lines1, lines2 = content1.splitlines(), content2.splitlines()
+    data, deltas = {}, {}
+    
+    #if only one cpu available, read only the first line, else read total cpu count lines starting from the second line
+    i, cpu_count = (1, cpu_count + 1) if cpu_count > 1 else (0, 1)
+    
+    #extract deltas
+    while i < cpu_count:
+        line_split1 = lines1[i].split()
+        line_split2 = lines2[i].split()
+        deltas[line_split1[0]] = [int(b) - int(a) for a, b in zip(line_split1[1:], line_split2[1:])]
+        i += 1
+    
+    for key in deltas:
+        #calculate the percentage
+        total = sum(deltas[key])
+        data[key] = dict(zip(keys, [100 - (100 * (float(total - x) / total)) for x in deltas[key]]))
+        
+        #delete additional keys
+        del data[key]['hi']
+        del data[key]['si']
+    
+    yield data
+
+def get_net_rw(sampling_duration):
+    """
+    Generator to get network reads and writes for the duration given.
+    
+    Args:
+        sampling_duration: time in seconds between the two collection.
+    
+    Yields:
+        dict containing network read and writes for each interface.
+    """
+    
+    interfaces = [file for file in os.listdir('/sys/class/net/') if file != 'lo']  #network interfaces
+        
     with open('/proc/net/dev') as f1:
         with open('/proc/net/dev') as f2:
-            content1 = f1.read()
-            time.sleep(sampling_duration)
-            content2 = f2.read()
+            content1 = f1.read()  #first collection
+            yield {}  #yield so that caller can put delay before sampling again
+            content2 = f2.read()  #second collection
             
-    for line in content1.splitlines():
-        if interface in line:
-            found = True
-            data = line.split('%s:' % interface)[1].split()
-            r_bytes1 = int(data[0])
-            w_bytes1 = int(data[8])
+    #initialize the dict with interfaces and values
+    data = dict(zip(interfaces, [dict(zip(['reads', 'writes'], [0, 0])) for interface in interfaces]))
+            
+    for line in content1.splitlines():  #read through first collection
+        for interface in [interface_x for interface_x in interfaces if interface_x in line]:
+            fields = line.split('%s:' % interface)[1].split()
+            data[interface]['reads'] = int(fields[0])
+            data[interface]['writes'] = int(fields[8])
             break
     
-    if not found:
-        raise NetError('interface not found: %r' % interface)
-    
-    for line in content2.splitlines():
-        if interface in line:
-            found = True
-            data = line.split('%s:' % interface)[1].split()
-            r_bytes2 = int(data[0])
-            w_bytes2 = int(data[8])
+    for line in content2.splitlines():  #read through second collection
+        for interface in [interface_x for interface_x in interfaces if interface_x in line]:
+            fields = line.split('%s:' % interface)[1].split()
+            data[interface]['reads'] = (int(fields[0]) - data[interface]['reads']) / float(sampling_duration)
+            data[interface]['writes'] = (int(fields[8]) - data[interface]['writes']) / float(sampling_duration)
             break
     
-    r_bytes_per_sec = (r_bytes2 - r_bytes1) / float(sampling_duration)
-    w_bytes_per_sec = (w_bytes2 - w_bytes1) / float(sampling_duration)   
-    return (r_bytes_per_sec, w_bytes_per_sec)
+    yield data
 
-def get_disk_rw(device, sampling_duration = 1):
+def get_disk_rw(sampling_duration):
+    """
+    Generator to get disk reads and writes for the duration given.
+    
+    Args:
+        sampling_duration: time in seconds between the two collection.
+    
+    Yields:
+        dict containing disk reads and writes for each device.
+    """
+    
+    #get te list of devices
+    with open('/proc/partitions') as f:
+        devices = [re.search('\s([^\s]+)$', line).group(1).strip() for line in re.findall('^\s*[0-9]+\s+[1-9]+.*$', f.read(), flags = re.MULTILINE)]
+    
     with open('/proc/diskstats') as f1:
         with open('/proc/diskstats') as f2:
-            content1 = f1.read()
-            time.sleep(sampling_duration)
-            content2 = f2.read()
-    sep = '%s ' % device
-    found = False
-    for line in content1.splitlines():
-        if sep in line:
-            found = True
-            fields = line.strip().split(sep)[1].split()
-            num_reads1 = int(fields[0])
-            num_writes1 = int(fields[4])
-            break
+            content1 = f1.read()  #first collection
+            yield {}  #yield so that caller can put delay before sampling again
+            content2 = f2.read()  #second collection
             
-    if not found:
-        raise DiskError('device not found: %r' % device)
+    #initialize the dict with interfaces and values
+    data = dict(zip(devices, [dict(zip(['reads', 'writes'], [0, 0])) for device in devices]))
+
+    for line in content1.splitlines():  #read through first collection
+        for device in [device_x for device_x in devices if '%s ' % device_x in line]:
+            fields = line.strip().split('%s ' % device)[1].split()
+            data[device]['reads'] = int(fields[0])
+            data[device]['writes'] = int(fields[4])
+            break
     
-    for line in content2.splitlines():
-        if sep in line:
-            fields = line.strip().split(sep)[1].split()
-            num_reads2 = int(fields[0])
-            num_writes2 = int(fields[4])
+    for line in content2.splitlines():  #read through second collection
+        for device in [device_x for device_x in devices if '%s ' % device_x in line]:
+            fields = line.strip().split('%s ' % device)[1].split()
+            data[device]['reads'] = (int(fields[0]) - data[device]['reads']) / float(sampling_duration)
+            data[device]['writes'] = (int(fields[4]) - data[device]['writes']) / float(sampling_duration)
             break            
-    reads_per_sec = (num_reads2 - num_reads1) / float(sampling_duration)
-    writes_per_sec = (num_writes2 - num_writes1) / float(sampling_duration)   
-    return (reads_per_sec, writes_per_sec)
+            
+    yield data

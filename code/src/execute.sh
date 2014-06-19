@@ -4,6 +4,10 @@
 #This is an attempt to reduce the memory overhead in fork-exec as bash consumes less memory compared to Python.
 #It also enable parallel process execution using multiple CPU cores. 
 
+#Copyright  : (c) Webyog, Inc
+#Author     : Vishal P.R
+#Email      : hello@sealion.com
+
 #trap exit, and send signal to sub-shell jobs, which in turn kills their children
 trap "kill -SIGTERM $(jobs -p) >/dev/null 2>&1" EXIT
 
@@ -48,6 +52,13 @@ while read -r LINE ; do
         }
 
         trap "kill_children" SIGTERM  #kill children on exit
+
+        if [ "$BASHPID" == "" ] ; then  #for bash versions where BASHPID does not exist
+            read BASHPID </proc/self/stat
+            BASHPID=($BASHPID)
+            BASHPID=${BASHPID[4]}  #pid is at the 4th index
+        fi
+
         echo "data: ${ACTIVITY[$TIMESTAMP]} pid $BASHPID"  #write out the process id for tracking purpose
 
         if [ $NO_SETSID -eq 0 ] ; then  #run it in a new session
