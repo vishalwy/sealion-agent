@@ -135,7 +135,7 @@ mkdir -p $TARGET/$OUTPUT/agent/bin
 generate_scripts
 
 if [ "$DOMAIN"  != "$DEFAULT_DOMAIN" ] ; then
-    sed 's/\("level"\s*:\s*\)"[^"]\+"/\1"debug"/' "$TARGET/$OUTPUT/agent/etc/config.json"
+    sed -i 's/\("level"\s*:\s*\)"[^"]\+"/\1"debug"/' "$TARGET/$OUTPUT/agent/etc/config.json"
     echo "Setting agent logging level to 'debug'"
 fi
 
