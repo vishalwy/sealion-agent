@@ -315,6 +315,11 @@ fi
 if [ -f "$SERVICE_FILE" ] ; then
     echo "Stopping agent..."
     "$SERVICE_FILE" stop
+    RET=$?
+
+    if [[ $RET -eq 34 || $RET -eq 127 ]] ; then
+        exit $RET
+    fi
 fi
 
 echo "Copying files..."
