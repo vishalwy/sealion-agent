@@ -244,8 +244,13 @@ class Executer(ThreadEx):
         """
         
         Executer.jobs_lock.acquire()  #this has to be atomic as multiple threads reads/writes
-        Executer.jobs['%d' % timestamp].update(details)
-        Executer.jobs_lock.release()
+        
+        try:
+            Executer.jobs['%d' % timestamp].update(details)
+        except KeyError:
+            _log.error('Failed to update job detail; no active job @ %d ' % timestamp)
+        finally:
+            Executer.jobs_lock.release()
 
     def finish_jobs(self):
         """
