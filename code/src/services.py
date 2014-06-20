@@ -116,6 +116,11 @@ class Job:
         """
         
         if type(details) is dict:
+            try:
+                details['pid'] = int(details['pid'])
+            except:
+                pass
+            
             self.exec_details.update(details)
         
             if 'return_code' in details:  #if return_code is in the details then we assume the the job is finished
@@ -261,8 +266,13 @@ class Executer(ThreadEx):
         """
         
         Executer.jobs_lock.acquire()  #this has to be atomic as multiple threads reads/writes
-        Executer.jobs['%d' % timestamp].update(details)
-        Executer.jobs_lock.release()
+        
+        try:
+            Executer.jobs['%d' % timestamp].update(details)
+        except KeyError:
+            pass  #it is possible that bash returns a process timestamp that has been killed already
+        finally:
+            Executer.jobs_lock.release()
 
     def finish_jobs(self):
         """
@@ -406,6 +416,15 @@ class Executer(ThreadEx):
         self.is_stop = True
         self.wait(True)  #terminate the bash subprocess and wait
         self.process_lock.release()
+        
+        Executer.jobs_lock.acquire()  #this has to be atomic as multiple threads reads/writes
+        
+        #loop throgh the jobs and close temperory files
+        for job_timestamp in list(Executer.jobs.keys()):  
+            job = Executer.jobs[job_timestamp]
+            job.close_file()
+        
+        Executer.jobs_lock.release()
         
 class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
     """
