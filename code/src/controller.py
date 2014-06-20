@@ -204,7 +204,8 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
 
                     #get the finished jobs and post the output
                     for job in job_producer.executer.finish_jobs():
-                        job.post_output()
+                        job_data = job.get_data()
+                        job_data != None and store.push(job.exec_details['_id'], job_data)
                         finished_job_count += 1
 
                     finished_job_count and _log.debug('Finished execution of %d activities.' % finished_job_count)

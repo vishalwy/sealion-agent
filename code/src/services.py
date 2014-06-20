@@ -36,13 +36,12 @@ class Job:
     Represents a job, that can be executed
     """
     
-    def __init__(self, activity, store):
+    def __init__(self, activity):
         """
         Constructor
         
         Args:
             activity: dict representing the activity to be executed
-            store: Storage instance used to post data
         """
         
         self.is_whitelisted = activity['is_whitelisted']  #is this job allowed to execute
@@ -59,8 +58,6 @@ class Job:
             '_id': activity['details']['_id'],  #activity id
             'command': activity['details']['command']  #command to be executed for commandline job, else the python module name for plugin job
         }
-        
-        self.store = store  #Storage instance used to post data
 
     def prepare(self):
         """
@@ -123,10 +120,13 @@ class Job:
         
             if 'return_code' in details:  #if return_code is in the details then we assume the the job is finished
                 self.status = JobStatus.FINISHED 
-
-    def post_output(self):
+                
+    def get_data(self):
         """
-        Public method to post the output to storage
+        Public method to get the data.
+        
+        Returns:
+            Dict containing the data to be posted on success, else None.
         """
         
         data = None
@@ -147,18 +147,35 @@ class Job:
                 data['data'] = self.exec_details['output']
             else:
                 #for a commandline job, output is the file containing data
-                self.exec_details['output'].seek(0, os.SEEK_SET)
-                data['data'] = self.exec_details['output'].read(256 * 1024).decode('utf-8', 'replace')
+                data['data'] = self.read_output
                 
-                if not data['data']:  #if the file is empty
-                    data['data'] = 'No output produced'
-                    _log.debug('No output/error found for activity (%s @ %d)' % (self.exec_details['_id'], self.exec_details['timestamp']))
-                
-        self.close_file()  #close the file so that it is removed from the disk
+        return data
 
-        if data:  #push the data to store
-            _log.debug('Pushing activity (%s @ %d) to %s' % (self.exec_details['_id'], self.exec_details['timestamp'], self.store.__class__.__name__))
-            self.store.push(self.exec_details['_id'], data)
+    def read_output(self):
+        """
+        Public method to read the output for commandline job.
+        A side effect of this method is that it closes any ouput file, so that next attempt will return empty string.
+        
+        Returns:
+            Output read.
+        """
+        
+        _log.debug('Reading output from activity (%s @ %d)' % (self.exec_details['_id'], self.exec_details['timestamp']))
+        
+        try:
+            #for a commandline job, output is the file containing data
+            self.exec_details['output'].seek(0, os.SEEK_SET)
+            data = self.exec_details['output'].read(256 * 1024).decode('utf-8', 'replace')
+
+            if not data:  #if the file is empty
+                data = 'No output produced'
+                _log.debug('No output/error found for activity (%s @ %d)' % (self.exec_details['_id'], self.exec_details['timestamp']))
+        except Exception as e:
+            data = ''
+            _log.error('Could not read output from activity (%s @ %d); %s' % (self.exec_details['_id'], self.exec_details['timestamp'], unicode(e)))
+            
+        self.close_file()  #close the file so that it is removed from the disk            
+        return data
 
     def close_file(self):
         """
@@ -457,7 +474,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
             #whether the activity interval expired
             #we have to put the job in the queue if the execution timestamp comes before the scheduler runs again
             if activity['next_exec_timestamp'] <= t + self.sleep_interval:
-                jobs.append(Job(activity, self.store))  #add a job for the activity
+                jobs.append(Job(activity))  #add a job for the activity
                 activity['next_exec_timestamp'] = activity['next_exec_timestamp'] + activity['details']['interval']  #update the next execution timestamp
 
         jobs.sort(key = lambda job: job.exec_timestamp)  #sort the jobs based on the execution timestamp
