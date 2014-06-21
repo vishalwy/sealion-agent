@@ -132,6 +132,7 @@ class Job:
         
         Returns:
             Dict containing the data to be posted on success, else None.
+            The data key holds either the method to read ouput or a dict if it is a plugin activity or a string
         """
         
         data = None
@@ -152,6 +153,8 @@ class Job:
                 data['data'] = self.exec_details['output']
             else:
                 #for a commandline job, output is the file containing data
+                #we supply the instance method to read the output on demand
+                #this reduces the memory used unneceserily reading the output and putting it in the queue
                 data['data'] = self.read_output
                 
         return data
@@ -165,8 +168,6 @@ class Job:
             Output read.
         """
         
-        _log.debug('Reading output from activity (%s @ %d)' % (self.exec_details['_id'], self.exec_details['timestamp']))
-        
         try:
             #for a commandline job, output is the file containing data
             self.exec_details['output'].seek(0, os.SEEK_SET)
@@ -175,6 +176,8 @@ class Job:
             if not data:  #if the file is empty
                 data = 'No output produced'
                 _log.debug('No output/error found for activity (%s @ %d)' % (self.exec_details['_id'], self.exec_details['timestamp']))
+                
+            _log.debug('Read output from activity (%s @ %d)' % (self.exec_details['_id'], self.exec_details['timestamp']))
         except Exception as e:
             data = ''
             _log.error('Could not read output from activity (%s @ %d); %s' % (self.exec_details['_id'], self.exec_details['timestamp'], unicode(e)))
@@ -217,6 +220,7 @@ class Executer(ThreadEx):
         self.process_timestamp = 0  #timestamp in second when the bash process was created
         self.is_stop = False  #stop flag for the thread
         self.globals = globals.Globals()  #reference to Globals for optimized access
+        self.daemon = True  #run this thread as daemon as it should not block agent from shutting down
         self.globals.event_dispatcher.bind('terminate', self.stop)  #bind to terminate event so that we can terminate bash process
         
         #use the job timeout defined in the config if we have one
@@ -345,6 +349,7 @@ class Executer(ThreadEx):
         if self.wait() and not self.is_stop:
             self.exec_process = subprocess.Popen(['bash', globals.Globals().exe_path + 'src/execute.sh'], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, preexec_fn = os.setpgrp)
             self.process_timestamp = time.time()
+            _log.debug('Executer bash process %d created' % self.exec_process.pid)
         
         self.process_lock.release()
         return self.exec_process
@@ -419,8 +424,6 @@ class Executer(ThreadEx):
             if is_terminated == True:
                 is_force == False and _log.error('Executer bash process %d was terminated', self.exec_process.pid)
                 os.waitpid(self.exec_process.pid, os.WUNTRACED)
-                self.exec_process.stdin.close()
-                self.exec_process.stdout.close()
                 self.exec_process = None
         except:
             pass
