@@ -214,6 +214,7 @@ class Executer(ThreadEx):
         ThreadEx.__init__(self)  #inititalize the base class
         self.exec_process = None  #bash process instance
         self.process_lock = threading.RLock()  #thread lock for bash process instance
+        self.process_timestamp = 0  #timestamp in second when the bash process was created
         self.is_stop = False  #stop flag for the thread
         self.globals = globals.Globals()  #reference to Globals for optimized access
         self.globals.event_dispatcher.bind('terminate', self.stop)  #bind to terminate event so that we can terminate bash process
@@ -297,12 +298,30 @@ class Executer(ThreadEx):
             if job.status != JobStatus.RUNNING:
                 finished_jobs.append(job)
                 del Executer.jobs[job_timestamp]
-
+                
+        not finished_jobs and not Executer.jobs and self.timeout_process()
         Executer.jobs_lock.release()
         return finished_jobs
+    
+    def timeout_process(self):
+        """
+        Method to terminate the bash subprocess if it has been executing for some time.
+        This is done to avoid memory usage in bash subprocess growing.
+        """
+        
+        self.process_lock.acquire()  #this has to be atomic as multiple threads reads/writes
+        timeout = 30 * 60
+        
+        if self.exec_process and time.time() - self.process_timestamp >= timeout:  #if it is executing for some time
+            _log.debug('Terminatng executer bash process %d as it is been running for more than %d seconds' % (self.exec_process.pid, timeout))
+            self.wait(True)
+            
+        self.process_lock.release()
         
     def exe(self):
-        "Method executes in a new thread."
+        """
+        Method executes in a new thread.
+        """
         
         while 1:
             self.read()  #blocking read from bash suprocess
@@ -323,8 +342,9 @@ class Executer(ThreadEx):
         self.process_lock.acquire()  #this has to be atomic as multiple threads reads/writes
  
         #self.wait returns True if the bash suprocess is terminated, in that case we will create a new bash process instance
-        if self.wait() and self.is_stop == False:
+        if self.wait() and not self.is_stop:
             self.exec_process = subprocess.Popen(['bash', globals.Globals().exe_path + 'src/execute.sh'], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, preexec_fn = os.setpgrp)
+            self.process_timestamp = time.time()
         
         self.process_lock.release()
         return self.exec_process
