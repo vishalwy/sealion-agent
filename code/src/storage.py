@@ -335,7 +335,12 @@ class OfflineStore(ThreadEx):
                 if not row:
                     break
                     
-                rows.append((row[0], row[1], row[2], row[3], json.loads(row[4])))  #we have to convert row[4] from string, as it can be a dict representation
+                try:
+                    #we have to convert row[4] from string, as it can be a dict representation
+                    rows.append((row[0], row[1], row[2], row[3], json.loads(row[4])))
+                except:
+                    #backward compatiblity for agent version < 3.1.0 as the string was written without escaping
+                    rows.append((row[0], row[1], row[2], row[3], row[4]))
                 
             self.cursor.execute('SELECT COUNT(*) FROM data')
             total_rows = self.cursor.fetchone()[0]  #get the total number of rows
