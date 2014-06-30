@@ -138,7 +138,6 @@ def run(is_update_only_mode = False):
         is_update_only_mode: whether to run the agent in update only mode
     """
     
-    os.nice(19)  #set the process niceness, so that it wont come in the way of high priority tasks
     globals.is_update_only_mode = is_update_only_mode
     _log.info('Agent starting up.')
     _log.info('Using python binary at %s.' % sys.executable)

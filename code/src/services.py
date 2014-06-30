@@ -314,9 +314,9 @@ class Executer(ThreadEx):
         """
         
         self.process_lock.acquire()  #this has to be atomic as multiple threads reads/writes
-        timeout = 30 * 60
+        timeout = 60 * 60
         
-        if self.exec_process and time.time() - self.process_timestamp >= timeout:  #if it is executing for some time
+        if self.exec_process and time.time() - self.process_timestamp > timeout:  #if it is executing for some time
             _log.debug('Terminatng executer bash process %d as it is been running for more than %d seconds' % (self.exec_process.pid, timeout))
             self.wait(True)
             
