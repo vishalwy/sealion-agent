@@ -8,7 +8,6 @@ __author__ = 'Vishal P.R'
 __email__ = 'hello@sealion.com'
 
 import logging
-import threading
 import globals
 import api
 import rtc
@@ -49,7 +48,7 @@ class Connection(ThreadEx):
     
     def attempt(self, retry_count = -1, retry_interval = 5):
         """
-        Method to attemp authentication and socket-io instantiation
+        Method to attempt authentication and socket-io instantiation
         
         Args:
             retry_count: number of times it should retry
@@ -65,7 +64,7 @@ class Connection(ThreadEx):
         
         while 1:
             status = api.session.authenticate(retry_count = retry_count, retry_interval = retry_interval)
-        
+
             if status != api.Status.SUCCESS:
                 break
                 
@@ -74,18 +73,19 @@ class Connection(ThreadEx):
             if rtc_session.connect() != None:  #after a successful auth, connect socket-io session
                 rtc_session.start()
                 break
-            
+
         return status
         
     def connect(self):        
         """
         Public method to authenticate the api session.
-        The method tries auth for three times
+        The method tries auth for three times before giving it to the background thread in case of connection issues.
         
         Returns:
             status of auth
         """
         
+        #if the session is not authorized or another thread is performing auth
         if api.session.auth_status() != api.AuthStatus.UNAUTHORIZED or not api.session.auth_status(api.AuthStatus.AUTHENTICATING):
             return api.Status.UNKNOWN
         
@@ -100,13 +100,13 @@ class Connection(ThreadEx):
     
     def reconnect(self):
         """
-        Public method to reauth. Reauth will happen in a seperate thread.
+        Public method to reauth api session. Reauth will happen in a seperate thread.
         """
         
+        #if the session is not authorized or another thread is performing auth
         if api.session.auth_status() != api.AuthStatus.UNAUTHORIZED or not api.session.auth_status(api.AuthStatus.AUTHENTICATING):
             return
         
-        _log.info('Reauthenticating')
         self.start()  #do auth in another thread
 
 
