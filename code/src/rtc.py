@@ -75,7 +75,7 @@ class SocketIONamespace(BaseNamespace):
         Method gets called when socket-io receives 'activity_updated' event.
         """
         
-        _log.info('SocketIO received Activity Updated event')
+        _log.info('SocketIO received \'Activity Updated\' event')
         self.rtc.update_heartbeat()
         api.session.get_config()  #get the config as activities are updated
 
@@ -84,7 +84,7 @@ class SocketIONamespace(BaseNamespace):
         Method gets called when socket-io receives 'activitylist_in_category_updated' event.
         """
         
-        _log.info('SocketIO received Activity list Updated event')
+        _log.info('SocketIO received \'Activity List Updated\' event')
         self.rtc.update_heartbeat()
         api.session.get_config()  #get the config as activities are updated
 
@@ -93,7 +93,7 @@ class SocketIONamespace(BaseNamespace):
         Method gets called when socket-io receives 'agent_removed' event.
         """
         
-        _log.info('SocketIO received Agent Removed event')
+        _log.info('SocketIO received \'Agent Removed\' event')
         self.rtc.update_heartbeat()
         
         try:
@@ -110,7 +110,7 @@ class SocketIONamespace(BaseNamespace):
         Method gets called when socket-io receives 'org_token_resetted' event.
         """
         
-        _log.info('SocketIO received Organization Token Reset event')
+        _log.info('SocketIO received \'Organization Token Reset\' event')
         api.session.stop()  #stop the agent as the organization token was resetted.
 
     def on_server_category_changed(self, *args):
@@ -118,7 +118,7 @@ class SocketIONamespace(BaseNamespace):
         Method gets called when socket-io receives 'server_category_changed' event.
         """
         
-        _log.info('SocketIO received Category Changed event')
+        _log.info('SocketIO received \'Category Changed\' event')
         self.rtc.update_heartbeat()
         
         try:
@@ -135,7 +135,7 @@ class SocketIONamespace(BaseNamespace):
         Method gets called when socket-io receives 'activity_deleted' event.
         """
         
-        _log.info('SocketIO received Activity Deleted event')
+        _log.info('SocketIO received \'Activity Deleted\' event')
         self.rtc.update_heartbeat()
         
         try:
@@ -149,7 +149,7 @@ class SocketIONamespace(BaseNamespace):
         Method gets called when socket-io receives 'upgrade_agent' event.
         """
         
-        _log.info('SocketIO received Upgrade Agent event')
+        _log.info('SocketIO received \'Upgrade Agent\' event')
         self.rtc.update_heartbeat()
         
         try:
@@ -163,7 +163,7 @@ class SocketIONamespace(BaseNamespace):
         Method gets called when socket-io receives 'logout' event.
         """
         
-        _log.info('SocketIO received Logout event')
+        _log.info('SocketIO received \'Logout\' event')
         self.rtc.update_heartbeat()
         api.session.stop(api.Status.SESSION_CONFLICT)  #stop api as there is a session conflict.
         
@@ -193,7 +193,7 @@ class RTC(ThreadEx):
         Python implementation of Socket-io has a bug because of which it fails to identify this error.
         """
         
-        if response.text == 'handshake error':
+        if 'handshake error' in response.text:
             raise SocketIOHandShakeError('%d; %s' % (response.status_code, response.text))  #raise an exception so that socket-io wait can finish
                
     def connect(self):
@@ -225,7 +225,7 @@ class RTC(ThreadEx):
             self.sio = None
             self.session_id = api.session.cookies.get('SessionID')
             self.sio = SocketIO(self.globals.get_url(), **kwargs)
-        except SocketIOHandShakeError as e:
+        except SocketIOHandShakeError as e:  #handshake error
             exception = e
             _log.error('Failed to connect SocketIO; %s' % unicode(e))
         except Exception as e:
@@ -273,6 +273,12 @@ class RTC(ThreadEx):
         return is_beating
     
     def wait_for_auth(self):
+        """
+        Method to check and perform auth
+        The method returns imeediately if session ids missmatch or the stop event is set
+        """
+        
+        #check whether we have a conflict in session ids, if so we can return immediately and connect again
         if self.session_id != api.session.cookies.get('SessionID') or self.is_stop or self.globals.stop_event.is_set():
             return
             
@@ -282,25 +288,25 @@ class RTC(ThreadEx):
             api.session.set_events(post_event = False)
             connection.Connection().reconnect()  #reauthenticate
 
-        self.globals.post_event.wait();  #wait for the post event
+        self.globals.post_event.wait();  #wait for the auth to complete
 
     def exe(self):        
         """
         Method runs in a new thread
         """
         
-        is_handshake_exception = True
+        is_handshake_exception = True  #whether we have a handshake error
         
         while 1:  #continuous wait
-            is_handshake_exception and self.wait_for_auth()
+            is_handshake_exception and self.wait_for_auth()  #reauth on handshake error
         
             if self.is_stop == True or self.globals.stop_event.is_set():  #do we need to stop
                 _log.debug('%s received stop event' % self.name)
                 break
                 
-            exception = self.connect();
+            exception = self.connect()  #try to connect
             
-            if exception:         
+            if exception:  #redo in case of exception
                 is_handshake_exception = isinstance(exception, SocketIOHandShakeError)
                 continue
         
@@ -308,7 +314,7 @@ class RTC(ThreadEx):
                 self.sio.wait()  #wait and process socket-io events
             except SocketIOHandShakeError as e:  #a handshake error happens when authentication fails
                 _log.error('Failed to connect SocketIO; %s' % unicode(e))
-                is_handshake_exception = True
+                is_handshake_exception = True  #mark as handshake error so that next iteration will perform auth
             except Exception as e:
                 _log.error(unicode(e))
                 is_handshake_exception = False
