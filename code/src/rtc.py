@@ -184,6 +184,7 @@ class RTC(ThreadEx):
         self.is_stop = False  #flag tells whether to stop the thread.
         self.daemon = True  #run this thread as daemon as it should not block agent from shutting down
         self.is_disconnected = False  #whether socket-io is disconnected
+        self.session_id = ''
         self.update_heartbeat()  #set the heardbeat
         
     def on_response(self, response, *args, **kwargs):
@@ -222,6 +223,7 @@ class RTC(ThreadEx):
         try:
             #instantiate socket-io
             self.sio = None
+            self.session_id = api.session.cookies.get('SessionID')
             self.sio = SocketIO(self.globals.get_url(), **kwargs)
         except SocketIOHandShakeError as e:
             exception = e
@@ -267,12 +269,15 @@ class RTC(ThreadEx):
         """
         
         t = int(time.time())        
-        is_beating = True if t - self.last_heartbeat < (60 * 60) else False
+        is_beating = True if self.sio and t - self.last_heartbeat < (60 * 60) else False
         return is_beating
     
     def wait_for_auth(self):
+        if self.session_id != api.session.cookies.get('SessionID') or self.is_stop or self.globals.stop_event.is_set():
+            return
+            
         #try to set auth status, if another thread has done it already we dont have to do anything
-        #else we reset the post event and reconnect
+        #else we reset the post event and reauthenticate
         if api.session.auth_status(api.AuthStatus.UNAUTHORIZED):
             api.session.set_events(post_event = False)
             connection.Connection().reconnect()  #reauthenticate
@@ -284,7 +289,11 @@ class RTC(ThreadEx):
         Method runs in a new thread
         """
         
+        is_handshake_exception = True
+        
         while 1:  #continuous wait
+            is_handshake_exception and self.wait_for_auth()
+        
             if self.is_stop == True or self.globals.stop_event.is_set():  #do we need to stop
                 _log.debug('%s received stop event' % self.name)
                 break
@@ -292,16 +301,17 @@ class RTC(ThreadEx):
             exception = self.connect();
             
             if exception:         
-                isinstance(exception, SocketIOHandShakeError) and self.wait_for_auth()
+                is_handshake_exception = isinstance(exception, SocketIOHandShakeError)
                 continue
         
             try:
                 self.sio.wait()  #wait and process socket-io events
             except SocketIOHandShakeError as e:  #a handshake error happens when authentication fails
                 _log.error('Failed to connect SocketIO; %s' % unicode(e))
-                self.wait_for_auth()
+                is_handshake_exception = True
             except Exception as e:
                 _log.error(unicode(e))
+                is_handshake_exception = False
                 self.is_disconnected = True  #for any other exception we set the disconnect flag, so that we can call config again
 
 def create_session():
