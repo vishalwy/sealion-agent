@@ -11,8 +11,6 @@ import logging
 import globals
 import api
 import rtc
-import exit_status
-import helper
 from constructs import *
 
 _log = logging.getLogger(__name__)  #module level logging
@@ -36,12 +34,6 @@ class Connection(ThreadEx):
         Method that runs in the new thread.
         """
         
-        if rtc.session:  #we need to terminat socket-io
-            _log.info('Waiting for SocketIO to disconnect')
-            helper.ThreadMonitor().register(callback = exit_status.AGENT_ERR_RESTART)  #register the thread for monitoring, as socket-io sometimes hangs
-            rtc.session.join()
-            helper.ThreadMonitor().unregister()  #unregister thread from monitoring
-        
         while 1:  #attempt until we dont get a bad request 
             if self.attempt(retry_interval = 10) != api.Status.BAD_REQUEST:
                 break
@@ -58,22 +50,12 @@ class Connection(ThreadEx):
             status of auth request
         """
         
-        rtc_session = None  #socket-io session
-        status = api.Status.UNKNOWN
         api.session.auth_status(api.AuthStatus.AUTHENTICATING)  #set auth status
-        
-        while 1:
-            status = api.session.authenticate(retry_count = retry_count, retry_interval = retry_interval)
+        status = api.session.authenticate(retry_count = retry_count, retry_interval = retry_interval)
 
-            if status != api.Status.SUCCESS:
-                break
-                
-            rtc_session = rtc_session or rtc.create_session()  #create socket-io session
+        if status == api.Status.SUCCESS and rtc.session == None:
+            rtc.create_session().start()
             
-            if rtc_session.connect() != None:  #after a successful auth, connect socket-io session
-                rtc_session.start()
-                break
-
         return status
         
     def connect(self):        

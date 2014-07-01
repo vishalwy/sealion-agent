@@ -155,7 +155,7 @@ class API(requests.Session):
             if is_ignore_stop_event == False and self.globals.stop_event.is_set():  #do we need to stop
                 break
             
-            try:
+            try:                    
                 response = method(timeout = 10, *args, **kwargs)  #actuall request
             except Exception as e:
                 _log.error(unicode(e))

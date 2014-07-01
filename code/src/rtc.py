@@ -217,17 +217,20 @@ class RTC(ThreadEx):
             kwargs['transports'] = ['xhr-polling']
         
         _log.debug('Waiting for SocketIO connection')
+        exception = None
         
         try:
             #instantiate socket-io
+            self.sio = None
             self.sio = SocketIO(self.globals.get_url(), **kwargs)
         except SocketIOHandShakeError as e:
+            exception = e
             _log.error('Failed to connect SocketIO; %s' % unicode(e))
-            return None
         except Exception as e:
+            exception = e
             _log.error(unicode(e))
         
-        return self
+        return exception
     
     def stop(self):
         """
@@ -243,6 +246,8 @@ class RTC(ThreadEx):
                 self.sio.disconnect()  #disconnect socket-io
             except:
                 pass
+            
+            self.sio = None
             
     def update_heartbeat(self):
         """
@@ -264,6 +269,15 @@ class RTC(ThreadEx):
         t = int(time.time())        
         is_beating = True if t - self.last_heartbeat < (60 * 60) else False
         return is_beating
+    
+    def wait_for_auth(self):
+        #try to set auth status, if another thread has done it already we dont have to do anything
+        #else we reset the post event and reconnect
+        if api.session.auth_status(api.AuthStatus.UNAUTHORIZED):
+            api.session.set_events(post_event = False)
+            connection.Connection().reconnect()  #reauthenticate
+
+        self.globals.post_event.wait();  #wait for the post event
 
     def exe(self):        
         """
@@ -271,34 +285,24 @@ class RTC(ThreadEx):
         """
         
         while 1:  #continuous wait
-            try:
-                self.sio.wait()  #wait an process socket-io events
-            except SocketIOHandShakeError as e:  #a handshake error happens when authentication fails
-                _log.error('Failed to connect SocketIO; %s' % unicode(e))
-                
-                #try to set auth status, if another thread has done it already we dont have to do anything
-                #else we reset the post event and reconnect
-                if api.session.auth_status(api.AuthStatus.UNAUTHORIZED):
-                    api.session.set_events(post_event = False)
-                    connection.Connection().reconnect()  #reauthenticate
-                
-                break
-            except Exception as e:
-                _log.error(unicode(e))
-                self.is_disconnected = True  #for any other exception we set the disconnect flag, so that we can call config again
-            
             if self.is_stop == True or self.globals.stop_event.is_set():  #do we need to stop
                 _log.debug('%s received stop event' % self.name)
                 break
                 
-            if self.connect() == None:  #connect or reconnect
-                #try to set auth status, if another thread has done it already we dont have to do anything
-                #else we reset the post event and reconnect
-                if api.session.auth_status(api.AuthStatus.UNAUTHORIZED):
-                    api.session.set_events(post_event = False)
-                    connection.Connection().reconnect()  #reauthenticate
-
-                break
+            exception = self.connect();
+            
+            if exception:         
+                isinstance(exception, SocketIOHandShakeError) and self.wait_for_auth()
+                continue
+        
+            try:
+                self.sio.wait()  #wait and process socket-io events
+            except SocketIOHandShakeError as e:  #a handshake error happens when authentication fails
+                _log.error('Failed to connect SocketIO; %s' % unicode(e))
+                self.wait_for_auth()
+            except Exception as e:
+                _log.error(unicode(e))
+                self.is_disconnected = True  #for any other exception we set the disconnect flag, so that we can call config again
 
 def create_session():
     """
