@@ -57,7 +57,8 @@ class API(requests.Session):
         requests.Session.__init__(self, *args, **kwargs)  #initialize the base class
         self.globals = globals.Globals()  #save the reference to Globals for optimized access
         self.stop_status = Status.SUCCESS  #reason for stopping
-        self.auth_status = AuthStatus.UNAUTHORIZED  #authentication status
+        self.authenticate_status = AuthStatus.UNAUTHORIZED  #authentication status
+        self.auth_lock = threading.RLock()  #lock for authentication status
         self.is_conn_err = False  #last api call returned error
             
     @staticmethod
@@ -269,7 +270,7 @@ class API(requests.Session):
             self.globals.config.agent.update(response.json())
             self.globals.config.agent.save()
             
-            self.auth_status = AuthStatus.AUTHENTICATED  #set auth sataus
+            self.auth_status(AuthStatus.AUTHENTICATED)  #set auth sataus
             self.set_events(post_event = True)  #set the post event so that data can posted
         else:
             ret = self.error('Authentication failed. ', response)
@@ -344,7 +345,7 @@ class API(requests.Session):
         
         if API.is_success(response):
             _log.info('Logout successful')
-            self.auth_status = AuthStatus.UNAUTHORIZED  #reset auth status
+            self.auth_status(AuthStatus.UNAUTHORIZED)  #reset auth status
         else:
             ret = self.error('Logout failed. ', response, True)
 
@@ -447,9 +448,9 @@ class API(requests.Session):
                 ret = Status.MISMATCH
             else:
                 if code == 200001 and self.stop_status == Status.SUCCESS:  #unauthorized session, reconnect
-                    self.auth_status = AuthStatus.UNAUTHORIZED  #reset auth status
-                    post_event = False
-                    exec_func = connection.Connection().reconnect  #reconnect
+                    if self.auth_status(AuthStatus.UNAUTHORIZED):
+                        post_event = False
+                        exec_func = connection.Connection().reconnect  #reconnect
                 else:
                     post_event = None
                     exec_func = self.stop
@@ -483,7 +484,35 @@ class API(requests.Session):
             True if authenticated, else False
         """
         
-        return True if self.auth_status == AuthStatus.AUTHENTICATED else False
+        return True if self.auth_status() == AuthStatus.AUTHENTICATED else False
+    
+    def auth_status(self, status = None):
+        """
+        Public function to get or set auth status
+        
+        Args:
+            status: auth status to be set, supply None to retreive status
+        
+        Returns:
+            Auth status if status is None
+            True if status changed else False
+        """
+        
+        self.auth_lock.acquire()  #this has to be atomic as multiple threads reads/wirtes
+        
+        try:
+            if status == None:  #return current status
+                return self.authenticate_status
+            else:
+                if self.authenticate_status == status:  #the status already set
+                    return False
+                elif self.authenticate_status == AuthStatus.AUTHENTICATING and status == AuthStatus.UNAUTHORIZED:  #we cannot change status to unauthorized from authetnicating
+                    return False
+                else:
+                    self.authenticate_status = status  #set the new status
+                    return True
+        finally:
+            self.auth_lock.release()
     
 def is_not_connected(status):
     """

@@ -275,7 +275,13 @@ class RTC(ThreadEx):
                 self.sio.wait()  #wait an process socket-io events
             except SocketIOHandShakeError as e:  #a handshake error happens when authentication fails
                 _log.error('Failed to connect SocketIO; %s' % unicode(e))
-                connection.Connection().reconnect()  #reauthenticate
+                
+                #try to set auth status, if another thread has done it already we dont have to do anything
+                #else we reset the post event and reconnect
+                if api.session.auth_status(api.AuthStatus.UNAUTHORIZED):
+                    api.session.set_events(post_event = False)
+                    connection.Connection().reconnect()  #reauthenticate
+                
                 break
             except Exception as e:
                 _log.error(unicode(e))
@@ -286,7 +292,12 @@ class RTC(ThreadEx):
                 break
                 
             if self.connect() == None:  #connect or reconnect
-                connection.Connection().reconnect()
+                #try to set auth status, if another thread has done it already we dont have to do anything
+                #else we reset the post event and reconnect
+                if api.session.auth_status(api.AuthStatus.UNAUTHORIZED):
+                    api.session.set_events(post_event = False)
+                    connection.Connection().reconnect()  #reauthenticate
+
                 break
 
 def create_session():
