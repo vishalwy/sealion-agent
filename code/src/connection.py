@@ -51,9 +51,9 @@ class Connection(ThreadEx):
         """
         
         api.session.auth_status(api.AuthStatus.AUTHENTICATING)  #set auth status
-        status = api.session.authenticate(retry_count = retry_count, retry_interval = retry_interval)
+        status = api.session.authenticate(retry_count = retry_count, retry_interval = retry_interval)  #authenticate
 
-        if status == api.Status.SUCCESS and rtc.session == None:
+        if status == api.Status.SUCCESS and rtc.session == None:  #create socket-io session
             rtc.create_session().start()
             
         return status
@@ -67,7 +67,7 @@ class Connection(ThreadEx):
             status of auth
         """
         
-        #if the session is not authorized or another thread is performing auth
+        #if the session is not authorized or another thread is performing auth, then we return
         if api.session.auth_status() != api.AuthStatus.UNAUTHORIZED or not api.session.auth_status(api.AuthStatus.AUTHENTICATING):
             return api.Status.UNKNOWN
         
@@ -85,7 +85,7 @@ class Connection(ThreadEx):
         Public method to reauth api session. Reauth will happen in a seperate thread.
         """
         
-        #if the session is not authorized or another thread is performing auth
+        #if the session is not authorized or another thread is performing auth, then we simply return
         if api.session.auth_status() != api.AuthStatus.UNAUTHORIZED or not api.session.auth_status(api.AuthStatus.AUTHENTICATING):
             return
         

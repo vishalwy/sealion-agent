@@ -288,7 +288,9 @@ class RTC(ThreadEx):
             api.session.set_events(post_event = False)
             connection.Connection().reconnect()  #reauthenticate
 
-        self.globals.post_event.wait();  #wait for the auth to complete
+        if self.globals.post_event.is_set() == False:
+            _log.debug('%s waiting for post event' % self.name)
+            self.globals.post_event.wait();  #wait for the auth to complete
 
     def exe(self):        
         """
