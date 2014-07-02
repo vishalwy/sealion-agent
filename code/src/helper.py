@@ -526,37 +526,3 @@ class ThreadMonitor(SingletonType('ThreadMonitorMetaClass', (object, ), {})):
         self.thread = ThreadEx(target = self.monitor, name = 'ThreadMonitor')
         self.thread.daemon = True
         self.thread.start()
-        
-class GarbageCollector(SingletonType('GarbageCollectorMetaClass', (object, ), {})):
-    """
-    Singleton class to perfomr gc on a threshold given
-    """
-    
-    def __init__(self, gc_threshold = 10):
-        """
-        Constructor
-        
-        Args:
-            gc_threshold: threshold for which the manual gc should invoke.
-        """
-        
-        self.gc_threshold = gc_threshold  #gc threshold
-        self.gc_threshold_counter = 0  #threshold counter
-        self.gc_lock = threading.RLock()  #thread lock for gc_threshold_counter
-        
-    def run(self, is_force_gc = False):
-        """
-        Public method to perform gc based on the counter.
-        
-        Args:
-            is_force_gc: run gc regardless of gc threshold counter
-        """
-        
-        self.gc_lock.acquire()  #this has to be atomic as multiple threads reads/writes
-        self.gc_threshold_counter += 1  #increment threshold counter
-        
-        if self.gc_threshold_counter > self.gc_threshold or is_force_gc: #perform gc
-            _log.debug('GC collected %d unreachables' % gc.collect())
-            self.gc_threshold_counter = 0  #reset the counter
-            
-        self.gc_lock.release()
