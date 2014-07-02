@@ -51,7 +51,7 @@ fi
 KERNEL_VERSION=$(uname -r)
 KERNEL_VERSION=$(printf "%.1f" ${KERNEL_VERSION%.*})
 
-if [ ${KERNEL_VERSION/./} -ge 26 ] ; then
+if [ ${KERNEL_VERSION/./} -lt 26 ] ; then
     echo 'Error: SeaLion agent requires kernel version 2.6 or above' >&2
     exit $SCRIPT_ERR_INCOMPATIBLE_PLATFORM
 fi
