@@ -49,9 +49,11 @@ if [ "$(uname -s)" != "Linux" ] ; then
 fi
 
 KERNEL_VERSION=$(uname -r)
-KERNEL_VERSION=$(printf "%.1f" ${KERNEL_VERSION%.*})
+KERNEL_MAJOR_VERSION="${KERNEL_VERSION%%.*}"
+KERNEL_VERSION="${KERNEL_VERSION#*.}"
+KERNEL_MINOR_VERSION="${KERNEL_VERSION%.*}"
 
-if [ ${KERNEL_VERSION/./} -lt 26 ] ; then
+if [[ $KERNEL_MAJOR_VERSION -lt 2 || ($KERNEL_MAJOR_VERSION -eq 2 && $KERNEL_MINOR_VERSION -lt 6) ]] ; then
     echo 'Error: SeaLion agent requires kernel version 2.6 or above' >&2
     exit $SCRIPT_ERR_INCOMPATIBLE_PLATFORM
 fi
