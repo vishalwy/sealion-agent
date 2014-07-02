@@ -141,7 +141,7 @@ class Utils(Namespace):
             #delete extra keys
             for key in keys:
                 if key not in schema:
-                    file and _log.warn('Ignoring config key "%s" in %s as it is unknown.' % (key, file))
+                    file and _log.warn('Ignoring config key \'%s\' in \'%s\' as it is unknown.' % (key, file))
                     del d[key]
 
         depends_check_keys = []  #keys for which the dependency check to be performed
@@ -159,9 +159,9 @@ class Utils(Namespace):
                 if Utils.sanitize_type(d[key], schema[key]['type'], is_delete_extra, 
                     schema[key].get('regex'), schema[key].get('is_regex', False), file) == False:
                     if file:
-                        _log.warn('Ignoring config key "%s" in %s as value is in improper format' % (key, file))
+                        _log.warn('Ignoring config key \'%s\' in \'%s\' as value is in improper format' % (key, file))
                     else:
-                        _log.error('Config key "%s" is in improper format' % key)
+                        _log.error('Config key \'%s\' is in improper format' % key)
                         
                     del d[key]
                     ret = False if is_optional == False else ret  #if it is optional return value remains as it is, else zero
@@ -173,7 +173,7 @@ class Utils(Namespace):
             for depend in depends:
                 if depend not in d:
                     if key in d:
-                        file and _log.warn('Ignoring config key "%s" in %s as it failed dependency' % (key, file))
+                        file and _log.warn('Ignoring config key \'%s\' in \'%s\' as it failed dependency' % (key, file))
                         del d[key]
                         
                     break
@@ -211,7 +211,7 @@ class Utils(Namespace):
         """
         
         notify_terminate(False, message, stack_trace)
-        _log.info('Restarting agent.')
+        _log.info('Restarting agent')
         os.execl(sys.executable, sys.executable, *sys.argv)
      
     @staticmethod
@@ -364,11 +364,11 @@ class Config:
         #sanitize the config
         if Utils.sanitize_dict(config[0], self.schema, True, self.file if is_data == False else None) == False:
             if is_data == False:
-                return self.file + ' is either missing or corrupted'
+                return '\'%s\' is either missing or corrupted' % self.file
             else:
                 return 'Invalid config'
         elif config[1] == True and is_data == False:
-            self.file and _log.warn('Ignoring %s as it is either missing or corrupted' % self.file)
+            self.file and _log.warn('Ignoring \'%s\' as it is either missing or corrupted' % self.file)
             
         self.lock.acquire()
         self.data.update(config[0])  #update the config
@@ -510,7 +510,7 @@ class ThreadMonitor(SingletonType('ThreadMonitorMetaClass', (object, ), {})):
                Utils.restart_agent('Thread %d is not responding' % ret['thread_id'], Utils.get_stack_trace(ret['thread_id']))
             elif ret['callback'] != -1:  #some thread expired and asked to terminate agent
                 notify_terminate(False, 'Thread %d is not responding' % ret['thread_id'], Utils.get_stack_trace(ret['thread_id']))
-                _log.info('Agent terminating with status code %d.' % ret['callback'])
+                _log.info('Agent terminating with status code %d' % ret['callback'])
                 os._exit(ret['callback'])
                
         self.thread = None

@@ -160,16 +160,16 @@ class OfflineStore(ThreadEx):
         
         try:
             self.conn = sqlite3.connect(self.db_file)  #connect to the sqlite db file
-            _log.debug('Created %s at %s' % (self.name, self.db_file))
+            _log.debug('Created %s at \'%s\'' % (self.name, self.db_file))
         except Exception as e:
-            _log.error('Failed to create %s at %s; %s' % (self.name, self.db_file, unicode(e)))
+            _log.error('Failed to create %s at \'%s\'; %s' % (self.name, self.db_file, unicode(e)))
             self.conn_event.set()  #set the event so that self.start can continue
             return
             
         self.cursor = self.conn.cursor()  #save connection cursor for optimize the access
         
         if self.setup_schema() == False:  #try to setup the schema
-            _log.error('Schema mismatch in %s at %s' % (self.name, self.db_file))
+            _log.error('Schema mismatch in %s at \'%s\'' % (self.name, self.db_file))
             self.close_db()  #close the db file and any resources opened
             self.conn_event.set()  #set the event so that self.start can continue
             return

@@ -273,7 +273,7 @@ class API(requests.Session):
             self.auth_status(AuthStatus.AUTHENTICATED)  #set auth sataus
             self.set_events(post_event = True)  #set the post event so that data can posted
         else:
-            ret = self.error('Authentication failed. ', response)
+            ret = self.error('Authentication failed', response)
         
         return ret
             
@@ -297,7 +297,7 @@ class API(requests.Session):
             
             self.set_events(post_event = True)  #set the post event so that data can posted
         else:
-            ret = self.error('Config updation failed. ', response)
+            ret = self.error('Config updation failed', response)
             
         return ret
             
@@ -347,7 +347,7 @@ class API(requests.Session):
             _log.info('Logout successful')
             self.auth_status(AuthStatus.UNAUTHORIZED)  #reset auth status
         else:
-            ret = self.error('Logout failed. ', response, True)
+            ret = self.error('Logout failed', response, True)
 
         return ret
     
@@ -368,7 +368,7 @@ class API(requests.Session):
             ret = response.json()
             _log.debug('Available agent version %s' % ret['agentVersion'])
         else:
-            ret = self.error('Failed to get agent version ', response, True)
+            ret = self.error('Failed to get agent version', response, True)
             ret == Status.MISMATCH and self.stop()
         
         return ret
@@ -395,7 +395,7 @@ class API(requests.Session):
         if API.is_success(response):
             _log.info('Sent dump @ %d' % data['timestamp'])
         else:
-            ret = self.error('Failed to send dump ', response, True)
+            ret = self.error('Failed to send dump', response, True)
         
         return ret
     

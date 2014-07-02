@@ -139,14 +139,14 @@ def run(is_update_only_mode = False):
     """
     
     globals.is_update_only_mode = is_update_only_mode
-    _log.info('Agent starting up.')
-    _log.info('Using python binary at %s.' % sys.executable)
-    _log.info('Python version : %s.' % globals.details['pythonVersion'])
-    _log.info('Agent version  : %s.' % globals.config.agent.agentVersion)   
+    _log.info('Agent starting up')
+    _log.info('Using python binary at %s' % sys.executable)
+    _log.info('Python version : %s' % globals.details['pythonVersion'])
+    _log.info('Agent version  : %s' % globals.config.agent.agentVersion)   
     controller.run()  #call the run method controller module to start the controller
-    _log.info('Agent shutting down with status code 0.')
-    _log.debug('Took %f seconds to shutdown.' % (globals.get_stoppage_time()))
-    _log.info('Ran for %s hours.' %  globals.get_run_time_str())
+    _log.info('Agent shutting down with status code 0')
+    _log.debug('Took %f seconds to shutdown' % (globals.get_stoppage_time()))
+    _log.info('Ran for %s hours' %  globals.get_run_time_str())
     helper.notify_terminate()  #send terminate event so that modules listening on the event will get a chance to cleanup
     sys.exit(0)
     

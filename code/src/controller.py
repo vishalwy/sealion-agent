@@ -55,15 +55,15 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
             True if the response is ok, else False
         """
         
-        _log.debug('Handling response status %d.' % status)
+        _log.debug('Handling response status %d' % status)
         
         if status == api.Status.SUCCESS:  #all good
             return True
         elif api.is_not_connected(status):
-            _log.info('Failed to establish connection.')
+            _log.info('Failed to establish connection')
         elif status == api.Status.NOT_FOUND:  #uninstall if the agent is not found in the organization
             try:
-                _log.info('Uninstalling agent.')
+                _log.info('Uninstalling agent')
                 subprocess.Popen([self.globals.exe_path + 'uninstall.sh'])
             except Exception as e:
                 _log.error('Failed to open uninstall script; %s' % unicode(e))
@@ -171,11 +171,11 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                 self.update_agent()
                 
                 #wait for some time
-                _log.debug('%s waiting for stop event for %d seconds.' % (self.name, 5 * 60, ))
+                _log.debug('%s waiting for stop event for %d seconds' % (self.name, 5 * 60, ))
                 self.globals.stop_event.wait(5 * 60)
 
                 if self.globals.stop_event.is_set():  #do we need to stop here
-                    _log.debug('%s received stop event.', self.name)
+                    _log.debug('%s received stop event', self.name)
                     self.globals.set_time_metric('stopping_time')
                     break
                 elif self.globals.get_run_time() >= 30 * 60:  #restart if total running time in update only mode is more that 30 mins,
@@ -207,11 +207,11 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                         store.push(job.exec_details['_id'], job.get_data())
                         finished_job_count += 1
 
-                    finished_job_count and _log.debug('Finished execution of %d activities.' % finished_job_count)
+                    finished_job_count and _log.debug('Finished execution of %d activities' % finished_job_count)
                     self.globals.stop_event.wait(5)  #wait for the stop event for sometime before next iteration
 
                     if self.globals.stop_event.is_set():
-                        _log.debug('%s received stop event.', self.name)
+                        _log.debug('%s received stop event', self.name)
                         self.globals.set_time_metric('stopping_time')
                         break
                         
@@ -239,7 +239,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         Method to stop all non-daemon threads
         """
         
-        _log.debug('Stopping all threads.')
+        _log.debug('Stopping all threads')
         rtc.session and rtc.session.stop()  #stop socket-io
         api.session.logout()  #logout from currrent session 
         api.session.close()  #close the session, so that any blocking operation in the session is aborted immediately
@@ -249,7 +249,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         #wait for all non-daemon thread to finish
         for thread in threads:
             if thread.ident != curr_thread.ident and thread.ident != self.main_thread.ident and thread.daemon != True:
-                _log.debug('Waiting for %s.' % unicode(thread))
+                _log.debug('Waiting for %s' % unicode(thread))
                 thread.join()
 
 def sig_handler(signum, frame):    
