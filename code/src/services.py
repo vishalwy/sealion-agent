@@ -580,7 +580,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
         #calculate the job consumer count and run the required number of job consumers
         #it assumes that every plugin activity gets an individual thread and all commandline activities shares one thread
         consumer_count = (1 if len(activity_ids) - plugin_count > 0 else 0) + plugin_count
-        self.start_consumers(consumer_count)    
+        self.is_alive() and self.start_consumers(consumer_count)    
         self.stop_consumers(consumer_count)
         
         if start_count + update_count > 0:  #immediately schedule any added/updated activities

@@ -399,7 +399,7 @@ class OfflineStore(ThreadEx):
         Method to close sqlite db.
         """
         
-        _log.debug('Closing %s at %s' % (self.db_file, self.name))
+        _log.debug('Closing %s at \'%s\'' % (self.name, self.db_file))
         self.conn.close()
         self.conn = None
     
