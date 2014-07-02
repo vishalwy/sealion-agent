@@ -184,7 +184,7 @@ class RTC(ThreadEx):
         self.is_stop = False  #flag tells whether to stop the thread.
         self.daemon = True  #run this thread as daemon as it should not block agent from shutting down
         self.is_disconnected = False  #whether socket-io is disconnected
-        self.session_id = ''
+        self.session_id = ''  #session id to verify handshake error
         self.update_heartbeat()  #set the heardbeat
         
     def on_response(self, response, *args, **kwargs):
