@@ -51,7 +51,7 @@ fi
 KERNEL_VERSION=$(uname -r)
 KERNEL_MAJOR_VERSION="${KERNEL_VERSION%%.*}"
 KERNEL_VERSION="${KERNEL_VERSION#*.}"
-KERNEL_MINOR_VERSION="${KERNEL_VERSION%.*}"
+KERNEL_MINOR_VERSION="${KERNEL_VERSION%%.*}"
 
 if [[ $KERNEL_MAJOR_VERSION -lt 2 || ($KERNEL_MAJOR_VERSION -eq 2 && $KERNEL_MINOR_VERSION -lt 6) ]] ; then
     echo 'Error: SeaLion agent requires kernel version 2.6 or above' >&2

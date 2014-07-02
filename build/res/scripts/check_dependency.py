@@ -46,7 +46,8 @@ try:
 except IndexError:
     sys.stderr.write('Error: %s requires an argument\n%s' % (sys.argv[i - 1], usage))  #missing option value
     sys.exit(ERR_INVALID_USAGE)
-except Exception as e:
+except Exception:
+    e = sys.exc_info()[1]
     sys.stderr.write('Error: ' + unicode(e) + '\n')  #some error
     sys.exit(ERR_INVALID_USAGE)
 
