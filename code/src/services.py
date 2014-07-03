@@ -314,13 +314,15 @@ class Executer(ThreadEx):
         """
         
         self.process_lock.acquire()  #this has to be atomic as multiple threads reads/writes
-        max_exec_count = 2225;  #maximum count of commands allowed in the bash process
-        
-        if self.exec_process and self.exec_count > max_exec_count:  #if number of commands executed execeeded the maximum allowed count
-            _log.debug('Terminatng executer bash process %d as it executed more than %d commands' % (self.exec_process.pid, max_exec_count))
-            self.wait(True)
-            
-        self.process_lock.release()
+
+        try:
+            max_exec_count = 2225;  #maximum count of commands allowed in the bash process
+
+            if self.exec_process and self.exec_count > max_exec_count:  #if number of commands executed execeeded the maximum allowed count
+                _log.debug('Terminatng executer bash process %d as it executed more than %d commands' % (self.exec_process.pid, max_exec_count))
+                self.wait(True)
+        finally:    
+            self.process_lock.release()
         
     def exe(self):
         """
