@@ -11,6 +11,7 @@ import logging
 import requests
 import time
 import json
+import re
 import connection
 import globals
 from constructs import *
@@ -124,19 +125,26 @@ class API(requests.Session):
             _log.debug('Resetting post event')
             self.globals.post_event.clear()
     
-    def exec_method(self, method, options = {}, *args, **kwargs):
+    def exec_method(self, method, url, **kwargs):
         """
         Public method to call the supplied http method with the arguments given.
         
         Args:
             method: http method to call.
-            options: various options involved in the call.
+            url: url for the request
             
         Returns:
-            Tupple of (response object, any exception) if options has is_return_exception set to True, else it returns response object
+            Tupple of (response object, any exception) if kwargs['options'] has is_return_exception set to True, else it returns response object
         """
         
         method = getattr(self, method.lower())  #get the method to be executed
+        
+        if kwargs.get('options'):  #get options for method call
+            options = kwargs['options']
+            del kwargs['options']
+        else:
+            options = {}
+            
         retry_count = options.get('retry_count', -1)  #retry count, -1 indicates infinite retry
         retry_interval = options.get('retry_interval', 5)  #retry interval
         is_ignore_stop_event = options.get('is_ignore_stop_event', False)  #whether to consider stop event
@@ -148,6 +156,8 @@ class API(requests.Session):
             kwargs['headers'] = {'Content-type': 'application/json', 'Accept': 'text/plain'}
             kwargs['data'] = json.dumps(kwargs['data'])
         
+        is_check_auth = True if re.match('^.+/agents/1(/.*)?\s*$', url) else False  #is this call requires session authentication
+        
         while retry_count == -1 or i <= retry_count:  #retry as many time as requested
             if i > 0:  #wait for stop event, before retrying
                 self.globals.stop_event.wait(retry_interval)
@@ -155,10 +165,13 @@ class API(requests.Session):
             if is_ignore_stop_event == False and self.globals.stop_event.is_set():  #do we need to stop
                 break
             
-            try:                    
-                response = method(timeout = 10, *args, **kwargs)  #actuall request
+            try:     
+                if is_check_auth and not self.is_authenticated():
+                    raise Exception('session not authenticated')
+                
+                response = method(url, timeout = 10, **kwargs)  #actuall request
             except Exception as e:
-                _log.error(unicode(e))
+                _log.error('Failed to attempt the request; %s' % unicode(e))
                 exception = e
                 
             #if the previous request failed due to a connection error, we just log that the connection is now available
@@ -190,7 +203,7 @@ class API(requests.Session):
         if is_ping_server == False:  #only unblock post event
             self.set_events(post_event = True)
         else:
-            response = self.exec_method('get', {'retry_count': 0, 'is_return_exception': True}, self.globals.get_url())  #ping the server
+            response = self.exec_method('get', self.globals.get_url(), options = {'retry_count': 0, 'is_return_exception': True})  #ping the server
             
             if response[0] != None and response[0].status_code < 500:  #we are able to reach the server
                 _log.debug('Ping server successful')
@@ -212,7 +225,7 @@ class API(requests.Session):
         
         #get data and make the request
         data = self.globals.config.agent.get_dict(['orgToken', 'name', 'category', 'agentVersion', ('ref', 'tarball')])
-        response = self.exec_method('post', kwargs, self.globals.get_url('agents'), data = data)    
+        response = self.exec_method('post', self.globals.get_url('agents'), data = data, options = kwargs)    
         
         if API.is_success(response):
             _log.info('Registration successful')
@@ -239,8 +252,8 @@ class API(requests.Session):
             return ret
         
         #make the request
-        response = self.exec_method('delete', {'retry_count': 2}, 
-            self.globals.get_url('orgs/%s/servers/%s' % (self.globals.config.agent.orgToken, self.globals.config.agent._id)))
+        response = self.exec_method('delete', 
+            self.globals.get_url('orgs/%s/servers/%s' % (self.globals.config.agent.orgToken, self.globals.config.agent._id)), options = {'retry_count': 2})
         
         if API.is_success(response) == False:
             ret = self.error('Failed to unregister agent', response)
@@ -261,7 +274,7 @@ class API(requests.Session):
         data = self.globals.config.agent.get_dict(['orgToken', 'agentVersion'])
         data['timestamp'] = int(time.time() * 1000)
         data['platform'] = self.globals.details
-        response = self.exec_method('post', kwargs, self.globals.get_url('agents/' + self.globals.config.agent._id + '/sessions'), data = data)    
+        response = self.exec_method('post', self.globals.get_url('agents/' + self.globals.config.agent._id + '/sessions'), data = data, options = kwargs)    
         
         if API.is_success(response):
             _log.info('Authentication successful')
@@ -286,7 +299,7 @@ class API(requests.Session):
         """
         
         ret = Status.SUCCESS
-        response = self.exec_method('get', {'retry_count': 0}, self.globals.get_url('agents/1'))  #make the request
+        response = self.exec_method('get', self.globals.get_url('agents/1'), options = {'retry_count': 0})  #make the request
         
         if API.is_success(response):
             _log.info('Config updation successful')
@@ -316,7 +329,7 @@ class API(requests.Session):
         ret = Status.SUCCESS
         
         #make the request
-        response = self.exec_method('post', {'retry_count': 0}, self.globals.get_url('agents/1/data/activities/' + activity_id), data = data)
+        response = self.exec_method('post', self.globals.get_url('agents/1/data/activities/' + activity_id), data = data, options = {'retry_count': 0})
         
         if API.is_success(response):
             _log.debug('Sent activity (%s @ %d)' % (activity_id, data['timestamp']))
@@ -336,12 +349,8 @@ class API(requests.Session):
         
         ret = Status.SUCCESS
         
-        #if this agent was not registered or not authenticated
-        if hasattr(self.globals.config.agent, '_id') == False or self.is_authenticated() == False:
-            return ret
-        
         #make request
-        response = self.exec_method('delete', {'retry_count': 0, 'is_ignore_stop_event': True}, self.globals.get_url('agents/1/sessions/1'))
+        response = self.exec_method('delete', self.globals.get_url('agents/1/sessions/1'), options = {'retry_count': 0, 'is_ignore_stop_event': True})
         
         if API.is_success(response):
             _log.info('Logout successful')
@@ -362,7 +371,7 @@ class API(requests.Session):
         #get the data, url and make the request
         data = self.globals.config.agent.get_dict([('orgToken', ''), ('_id', ''), ('agentVersion', '')])
         url = self.globals.get_url('orgs/%s/agents/%s/agentVersion' % (data['orgToken'], data['_id']))
-        response = self.exec_method('get', {'retry_count': 0}, url, params = {'agentVersion': data['agentVersion']})
+        response = self.exec_method('get', url, params = {'agentVersion': data['agentVersion']}, options = {'retry_count': 0})
         
         if API.is_success(response):
             ret = response.json()
@@ -390,7 +399,8 @@ class API(requests.Session):
         del data['orgToken'], data['_id']
         
         #make request
-        response = self.exec_method('post', {'retry_count': 0}, self.globals.get_url('orgs/%s/agents/%s/crashreport' % (orgToken, agentId)), data = data)
+        response = self.exec_method('post', self.globals.get_url('orgs/%s/agents/%s/crashreport' % (orgToken, agentId)), 
+            data = data, options = {'retry_count': 0})
         
         if API.is_success(response):
             _log.info('Sent dump @ %d' % data['timestamp'])
