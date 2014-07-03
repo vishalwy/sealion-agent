@@ -87,7 +87,7 @@ class API(requests.Session):
             response: response instance for which the error to be logged.
         """
         
-        temp = 'Network issue'  #default case if response is None
+        temp = 'Client side failure'  #default case if response is None
         
         if response != None:
             try:
@@ -171,7 +171,7 @@ class API(requests.Session):
                 
                 response = method(url, timeout = 10, **kwargs)  #actuall request
             except Exception as e:
-                _log.error('Failed to attempt the request; %s' % unicode(e))
+                _log.error('Failed URL request; %s' % unicode(e))
                 exception = e
                 
             #if the previous request failed due to a connection error, we just log that the connection is now available
