@@ -217,7 +217,7 @@ class Executer(ThreadEx):
         ThreadEx.__init__(self)  #inititalize the base class
         self.exec_process = None  #bash process instance
         self.process_lock = threading.RLock()  #thread lock for bash process instance
-        self.process_timestamp = 0  #timestamp in second when the bash process was created
+        self.exec_count = 0  #2254 total number of commands executed in the bash process
         self.is_stop = False  #stop flag for the thread
         self.globals = globals.Globals()  #reference to Globals for optimized access
         self.daemon = True  #run this thread as daemon as it should not block agent from shutting down
@@ -303,21 +303,21 @@ class Executer(ThreadEx):
                 finished_jobs.append(job)
                 del Executer.jobs[job_timestamp]
                 
-        not finished_jobs and not Executer.jobs and self.timeout_process()
+        not finished_jobs and not Executer.jobs and self.limit_process_usage()
         Executer.jobs_lock.release()
         return finished_jobs
     
-    def timeout_process(self):
+    def limit_process_usage(self):
         """
-        Method to terminate the bash subprocess if it has been executing for some time.
+        Method to terminate the bash subprocess if it has executed more than a N commands.
         This is done to avoid memory usage in bash subprocess growing.
         """
         
         self.process_lock.acquire()  #this has to be atomic as multiple threads reads/writes
-        timeout = 2 * 60 * 60
+        max_exec_count = 2225;  #maximum count of commands allowed in the bash process
         
-        if self.exec_process and time.time() - self.process_timestamp > timeout:  #if it is executing for some time
-            _log.debug('Terminatng executer bash process %d as it is been running for more than %d seconds' % (self.exec_process.pid, timeout))
+        if self.exec_process and self.exec_count > max_exec_count:  #if number of commands executed execeeded the maximum allowed count
+            _log.debug('Terminatng executer bash process %d as it executed more than %d commands' % (self.exec_process.pid, max_exec_count))
             self.wait(True)
             
         self.process_lock.release()
@@ -348,8 +348,8 @@ class Executer(ThreadEx):
         #self.wait returns True if the bash suprocess is terminated, in that case we will create a new bash process instance
         if self.wait() and not self.is_stop:
             self.exec_process = subprocess.Popen(['bash', globals.Globals().exe_path + 'src/execute.sh'], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, preexec_fn = os.setpgrp)
-            self.process_timestamp = time.time()
-            _log.debug('Executer bash process %d created' % self.exec_process.pid)
+            self.exec_count = 0
+            _log.info('Executer bash process %d created' % self.exec_process.pid)
         
         self.process_lock.release()
         return self.exec_process
@@ -368,6 +368,7 @@ class Executer(ThreadEx):
         try:
             #it is possible that the pipe is broken or the subprocess was terminated
             self.process.stdin.write(('%d %s: %s\n' % (job.exec_details['timestamp'], job.exec_details['output'].name, job.exec_details['command'])).encode('utf-8'))
+            self.exec_count += 1
         except Exception as e:
             _log.error('Failed to write to bash; %s' % unicode(e))
             return False

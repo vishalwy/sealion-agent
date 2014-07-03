@@ -446,7 +446,7 @@ class Sender(ThreadEx):
         ThreadEx.__init__(self)  #initialize base class
         self.globals = globals.Globals()  #save reference to Globals for optimized access
         self.off_store = off_store  #offline store instance to be used
-        self.queue_max_size = 200  #max sending queue count
+        self.queue_max_size = 275  #max sending queue count
         self.ping_interval = 10  #the ping interval for retry after an failed api request
         self.queue = queue.Queue(self.queue_max_size)  #sending queue
         self.last_ping_time = int(time.time())  #saves the last time api was pinged
@@ -653,7 +653,7 @@ class HistoricSender(Sender):
         
         Sender.__init__(self, off_store)  #initialize base class
         self.del_rows = []  #keeps the sqlite row_ids of deleted rows
-        self.queue_max_size = 50  #maximum size of the sending queue
+        self.queue_max_size = 25  #maximum size of the sending queue
         
     def queue_empty(self):
         """
