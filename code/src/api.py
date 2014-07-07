@@ -475,10 +475,7 @@ class API(requests.Session):
             if code == 204011:
                 ret = Status.DATA_CONFLICT  #duplicate data
             elif code == 204012:  #another agent session running for the same agent id
-                post_event = None
-                exec_func = self.stop
-                args = (Status.SESSION_CONFLICT,)
-                ret = Status.SESSION_CONFLICT
+                post_event = None  #just ignore this, as cookie handling is not thread safe and can cause this
                 
         if is_ignore_status == False:  #perform any actions
             self.set_events(post_event = post_event)
