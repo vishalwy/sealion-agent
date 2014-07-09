@@ -216,7 +216,7 @@ class _XHR_PollingTransport(_AbstractTransport):
         _get_response(
             self._http_session.get,
             self._url,
-            params=dict(self._params.items() + [('disconnect', True)]))
+            params=dict(list(self._params.items()) + [('disconnect', True)]))
         self._connected = False
 
 
@@ -279,7 +279,7 @@ class _JSONP_PollingTransport(_AbstractTransport):
         _get_response(
             self._http_session.get,
             self._url,
-            params=dict(self._params.items() + [('disconnect', True)]))
+            params=dict(list(self._params.items()) + [('disconnect', True)]))
         self._connected = False
 
 
