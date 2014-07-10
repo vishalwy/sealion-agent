@@ -125,10 +125,10 @@ generate_scripts()
     fi
 
     sed -i "1iSeaLion Agent $VERSION - $DATE $REVISION" $TARGET/$OUTPUT/agent/README
-    echo "Generated README"
+    echo "README generated"
 }
 
-find ../code/ -mindepth 1 -maxdepth 1 -type d -regextype sed ! -regex '.*/\(\(etc\)\|\(tmp\)\|\(bin\)\|\(var\)\)' -exec cp -r {} $TARGET/$OUTPUT/agent \;
+find ../code/ -mindepth 1 -maxdepth 1 -type d -regextype sed -regex '.*/\(\(lib\)\|\(opt\)\|\(src\)\)' -exec cp -r {} $TARGET/$OUTPUT/agent \;
 cp -r res/etc $TARGET/$OUTPUT/agent
 mkdir -p $TARGET/$OUTPUT/agent/etc/init.d
 mkdir -p $TARGET/$OUTPUT/agent/bin

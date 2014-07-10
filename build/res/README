@@ -8,7 +8,7 @@ Sealion is a Linux system monitoring/debugging solution. This is the agent to co
 
 Software requirements
 =====================
-#   Requires GNU Linux
+#   Requires GNU Linux kernel version 2.6 or above.
 #   Requires Python version 2.6 or above. 
     If you have multiple versions of python installed, use -p option in the installer to point to the preferred version.
 #   Requires SSL and SQLite3 modules in Python.
