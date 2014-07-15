@@ -234,12 +234,10 @@ class RTC(ThreadEx):
         
         return exception
     
-    def stop(self):
+    def disconnect(self):
         """
-        Public method to stop socket-io
+        Method to disconnect socket-io
         """
-        
-        self.is_stop = True  #set the stop flag
         
         if self.sio != None:
             _log.debug('Disconnecting SocketIO')
@@ -250,6 +248,14 @@ class RTC(ThreadEx):
                 pass
             
             self.sio = None
+    
+    def stop(self):
+        """
+        Public method to stop RTC session thereby socket-io
+        """
+        
+        self.is_stop = True  #set the stop flag
+        self.disconnect()  #disconnect socket-io
             
     def update_heartbeat(self):
         """
@@ -299,7 +305,7 @@ class RTC(ThreadEx):
         
         is_handshake_exception = True  #whether we have a handshake error
         
-        while 1:  #continuous wait
+        while 1:  #continuous wait  
             is_handshake_exception and self.wait_for_auth()  #reauth on handshake error
         
             if self.is_stop == True or self.globals.stop_event.is_set():  #do we need to stop
@@ -320,6 +326,7 @@ class RTC(ThreadEx):
             except Exception as e:
                 _log.error(unicode(e))
                 is_handshake_exception = False
+                self.disconnect()  #disconnect socket-io
                 self.is_disconnected = True  #for any other exception we set the disconnect flag, so that we can call config again
 
 def create_session():

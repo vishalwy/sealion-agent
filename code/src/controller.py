@@ -43,6 +43,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         self.is_stop = False  #flag determines to stop the execution of controller
         self.main_thread = threading.current_thread()  #reference for main thread
         self.updater = None  #updater thread
+        self.updater_lock = threading.RLock()  #thread lock for updating agent
     
     def handle_response(self, status):
         """
@@ -101,21 +102,26 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         It is also bind to the global event dispatcher for 'update-agent' event, so that other modules can invoke it
         """
         
-        if self.updater != None:  #if an updater thread already running
-            return
+        self.updater_lock.acquire()  #this has to be atomic as mulriple threads read/write
         
-        self.updater = True  #assign non None, so that any other thread will immediately return
-        version_details = api.unauth_session.get_agent_version()  #get the available version details for the agent
-        
-        if type(version_details) is dict and version_details['agentVersion'] != self.globals.config.agent.agentVersion:  #match version
-            self.updater = ThreadEx(target = self.install_update, name = 'Updater', args = (version_details,))  #thread to perform update
+        try:
+            if self.updater != None:  #if an updater thread already running
+                return
 
-            #we should run the updater thread as daemon, because the update script first terminates the agent
-            #python process wont exit untill all the non-daemon threads are terminated, and if it is non-daemon, it will deadlock
-            self.updater.daemon = True 
-            self.updater.start()
-        else:
-            self.updater = None  #reset the member so that another update can run
+            self.updater = True  #assign non None, so that any other thread will immediately return
+            version_details = api.unauth_session.get_agent_version()  #get the available version details for the agent
+
+            if type(version_details) is dict and version_details['agentVersion'] != self.globals.config.agent.agentVersion:  #match version
+                self.updater = ThreadEx(target = self.install_update, name = 'Updater', args = (version_details,))  #thread to perform update
+
+                #we should run the updater thread as daemon, because the update script first terminates the agent
+                #python process wont exit untill all the non-daemon threads are terminated, and if it is non-daemon, it will deadlock
+                self.updater.daemon = True 
+                self.updater.start()
+            else:
+                self.updater = None  #reset the member so that another update can run
+        finally:
+            self.updater_lock.release()
             
     def install_update(self, version_details):
         """
