@@ -653,7 +653,7 @@ class HistoricSender(Sender):
         
         Sender.__init__(self, off_store)  #initialize base class
         self.del_rows = []  #keeps the sqlite row_ids of deleted rows
-        self.queue_max_size = 10  #maximum size of the sending queue
+        self.queue_max_size = 20  #maximum size of the sending queue
         
     def queue_empty(self):
         """
