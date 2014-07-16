@@ -20,13 +20,6 @@ terminate()
 #trap exit, and send signal to sub-shell jobs, which in turn kills their children
 trap "terminate" EXIT
 
-type rm >/dev/null 2>&1  #check whether rm is available
-
-#cleanup temp files if we have a temp path available
-if [[ $? -eq 0 && "$1" != "" ]] ; then
-    rm -rf "${1%/}/*" >/dev/null 2>&1
-fi
-
 #initialize the indexes of each column in the line read from stdin
 TIMESTAMP=0  #unique timestamp of the activity
 OUTPUT=1  #filename of output
