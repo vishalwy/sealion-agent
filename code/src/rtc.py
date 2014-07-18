@@ -75,7 +75,7 @@ class SocketIONamespace(BaseNamespace):
         Method gets called when socket-io receives 'activity_updated' event.
         """
         
-        _log.info('SocketIO received Activity Updated event')
+        _log.info('SocketIO received \'Activity Updated\' event')
         self.rtc.update_heartbeat()
         api.session.get_config()  #get the config as activities are updated
 
@@ -84,7 +84,7 @@ class SocketIONamespace(BaseNamespace):
         Method gets called when socket-io receives 'activitylist_in_category_updated' event.
         """
         
-        _log.info('SocketIO received Activity list Updated event')
+        _log.info('SocketIO received \'Activity List Updated\' event')
         self.rtc.update_heartbeat()
         api.session.get_config()  #get the config as activities are updated
 
@@ -93,7 +93,7 @@ class SocketIONamespace(BaseNamespace):
         Method gets called when socket-io receives 'agent_removed' event.
         """
         
-        _log.info('SocketIO received Agent Removed event')
+        _log.info('SocketIO received \'Agent Removed\' event')
         self.rtc.update_heartbeat()
         
         try:
@@ -110,7 +110,7 @@ class SocketIONamespace(BaseNamespace):
         Method gets called when socket-io receives 'org_token_resetted' event.
         """
         
-        _log.info('SocketIO received Organization Token Reset event')
+        _log.info('SocketIO received \'Organization Token Reset\' event')
         api.session.stop()  #stop the agent as the organization token was resetted.
 
     def on_server_category_changed(self, *args):
@@ -118,7 +118,7 @@ class SocketIONamespace(BaseNamespace):
         Method gets called when socket-io receives 'server_category_changed' event.
         """
         
-        _log.info('SocketIO received Category Changed event')
+        _log.info('SocketIO received \'Category Changed\' event')
         self.rtc.update_heartbeat()
         
         try:
@@ -135,7 +135,7 @@ class SocketIONamespace(BaseNamespace):
         Method gets called when socket-io receives 'activity_deleted' event.
         """
         
-        _log.info('SocketIO received Activity Deleted event')
+        _log.info('SocketIO received \'Activity Deleted\' event')
         self.rtc.update_heartbeat()
         
         try:
@@ -149,7 +149,7 @@ class SocketIONamespace(BaseNamespace):
         Method gets called when socket-io receives 'upgrade_agent' event.
         """
         
-        _log.info('SocketIO received Upgrade Agent event')
+        _log.info('SocketIO received \'Upgrade Agent\' event')
         self.rtc.update_heartbeat()
         
         try:
@@ -163,7 +163,7 @@ class SocketIONamespace(BaseNamespace):
         Method gets called when socket-io receives 'logout' event.
         """
         
-        _log.info('SocketIO received Logout event')
+        _log.info('SocketIO received \'Logout\' event')
         self.rtc.update_heartbeat()
         api.session.stop(api.Status.SESSION_CONFLICT)  #stop api as there is a session conflict.
         
@@ -184,6 +184,7 @@ class RTC(ThreadEx):
         self.is_stop = False  #flag tells whether to stop the thread.
         self.daemon = True  #run this thread as daemon as it should not block agent from shutting down
         self.is_disconnected = False  #whether socket-io is disconnected
+        self.session_id = ''  #session id to verify handshake error
         self.update_heartbeat()  #set the heardbeat
         
     def on_response(self, response, *args, **kwargs):
@@ -192,7 +193,7 @@ class RTC(ThreadEx):
         Python implementation of Socket-io has a bug because of which it fails to identify this error.
         """
         
-        if response.text == 'handshake error':
+        if 'handshake error' in response.text:
             raise SocketIOHandShakeError('%d; %s' % (response.status_code, response.text))  #raise an exception so that socket-io wait can finish
                
     def connect(self):
@@ -217,24 +218,26 @@ class RTC(ThreadEx):
             kwargs['transports'] = ['xhr-polling']
         
         _log.debug('Waiting for SocketIO connection')
+        exception = None
         
         try:
             #instantiate socket-io
+            self.sio = None
+            self.session_id = api.session.cookies.get('SessionID')
             self.sio = SocketIO(self.globals.get_url(), **kwargs)
-        except SocketIOHandShakeError as e:
+        except SocketIOHandShakeError as e:  #handshake error
+            exception = e
             _log.error('Failed to connect SocketIO; %s' % unicode(e))
-            return None
         except Exception as e:
+            exception = e
             _log.error(unicode(e))
         
-        return self
+        return exception
     
-    def stop(self):
+    def disconnect(self):
         """
-        Public method to stop socket-io
+        Method to disconnect socket-io
         """
-        
-        self.is_stop = True  #set the stop flag
         
         if self.sio != None:
             _log.debug('Disconnecting SocketIO')
@@ -243,6 +246,16 @@ class RTC(ThreadEx):
                 self.sio.disconnect()  #disconnect socket-io
             except:
                 pass
+            
+            self.sio = None
+    
+    def stop(self):
+        """
+        Public method to stop RTC session thereby socket-io
+        """
+        
+        self.is_stop = True  #set the stop flag
+        self.disconnect()  #disconnect socket-io
             
     def update_heartbeat(self):
         """
@@ -262,32 +275,59 @@ class RTC(ThreadEx):
         """
         
         t = int(time.time())        
-        is_beating = True if t - self.last_heartbeat < (60 * 60) else False
+        is_beating = True if self.sio and t - self.last_heartbeat < (60 * 60) else False
         return is_beating
+    
+    def wait_for_auth(self):
+        """
+        Method to check and perform auth
+        The method returns imeediately if session ids missmatch or the stop event is set
+        """
+        
+        #check whether we have a conflict in session ids, if so we can return immediately and connect again
+        if self.session_id != api.session.cookies.get('SessionID') or self.is_stop or self.globals.stop_event.is_set():
+            return
+            
+        #try to set auth status, if another thread has done it already we dont have to do anything
+        #else we reset the post event and reauthenticate
+        if api.session.auth_status(api.AuthStatus.UNAUTHORIZED):
+            api.session.set_events(post_event = False)
+            connection.Connection().reconnect()  #reauthenticate
+
+        if self.globals.post_event.is_set() == False:
+            _log.debug('%s waiting for post event' % self.name)
+            self.globals.post_event.wait();  #wait for the auth to complete
 
     def exe(self):        
         """
         Method runs in a new thread
         """
         
-        while 1:  #continuous wait
-            try:
-                self.sio.wait()  #wait an process socket-io events
-            except SocketIOHandShakeError as e:  #a handshake error happens when authentication fails
-                _log.error('Failed to connect SocketIO; %s' % unicode(e))
-                connection.Connection().reconnect()  #reauthenticate
-                break
-            except Exception as e:
-                _log.error(unicode(e))
-                self.is_disconnected = True  #for any other exception we set the disconnect flag, so that we can call config again
-            
+        is_handshake_exception = True  #whether we have a handshake error
+        
+        while 1:  #continuous wait  
+            is_handshake_exception and self.wait_for_auth()  #reauth on handshake error
+        
             if self.is_stop == True or self.globals.stop_event.is_set():  #do we need to stop
                 _log.debug('%s received stop event' % self.name)
                 break
                 
-            if self.connect() == None:  #connect or reconnect
-                connection.Connection().reconnect()
-                break
+            exception = self.connect()  #try to connect
+            
+            if exception:  #redo in case of exception
+                is_handshake_exception = isinstance(exception, SocketIOHandShakeError)
+                continue
+        
+            try:
+                self.sio.wait()  #wait and process socket-io events
+            except SocketIOHandShakeError as e:  #a handshake error happens when authentication fails
+                _log.error('Failed to connect SocketIO; %s' % unicode(e))
+                is_handshake_exception = True  #mark as handshake error so that next iteration will perform auth
+            except Exception as e:
+                _log.error(unicode(e))
+                is_handshake_exception = False
+                self.disconnect()  #disconnect socket-io
+                self.is_disconnected = True  #for any other exception we set the disconnect flag, so that we can call config again
 
 def create_session():
     """

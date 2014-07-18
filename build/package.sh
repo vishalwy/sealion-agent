@@ -37,9 +37,9 @@ while getopts :d:v:h OPT ; do
     esac
 done
 
-TARGET=$DOMAIN
 VERSION="$(echo "$VERSION" | sed -e 's/^\s*//' -e 's/\s*$//')"
 DOMAIN="$(echo "$DOMAIN" | sed -e 's/^\s*//' -e 's/\s*$//')"
+TARGET=$DOMAIN
 
 if [ "$VERSION" == "" ] ; then
     echo "Please specify a valid version for the build"
@@ -125,14 +125,20 @@ generate_scripts()
     fi
 
     sed -i "1iSeaLion Agent $VERSION - $DATE $REVISION" $TARGET/$OUTPUT/agent/README
-    echo "Generated README"
+    echo "README generated"
 }
 
-find ../code/ -mindepth 1 -maxdepth 1 -type d -regextype sed ! -regex '.*/\(\(etc\)\|\(tmp\)\|\(bin\)\|\(var\)\)' -exec cp -r {} $TARGET/$OUTPUT/agent \;
+find ../code/ -mindepth 1 -maxdepth 1 -type d -regextype sed -regex '.*/\(\(lib\)\|\(opt\)\|\(src\)\)' -exec cp -r {} $TARGET/$OUTPUT/agent \;
 cp -r res/etc $TARGET/$OUTPUT/agent
 mkdir -p $TARGET/$OUTPUT/agent/etc/init.d
 mkdir -p $TARGET/$OUTPUT/agent/bin
 generate_scripts
+
+if [ "$DOMAIN"  != "$DEFAULT_DOMAIN" ] ; then
+    sed -i 's/\("level"\s*:\s*\)"[^"]\+"/\1"debug"/' "$TARGET/$OUTPUT/agent/etc/config.json"
+    echo "Setting agent logging level to 'debug'"
+fi
+
 tar -zcvf "$TARGET/$OUTPUT-$VERSION-noarch.tar.gz" --exclude="*.pyc" --exclude="__pycache__" --exclude="*~" --exclude-vcs --exclude-backups --directory=$TARGET $OUTPUT/
 rm -rf $TARGET/$OUTPUT
 

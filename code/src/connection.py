@@ -8,12 +8,9 @@ __author__ = 'Vishal P.R'
 __email__ = 'hello@sealion.com'
 
 import logging
-import threading
 import globals
 import api
 import rtc
-import exit_status
-import helper
 from constructs import *
 
 _log = logging.getLogger(__name__)  #module level logging
@@ -43,7 +40,7 @@ class Connection(ThreadEx):
     
     def attempt(self, retry_count = -1, retry_interval = 5):
         """
-        Method to attemp authentication and socket-io instantiation
+        Method to attempt authentication and socket-io instantiation
         
         Args:
             retry_count: number of times it should retry
@@ -53,29 +50,26 @@ class Connection(ThreadEx):
             status of auth request
         """
         
-        rtc.create_session()  #create the socket-io
-        status = api.Status.UNKNOWN
-        api.session.auth_status = api.AuthStatus.AUTHENTICATING  #set api session authentication status to indicate progress
-        
-        while 1:
-            status = api.session.authenticate(retry_count = retry_count, retry_interval = retry_interval)
-        
-            if status != api.Status.SUCCESS:
-                break
-            elif rtc.session.connect() != None:  #after a successful auth, connect socket-io session
-                rtc.session.start()
-                break
+        api.session.auth_status(api.AuthStatus.AUTHENTICATING)  #set auth status
+        status = api.session.authenticate(retry_count = retry_count, retry_interval = retry_interval)  #authenticate
+
+        if status == api.Status.SUCCESS and rtc.session == None:  #create socket-io session
+            rtc.create_session().start()
             
         return status
         
     def connect(self):        
         """
         Public method to authenticate the api session.
-        The method tries auth for three times
+        The method tries auth for three times before giving it to the background thread in case of connection issues.
         
         Returns:
             status of auth
         """
+        
+        #if the session is not authorized or another thread is performing auth, then we return
+        if api.session.auth_status() != api.AuthStatus.UNAUTHORIZED or not api.session.auth_status(api.AuthStatus.AUTHENTICATING):
+            return api.Status.UNKNOWN
         
         status = self.attempt(retry_count = 2)  #attempt to auth
         
@@ -86,40 +80,15 @@ class Connection(ThreadEx):
             
         return status
     
-    def reconnect_helper(self):
-        """
-        Helper method to reauth if the reconnect was called from socket-io thread
-        """
-        
-        self.reconnect()
-    
     def reconnect(self):
         """
-        Public method to reauth. Reauth will happen in a seperate thread.
+        Public method to reauth api session. Reauth will happen in a seperate thread.
         """
         
-        curr_thread = threading.current_thread()
-        helper_thread_name = 'ReconnectHelper'
-        
-        if api.session.auth_status != api.AuthStatus.UNAUTHORIZED and curr_thread.name != helper_thread_name:  #precaution
+        #if the session is not authorized or another thread is performing auth, then we simply return
+        if api.session.auth_status() != api.AuthStatus.UNAUTHORIZED or not api.session.auth_status(api.AuthStatus.AUTHENTICATING):
             return
         
-        api.session.auth_status = api.AuthStatus.AUTHENTICATING  #set api session authentication status to indicate progress
-        
-        #if the current thread is socket-io thread, we need to start a helper thread to avoid deadlock
-        if isinstance(threading.current_thread(), rtc.RTC):
-            reconnect_helper = ThreadEx(target = self.reconnect_helper, name = helper_thread_name)  #helper thread
-            reconnect_helper.daemon = True  #set the daemon flag as we dont want this thread to block agent shutdown
-            reconnect_helper.start()
-            return
-        
-        _log.info('Reauthenticating')
-        
-        if rtc.session:  #we neex to terminat socket-io
-            _log.info('Waiting for SocketIO to disconnect')
-            helper.ThreadMonitor().register(callback = exit_status.AGENT_ERR_RESTART)  #register the thread for monitoring, as socket-io sometimes hangs
-            rtc.session.join()
-            helper.ThreadMonitor().unregister()  #unregister thread from monitoring
-                
         self.start()  #do auth in another thread
+
 

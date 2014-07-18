@@ -8,8 +8,17 @@
 #Author     : Vishal P.R
 #Email      : hello@sealion.com
 
+terminate()
+{
+    #Function to close the output streams and kill background jobs.
+
+    exec 1>&-  #close stdout
+    exec 2>&-  #close stderr
+    kill -SIGTERM $(jobs -p) >/dev/null 2>&1
+}
+
 #trap exit, and send signal to sub-shell jobs, which in turn kills their children
-trap "kill -SIGTERM $(jobs -p) >/dev/null 2>&1" EXIT
+trap "terminate" EXIT
 
 #initialize the indexes of each column in the line read from stdin
 TIMESTAMP=0  #unique timestamp of the activity
@@ -37,9 +46,6 @@ while read -r LINE ; do
     (
         #This is a sub-shell, which is forked from parent process. We run this as a background job to enable parallel execution.
         
-        #pid of the bash process
-        SESSION_PID=
-
         kill_children()
         {
             #Function to kill children.
@@ -67,7 +73,7 @@ while read -r LINE ; do
             bash -c "${ACTIVITY[$COMMAND]}" 1>"${ACTIVITY[$OUTPUT]}" 2>"${ACTIVITY[$OUTPUT]}" &
         fi
 
-        SESSION_PID=$!
+        SESSION_PID=$!  #pid of the bash process
         wait  #wait for the background job to finish
         echo "data: ${ACTIVITY[$TIMESTAMP]} return_code $?"  #write out the return code which indicates that the process has finished
     ) &

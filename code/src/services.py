@@ -36,13 +36,12 @@ class Job:
     Represents a job, that can be executed
     """
     
-    def __init__(self, activity, store):
+    def __init__(self, activity):
         """
         Constructor
         
         Args:
             activity: dict representing the activity to be executed
-            store: Storage instance used to post data
         """
         
         self.is_whitelisted = activity['is_whitelisted']  #is this job allowed to execute
@@ -59,8 +58,6 @@ class Job:
             '_id': activity['details']['_id'],  #activity id
             'command': activity['details']['command']  #command to be executed for commandline job, else the python module name for plugin job
         }
-        
-        self.store = store  #Storage instance used to post data
 
     def prepare(self):
         """
@@ -119,14 +116,23 @@ class Job:
         """
         
         if type(details) is dict:
+            try:
+                details['pid'] = int(details['pid'])
+            except:
+                pass
+            
             self.exec_details.update(details)
         
             if 'return_code' in details:  #if return_code is in the details then we assume the the job is finished
                 self.status = JobStatus.FINISHED 
-
-    def post_output(self):
+                
+    def get_data(self):
         """
-        Public method to post the output to storage
+        Public method to get the data.
+        
+        Returns:
+            Dict containing the data to be posted on success, else None.
+            The data key holds either the method to read ouput or a dict if it is a plugin activity or a string
         """
         
         data = None
@@ -147,18 +153,37 @@ class Job:
                 data['data'] = self.exec_details['output']
             else:
                 #for a commandline job, output is the file containing data
-                self.exec_details['output'].seek(0, os.SEEK_SET)
-                data['data'] = self.exec_details['output'].read(256 * 1024).decode('utf-8', 'replace')
+                #we supply the instance method to read the output on demand
+                #this reduces the memory used unneceserily reading the output and putting it in the queue
+                data['data'] = self.read_output
                 
-                if not data['data']:  #if the file is empty
-                    data['data'] = 'No output produced'
-                    _log.debug('No output/error found for activity (%s @ %d)' % (self.exec_details['_id'], self.exec_details['timestamp']))
-                
-        self.close_file()  #close the file so that it is removed from the disk
+        return data
 
-        if data:  #push the data to store
-            _log.debug('Pushing activity (%s @ %d) to %s' % (self.exec_details['_id'], self.exec_details['timestamp'], self.store.__class__.__name__))
-            self.store.push(self.exec_details['_id'], data)
+    def read_output(self):
+        """
+        Public method to read the output for commandline job.
+        A side effect of this method is that it closes any ouput file, so that next attempt will return empty string.
+        
+        Returns:
+            Output read.
+        """
+        
+        try:
+            #for a commandline job, output is the file containing data
+            self.exec_details['output'].seek(0, os.SEEK_SET)
+            data = self.exec_details['output'].read(256 * 1024).decode('utf-8', 'replace')
+
+            if not data:  #if the file is empty
+                data = 'No output produced'
+                _log.debug('No output/error found for activity (%s @ %d)' % (self.exec_details['_id'], self.exec_details['timestamp']))
+                
+            _log.debug('Read output from activity (%s @ %d)' % (self.exec_details['_id'], self.exec_details['timestamp']))
+        except Exception as e:
+            data = ''
+            _log.error('Could not read output from activity (%s @ %d); %s' % (self.exec_details['_id'], self.exec_details['timestamp'], unicode(e)))
+            
+        self.close_file()  #close the file so that it is removed from the disk            
+        return data
 
     def close_file(self):
         """
@@ -192,8 +217,10 @@ class Executer(ThreadEx):
         ThreadEx.__init__(self)  #inititalize the base class
         self.exec_process = None  #bash process instance
         self.process_lock = threading.RLock()  #thread lock for bash process instance
+        self.exec_count = 0  #2254 total number of commands executed in the bash process
         self.is_stop = False  #stop flag for the thread
         self.globals = globals.Globals()  #reference to Globals for optimized access
+        self.daemon = True  #run this thread as daemon as it should not block agent from shutting down
         self.globals.event_dispatcher.bind('terminate', self.stop)  #bind to terminate event so that we can terminate bash process
         
         #use the job timeout defined in the config if we have one
@@ -244,8 +271,13 @@ class Executer(ThreadEx):
         """
         
         Executer.jobs_lock.acquire()  #this has to be atomic as multiple threads reads/writes
-        Executer.jobs['%d' % timestamp].update(details)
-        Executer.jobs_lock.release()
+        
+        try:
+            Executer.jobs['%d' % timestamp].update(details)
+        except KeyError:
+            pass  #it is possible that bash returns a process timestamp that has been killed already
+        finally:
+            Executer.jobs_lock.release()
 
     def finish_jobs(self):
         """
@@ -270,12 +302,32 @@ class Executer(ThreadEx):
             if job.status != JobStatus.RUNNING:
                 finished_jobs.append(job)
                 del Executer.jobs[job_timestamp]
-
+                
+        not finished_jobs and not Executer.jobs and self.limit_process_usage()
         Executer.jobs_lock.release()
         return finished_jobs
+    
+    def limit_process_usage(self):
+        """
+        Method to terminate the bash subprocess if it has executed more than a N commands.
+        This is done to avoid memory usage in bash subprocess growing.
+        """
+        
+        self.process_lock.acquire()  #this has to be atomic as multiple threads reads/writes
+
+        try:
+            max_exec_count = 2222;  #maximum count of commands allowed in the bash process
+
+            if self.exec_process and self.exec_count > max_exec_count:  #if number of commands executed execeeded the maximum allowed count
+                _log.debug('Terminatng executer bash process %d as it executed more than %d commands' % (self.exec_process.pid, max_exec_count))
+                self.wait(True)
+        finally:    
+            self.process_lock.release()
         
     def exe(self):
-        "Method executes in a new thread."
+        """
+        Method executes in a new thread.
+        """
         
         while 1:
             self.read()  #blocking read from bash suprocess
@@ -283,7 +335,7 @@ class Executer(ThreadEx):
             if self.is_stop:  #should we stop now
                 _log.debug('%s received stop event' % self.name)
                 break
-            
+                
     @property
     def process(self):
         """
@@ -296,8 +348,11 @@ class Executer(ThreadEx):
         self.process_lock.acquire()  #this has to be atomic as multiple threads reads/writes
  
         #self.wait returns True if the bash suprocess is terminated, in that case we will create a new bash process instance
-        if self.wait() and self.is_stop == False:
-            self.exec_process = subprocess.Popen(['bash', globals.Globals().exe_path + 'src/execute.sh'], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, preexec_fn = os.setpgrp)
+        if self.wait() and not self.is_stop:
+            self.exec_process = subprocess.Popen(['bash', self.globals.exe_path + 'src/execute.sh'], 
+                stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, preexec_fn = os.setpgrp)
+            self.exec_count = 0
+            _log.info('Executer bash process %d created' % self.exec_process.pid)
         
         self.process_lock.release()
         return self.exec_process
@@ -316,6 +371,7 @@ class Executer(ThreadEx):
         try:
             #it is possible that the pipe is broken or the subprocess was terminated
             self.process.stdin.write(('%d %s: %s\n' % (job.exec_details['timestamp'], job.exec_details['output'].name, job.exec_details['command'])).encode('utf-8'))
+            self.exec_count += 1
         except Exception as e:
             _log.error('Failed to write to bash; %s' % unicode(e))
             return False
@@ -372,8 +428,7 @@ class Executer(ThreadEx):
             if is_terminated == True:
                 is_force == False and _log.error('Executer bash process %d was terminated', self.exec_process.pid)
                 os.waitpid(self.exec_process.pid, os.WUNTRACED)
-                self.exec_process.stdin.close()
-                self.exec_process.stdout.close()
+                self.exec_process = None
         except:
             pass
                 
@@ -388,6 +443,15 @@ class Executer(ThreadEx):
         self.is_stop = True
         self.wait(True)  #terminate the bash subprocess and wait
         self.process_lock.release()
+        
+        Executer.jobs_lock.acquire()  #this has to be atomic as multiple threads reads/writes
+        
+        #loop throgh the jobs and close temperory files
+        for job_timestamp in list(Executer.jobs.keys()):  
+            job = Executer.jobs[job_timestamp]
+            job.close_file()
+        
+        Executer.jobs_lock.release()
         
 class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
     """
@@ -456,7 +520,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
             #whether the activity interval expired
             #we have to put the job in the queue if the execution timestamp comes before the scheduler runs again
             if activity['next_exec_timestamp'] <= t + self.sleep_interval:
-                jobs.append(Job(activity, self.store))  #add a job for the activity
+                jobs.append(Job(activity))  #add a job for the activity
                 activity['next_exec_timestamp'] = activity['next_exec_timestamp'] + activity['details']['interval']  #update the next execution timestamp
 
         jobs.sort(key = lambda job: job.exec_timestamp)  #sort the jobs based on the execution timestamp
@@ -520,7 +584,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
         #calculate the job consumer count and run the required number of job consumers
         #it assumes that every plugin activity gets an individual thread and all commandline activities shares one thread
         consumer_count = (1 if len(activity_ids) - plugin_count > 0 else 0) + plugin_count
-        self.start_consumers(consumer_count)    
+        self.is_alive() and self.start_consumers(consumer_count)    
         self.stop_consumers(consumer_count)
         
         if start_count + update_count > 0:  #immediately schedule any added/updated activities
@@ -546,6 +610,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
                 break
 
         self.stop_consumers()  #stop the consumers
+        self.executer.stop()  #stop executer for suprocess
         
     def start_consumers(self, count):
         """

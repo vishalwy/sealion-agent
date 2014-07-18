@@ -43,7 +43,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         self.is_stop = False  #flag determines to stop the execution of controller
         self.main_thread = threading.current_thread()  #reference for main thread
         self.updater = None  #updater thread
-        self.job_producer = None  #JobProducer instance
+        self.updater_lock = threading.RLock()  #thread lock for updating agent
     
     def handle_response(self, status):
         """
@@ -56,15 +56,15 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
             True if the response is ok, else False
         """
         
-        _log.debug('Handling response status %d.' % status)
+        _log.debug('Handling response status %d' % status)
         
         if status == api.Status.SUCCESS:  #all good
             return True
         elif api.is_not_connected(status):
-            _log.info('Failed to establish connection.')
+            _log.info('Failed to establish connection')
         elif status == api.Status.NOT_FOUND:  #uninstall if the agent is not found in the organization
             try:
-                _log.info('Uninstalling agent.')
+                _log.info('Uninstalling agent')
                 subprocess.Popen([self.globals.exe_path + 'uninstall.sh'])
             except Exception as e:
                 _log.error('Failed to open uninstall script; %s' % unicode(e))
@@ -102,21 +102,26 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         It is also bind to the global event dispatcher for 'update-agent' event, so that other modules can invoke it
         """
         
-        if self.updater != None:  #if an updater thread already running
-            return
+        self.updater_lock.acquire()  #this has to be atomic as mulriple threads read/write
         
-        self.updater = True  #assign non None, so that any other thread will immediately return
-        version_details = api.unauth_session.get_agent_version()  #get the available version details for the agent
-        
-        if type(version_details) is dict and version_details['agentVersion'] != self.globals.config.agent.agentVersion:  #match version
-            self.updater = ThreadEx(target = self.install_update, name = 'Updater', args = (version_details,))  #thread to perform update
+        try:
+            if self.updater != None:  #if an updater thread already running
+                return
 
-            #we should run the updater thread as daemon, because the update script first terminates the agent
-            #python process wont exit untill all the non-daemon threads are terminated, and if it is non-daemon, it will deadlock
-            self.updater.daemon = True 
-            self.updater.start()
-        else:
-            self.updater = None  #reset the member so that another update can run
+            self.updater = True  #assign non None, so that any other thread will immediately return
+            version_details = api.unauth_session.get_agent_version()  #get the available version details for the agent
+
+            if type(version_details) is dict and version_details['agentVersion'] != self.globals.config.agent.agentVersion:  #match version
+                self.updater = ThreadEx(target = self.install_update, name = 'Updater', args = (version_details,))  #thread to perform update
+
+                #we should run the updater thread as daemon, because the update script first terminates the agent
+                #python process wont exit untill all the non-daemon threads are terminated, and if it is non-daemon, it will deadlock
+                self.updater.daemon = True 
+                self.updater.start()
+            else:
+                self.updater = None  #reset the member so that another update can run
+        finally:
+            self.updater_lock.release()
             
     def install_update(self, version_details):
         """
@@ -172,11 +177,11 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                 self.update_agent()
                 
                 #wait for some time
-                _log.debug('%s waiting for stop event for %d seconds.' % (self.name, 5 * 60, ))
+                _log.debug('%s waiting for stop event for %d seconds' % (self.name, 5 * 60, ))
                 self.globals.stop_event.wait(5 * 60)
 
                 if self.globals.stop_event.is_set():  #do we need to stop here
-                    _log.debug('%s received stop event.', self.name)
+                    _log.debug('%s received stop event', self.name)
                     self.globals.set_time_metric('stopping_time')
                     break
                 elif self.globals.get_run_time() >= 30 * 60:  #restart if total running time in update only mode is more that 30 mins,
@@ -189,13 +194,13 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                     break
                     
                 store = storage.Storage()  #Storage instance
-                self.job_producer = services.JobProducer(store)  #JobProducer instance
+                job_producer = services.JobProducer(store)  #JobProducer instance
 
                 if store.start() == False:  #try to start the store
                     self.globals.set_time_metric('stopping_time')
                     break
                     
-                self.job_producer.start()  #start job producer
+                job_producer.start()  #start job producer
 
                 while 1:              
                     if Controller.is_rtc_heartbeating() == False:  #check socket-io heartbeat. if it is not beating we need to call the config
@@ -203,16 +208,16 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                     
                     finished_job_count = 0  #count of finished jobs in this iteration
 
-                    #get the finished jobs and post the output
-                    for job in self.job_producer.executer.finish_jobs():
-                        job.post_output()
+                    #get the finished jobs and push the data
+                    for job in job_producer.executer.finish_jobs():
+                        store.push(job.exec_details['_id'], job.get_data())
                         finished_job_count += 1
 
-                    finished_job_count and _log.debug('Finished execution of %d activities.' % finished_job_count)
+                    finished_job_count and _log.debug('Finished execution of %d activities' % finished_job_count)
                     self.globals.stop_event.wait(5)  #wait for the stop event for sometime before next iteration
 
                     if self.globals.stop_event.is_set():
-                        _log.debug('%s received stop event.', self.name)
+                        _log.debug('%s received stop event', self.name)
                         self.globals.set_time_metric('stopping_time')
                         break
                         
@@ -224,7 +229,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         #monitor current thread to prevent agent from hanging, as the next stmt waits for all the threads to stop
         helper.ThreadMonitor().register(callback = exit_status.AGENT_ERR_NOT_RESPONDING)
         self.stop_threads()  
-        
+        self.is_stop = True
         _log.debug('%s generating SIGALRM', self.name)
         signal.alarm(1)  #generate signal to wake up the main thread
             
@@ -233,7 +238,6 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         Public method to stop the controller and in turn the agent.
         """
         
-        self.is_stop = True
         api.session.stop()  #set the global stop event
         
     def stop_threads(self):
@@ -241,9 +245,8 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         Method to stop all non-daemon threads
         """
         
-        _log.debug('Stopping all threads.')
+        _log.debug('Stopping all threads')
         rtc.session and rtc.session.stop()  #stop socket-io
-        self.job_producer and self.job_producer.executer and self.job_producer.executer.stop()  #stop executer subprocess
         api.session.logout()  #logout from currrent session 
         api.session.close()  #close the session, so that any blocking operation in the session is aborted immediately
         threads = threading.enumerate()
@@ -252,7 +255,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         #wait for all non-daemon thread to finish
         for thread in threads:
             if thread.ident != curr_thread.ident and thread.ident != self.main_thread.ident and thread.daemon != True:
-                _log.debug('Waiting for %s.' % unicode(thread))
+                _log.debug('Waiting for %s' % unicode(thread))
                 thread.join()
 
 def sig_handler(signum, frame):    

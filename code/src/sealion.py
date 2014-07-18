@@ -339,7 +339,7 @@ def sig_handler(signum, frame):
     """
     
     if signum == signal.SIGINT:
-        sys.exit(exit_status.AGENT_ERR_SUCCESS)
+        sys.exit(exit_status.AGENT_ERR_INTERRUPTED)
     
 signal.signal(signal.SIGINT, sig_handler)  #setup signal handling for SIGINT
 daemon = SeaLion(exe_path + 'var/run/sealion.pid')  #SeaLion daemon instance

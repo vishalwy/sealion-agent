@@ -142,10 +142,6 @@ def get_cpu_usage(*args):
         #calculate the percentage
         total = sum(deltas[key])
         data[key] = dict(zip(keys, [100 - (100 * (float(total - x) / total)) for x in deltas[key]]))
-        
-        #delete additional keys
-        del data[key]['hi']
-        del data[key]['si']
     
     yield data
 

@@ -26,7 +26,7 @@ sys.path.insert(0, exe_path + 'lib/websocket_client')
 sys.path.insert(0, exe_path + 'src')
 sys.path.insert(0, exe_path + 'lib')
 
-#to avoid the bug reported at http://bugs.python.org/issue13684 we use a stable httplib version available with CPython 2.7.3
+#to avoid the bug reported at http://bugs.python.org/issue13684 we use a stable httplib version available with CPython 2.7.3 and 3.2.3
 #since httplib has been renamed to http, we have to add that also in the path so that import can find it
 if sys.version_info[0] == 3:
     sys.path.insert(0, exe_path + 'lib/httplib')
@@ -138,16 +138,15 @@ def run(is_update_only_mode = False):
         is_update_only_mode: whether to run the agent in update only mode
     """
     
-    os.nice(19)  #set the process niceness, so that it wont come in the way of high priority tasks
     globals.is_update_only_mode = is_update_only_mode
-    _log.info('Agent starting up.')
-    _log.info('Using python binary at %s.' % sys.executable)
-    _log.info('Python version : %s.' % globals.details['pythonVersion'])
-    _log.info('Agent version  : %s.' % globals.config.agent.agentVersion)   
+    _log.info('Agent starting up')
+    _log.info('Using python binary at %s' % sys.executable)
+    _log.info('Python version : %s' % globals.details['pythonVersion'])
+    _log.info('Agent version  : %s' % globals.config.agent.agentVersion)   
     controller.run()  #call the run method controller module to start the controller
-    _log.info('Agent shutting down with status code 0.')
-    _log.debug('Took %f seconds to shutdown.' % (globals.get_stoppage_time()))
-    _log.info('Ran for %s hours.' %  globals.get_run_time_str())
+    _log.info('Agent shutting down with status code 0')
+    _log.debug('Took %f seconds to shutdown' % (globals.get_stoppage_time()))
+    _log.info('Ran for %s hours' %  globals.get_run_time_str())
     helper.notify_terminate()  #send terminate event so that modules listening on the event will get a chance to cleanup
     sys.exit(0)
     

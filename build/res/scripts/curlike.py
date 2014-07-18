@@ -24,7 +24,7 @@ exe_path = exe_path[:exe_path.rfind('/') + 1]
 sys.path.insert(0, exe_path + 'src')
 sys.path.insert(0, exe_path + 'lib')
 
-#to avoid the bug reported at http://bugs.python.org/issue13684 we use a stable httplib version available with CPython 2.7.3
+#to avoid the bug reported at http://bugs.python.org/issue13684 we use a stable httplib version available with CPython 2.7.3 and 3.2.3
 #since httplib has been renamed to http, we have to add that also in the path so that import can find it
 if sys.version_info[0] == 3:
     sys.path.insert(0, exe_path + 'lib/httplib')    
@@ -33,6 +33,7 @@ import requests
 from constructs import unicode
 
 i, arg_len, output_format, output_file, urls, f = 0, len(sys.argv), '', '', [], None
+usage = 'Usage: curlike.py {[-x <proxy>] [-H <header>] [-X <http method>] [-d <data>] [-w <write out>] [-o <output file>] [-L <allow redirects>] URLs | -h for Help}\n'
 
 #keyword arguments for requests
 kwargs = {
@@ -117,7 +118,11 @@ try:
                 kwargs['headers'].update(dict(zip(iterator, iterator)))
             elif arg == '-X':  #http method to use
                 i += 1  #read option value
-                method = getattr(session, sys.argv[i].strip().lower())  #get the session method currusponding to the value
+                
+                if sys.argv[i].strip().lower() in ['post', 'get', 'put', 'delete', 'patch', 'options']:
+                    method = getattr(session, sys.argv[i].strip().lower())  #get the session method currusponding to the value
+                else:
+                    raise Exception('unknown http method \'%s\'' % sys.argv[i].strip().lower())
             elif arg == '-d':  #data to be send
                 i += 1  #read option value
                 kwargs['data'] = sys.argv[i]  #set the data
@@ -129,6 +134,9 @@ try:
                 output_file = sys.argv[i]
             elif arg == '-L':  #allow url redirection
                 kwargs['allow_redirects'] = True
+            elif arg == '-h':
+                sys.stdout.write(usage)
+                sys.exit(0)
         else:  #anything else is considered as url to fetch
             url = arg.strip()
             
@@ -138,14 +146,14 @@ try:
 
         i += 1  #next option
 except IndexError:
-    sys.stderr.write('Error: ' + sys.argv[i - 1] + ' requires an argument\n')
+    sys.stderr.write('Error: %s requires an argument\n%s' % (sys.argv[i - 1], usage))  #missing option value
     sys.exit(1)
 except Exception as e:
     sys.stderr.write('Error: ' + unicode(e) + '\n')
     sys.exit(1)
     
 if len(urls) == 0:  #no urls specified
-    sys.stderr.write('Error: please specify atleast one URL\n')
+    sys.stderr.write('Error: please specify atleast one URL\n%s' % usage)
     sys.exit(1)
                     
 try:

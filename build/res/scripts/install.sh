@@ -43,6 +43,21 @@ NO_PROXY=$no_proxy
 REF="tarball"
 PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
 
+if [ "$(uname -s)" != "Linux" ] ; then
+    echo 'Error: SeaLion agent works on Linux only' >&2
+    exit $SCRIPT_ERR_INCOMPATIBLE_PLATFORM
+fi
+
+KERNEL_VERSION=$(uname -r)
+KERNEL_MAJOR_VERSION="${KERNEL_VERSION%%.*}"
+KERNEL_VERSION="${KERNEL_VERSION#*.}"
+KERNEL_MINOR_VERSION="${KERNEL_VERSION%%.*}"
+
+if [[ $KERNEL_MAJOR_VERSION -lt 2 || ($KERNEL_MAJOR_VERSION -eq 2 && $KERNEL_MINOR_VERSION -lt 6) ]] ; then
+    echo 'Error: SeaLion agent requires kernel version 2.6 or above' >&2
+    exit $SCRIPT_ERR_INCOMPATIBLE_PLATFORM
+fi
+
 while getopts :i:o:c:H:x:p:a:r:v:h OPT ; do
     case "$OPT" in
         i)
@@ -91,11 +106,6 @@ if [ "$ORG_TOKEN" == '' ] ; then
     echo "Missing option '-o'" >&2
     echo $USAGE
     exit $SCRIPT_ERR_INVALID_USAGE
-fi
-
-if [ "`uname -s`" != "Linux" ] ; then
-    echo 'Error: SeaLion agent works on Linux only' >&2
-    exit $SCRIPT_ERR_INCOMPATIBLE_PLATFORM
 fi
 
 update_agent_config()
@@ -315,6 +325,11 @@ fi
 if [ -f "$SERVICE_FILE" ] ; then
     echo "Stopping agent..."
     "$SERVICE_FILE" stop
+    RET=$?
+
+    if [[ $RET -eq 34 || $RET -eq 127 ]] ; then
+        exit $RET
+    fi
 fi
 
 echo "Copying files..."
@@ -357,6 +372,7 @@ echo "Starting agent..."
 RET=$?
 
 if [[ $UPDATE_AGENT -eq 0 && $RET -eq 0 ]] ; then
+    echo "Find more info at '$INSTALL_PATH/README'"
     URL="$(echo "$API_URL" | sed 's/api\(\.\|-\)//')"
     echo "Please continue on $URL"
 fi

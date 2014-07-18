@@ -160,16 +160,16 @@ class OfflineStore(ThreadEx):
         
         try:
             self.conn = sqlite3.connect(self.db_file)  #connect to the sqlite db file
-            _log.debug('Created %s at %s' % (self.name, self.db_file))
+            _log.debug('Created %s at \'%s\'' % (self.name, self.db_file))
         except Exception as e:
-            _log.error('Failed to create %s at %s; %s' % (self.name, self.db_file, unicode(e)))
+            _log.error('Failed to create %s at \'%s\'; %s' % (self.name, self.db_file, unicode(e)))
             self.conn_event.set()  #set the event so that self.start can continue
             return
             
         self.cursor = self.conn.cursor()  #save connection cursor for optimize the access
         
         if self.setup_schema() == False:  #try to setup the schema
-            _log.error('Schema mismatch in %s at %s' % (self.name, self.db_file))
+            _log.error('Schema mismatch in %s at \'%s\'' % (self.name, self.db_file))
             self.close_db()  #close the db file and any resources opened
             self.conn_event.set()  #set the event so that self.start can continue
             return
@@ -271,8 +271,9 @@ class OfflineStore(ThreadEx):
         """
         
         try:
+            Storage.get_data(data)  #get the data. read the get_data doc to know why this is required
             self.cursor.execute('INSERT INTO data VALUES(?, ?, ?, ?)', 
-                (activity, data['timestamp'], data['returnCode'], json.dumps(data['data'])))  #we have to convert data['data'] to string, as it can be a dict
+                (activity, data['timestamp'], data['returnCode'], json.dumps(data['data'])))  #we have to convert output to string, as it can be a dict
             self.conn.commit()  #commit the changes
             _log.debug('Inserted activity (%s @ %d) to %s' % (activity, data['timestamp'], self.name))
             callback and callback()  #callback for successful insertion
@@ -297,8 +298,9 @@ class OfflineStore(ThreadEx):
             for row in rows:
                 activity = row['activity']
                 data = row['data']
+                Storage.get_data(data)  #get the data. read get_data doc to know why this is required
                 self.cursor.execute('INSERT OR IGNORE INTO data VALUES(?, ?, ?, ?)', 
-                    (activity, data['timestamp'], data['returnCode'], json.dumps(data['data'])))  #we have to convert data['data'] to string, as it can be a dict
+                    (activity, data['timestamp'], data['returnCode'], json.dumps(data['data'])))  #we have to convert output to string, as it can be a dict
                 self.pending_insert_row_count += self.cursor.rowcount  #increment the count of pending rows to be committed
                 
             if is_commit == False:
@@ -333,7 +335,12 @@ class OfflineStore(ThreadEx):
                 if not row:
                     break
                     
-                rows.append((row[0], row[1], row[2], row[3], json.loads(row[4])))  #we have to convert row[4] from string, as it can be a dict representation
+                try:
+                    #we have to convert row[4] from string, as it can be a dict representation
+                    rows.append((row[0], row[1], row[2], row[3], json.loads(row[4])))
+                except:
+                    #backward compatiblity for agent version < 3.1.0 as the string was written without escaping
+                    rows.append((row[0], row[1], row[2], row[3], row[4]))
                 
             self.cursor.execute('SELECT COUNT(*) FROM data')
             total_rows = self.cursor.fetchone()[0]  #get the total number of rows
@@ -392,7 +399,7 @@ class OfflineStore(ThreadEx):
         Method to close sqlite db.
         """
         
-        _log.debug('Closing %s at %s' % (self.db_file, self.name))
+        _log.debug('Closing %s at \'%s\'' % (self.name, self.db_file))
         self.conn.close()
         self.conn = None
     
@@ -439,7 +446,7 @@ class Sender(ThreadEx):
         ThreadEx.__init__(self)  #initialize base class
         self.globals = globals.Globals()  #save reference to Globals for optimized access
         self.off_store = off_store  #offline store instance to be used
-        self.queue_max_size = 100  #max sending queue count
+        self.queue_max_size = 150  #max sending queue count
         self.ping_interval = 10  #the ping interval for retry after an failed api request
         self.queue = queue.Queue(self.queue_max_size)  #sending queue
         self.last_ping_time = int(time.time())  #saves the last time api was pinged
@@ -589,6 +596,8 @@ class RealtimeSender(Sender):
             item: item to be sent
         """
         
+        Storage.get_data(item['data'])  #get the data. read get_data doc to know why this is required
+        
         #update the timestamp limit for selecting rows to the last real time data retreived.
         #this will prevent any data sent to offline store due to queue overflow being sent before real time queue clears up
         self.off_store.select_timestamp = item['data']['timestamp']
@@ -644,7 +653,7 @@ class HistoricSender(Sender):
         
         Sender.__init__(self, off_store)  #initialize base class
         self.del_rows = []  #keeps the sqlite row_ids of deleted rows
-        self.queue_max_size = 50  #maximum size of the sending queue
+        self.queue_max_size = 20  #maximum size of the sending queue
         
     def queue_empty(self):
         """
@@ -728,6 +737,23 @@ class Storage:
         self.off_store = OfflineStore()  #offline store
         self.realtime_sender = RealtimeSender(self.off_store)  #real time sender
         self.historic_sender = HistoricSender(self.off_store)  #historic sender
+        
+    @staticmethod
+    def get_data(data):
+        """
+        Public static function to convert the data['data'] on demand.
+        It makes a function call if data['data'] is a callable object to get data, else it directly uses the object.
+        Read Job.get_data to know why this wrapper is required.
+        
+        Args:
+            data: a dict whose key 'data' to be converted.
+            
+        Returns:
+            The dict passed to the function whose 'data' key is converted.
+        """       
+
+        data['data'] = data['data']() if hasattr(data['data'], '__call__') else data['data']
+        return data
         
     def start(self):        
         """
