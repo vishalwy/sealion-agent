@@ -259,7 +259,9 @@ class Executer(ThreadEx):
                 job.update({'return_code': 0, 'output': plugin.get_data()})
             except Exception as e:
                 #on failure we set the return_code to non zero so that output can be interpreted as error string
-                job.update({'return_code': 1, 'output': unicode(e)})
+                error = unicode(e);
+                _log.error('Failed to get data for plugin activity (%s @ %d); %s' % (job.exec_details['_id'], job.exec_details['timestamp'], error))
+                job.update({'return_code': 1, 'output': error})
         
     def update_job(self, timestamp, details):
         """
