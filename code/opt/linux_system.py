@@ -168,14 +168,14 @@ def get_net_rw(sampling_duration):
     data = dict(zip(interfaces, [dict(zip(['reads', 'writes'], [0, 0])) for interface in interfaces]))
             
     for line in content1.splitlines():  #read through first collection
-        for interface in [interface_x for interface_x in interfaces if interface_x in line]:
+        for interface in [interface_x for interface_x in interfaces if '%s:' % interface_x in line]:
             fields = line.split('%s:' % interface)[1].split()
             data[interface]['reads'] = int(fields[0])
             data[interface]['writes'] = int(fields[8])
             break
     
     for line in content2.splitlines():  #read through second collection
-        for interface in [interface_x for interface_x in interfaces if interface_x in line]:
+        for interface in [interface_x for interface_x in interfaces if '%s:' % interface_x in line]:
             fields = line.split('%s:' % interface)[1].split()
             data[interface]['reads'] = (int(fields[0]) - data[interface]['reads']) / float(sampling_duration)
             data[interface]['writes'] = (int(fields[8]) - data[interface]['writes']) / float(sampling_duration)
