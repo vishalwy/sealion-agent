@@ -21,7 +21,7 @@ if [ -f "etc/init.d/sealion" ] ; then
     etc/init.d/sealion stop
 fi
 
-if [ -f "src/unregister.py" ] ; then
+if [ -f "bin/unregister.py" ] ; then
     echo "Unregistering agent..."
     python bin/unregister.py >/dev/null 2>&1
 
