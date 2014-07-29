@@ -47,7 +47,7 @@ class Job:
         self.is_whitelisted = activity['is_whitelisted']  #is this job allowed to execute
         self.exec_timestamp = activity['next_exec_timestamp']  #timestamp at which the job should execute
         self.status = JobStatus.INITIALIZED  #current job state
-        self.is_plugin = True if activity['details']['service'] == 'Plugins' else False  #is this job a plugin or a commandline
+        self.is_plugin = True if activity['details'].get('service') == 'Plugins' else False  #is this job a plugin or a commandline
         
         #dict containing job execution details
         self.exec_details = {
@@ -492,7 +492,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
         
         whitelist, command = [], activity['command']
         
-        if activity['service'] == 'Plugins':  #always execute plugin activities
+        if activity.get('service') == 'Plugins':  #always execute plugin activities
             return True
 
         if hasattr(self.globals.config.sealion, 'whitelist'):  #read the whitelist from config
@@ -568,7 +568,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
                 _log.info('Starting activity %s' % activity_id)
                 start_count += 1
             
-            plugin_count += 1 if activity['service'] == 'Plugins' else 0  #count the number of plugins, it affect the number of job consumers
+            plugin_count += 1 if activity.get('service') == 'Plugins' else 0  #count the number of plugins, it affect the number of job consumers
             activity_ids.append(activity_id)  #keep track of available activity ids
             
         #find any activities in the dict that is not in the activity_ids list

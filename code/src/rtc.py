@@ -275,7 +275,7 @@ class RTC(ThreadEx):
         """
         
         t = int(time.time())        
-        is_beating = True if self.sio and t - self.last_heartbeat < (60 * 60) else False
+        is_beating = True if t - self.last_heartbeat < (60 * 60) else False
         return is_beating
     
     def wait_for_auth(self):

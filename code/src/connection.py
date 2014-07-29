@@ -73,8 +73,8 @@ class Connection(ThreadEx):
         
         status = self.attempt(retry_count = 2)  #attempt to auth
         
-        #if api sesssion cannot connect to server and we have the activities available, we can run them offline
-        if api.is_not_connected(status) and hasattr(self.globals.config.agent, 'activities') and hasattr(self.globals.config.agent, 'org'):
+        #if api sesssion cannot connect to server and was authenticated previously, we can run offline
+        if api.is_not_connected(status) and hasattr(self.globals.config.agent, 'org'):
             self.start()
             status = api.Status.SUCCESS  #modify the status so that caller can continue
             
