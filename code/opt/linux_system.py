@@ -156,7 +156,7 @@ def get_net_rw(sampling_duration):
         dict containing network read and writes for each interface.
     """
     
-    interfaces = [file for file in os.listdir('/sys/class/net/') if file != 'lo']  #network interfaces
+    interfaces = [file for file in os.listdir('/sys/class/net/')]  #network interfaces
         
     with open('/proc/net/dev') as f1:
         with open('/proc/net/dev') as f2:
@@ -170,15 +170,15 @@ def get_net_rw(sampling_duration):
     for line in content1.splitlines():  #read through first collection
         for interface in [interface_x for interface_x in interfaces if '%s:' % interface_x in line]:
             fields = line.split('%s:' % interface)[1].split()
-            data[interface]['reads'] = int(fields[1])
-            data[interface]['writes'] = int(fields[9])
+            data[interface]['reads'] = int(fields[0])
+            data[interface]['writes'] = int(fields[8])
             break
     
     for line in content2.splitlines():  #read through second collection
         for interface in [interface_x for interface_x in interfaces if '%s:' % interface_x in line]:
             fields = line.split('%s:' % interface)[1].split()
-            data[interface]['reads'] = (int(fields[1]) - data[interface]['reads']) / float(sampling_duration)
-            data[interface]['writes'] = (int(fields[9]) - data[interface]['writes']) / float(sampling_duration)
+            data[interface]['reads'] = (int(fields[0]) - data[interface]['reads']) / float(sampling_duration)
+            data[interface]['writes'] = (int(fields[8]) - data[interface]['writes']) / float(sampling_duration)
             break
     
     yield data
