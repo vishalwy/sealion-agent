@@ -9,7 +9,7 @@ __email__ = 'hello@sealion.com'
 
 import logging
 import time
-import globals
+import universal
 import api
 import connection
 from socketio_client import SocketIO, BaseNamespace
@@ -35,7 +35,7 @@ class SocketIONamespace(BaseNamespace):
         Method gets called when socket-io is initialized.
         """
         
-        self.globals = globals.Globals()  #save the reference to Globals for optimized access
+        self.univ = universal.Universal()  #save the reference to Universal for optimized access
     
     def on_connect(self):        
         """
@@ -45,7 +45,7 @@ class SocketIONamespace(BaseNamespace):
         _log.info('SocketIO connected')
         self.rtc.update_heartbeat()
         
-        if self.rtc.is_stop == True or self.globals.stop_event.is_set():  #do we need to stop
+        if self.rtc.is_stop == True or self.univ.stop_event.is_set():  #do we need to stop
             self.rtc.stop()
             return
         
@@ -99,7 +99,7 @@ class SocketIONamespace(BaseNamespace):
         try:
             #stop the agent if it is not found in the list of servers            
             if args[0].get('servers'):
-                self.globals.config.agent._id in args[0]['servers'] and api.session.stop(api.Status.NOT_FOUND)
+                self.univ.config.agent._id in args[0]['servers'] and api.session.stop(api.Status.NOT_FOUND)
             else:
                 api.session.stop(api.Status.NOT_FOUND)
         except:
@@ -124,7 +124,7 @@ class SocketIONamespace(BaseNamespace):
         try:
             #get agent config if this is the agent changed category
             if args[0].get('servers'):
-                self.globals.config.agent._id in args[0]['servers'] and api.session.get_config()
+                self.univ.config.agent._id in args[0]['servers'] and api.session.get_config()
             else:
                 api.session.get_config()  #get the config as activities are updated
         except:
@@ -140,7 +140,7 @@ class SocketIONamespace(BaseNamespace):
         
         try:
              #get agent config if this agent runs the activity that was deleted.
-            args[0]['activity'] in self.globals.config.agent.activities and api.session.get_config()
+            args[0]['activity'] in self.univ.config.agent.activities and api.session.get_config()
         except:
             pass
         
@@ -154,7 +154,7 @@ class SocketIONamespace(BaseNamespace):
         
         try:
             #match the version with the current version, and trigger an update_event
-            args[0]['agentVersion'] != self.globals.config.agent.agentVersion and self.globals.event_dispatcher.trigger('update_agent')
+            args[0]['agentVersion'] != self.univ.config.agent.agentVersion and self.univ.event_dispatcher.trigger('update_agent')
         except:
             pass
         
@@ -180,7 +180,7 @@ class RTC(ThreadEx):
         
         ThreadEx.__init__(self)  #initialize base class
         self.sio = None  #socket-io instance
-        self.globals = globals.Globals()  #save the reference of globals for optimized access
+        self.univ = universal.Universal()  #save the reference to Universal for optimized access
         self.is_stop = False  #flag tells whether to stop the thread.
         self.daemon = True  #run this thread as daemon as it should not block agent from shutting down
         self.is_disconnected = False  #whether socket-io is disconnected
@@ -213,7 +213,7 @@ class RTC(ThreadEx):
         
         #socket-io by default uses websocket transport, but websockets wont work behind a proxy
         #we force xhr polling in such cases
-        if self.globals.details['isProxy'] == True:
+        if self.univ.details['isProxy'] == True:
             _log.info('Proxy detected; Forcing xhr-polling for SocketIO')
             kwargs['transports'] = ['xhr-polling']
         
@@ -224,7 +224,7 @@ class RTC(ThreadEx):
             #instantiate socket-io
             self.sio = None
             self.session_id = api.session.cookies.get('SessionID')
-            self.sio = SocketIO(self.globals.get_url(), **kwargs)
+            self.sio = SocketIO(self.univ.get_url(), **kwargs)
         except SocketIOHandShakeError as e:  #handshake error
             exception = e
             _log.error('Failed to connect SocketIO; %s' % unicode(e))
@@ -285,7 +285,7 @@ class RTC(ThreadEx):
         """
         
         #check whether we have a conflict in session ids, if so we can return immediately and connect again
-        if self.session_id != api.session.cookies.get('SessionID') or self.is_stop or self.globals.stop_event.is_set():
+        if self.session_id != api.session.cookies.get('SessionID') or self.is_stop or self.univ.stop_event.is_set():
             return
             
         #try to set auth status, if another thread has done it already we dont have to do anything
@@ -294,9 +294,9 @@ class RTC(ThreadEx):
             api.session.set_events(post_event = False)
             connection.Connection().reconnect()  #reauthenticate
 
-        if self.globals.post_event.is_set() == False:
+        if self.univ.post_event.is_set() == False:
             _log.debug('%s waiting for post event' % self.name)
-            self.globals.post_event.wait();  #wait for the auth to complete
+            self.univ.post_event.wait();  #wait for the auth to complete
 
     def exe(self):        
         """
@@ -308,7 +308,7 @@ class RTC(ThreadEx):
         while 1:  #continuous wait  
             is_handshake_exception and self.wait_for_auth()  #reauth on handshake error
         
-            if self.is_stop == True or self.globals.stop_event.is_set():  #do we need to stop
+            if self.is_stop == True or self.univ.stop_event.is_set():  #do we need to stop
                 _log.debug('%s received stop event' % self.name)
                 break
                 

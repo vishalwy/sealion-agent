@@ -1,6 +1,6 @@
 """
 In a development environment this script is used as the main script.
-It sets up logging, Globals and api sessions.
+It sets up logging, Universal and api sessions.
 When used as main script this starts the agent execution.
 """
 
@@ -37,7 +37,7 @@ import helper
 import controller
 import api
 import exit_status
-from globals import Globals
+from universal import Universal
 from constructs import *
 
 _log = logging.getLogger(__name__)  #module level logging
@@ -63,9 +63,9 @@ except Exception as e:
     sys.exit(exit_status.AGENT_ERR_FAILED_OPEN_LOG)
     
 try:
-    #initialize Globals and create api sessions
-    #this can raise exception if globals are failed to find/create config files
-    globals = Globals()
+    #initialize Universal and create api sessions
+    #this can raise exception if universal is failed to find/create config files
+    univ = Universal()
     api.create_session()
     api.create_unauth_session()
 except Exception as e:
@@ -98,12 +98,12 @@ class LoggingList(logging.Filter):
         return any(log.filter(record) for log in self.logs)
     
 try:
-    logging_list = globals.config.sealion.logging['modules']  #read any logging list defined in the config
+    logging_list = univ.config.sealion.logging['modules']  #read any logging list defined in the config
 except:
     pass
 
 try:    
-    temp = globals.config.sealion.logging['level'].strip()  #read logging level from config
+    temp = univ.config.sealion.logging['level'].strip()  #read logging level from config
     
     #set the level based on the string
     if temp == 'error':
@@ -120,7 +120,7 @@ for handler in logging.root.handlers:
     if len(logging_list) != 1 or logging_list[0] != 'all':
         handler.addFilter(LoggingList(*logging_list))
         
-if hasattr(globals.config.agent, '_id') == False:  #if the agent is already registerd, thare will be _id attribute
+if hasattr(univ.config.agent, '_id') == False:  #if the agent is already registerd, thare will be _id attribute
     if api.session.register(retry_count = 2, retry_interval = 10) != api.Status.SUCCESS:
         sys.exit(exit_status.AGENT_ERR_FAILED_REGISTER)
         
@@ -138,15 +138,15 @@ def run(is_update_only_mode = False):
         is_update_only_mode: whether to run the agent in update only mode
     """
     
-    globals.is_update_only_mode = is_update_only_mode
+    univ.is_update_only_mode = is_update_only_mode
     _log.info('Agent starting up')
     _log.info('Using python binary at %s' % sys.executable)
-    _log.info('Python version : %s' % globals.details['pythonVersion'])
-    _log.info('Agent version  : %s' % globals.config.agent.agentVersion)   
+    _log.info('Python version : %s' % univ.details['pythonVersion'])
+    _log.info('Agent version  : %s' % univ.config.agent.agentVersion)   
     controller.run()  #call the run method controller module to start the controller
     _log.info('Agent shutting down with status code 0')
-    _log.debug('Took %f seconds to shutdown' % (globals.get_stoppage_time()))
-    _log.info('Ran for %s hours' %  globals.get_run_time_str())
+    _log.debug('Took %f seconds to shutdown' % (univ.get_stoppage_time()))
+    _log.info('Ran for %s hours' %  univ.get_run_time_str())
     helper.notify_terminate()  #send terminate event so that modules listening on the event will get a chance to cleanup
     sys.exit(0)
     

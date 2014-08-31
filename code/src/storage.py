@@ -13,7 +13,7 @@ import time
 import json
 import sqlite3
 import helper
-import globals
+import universal
 import api
 from constructs import *
 
@@ -31,8 +31,8 @@ class OfflineStore(ThreadEx):
         """
         
         ThreadEx.__init__(self)  #initialize base class
-        self.globals = globals.Globals()  #save a reference to Globals for optimized access
-        self.db_file = self.globals.db_path  #sqlite db file path; same property is used as absolute path to the filename once offline store is started
+        self.univ = universal.Universal()  #save a reference to Universal for optimized access
+        self.db_file = self.univ.db_path  #sqlite db file path; same property is used as absolute path to the filename once offline store is started
         self.conn = None  #sqlite db connection;
         self.conn_event = threading.Event()  #event to synchronize connection made in the thread
         self.task_queue = queue.Queue()  #the task queue used to feed the operations to thread
@@ -49,7 +49,7 @@ class OfflineStore(ThreadEx):
             True on success else False
         """
         
-        self.db_file = helper.Utils.get_safe_path(self.db_file + ('%s.db' % self.globals.config.agent.org)) #form absolute path to db filename
+        self.db_file = helper.Utils.get_safe_path(self.db_file + ('%s.db' % self.univ.config.agent.org)) #form absolute path to db filename
         ThreadEx.start(self) #start the thread
         self.conn_event.wait() #synchronize connection           
         return True if self.conn else False
@@ -444,7 +444,7 @@ class Sender(ThreadEx):
         """
         
         ThreadEx.__init__(self)  #initialize base class
-        self.globals = globals.Globals()  #save reference to Globals for optimized access
+        self.univ = universal.Universal()  #save a reference to Universal for optimized access
         self.off_store = off_store  #offline store instance to be used
         self.queue_max_size = 150  #max sending queue count
         self.ping_interval = 10  #the ping interval for retry after an failed api request
@@ -485,12 +485,12 @@ class Sender(ThreadEx):
             False if it finds that the global stop event is set, else True
         """
         
-        if self.globals.post_event.is_set() == False:  #if post event is not set
+        if self.univ.post_event.is_set() == False:  #if post event is not set
             timeout = self.ping_interval if api.session.is_authenticated() else None  #for unauthorized api session the wait timeout is None, indicating a blocking wait forever
             _log.debug('%s waiting for post event%s' % (self.name, ' for %d seconds' % timeout if timeout else ''))
-            self.globals.post_event.wait(timeout)
+            self.univ.post_event.wait(timeout)
         
-        if self.globals.stop_event.is_set() == True:  #we need to stop now
+        if self.univ.stop_event.is_set() == True:  #we need to stop now
             _log.debug('%s received stop event' % self.name)
             return False
         
@@ -733,7 +733,7 @@ class Storage:
         Constructor.
         """
         
-        self.globals = globals.Globals()  #save a reference to Globals for optimized access
+        self.univ = universal.Universal()  #save a reference to Universal for optimized access
         self.off_store = OfflineStore()  #offline store
         self.realtime_sender = RealtimeSender(self.off_store)  #real time sender
         self.historic_sender = HistoricSender(self.off_store)  #historic sender
@@ -764,7 +764,7 @@ class Storage:
             return False
         
         #trigger an event and some other module respond to the event with function used to validate activities
-        self.globals.event_dispatcher.trigger('get_activity_funct', lambda x: [True, setattr(Sender, 'validate_funct', x)][0])
+        self.univ.event_dispatcher.trigger('get_activity_funct', lambda x: [True, setattr(Sender, 'validate_funct', x)][0])
         
         #start senders
         self.realtime_sender.start()
@@ -781,7 +781,7 @@ class Storage:
             data: data to send
         """
         
-        if self.globals.stop_event.is_set():  #check whether we need to stop
+        if self.univ.stop_event.is_set():  #check whether we need to stop
             return
         
         if self.realtime_sender.push({'activity': activity, 'data': data}) == False:  #try to push data to real time sender

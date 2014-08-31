@@ -31,7 +31,7 @@ sys.path.insert(0, exe_path + 'lib')
 import exit_status
 from daemon import Daemon
 import helper
-from globals import Globals
+from universal import Universal
 from constructs import unicode, ThreadEx
 
 _log = logging.getLogger(__name__)  #module level logging
@@ -64,9 +64,9 @@ class SeaLion(Daemon):
             Path to the crash dump on success else False
         """
         
-        globals = Globals()  #get globals
+        univ = Universal()  #get Universal
         timestamp = int(time.time() * 1000)  #timestamp for the unique crash dump filename
-        path = self.crash_dump_path + ('sealion-%s-%d.dmp' % (globals.config.agent.agentVersion, timestamp))  #crash dump filename
+        path = self.crash_dump_path + ('sealion-%s-%d.dmp' % (univ.config.agent.agentVersion, timestamp))  #crash dump filename
         f = None
         
         try:
@@ -76,15 +76,15 @@ class SeaLion(Daemon):
             report = {
                 'timestamp': timestamp,
                 'stack': stack_trace,
-                'orgToken': globals.config.agent.orgToken,
-                '_id': globals.config.agent._id,
-                'os': {'pythonVersion': globals.details['pythonVersion']},
+                'orgToken': univ.config.agent.orgToken,
+                '_id': univ.config.agent._id,
+                'os': {'pythonVersion': univ.details['pythonVersion']},
                 'process': {
                     'uid': os.getuid(),
                     'gid': os.getgid(),
-                    'uptime': int(globals.get_run_time() * 1000),
-                    'agentVersion': globals.config.agent.agentVersion,
-                    'isProxy': globals.details['isProxy']
+                    'uptime': int(univ.get_run_time() * 1000),
+                    'agentVersion': univ.config.agent.agentVersion,
+                    'isProxy': univ.details['isProxy']
                 }
             }
             
@@ -133,18 +133,18 @@ class SeaLion(Daemon):
         """
         
         import api
-        globals = Globals()  #get globals
+        univ = Universal()  #get Universal
         
         #how much time the crash dump sender wait before start sending.
         #this is required not to affect crash loop detection, since crash loop detection is done by checking number crash dumps generated in a span of time
         crash_dump_timeout = (self.crash_loop_count * self.monit_interval) + 10 
         
         #get the agent version regex to differentiate dumps from any other file
-        agent_version_regex = globals.config.agent.schema['agentVersion'].get('regex', '.*')
+        agent_version_regex = univ.config.agent.schema['agentVersion'].get('regex', '.*')
         agent_version_regex = re.sub('^\^?([^\$]+)\$?$', '\g<1>', agent_version_regex)
         
         _log.debug('CrashDumpSender waiting for stop event for %d seconds' % crash_dump_timeout)
-        globals.stop_event.wait(crash_dump_timeout)
+        univ.stop_event.wait(crash_dump_timeout)
         
         try:
             for file in os.listdir(self.crash_dump_path):  #loop though files in the crash dump directory
@@ -155,7 +155,7 @@ class SeaLion(Daemon):
                     report = None
 
                     while 1:
-                        if globals.stop_event.is_set():  #do we need to stop now
+                        if univ.stop_event.is_set():  #do we need to stop now
                             _log.debug('CrashDumpSender received stop event')
                             return
 
@@ -166,7 +166,7 @@ class SeaLion(Daemon):
                             break
 
                         _log.debug('CrashDumpSender waiting for stop event for 10 seconds')
-                        globals.stop_event.wait(10)  #on failure, wait for some time
+                        univ.stop_event.wait(10)  #on failure, wait for some time
                     
                     try:
                         os.remove(file_name)  #remove the dump as we sent it
@@ -174,7 +174,7 @@ class SeaLion(Daemon):
                     except Exception as e:
                         _log.error('Failed to remove dump %s; %s' % (file_name, unicode(e)))
 
-                if globals.stop_event.is_set():  #do we need to stop now
+                if univ.stop_event.is_set():  #do we need to stop now
                     _log.debug('CrashDumpSender received stop event')
                     return
         except:
@@ -238,16 +238,16 @@ class SeaLion(Daemon):
             Tupple (is crah loop, crash dump count)
         """
         
-        globals = Globals()  #get globals
+        univ = Universal()  #get Universal
         t = int(time.time())  #current epoch time for crash loop detection
         crash_loop_timeout = self.crash_loop_count * self.monit_interval  #time span for crash loop detection
         file_count, loop_file_count = 0, 0
         
         #crash loop is detected only for the current agent version running
-        loop_regex = '^sealion-%s-[0-9]+\.dmp$' % globals.config.agent.agentVersion.replace('.', '\.')
+        loop_regex = '^sealion-%s-[0-9]+\.dmp$' % univ.config.agent.agentVersion.replace('.', '\.')
         
         #agent version regex for finding valid crash dump files
-        agent_version_regex = globals.config.agent.schema['agentVersion'].get('regex', '.*')
+        agent_version_regex = univ.config.agent.schema['agentVersion'].get('regex', '.*')
         agent_version_regex = re.sub('^\^?([^\$]+)\$?$', '\g<1>', agent_version_regex)
         
         try:

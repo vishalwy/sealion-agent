@@ -1,6 +1,6 @@
 """
-Abstracts configuration and globals for SeaLion agent.
-Implements SealionConfig, AgentConfig and Globals
+Abstracts configuration and universal for SeaLion agent.
+Implements SealionConfig, AgentConfig and Universal
 """
 
 __copyright__ = '(c) Webyog, Inc'
@@ -130,18 +130,18 @@ class AgentConfig(helper.Config):
         if 'category' in data:  #delete the category key from data since category in the settings file is the name, and data['category'] is the id
             del data['category']
             
-        globals = Globals()
+        univ = Universal()
         version = data.get('agentVersion')
              
         if version and version != self.data['agentVersion']:  #if the agent version mismatch we need to update the agent
-            hasattr(self, '_id') and globals.event_dispatcher.trigger('update_agent')  #trigger an event so that the other module can install the update
+            hasattr(self, '_id') and univ.event_dispatcher.trigger('update_agent')  #trigger an event so that the other module can install the update
             del data['agentVersion']  #delete the key as we want only the updater script to modify it
             
         ret = helper.Config.update(self, data)  #call the base class version
-        globals.event_dispatcher.trigger('set_activities')  #trigger an event so that the other modules can act on the new activities
+        univ.event_dispatcher.trigger('set_activities')  #trigger an event so that the other modules can act on the new activities
         return ret
 
-class Globals(SingletonType('GlobalsMetaClass', (object, ), {})):
+class Universal(SingletonType('UniversalMetaClass', (object, ), {})):
     """
     Implements global variables as a singleton class
     """

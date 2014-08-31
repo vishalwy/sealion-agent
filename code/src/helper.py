@@ -12,7 +12,6 @@ import json
 import re
 import threading
 import logging
-import gc
 import sys
 import time
 import traceback

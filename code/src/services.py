@@ -15,7 +15,7 @@ import re
 import signal
 import os
 import tempfile
-import globals
+import universal
 from constructs import *
 
 _log = logging.getLogger(__name__)  #module level logging
@@ -77,7 +77,7 @@ class Job:
             #if it is not a plugin job, then we create a temperory file to capture the output
             #a plugin job return the data directly
             if not self.is_plugin:
-                self.exec_details['output'] = tempfile.NamedTemporaryFile(dir = globals.Globals().temp_path)
+                self.exec_details['output'] = tempfile.NamedTemporaryFile(dir = universal.Universal().temp_path)
                 
             self.status = JobStatus.RUNNING  #change the state to running
         else:
@@ -219,13 +219,13 @@ class Executer(ThreadEx):
         self.process_lock = threading.RLock()  #thread lock for bash process instance
         self.exec_count = 0  #2254 total number of commands executed in the bash process
         self.is_stop = False  #stop flag for the thread
-        self.globals = globals.Globals()  #reference to Globals for optimized access
+        self.univ = universal.Universal()  #reference to Universal for optimized access
         self.daemon = True  #run this thread as daemon as it should not block agent from shutting down
-        self.globals.event_dispatcher.bind('terminate', self.stop)  #bind to terminate event so that we can terminate bash process
+        self.univ.event_dispatcher.bind('terminate', self.stop)  #bind to terminate event so that we can terminate bash process
         
         #use the job timeout defined in the config if we have one
         try:
-            self.timeout = self.globals.config.sealion.commandTimeout
+            self.timeout = self.univ.config.sealion.commandTimeout
         except:
             self.timeout = 30
 
@@ -351,7 +351,7 @@ class Executer(ThreadEx):
  
         #self.wait returns True if the bash suprocess is terminated, in that case we will create a new bash process instance
         if self.wait() and not self.is_stop:
-            self.exec_process = subprocess.Popen(['bash', self.globals.exe_path + 'src/execute.sh'], 
+            self.exec_process = subprocess.Popen(['bash', self.univ.exe_path + 'src/execute.sh'], 
                 stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, preexec_fn = os.setpgrp)
             self.exec_count = 0
             _log.info('Executer bash process %d created' % self.exec_process.pid)
@@ -469,7 +469,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
         """
         
         ThreadEx.__init__(self)  #initialize the base class
-        self.globals = globals.Globals()  #store reference to Globals for optmized access
+        self.univ = universal.Universal()  #store reference to Universal for optmized access
         self.activities_lock = threading.RLock()  #threading lock for updating activities
         self.activities = {}  #dict of activities 
         self.queue = queue.Queue()  #job queue
@@ -477,7 +477,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
         self.store = store  #storage instance
         self.consumer_count = 0  #total number of job consumers running
         self.executer = Executer()  #executer instance for running commandline activities
-        self.globals.event_dispatcher.bind('get_activity_funct', self.get_activity_funct)
+        self.univ.event_dispatcher.bind('get_activity_funct', self.get_activity_funct)
 
     def is_in_whitelist(self, activity):
         """
@@ -495,8 +495,8 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
         if activity.get('service') == 'Plugins':  #always execute plugin activities
             return True
 
-        if hasattr(self.globals.config.sealion, 'whitelist'):  #read the whitelist from config
-            whitelist = self.globals.config.sealion.whitelist
+        if hasattr(self.univ.config.sealion, 'whitelist'):  #read the whitelist from config
+            whitelist = self.univ.config.sealion.whitelist
             
         is_whitelisted = False if len(whitelist) else True  #an empty whitelist implies that all activities are allowed to run
 
@@ -539,7 +539,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
         It also starts Job consumers
         """
         
-        activities = self.globals.config.agent.activities
+        activities = self.univ.config.agent.activities
         start_count, update_count, stop_count, plugin_count, activity_ids = 0, 0, 0, 0, []
         self.activities_lock.acquire()  #this has to be atomic as multiple threads reads/writes
         t = time.time()  #current time is the next execution time for any activity started or updated
@@ -601,13 +601,13 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
         
         self.executer.start()  #start the executer for bash suprocess
         self.set_activities();  #set ativities dict
-        self.globals.event_dispatcher.bind('set_activities', self.set_activities)  #bind to 'set_activities' event so that we can update our activities dict
+        self.univ.event_dispatcher.bind('set_activities', self.set_activities)  #bind to 'set_activities' event so that we can update our activities dict
         
         while 1:  #schedule the activities every sleep_interval seconds
             self.schedule_activities()
-            self.globals.stop_event.wait(self.sleep_interval)
+            self.univ.stop_event.wait(self.sleep_interval)
 
-            if self.globals.stop_event.is_set():  #do we need to stop
+            if self.univ.stop_event.is_set():  #do we need to stop
                 _log.debug('%s received stop event' % self.name)
                 break
 
@@ -677,7 +677,7 @@ class JobConsumer(ThreadEx):
         
         ThreadEx.__init__(self)  #initialize the base class
         self.job_producer = JobProducer()  #job producer
-        self.globals = globals.Globals()  #save the reference to Globals for optimized access
+        self.univ = universal.Universal()  #save the reference to Universal for optimized access
         self.name = '%s-%d' % (self.__class__.__name__, JobConsumer.unique_id)  #set the name
         JobConsumer.unique_id += 1  #increment the id
 
@@ -685,7 +685,7 @@ class JobConsumer(ThreadEx):
         while 1:  #wait on job queue
             job = self.job_producer.queue.get()  #blocking wait
 
-            if self.globals.stop_event.is_set() or job == None:  #need to stop
+            if self.univ.stop_event.is_set() or job == None:  #need to stop
                 _log.debug('%s received stop event' % self.name)
                 break
 

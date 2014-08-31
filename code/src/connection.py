@@ -8,7 +8,7 @@ __author__ = 'Vishal P.R'
 __email__ = 'hello@sealion.com'
 
 import logging
-import globals
+import universal
 import api
 import rtc
 from constructs import *
@@ -26,7 +26,7 @@ class Connection(ThreadEx):
         """
         
         ThreadEx.__init__(self)  #initialize base class
-        self.globals = globals.Globals()  #save the reference to globals for optimized access
+        self.univ = universal.Universal()  #save the reference to Universal for optimized access
         self.daemon = True  #set the daemon flag as we dont want this thread to block agent shutdown
     
     def exe(self):
@@ -74,7 +74,7 @@ class Connection(ThreadEx):
         status = self.attempt(retry_count = 2)  #attempt to auth
         
         #if api sesssion cannot connect to server and we have the activities available, we can run them offline
-        if api.is_not_connected(status) and hasattr(self.globals.config.agent, 'activities') and hasattr(self.globals.config.agent, 'org'):
+        if api.is_not_connected(status) and hasattr(self.univ.config.agent, 'activities') and hasattr(self.univ.config.agent, 'org'):
             self.start()
             status = api.Status.SUCCESS  #modify the status so that caller can continue
             

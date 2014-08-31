@@ -19,7 +19,7 @@ import time
 import api
 import rtc
 import storage
-import globals
+import universal
 import connection
 import services
 import exit_status
@@ -39,7 +39,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         """
         
         ThreadEx.__init__(self)  #initialize the base class
-        self.globals = globals.Globals()  #save the reference to Globals for optimized access
+        self.univ = universal.Universal()  #save the reference to Universal for optimized access
         self.is_stop = False  #flag determines to stop the execution of controller
         self.main_thread = threading.current_thread()  #reference for main thread
         self.updater = None  #updater thread
@@ -65,7 +65,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         elif status == api.Status.NOT_FOUND:  #uninstall if the agent is not found in the organization
             try:
                 _log.info('Uninstalling agent')
-                subprocess.Popen([self.globals.exe_path + 'uninstall.sh'])
+                subprocess.Popen([self.univ.exe_path + 'uninstall.sh'])
             except Exception as e:
                 _log.error('Failed to open uninstall script; %s' % unicode(e))
         elif status == api.Status.UNAUTHORIZED:
@@ -111,7 +111,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
             self.updater = True  #assign non None, so that any other thread will immediately return
             version_details = api.unauth_session.get_agent_version()  #get the available version details for the agent
 
-            if type(version_details) is dict and version_details['agentVersion'] != self.globals.config.agent.agentVersion:  #match version
+            if type(version_details) is dict and version_details['agentVersion'] != self.univ.config.agent.agentVersion:  #match version
                 self.updater = ThreadEx(target = self.install_update, name = 'Updater', args = (version_details,))  #thread to perform update
 
                 #we should run the updater thread as daemon, because the update script first terminates the agent
@@ -132,20 +132,20 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         """
         
         _log.info('Update found; Installing update version %s' % version_details['agentVersion'])
-        curllike = self.globals.exe_path + 'bin/curlike.py'  #curl like functionality
+        curllike = self.univ.exe_path + 'bin/curlike.py'  #curl like functionality
         url_caller = '"%s" "%s"' % (sys.executable, curllike)  #commandline for curlike.py
         
         #frame the full commandline to download and execute the curl-install.sh
         format = '%(url_caller)s -s %(proxy)s %(download_url)s | bash /dev/stdin -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" -v %(version)s %(proxy)s'
         format_spec = {
             'url_caller': url_caller,
-            'exe_path': self.globals.exe_path, 
+            'exe_path': self.univ.exe_path, 
             'executable': sys.executable, 
-            'org_token': self.globals.config.agent.orgToken, 
-            'agent_id': self.globals.config.agent._id,
+            'org_token': self.univ.config.agent.orgToken, 
+            'agent_id': self.univ.config.agent._id,
             'version': version_details['agentVersion'], 
-            'download_url': self.globals.get_url().replace('://api', '://agent'),
-            'proxy': ('-x "%s"' % self.globals.proxy_url) if self.globals.details['isProxy'] else ''
+            'download_url': self.univ.get_url().replace('://api', '://agent'),
+            'proxy': ('-x "%s"' % self.univ.proxy_url) if self.univ.details['isProxy'] else ''
         }
             
         try:
@@ -173,31 +173,31 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         """
         
         while 1:  #process continuously
-            if self.globals.is_update_only_mode == True:  #in update only mode, all we have to check is an update is available
+            if self.univ.is_update_only_mode == True:  #in update only mode, all we have to check is an update is available
                 self.update_agent()
                 
                 #wait for some time
                 _log.debug('%s waiting for stop event for %d seconds' % (self.name, 5 * 60, ))
-                self.globals.stop_event.wait(5 * 60)
+                self.univ.stop_event.wait(5 * 60)
 
-                if self.globals.stop_event.is_set():  #do we need to stop here
+                if self.univ.stop_event.is_set():  #do we need to stop here
                     _log.debug('%s received stop event', self.name)
-                    self.globals.set_time_metric('stopping_time')
+                    self.univ.set_time_metric('stopping_time')
                     break
-                elif self.globals.get_run_time() >= 30 * 60:  #restart if total running time in update only mode is more that 30 mins,
+                elif self.univ.get_run_time() >= 30 * 60:  #restart if total running time in update only mode is more that 30 mins,
                     helper.Utils.restart_agent('No updates available')
             else:
-                self.globals.event_dispatcher.bind('update_agent', self.update_agent)  #bind to 'update_agent' event
+                self.univ.event_dispatcher.bind('update_agent', self.update_agent)  #bind to 'update_agent' event
                 
                 if self.handle_response(connection.Connection().connect()) == False:  #if authontication fails
-                    self.globals.set_time_metric('stopping_time')
+                    self.univ.set_time_metric('stopping_time')
                     break
                     
                 store = storage.Storage()  #Storage instance
                 job_producer = services.JobProducer(store)  #JobProducer instance
 
                 if store.start() == False:  #try to start the store
-                    self.globals.set_time_metric('stopping_time')
+                    self.univ.set_time_metric('stopping_time')
                     break
                     
                 job_producer.start()  #start job producer
@@ -214,11 +214,11 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                         finished_job_count += 1
 
                     finished_job_count and _log.debug('Finished execution of %d activities' % finished_job_count)
-                    self.globals.stop_event.wait(5)  #wait for the stop event for sometime before next iteration
+                    self.univ.stop_event.wait(5)  #wait for the stop event for sometime before next iteration
 
-                    if self.globals.stop_event.is_set():
+                    if self.univ.stop_event.is_set():
                         _log.debug('%s received stop event', self.name)
-                        self.globals.set_time_metric('stopping_time')
+                        self.univ.set_time_metric('stopping_time')
                         break
                         
                 self.handle_response(api.session.stop_status)
@@ -287,7 +287,7 @@ def dump_stack_traces():
     f, timestamp = None, int(time.time() * 1000)
     
     try:
-        path = helper.Utils.get_safe_path(globals.Globals().exe_path + ('var/log/stack-trace-%d.log' % timestamp))  #unique filename for stack trace
+        path = helper.Utils.get_safe_path(universal.Universal().exe_path + ('var/log/stack-trace-%d.log' % timestamp))  #unique filename for stack trace
         f = open(path, 'w')
         f.write(trace)
         _log.info('Stack trace saved at %s' % path)

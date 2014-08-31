@@ -13,7 +13,7 @@ import time
 import json
 import re
 import connection
-import globals
+import universal
 from constructs import *
 
 _log = logging.getLogger(__name__)  #module level logging
@@ -56,7 +56,7 @@ class API(requests.Session):
         """
         
         requests.Session.__init__(self, *args, **kwargs)  #initialize the base class
-        self.globals = globals.Globals()  #save the reference to Globals for optimized access
+        self.univ = universal.Universal()  #save the reference to Universal for optimized access
         self.stop_status = Status.SUCCESS  #reason for stopping
         self.authenticate_status = AuthStatus.UNAUTHORIZED  #authentication status
         self.auth_lock = threading.RLock()  #lock for authentication status
@@ -109,21 +109,21 @@ class API(requests.Session):
             post_event: set/reset stop event if True/False
         """
                 
-        if stop_event == True and self.globals.stop_event.is_set() == False:  #set stop event if it is not set
+        if stop_event == True and self.univ.stop_event.is_set() == False:  #set stop event if it is not set
             _log.debug('Setting stop event')
-            self.globals.stop_event.set()
-        elif stop_event == False and self.globals.stop_event.is_set() == True:  #reset stop event if it is not reset
+            self.univ.stop_event.set()
+        elif stop_event == False and self.univ.stop_event.is_set() == True:  #reset stop event if it is not reset
             _log.debug('Resetting stop event')
-            self.globals.stop_event.clear()
+            self.univ.stop_event.clear()
         
-        if post_event == True and self.globals.post_event.is_set() == False:  #set post event if it is not set
+        if post_event == True and self.univ.post_event.is_set() == False:  #set post event if it is not set
             _log.debug('Setting post event')
-            self.globals.post_event.set()
+            self.univ.post_event.set()
         #reset post event if it is not set and stop event is reset. 
         #if stop event is set, it means agent want to shutdown, and resetting post event can delay shutdown if any threads waiting for it.
-        elif post_event == False and self.globals.post_event.is_set() == True and self.globals.stop_event.is_set() == False:
+        elif post_event == False and self.univ.post_event.is_set() == True and self.univ.stop_event.is_set() == False:
             _log.debug('Resetting post event')
-            self.globals.post_event.clear()
+            self.univ.post_event.clear()
     
     def exec_method(self, method, url, **kwargs):
         """
@@ -160,9 +160,9 @@ class API(requests.Session):
         
         while retry_count == -1 or i <= retry_count:  #retry as many time as requested
             if i > 0:  #wait for stop event, before retrying
-                self.globals.stop_event.wait(retry_interval)
+                self.univ.stop_event.wait(retry_interval)
                 
-            if is_ignore_stop_event == False and self.globals.stop_event.is_set():  #do we need to stop
+            if is_ignore_stop_event == False and self.univ.stop_event.is_set():  #do we need to stop
                 break
             
             try:     
@@ -203,7 +203,7 @@ class API(requests.Session):
         if is_ping_server == False:  #only unblock post event
             self.set_events(post_event = True)
         else:
-            response = self.exec_method('get', self.globals.get_url(), options = {'retry_count': 0, 'is_return_exception': True})  #ping the server
+            response = self.exec_method('get', self.univ.get_url(), options = {'retry_count': 0, 'is_return_exception': True})  #ping the server
             
             if response[0] != None and response[0].status_code < 500:  #we are able to reach the server
                 _log.debug('Ping server successful')
@@ -224,15 +224,15 @@ class API(requests.Session):
         ret = Status.SUCCESS
         
         #get data and make the request
-        data = self.globals.config.agent.get_dict(['orgToken', 'name', 'category', 'agentVersion', ('ref', 'tarball')])
-        response = self.exec_method('post', self.globals.get_url('agents'), data = data, options = kwargs)    
+        data = self.univ.config.agent.get_dict(['orgToken', 'name', 'category', 'agentVersion', ('ref', 'tarball')])
+        response = self.exec_method('post', self.univ.get_url('agents'), data = data, options = kwargs)    
         
         if API.is_success(response):
             _log.info('Registration successful')
             
             #update and save the config
-            self.globals.config.agent.update(response.json())
-            self.globals.config.agent.save()
+            self.univ.config.agent.update(response.json())
+            self.univ.config.agent.save()
         else:
             ret = self.error('Failed to register agent', response)
         
@@ -248,12 +248,12 @@ class API(requests.Session):
         
         ret = Status.SUCCESS
         
-        if hasattr(self.globals.config.agent, '_id') == False:  #if this agent was not registered
+        if hasattr(self.univ.config.agent, '_id') == False:  #if this agent was not registered
             return ret
         
         #make the request
         response = self.exec_method('delete', 
-            self.globals.get_url('orgs/%s/servers/%s' % (self.globals.config.agent.orgToken, self.globals.config.agent._id)), options = {'retry_count': 2})
+            self.univ.get_url('orgs/%s/servers/%s' % (self.univ.config.agent.orgToken, self.univ.config.agent._id)), options = {'retry_count': 2})
         
         if API.is_success(response) == False:
             ret = self.error('Failed to unregister agent', response)
@@ -271,17 +271,17 @@ class API(requests.Session):
         ret = Status.SUCCESS
         
         #get data and make the request
-        data = self.globals.config.agent.get_dict(['orgToken', 'agentVersion'])
+        data = self.univ.config.agent.get_dict(['orgToken', 'agentVersion'])
         data['timestamp'] = int(time.time() * 1000)
-        data['platform'] = self.globals.details
-        response = self.exec_method('post', self.globals.get_url('agents/' + self.globals.config.agent._id + '/sessions'), data = data, options = kwargs)    
+        data['platform'] = self.univ.details
+        response = self.exec_method('post', self.univ.get_url('agents/' + self.univ.config.agent._id + '/sessions'), data = data, options = kwargs)    
         
         if API.is_success(response):
             _log.info('Authentication successful')
             
             #update and save the config
-            self.globals.config.agent.update(response.json())
-            self.globals.config.agent.save()
+            self.univ.config.agent.update(response.json())
+            self.univ.config.agent.save()
             
             self.auth_status(AuthStatus.AUTHENTICATED)  #set auth sataus
             self.set_events(post_event = True)  #set the post event so that data can posted
@@ -299,14 +299,14 @@ class API(requests.Session):
         """
         
         ret = Status.SUCCESS
-        response = self.exec_method('get', self.globals.get_url('agents/1'), options = {'retry_count': 0})  #make the request
+        response = self.exec_method('get', self.univ.get_url('agents/1'), options = {'retry_count': 0})  #make the request
         
         if API.is_success(response):
             _log.info('Config updation successful')
             
             #update and save the config
-            self.globals.config.agent.update(response.json())
-            self.globals.config.agent.save()
+            self.univ.config.agent.update(response.json())
+            self.univ.config.agent.save()
             
             self.set_events(post_event = True)  #set the post event so that data can posted
         else:
@@ -329,7 +329,7 @@ class API(requests.Session):
         ret = Status.SUCCESS
         
         #make the request
-        response = self.exec_method('post', self.globals.get_url('agents/1/data/activities/' + activity_id), data = data, options = {'retry_count': 0})
+        response = self.exec_method('post', self.univ.get_url('agents/1/data/activities/' + activity_id), data = data, options = {'retry_count': 0})
         
         if API.is_success(response):
             _log.debug('Sent activity (%s @ %d)' % (activity_id, data['timestamp']))
@@ -350,7 +350,7 @@ class API(requests.Session):
         ret = Status.SUCCESS
         
         #make request
-        response = self.exec_method('delete', self.globals.get_url('agents/1/sessions/1'), options = {'retry_count': 0, 'is_ignore_stop_event': True})
+        response = self.exec_method('delete', self.univ.get_url('agents/1/sessions/1'), options = {'retry_count': 0, 'is_ignore_stop_event': True})
         
         if API.is_success(response):
             _log.info('Logout successful')
@@ -369,8 +369,8 @@ class API(requests.Session):
         """
         
         #get the data, url and make the request
-        data = self.globals.config.agent.get_dict([('orgToken', ''), ('_id', ''), ('agentVersion', '')])
-        url = self.globals.get_url('orgs/%s/agents/%s/agentVersion' % (data['orgToken'], data['_id']))
+        data = self.univ.config.agent.get_dict([('orgToken', ''), ('_id', ''), ('agentVersion', '')])
+        url = self.univ.get_url('orgs/%s/agents/%s/agentVersion' % (data['orgToken'], data['_id']))
         response = self.exec_method('get', url, params = {'agentVersion': data['agentVersion']}, options = {'retry_count': 0})
         
         if API.is_success(response):
@@ -399,7 +399,7 @@ class API(requests.Session):
         del data['orgToken'], data['_id']
         
         #make request
-        response = self.exec_method('post', self.globals.get_url('orgs/%s/agents/%s/crashreport' % (orgToken, agentId)), 
+        response = self.exec_method('post', self.univ.get_url('orgs/%s/agents/%s/crashreport' % (orgToken, agentId)), 
             data = data, options = {'retry_count': 0})
         
         if API.is_success(response):
@@ -438,7 +438,7 @@ class API(requests.Session):
         API.print_error(message, response)  #log the error  
         
         if response == None:  #client error for the request. reset the post event 
-            is_ignore_status == False and self.globals.stop_event.is_set() == False and self.set_events(post_event = False)
+            is_ignore_status == False and self.univ.stop_event.is_set() == False and self.set_events(post_event = False)
             return Status.NOT_CONNECTED
         
         status, ret, post_event, exec_func, args = response.status_code, Status.UNKNOWN, True, None, ()
