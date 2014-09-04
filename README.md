@@ -4,7 +4,7 @@ SeaLion is a server monitoring, alerting and debugging tool. This repo contains 
 
 [Get started with SeaLion](https://sealion.com) | [Features](https://sealion.com/features) | [FAQ](https://sealion.com/faq) 
 
-![SeaLion](https://sealion.com/images/hundreds-of-servers.png?v=1409768820 "SeaLion Dashboard")
+![SeaLion](https://s3.amazonaws.com/sealion.com-static/monitors-hundred-of-servers.jpgSeaLion Dashboard")
 
 
 ## Features ##
