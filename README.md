@@ -1,5 +1,4 @@
-SeaLion Agent
-=============
+# SeaLion Agent
 ***
 SeaLion is a server monitoring, alerting and debugging tool. This repo contains the source of SeaLion Agent. 
 
@@ -8,8 +7,7 @@ SeaLion is a server monitoring, alerting and debugging tool. This repo contains 
 ![SeaLion](https://sealion.com/images/hundreds-of-servers.png?v=1409768820 "SeaLion Dashboard")
 
 
-Features
-========
+## Features
 ***
 * Dashboards and Charts - a bird's eye view of all servers with beautiful, useful visualizations
 * Alerts - get instant alerts when metrics cross their threshold
