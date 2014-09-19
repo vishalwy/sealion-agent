@@ -196,7 +196,7 @@ def get_disk_rw(sampling_duration):
     
     #get te list of devices
     with open('/proc/partitions') as f:
-        devices = [re.search('\s([^\s]+)$', line).group(1).strip() for line in re.findall('^\s*[0-9]+\s+[1-9]+.*$', f.read(), flags = re.MULTILINE)]
+        devices = [re.search('\s([^\s]+)$', line).group(1).strip() for line in re.findall('^\s*[0-9]+\s+[0-9]+\s+[0-9]+\s+.+$', f.read(), flags = re.MULTILINE)]
     
     with open('/proc/diskstats') as f1:
         with open('/proc/diskstats') as f2:

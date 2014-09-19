@@ -1,12 +1,13 @@
-# Ignore all files ending in ~ (temp files)
+# Ignore temp files
 *~
 *.pyc
 
 
-## Ignore folders ##
+# Ignore dynamic directories created
 build/bin/
 code/var/
 code/etc/
 code/bin/
 code/tmp/
 __pycache__/
+nbproject/
