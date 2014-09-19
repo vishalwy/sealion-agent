@@ -151,7 +151,7 @@ check_dependency()
 {
     echo "Performing dependency check..."
 
-    if [ "$(which "$PYTHON")" == "" ] ; then
+    if [ "$(type -P "$PYTHON")" == "" ] ; then
         echo "Error: No python found" >&2
         exit $SCRIPT_ERR_INVALID_PYTHON
     fi
@@ -166,7 +166,7 @@ check_dependency()
     PADDING="      "
 
     for COMMAND in "${WHICH_COMMANDS[@]}" ; do
-        if [ "$(which $COMMAND 2>/dev/null)" == "" ] ; then
+        if [ "$(type -P $COMMAND 2>/dev/null)" == "" ] ; then
             MISSING_COMMANDS=$([ "$MISSING_COMMANDS" != "" ] && echo "$MISSING_COMMANDS\n$PADDING Cannot locate command '$COMMAND'" || echo "$PADDING Cannot locate command '$COMMAND'")
         fi
     done

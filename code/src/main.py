@@ -150,5 +150,5 @@ def run(is_update_only_mode = False):
     helper.notify_terminate()  #send terminate event so that modules listening on the event will get a chance to cleanup
     sys.exit(0)
     
-if __name__ == "__main__":  #if this is the main script
+if __name__ == '__main__':  #if this is the main script
     run()

@@ -535,7 +535,6 @@ class Sender(ThreadEx):
     def exe(self):       
         """
         Method that runs in the new thread.
-        This also performs gc at some intervals depending on the queue size
         """
         
         while 1:
