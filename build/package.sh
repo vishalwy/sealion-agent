@@ -68,27 +68,12 @@ chmod +x $TARGET/$OUTPUT
 
 generate_scripts()
 {
-    cp res/scripts/uninstall.sh $TARGET/$OUTPUT/agent/
-    chmod +x $TARGET/$OUTPUT/agent/uninstall.sh
-    echo "Uninstaller generated"
-    cp res/scripts/curlike.py $TARGET/$OUTPUT/agent/bin/
-    chmod +x $TARGET/$OUTPUT/agent/bin/curlike.py
-    echo "Update script generated"
-    cp res/scripts/unregister.py $TARGET/$OUTPUT/agent/bin/
-    chmod +x $TARGET/$OUTPUT/agent/bin/unregister.py
-    echo "Unregister script generated"
-    cp res/scripts/monit.sh $TARGET/$OUTPUT/agent/bin/
-    chmod +x $TARGET/$OUTPUT/agent/bin/monit.sh
-    echo "Monit script generated"
     cp res/scripts/sealion $TARGET/$OUTPUT/agent/etc/init.d
     chmod +x $TARGET/$OUTPUT/agent/etc/init.d/sealion
     echo "Service script generated"
-    cp res/scripts/check_dependency.py $TARGET/$OUTPUT/agent/bin/
-    URL="$(echo "$API_URL" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
-    ARGS="-i 's/\(^api\_url\s*=\s*\)\(\"[^\"]\+\"\)/\1\"$URL\"/'"
-    eval sed "$ARGS" $TARGET/$OUTPUT/agent/bin/check_dependency.py
-    chmod +x $TARGET/$OUTPUT/agent/bin/check_dependency.py
-    echo "Dependency script generated"
+    cp res/scripts/uninstall.sh $TARGET/$OUTPUT/agent/
+    chmod +x $TARGET/$OUTPUT/agent/uninstall.sh
+    echo "Uninstaller generated"
     INSTALLER=$TARGET/$OUTPUT/install.sh
     CURL_INSTALLER=$TARGET/curl-install.sh
     CURL_INSTALLER_NODE=$TARGET/curl-install-node.sh
@@ -128,10 +113,9 @@ generate_scripts()
     echo "README generated"
 }
 
-find ../code/ -mindepth 1 -maxdepth 1 -type d -regextype sed -regex '.*/\(\(lib\)\|\(opt\)\|\(src\)\)' -exec cp -r {} $TARGET/$OUTPUT/agent \;
+find ../code/ -mindepth 1 -maxdepth 1 -type d -regextype sed -regex '.*/\(\(lib\)\|\(opt\)\|\(src\)\|\(bin\)\)' -exec cp -r {} $TARGET/$OUTPUT/agent \;
 cp -r res/etc $TARGET/$OUTPUT/agent
 mkdir -p $TARGET/$OUTPUT/agent/etc/init.d
-mkdir -p $TARGET/$OUTPUT/agent/bin
 generate_scripts
 
 if [ "$DOMAIN"  != "$DEFAULT_DOMAIN" ] ; then

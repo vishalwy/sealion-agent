@@ -7,7 +7,6 @@
 build/bin/
 code/var/
 code/etc/
-code/bin/
 code/tmp/
 __pycache__/
 nbproject/

@@ -178,7 +178,7 @@ check_dependency()
 
     cd agent/lib
     PROXY_OPTION=$([ "$PROXY" == "" ] && echo "" || echo "-x $PROXY")
-    RET=$("$PYTHON" ../bin/check_dependency.py -p "       " $PROXY_OPTION 2>&1)
+    RET=$("$PYTHON" ../bin/check_dependency.py -p "       " -a "$API_URL" $PROXY_OPTION 2>&1)
     RET_CODE=$?
 
     if [[ $RET_CODE -eq $SCRIPT_ERR_SUCCESS && "$RET" != "Success" ]] ; then

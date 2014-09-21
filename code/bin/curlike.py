@@ -32,7 +32,7 @@ if sys.version_info[0] == 3:
 import requests
 from constructs import unicode
 
-i, arg_len, output_format, output_file, urls, f = 0, len(sys.argv), '', '', [], None
+i, arg_len, output_format, output_file, urls, f = 1, len(sys.argv), '', '', [], None
 usage = 'Usage: curlike.py {[-x <proxy>] [-H <header>] [-X <http method>] [-d <data>] [-w <write out>] [-o <output file>] [-L <allow redirects>] URLs | -h for Help}\n'
 
 #keyword arguments for requests
@@ -95,10 +95,6 @@ sys.excepthook = exception_hook  #set the exception hook
 
 try:
     while i < arg_len:  #read all the arguments
-        if not i:  #skip the first argument as it is the name of the script
-            i += 1
-            continue
-
         arg = sys.argv[i]
 
         if arg[:1] == '-':  #considering single letter options only

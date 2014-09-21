@@ -15,7 +15,7 @@ ERR_INCOMPATIBLE_PYTHON = 2
 ERR_FAILED_DEPENDENCY = 3
 ERR_INVALID_USAGE=7
 
-usage = 'Usage: check_dependency.py {[-x <proxy address>] [-p <padding for output>] | -h for Help}\n'
+usage = 'Usage: check_dependency.py {[-x <proxy address>] [-p <padding for output>] [-a <api url>] | -h for Help}\n'
 
 #Python 2.x vs 3.x
 try:
@@ -24,20 +24,19 @@ except:
     def unicode(object, *args, **kwargs):
         return str(object)
     
-i, arg_len, padding, proxies = 0, len(sys.argv), '', {}
+i, arg_len, padding, proxies, api_url = 1, len(sys.argv), '', {}, ''
 
 try:
     while i < arg_len:  #read all the arguments
-        if not i:  #skip the first argument as it is the name of the script
-            i += 1
-            continue
-
         if sys.argv[i] == '-x':  #proxy
             i += 1  #read option value
             proxies = {'https': sys.argv[i]}
         elif sys.argv[i] == '-p':  #padding for output
             i += 1  #read option value
             padding = sys.argv[i]
+        elif sys.argv[i] == '-a':  #api url to test for connection tunneling
+            i += 1  #read option value
+            api_url = sys.argv[i]
         elif sys.argv[i] == '-h':  #help
             sys.stdout.write(usage)
             sys.exit(0)
@@ -82,7 +81,6 @@ sys.path.insert(0, exe_path + 'lib')
 if sys.version_info[0] == 3:
     sys.path.insert(0, exe_path + 'lib/httplib')    
     
-api_url = "<api-url>"  #api url, this will be updated while packaging
 errors = []  #any errors
 
 #modules to be checked for
@@ -131,7 +129,7 @@ except ImportError:
 
 #check whether the connection tunneling works
 try:
-    requests.get(api_url, proxies = proxies, timeout = 10)
+    api_url and requests.get(api_url, proxies = proxies, timeout = 10)
 except (ImportError, TypeError, AttributeError):
     e = sys.exc_info()[1]
     errors.append(unicode(e))
