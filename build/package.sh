@@ -102,7 +102,7 @@ generate_scripts()
     chmod +x $CURL_INSTALLER_NODE
     echo "Curl installer for node generated"
     cp res/README $TARGET/$OUTPUT/agent
-    DATE="$(echo "$(date +"%F %T")" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
+    DATE="$(echo "$(date +"%F %T %Z")" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
     REVISION=$(git rev-parse --short=10 HEAD 2>/dev/null)
 
     if [ "$REVISION" != "" ] ; then
@@ -123,6 +123,7 @@ if [ "$DOMAIN"  != "$DEFAULT_DOMAIN" ] ; then
     echo "Setting agent logging level to 'debug'"
 fi
 
+echo "Generating $TARGET/$OUTPUT-$VERSION-noarch.tar.gz..."
 tar -zcvf "$TARGET/$OUTPUT-$VERSION-noarch.tar.gz" --exclude="*.pyc" --exclude="__pycache__" --exclude="*~" --exclude-vcs --exclude-backups --directory=$TARGET $OUTPUT/
 rm -rf $TARGET/$OUTPUT
 

@@ -343,14 +343,14 @@ def sig_handler(signum, frame):
     
 signal.signal(signal.SIGINT, sig_handler)  #setup signal handling for SIGINT
 daemon = SeaLion(exe_path + 'var/run/sealion.pid')  #SeaLion daemon instance
+valid_usage = ['start', 'stop', 'restart', 'status']
 
 #perform the operation based on the commandline
 #do not call getattr directly without validating as it will allow any method inside the daemon to run
-if len(sys.argv) == 2 and sys.argv[1] in ['start', 'stop', 'restart', 'status']:
-    method = getattr(daemon, sys.argv[1])
-    method()
+if len(sys.argv) == 2 and sys.argv[1] in valid_usage:
+    getattr(daemon, sys.argv[1])()
 else:
-    len(sys.argv) > 1 and sys.stderr.write('Invalid Usage: \'%s\'\n' % ' '.join(sys.argv[1:]))
-    sys.stdout.write('Usage: %s start|stop|restart|status\n' % daemon.daemon_name)
+    len(sys.argv) > 1 and sys.stderr.write('Invalid usage: \'%s\'\n' % ' '.join(sys.argv[1:]))
+    sys.stdout.write('Usage: %s %s\n' % (daemon.daemon_name, '|'.join(valid_usage)))
     
 sys.exit(exit_status.AGENT_ERR_SUCCESS)
