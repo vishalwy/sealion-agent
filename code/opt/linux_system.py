@@ -155,14 +155,15 @@ def get_net_rw(sampling_duration):
     Yields:
         dict containing network read and writes for each interface.
     """
-    
-    interfaces = [file for file in os.listdir('/sys/class/net/')]  #network interfaces
         
     with open('/proc/net/dev') as f1:
         with open('/proc/net/dev') as f2:
             content1 = f1.read()  #first collection
             yield {}  #yield so that caller can put delay before sampling again
             content2 = f2.read()  #second collection
+            
+    #network interfaces
+    interfaces = [interface[:-1].strip() for interface in re.findall('^\s*.+:', content1, flags = re.MULTILINE)]
             
     #initialize the dict with interfaces and values
     data = dict(zip(interfaces, [dict(zip(['reads', 'writes'], [0, 0])) for interface in interfaces]))
