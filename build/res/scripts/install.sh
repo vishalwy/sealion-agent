@@ -108,12 +108,13 @@ if [ "$ORG_TOKEN" == '' ] ; then
     exit $SCRIPT_ERR_INVALID_USAGE
 fi
 
-update_agent_config()
+update_config()
 {
     KEY="$(echo "$1" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
     VALUE="$(echo "$2" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
     ARGS="-i 's/\(\"$KEY\"\s*:\s*\)\(\"[^\"]\+\"\)/\1\"$VALUE\"/'"
-    eval sed "$ARGS" "\"$INSTALL_PATH/etc/agent.json\""
+    CONFIG_FILE=$([ "$3" == "" ] && echo "agent.json" || echo "$3")
+    eval sed "$ARGS" "\"$INSTALL_PATH/etc/$CONFIG_FILE\""
 }
 
 install_service()
@@ -360,8 +361,9 @@ else
     else
         find "$INSTALL_PATH" -mindepth 1 -maxdepth 1 ! -name 'var' ! -name 'etc' ! -name 'tmp' -exec rm -rf "{}" \; >/dev/null 2>&1
         find agent/ -mindepth 1 -maxdepth 1 ! -name 'etc' -exec cp -r {} "$INSTALL_PATH" \;
-        update_agent_config "agentVersion" $VERSION
-        update_agent_config "apiUrl" $API_URL
+        update_config "agentVersion" $VERSION
+        update_config "apiUrl" $API_URL
+        update_config "level" "info" "config.json"
     fi
 
     echo "Sealion agent updated successfully"

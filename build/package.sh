@@ -60,6 +60,7 @@ BASEDIR=$(readlink -f "$0")
 BASEDIR=$(dirname "$BASEDIR")
 BASEDIR=${BASEDIR%/}
 OUTPUT="sealion-agent"
+ORIG_DOMAIN="$TARGET"
 TARGET="bin/$TARGET"
 cd "$BASEDIR"
 rm -rf $TARGET >/dev/null 2>&1
@@ -118,7 +119,7 @@ cp -r res/etc $TARGET/$OUTPUT/agent
 mkdir -p $TARGET/$OUTPUT/agent/etc/init.d
 generate_scripts
 
-if [ "$DOMAIN"  != "$DEFAULT_DOMAIN" ] ; then
+if [ "$ORIG_DOMAIN"  != "$DEFAULT_DOMAIN" ] ; then
     sed -i 's/\("level"\s*:\s*\)"[^"]\+"/\1"debug"/' "$TARGET/$OUTPUT/agent/etc/config.json"
     echo "Setting agent logging level to 'debug'"
 fi
