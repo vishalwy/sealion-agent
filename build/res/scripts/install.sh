@@ -363,7 +363,6 @@ else
         find agent/ -mindepth 1 -maxdepth 1 ! -name 'etc' -exec cp -r {} "$INSTALL_PATH" \;
         update_config "agentVersion" $VERSION
         update_config "apiUrl" $API_URL
-        update_config "level" "info" "config.json"
     fi
 
     echo "Sealion agent updated successfully"
