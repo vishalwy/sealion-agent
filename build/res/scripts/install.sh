@@ -197,15 +197,6 @@ check_dependency()
     cd ../../
 }
 
-migrate_node_agent_config()
-{
-    TEMP=$(cat "$INSTALL_PATH/etc/config/proxy.json" 2>/dev/null | grep "\"http\_proxy\"\s*:\s*\"\([^\"]*\)\"" -o | sed 's/.*"http\_proxy"\s*:\s*"\([^"]*\)".*/\1/')
-    
-    if [ "$TEMP" != "" ] ; then
-        PROXY=$TEMP
-    fi
-}
-
 setup_config()
 {
     CONFIG="\"orgToken\": \"$ORG_TOKEN\", \"apiUrl\": \"$API_URL\", \"agentVersion\": \"$VERSION\", \"name\": \"$HOST_NAME\", \"ref\": \"$REF\""

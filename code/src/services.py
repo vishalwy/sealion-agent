@@ -301,7 +301,7 @@ class Executer(ThreadEx):
             if job.status == JobStatus.RUNNING and t - job.exec_details['timestamp'] > self.timeout:
                 job.kill() and _log.info('Killed activity (%s @ %d) as it exceeded timeout' % (job.exec_details['_id'], job.exec_details['timestamp']))
 
-            if job.status != JobStatus.IGNORED:  #remove the job if it is to be ignored
+            if job.status == JobStatus.IGNORED:  #remove the job if it is to be ignored
                 del Executer.jobs[job_timestamp]
             elif job.status != JobStatus.RUNNING:  #collect the job if it is not running and remove it from the dict
                 finished_jobs.append(job)
