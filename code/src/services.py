@@ -30,6 +30,7 @@ class JobStatus(Namespace):
     RUNNING = 2  #job is in running state
     TIMED_OUT = 3  #job didnt finish in the timeout
     FINISHED = 4  #job finished
+    IGNORED = 5  #job should be considered as ignored and should not process the output
     
 class Job:    
     """
@@ -258,10 +259,9 @@ class Executer(ThreadEx):
                 plugin = __import__(job.exec_details['command'])
                 job.update({'return_code': 0, 'output': plugin.get_data()})
             except Exception as e:
-                #on failure we set the return_code to non zero so that output can be interpreted as error string
-                error = unicode(e);
-                _log.error('Failed to get data for plugin activity (%s @ %d); %s' % (job.exec_details['_id'], job.exec_details['timestamp'], error))
-                job.update({'return_code': 1, 'output': error})
+                #on failure we set the status code as ignored, so that output is not processed
+                job.status = JobStatus.IGNORED
+                _log.error('Failed to get data for plugin activity (%s @ %d); %s' % (job.exec_details['_id'], job.exec_details['timestamp'], unicode(e)))
         
     def update_job(self, timestamp, details):
         """
@@ -297,11 +297,13 @@ class Executer(ThreadEx):
         for job_timestamp in list(Executer.jobs.keys()):  #loop throgh the jobs
             job = Executer.jobs[job_timestamp]
             
-            if t - job.exec_details['timestamp'] > self.timeout:  #if it exceeds the timeout
+            #if the job exceeds the timeout
+            if job.status == JobStatus.RUNNING and t - job.exec_details['timestamp'] > self.timeout:
                 job.kill() and _log.info('Killed activity (%s @ %d) as it exceeded timeout' % (job.exec_details['_id'], job.exec_details['timestamp']))
 
-            #collect the job if it is not running and remove it from the dict
-            if job.status != JobStatus.RUNNING:
+            if job.status != JobStatus.IGNORED:  #remove the job if it is to be ignored
+                del Executer.jobs[job_timestamp]
+            elif job.status != JobStatus.RUNNING:  #collect the job if it is not running and remove it from the dict
                 finished_jobs.append(job)
                 del Executer.jobs[job_timestamp]
                 

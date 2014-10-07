@@ -7,10 +7,19 @@ __copyright__ = '(c) Webyog, Inc'
 __author__ = 'Vishal P.R'
 __email__ = 'hello@sealion.com'
 
+import logging
 import re
-import os
 import multiprocessing
 import time
+
+#Python 2.x vs 3.x
+try:
+    unicode = unicode
+except:
+    def unicode(object, *args, **kwargs):
+        return str(object)
+    
+_log = logging.getLogger(__name__)  #module level logging
 
 def get_data():
     """
@@ -38,20 +47,39 @@ def get_data():
     
     #metrics that needs sampling
     #they are written as a generator so that we can sleep before collection again
-    sampling_duration = 1
+    #we sample twice
+    sampling_duration, sampling_count = 1, 2
     cpu_usage_gen = get_cpu_usage(sampling_duration)  #generator for cpu usage
     net_rw_gen = get_net_rw(sampling_duration)  #generator for network read write
     disk_rw_gen = get_disk_rw(sampling_duration)  #generator for disk read write
-        
-    while 1:  #now start sampling, whenever we have walid data, we can exit the loop
-        cpu_usage = next(cpu_usage_gen)
-        net_rw = next(net_rw_gen)
-        disk_rw = next(disk_rw_gen)
-        
-        if cpu_usage or net_rw or disk_rw:  #we have valid data
-            break
-        
-        time.sleep(sampling_duration)
+    
+    while sampling_count > 0:
+        try:
+            cpu_usage = next(cpu_usage_gen)
+        except (StopIteration, GeneratorExit):
+            cpu_usage = {}
+        except Exception as e:
+            cpu_usage = {}
+            _log.error('Failed to sample CPU usage; %s' % unicode(e))
+            
+        try:
+            net_rw = next(net_rw_gen)
+        except (StopIteration, GeneratorExit):
+            net_rw = {}
+        except Exception as e:
+            net_rw = {}
+            _log.error('Failed to sample network R/W; %s' % unicode(e))
+            
+        try:
+            disk_rw = next(disk_rw_gen)
+        except (StopIteration, GeneratorExit):
+            disk_rw = {}
+        except Exception as e:
+            disk_rw = {}
+            _log.error('Failed to sample disk R/W; %s' % unicode(e))
+            
+        sampling_count -= 1
+        sampling_count and time.sleep(sampling_duration)  #sleep before sampling again
     
     #append cpu usage for each cpu core
     for cpu, usage in cpu_usage.items():
@@ -89,6 +117,8 @@ def get_mem_usage():
     Returns:
         dict containing memory usage stats
     """
+    
+    mem_total, mem_free, vm_total, mem_cached = 0, 0, 0, 0
     
     with open('/proc/meminfo') as f:
         for line in f:
