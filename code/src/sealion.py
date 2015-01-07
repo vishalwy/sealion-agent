@@ -14,6 +14,7 @@ import time
 import traceback
 import signal
 import pwd
+import grp
 import subprocess
 import json
 import re
@@ -207,7 +208,8 @@ class SeaLion(Daemon):
             #if it is not sealion user, then we need to change user and group
             #if current user is not super user, trying to change the user/group id will raise exception
             if user.pw_uid != os.getuid():
-                os.setgroups([])  #leave any effective groups
+                groups = [group.gr_gid for group in grp.getgrall() if user.pw_name in group.gr_mem and user.pw_gid != group.gr_gid]  #find all the groups where the user a member
+                os.setgroups(groups)  #set the suplimentary groups
                 os.setgid(user.pw_gid)  #set group id
                 os.setuid(user.pw_uid)  #set user id
                 os.environ['HOME'] = '/'  #reset the environment
@@ -217,7 +219,7 @@ class SeaLion(Daemon):
         except Exception as e:
             sys.stderr.write('Failed to change the group or user to %s; %s\n' % (self.user_name, unicode(e)))
             sys.exit(exit_status.AGENT_ERR_FAILED_CHANGE_GROUP_OR_USER)
-            
+                
         try:
             #try to create pid file
             helper.Utils.get_safe_path(self.pidfile)
