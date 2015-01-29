@@ -52,8 +52,8 @@ Note: Uninstalling agent requires super privilege.
 
 Credits
 =======
-#   Requests module for Python  : https://pypi.python.org/pypi/requests
-#   socketIO-client for Python  : https://pypi.python.org/pypi/socketIO-client
-#   websocket-client for Python : https://pypi.python.org/pypi/websocket-client
+#   Requests         : https://pypi.python.org/pypi/requests
+#   socketIO-client  : https://pypi.python.org/pypi/socketIO-client
+#   websocket-client : https://pypi.python.org/pypi/websocket-client
  
 

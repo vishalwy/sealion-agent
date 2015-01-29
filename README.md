@@ -2,7 +2,7 @@
 
 SeaLion is a server monitoring, alerting and debugging tool. This repo contains the source of SeaLion Agent. 
 
-[Get started with SeaLion](https://sealion.com) | [Features](https://sealion.com/features) | [FAQ](https://sealion.com/faq) 
+[Get started with SeaLion](https://sealion.com) | [Features](https://sealion.com/features) | [FAQ](https://sealion.com/faq) | [README](build/res/README) 
 
 ![SeaLion](https://s3.amazonaws.com/sealion.com-static/monitors-hundred-of-servers.jpg "SeaLion Dashboard")
 
@@ -18,4 +18,4 @@ SeaLion is a server monitoring, alerting and debugging tool. This repo contains 
 * Servers side-by-side - quickly find out why one server does better than the other
 * Teams - granular access controls for multiple users
 
-[Get started with SeaLion](https://sealion.com) | [Features](https://sealion.com/features) | [FAQ](https://sealion.com/faq) 
+[Get started with SeaLion](https://sealion.com) | [Features](https://sealion.com/features) | [FAQ](https://sealion.com/faq) | [README](build/res/README)
