@@ -48,7 +48,7 @@ class SeaLion(Daemon):
         """
         
         Daemon.__init__(self, *args, **kwargs)  #initialize the base class
-        self.user_name = 'vagrant'  #user name for daemon
+        self.user_name = 'sealion'  #user name for daemon
         self.monit_interval = 30  #monitoring interval for monit.sh
         self.crash_loop_count = 5  #count of crash dumps to determine crash loop
         self.monit_pid = -1  #pid of monit.sh
