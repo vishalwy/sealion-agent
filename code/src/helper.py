@@ -214,25 +214,29 @@ class Utils(Namespace):
         os.execl(sys.executable, sys.executable, *sys.argv)
      
     @staticmethod
-    def get_stack_trace(thread_ident = None):
+    def get_stack_trace(curr_thread_trace = ''):
         """
         Public static function to get the stack trace of threads.
         
         Args:
-            thread_ident: thread identifier of the thread for which it should retreive stack trace.
+            curr_thread_trace: thread trace to be used for the calling thread.
             
         Returns:
             string representing the stack trace.
         """
         
         trace = ''
+        curr_thread = threading.current_thread()
 
         #loop throught the sys frames and form the trace
         for thread_id, frame in sys._current_frames().items():
-            if thread_ident == None or thread_ident == thread_id:
+            if thread_id != curr_thread.ident:
                 trace += '# Thread ID: %s\n' % thread_id if thread_ident == None else ''
-                trace += ''.join(traceback.format_list(traceback.extract_stack(frame)))
-                trace += '\n\n' if thread_ident == None else ''
+                trace += ''.join(traceback.format_list(traceback.extract_stack(frame))) + '\n\n'
+            else: 
+                curr_thread_trace = curr_thread_trace if curr_thread_trace else ''.join(traceback.format_list(traceback.extract_stack(frame)))
+                curr_thread_trace = '# Thread ID: %s(Current thread)\n%s' % (thread_id, curr_thread_trace)
+                trace = '%s\n\n%s' % (curr_thread_trace, trace)
 
         return trace
          
@@ -506,9 +510,9 @@ class ThreadMonitor(SingletonType('ThreadMonitorMetaClass', (object, ), {})):
             if hasattr(ret['callback'], '__call__'):  #a callabcle object
                 ret['callback'](*ret['callback_args'], **ret['callback_kwargs'])
             elif ret['callback'] == exit_status.AGENT_ERR_RESTART:  #restart agent
-               Utils.restart_agent('Thread %d is not responding' % ret['thread_id'], Utils.get_stack_trace(ret['thread_id']))
+               Utils.restart_agent('Thread %d is not responding' % ret['thread_id'], Utils.get_stack_trace())
             elif ret['callback'] != -1:  #some thread expired and asked to terminate agent
-                notify_terminate(False, 'Thread %d is not responding' % ret['thread_id'], Utils.get_stack_trace(ret['thread_id']))
+                notify_terminate(False, 'Thread %d is not responding' % ret['thread_id'], Utils.get_stack_trace())
                 _log.info('Agent terminating with status code %d' % ret['callback'])
                 os._exit(ret['callback'])
                
