@@ -210,9 +210,11 @@ class Utils(Namespace):
         """
         
         notify_terminate(False, message, stack_trace)
-        _log.info('Restarting agent')
-        os.execl(sys.executable, sys.executable, *sys.argv)
-     
+        main_module = sys.modules['__main__'];
+        main_file = main_module.exe_path + 'src/' + os.path.basename(main_module.__file__)
+        _log.info('Restarting agent %s' % main_file)
+        os.execl(sys.executable, sys.executable, main_module.exe_path + 'src/' + os.path.basename(main_module.__file__), 'restart')
+        
     @staticmethod
     def get_stack_trace(curr_thread_trace = ''):
         """
@@ -231,7 +233,7 @@ class Utils(Namespace):
         #loop throught the sys frames and form the trace
         for thread_id, frame in sys._current_frames().items():
             if thread_id != curr_thread.ident:
-                trace += '# Thread ID: %s\n' % thread_id if thread_ident == None else ''
+                trace += '# Thread ID: %s\n' % thread_id
                 trace += ''.join(traceback.format_list(traceback.extract_stack(frame))) + '\n\n'
             else: 
                 curr_thread_trace = curr_thread_trace if curr_thread_trace else ''.join(traceback.format_list(traceback.extract_stack(frame)))

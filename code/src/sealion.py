@@ -274,7 +274,7 @@ class SeaLion(Daemon):
         
         if type != SystemExit:  #filter out sys.exit()
             import helper
-            trace = helper.Utils.get_stack_trace(''.join(traceback.format_exception(type, value, tb)))
+            trace = helper.Utils.get_stack_trace(''.join(traceback.format_tb(tb)))
             helper.Utils.restart_agent('%s crashed' % self.daemon_name, trace)
     
     def run(self):

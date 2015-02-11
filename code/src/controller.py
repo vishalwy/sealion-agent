@@ -275,7 +275,7 @@ def sig_handler(signum, frame):
         _log.debug('Received SIGALRM')
         signal.alarm(0)  #reset SIGALRM
     elif signum == signal.SIGUSR1:
-        _log.debug('Received SIGUSR1')
+        _log.info('Received SIGUSR1')
         dump_stack_traces()  #dump the stack trace of all the threads in the process
         
 def dump_stack_traces():
