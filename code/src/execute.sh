@@ -1,5 +1,3 @@
-#!/bin/bash
-
 #This script is used to execute command-line activities from SeaLion agent.
 #This is an attempt to reduce the memory overhead in fork-exec as bash consumes less memory compared to Python.
 #It also enable parallel process execution using multiple CPU cores. 

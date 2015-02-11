@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """
 Use this as the main script to run agent as a daemon.
 It gives a commandline interface to the program, makes the process daemon, sets up crash dump handling and starts monitoring script.

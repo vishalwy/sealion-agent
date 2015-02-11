@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """
 In a development environment this script is used as the main script.
 It sets up logging, Universal and api sessions.

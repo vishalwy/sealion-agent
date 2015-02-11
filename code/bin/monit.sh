@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 #This script is used to monitor SeaLion agent. It restarts the agent if it was killed.
 
