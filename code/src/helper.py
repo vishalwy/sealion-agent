@@ -211,9 +211,8 @@ class Utils(Namespace):
         
         notify_terminate(False, message, stack_trace)
         main_module = sys.modules['__main__'];
-        main_file = main_module.exe_path + 'src/' + os.path.basename(main_module.__file__)
-        _log.info('Restarting agent %s' % main_file)
-        os.execl(sys.executable, sys.executable, main_module.exe_path + 'src/' + os.path.basename(main_module.__file__), 'restart')
+        _log.info('Restarting agent')
+        os.execl(sys.executable, sys.executable, main_module.exe_path + 'src/' + os.path.basename(main_module.__file__), *sys.argv[1:])
         
     @staticmethod
     def get_stack_trace(curr_thread_trace = ''):
