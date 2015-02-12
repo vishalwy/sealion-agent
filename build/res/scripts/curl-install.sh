@@ -173,6 +173,7 @@ if [[ $? -ne 0 || "$RET" != "200" ]] ; then
 fi
 
 VERSION=$(grep '"agentVersion"\s*:\s*"[^"]*"' "$TMP_DATA_FILE" -o | sed 's/"agentVersion"\s*:\s*"\([^"]*\)"/\1/')
+log_output "Available agent version is $VERSION"
 MAJOR_VERSION=$(echo $VERSION | grep '^[0-9]\+' -o)
 TAR_DOWNLOAD_URL=$(grep '"agentDownloadURL"\s*:\s*"[^"]*"' "$TMP_DATA_FILE" -o | sed 's/"agentDownloadURL"\s*:\s*"\([^"]*\)"/\1/')
 
