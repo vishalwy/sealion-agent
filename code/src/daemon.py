@@ -74,18 +74,14 @@ class Daemon(object):
         #flush and close standard input/output/error
         sys.stdout.flush()
         sys.stderr.flush()
-        input, output, error = sys.stdin.fileno(), sys.stdout.fileno(), sys.stderr.fileno()
         sys.stdin.close()
         sys.stdout.close()
         sys.stderr.close()
             
         #redirect standard input/output/error 
-        si = open(self.stdin, 'r')
-        so = open(self.stdout, 'a+')
-        se = open(self.stderr, 'a+')
-        os.dup2(si.fileno(), input)
-        os.dup2(so.fileno(), output)
-        os.dup2(se.fileno(), error)
+        sys.stdin = open(self.stdin, 'r')
+        sys.stdout = open(self.stdout, 'a+')
+        sys.stderr = open(self.stderr, 'a+')
         
         atexit.register(self.cleanup)  #register cleanup on exit
         
