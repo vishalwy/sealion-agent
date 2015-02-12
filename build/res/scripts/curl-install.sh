@@ -80,16 +80,47 @@ log_output()
     return 0
 }
 
-trap_exit()
+read_and_log()
 {
-    if [[ -t 0 || -t 1 ]] ; then
-        kill -PIPE 0 >/dev/null 2>&1
-    else
-        kill -9 0 >/dev/null 2>&1
+    OUTPUT_STREAM=1
+
+    if [ "$1" == "2" ] ; then
+        OUTPUT_STREAM=2
     fi
+
+    while read -t 1800 line; do 
+        log_output "${line}" $OUTPUT_STREAM 
+    done
 }
 
-trap trap_exit EXIT
+report_failure()
+{
+    call_url -s $PROXY -H "Content-Type: application/json" -X PUT -d "{\"reason\":\"$1\"}"  "$API_URL/orgs/$ORG_TOKEN/agents/$AGENT_ID/updatefail" >/dev/null 2>&1
+}
+
+check_dependency()
+{
+    WHICH_COMMANDS=("sed" "tar" "bash" "grep" "mktemp")
+    MISSING_COMMANDS=""
+    PADDING="      "
+
+    for COMMAND in "${WHICH_COMMANDS[@]}" ; do
+        if [ "$(type -P $COMMAND 2>/dev/null)" == "" ] ; then
+            MISSING_COMMANDS=$([ "$MISSING_COMMANDS" != "" ] && echo "$MISSING_COMMANDS\n$PADDING Cannot locate command '$COMMAND'" || echo "$PADDING Cannot locate command '$COMMAND'")
+        fi
+    done
+
+    if [ "$MISSING_COMMANDS" != "" ] ; then
+        OUTPUT=$(echo -e "Error: Command dependency check failed\n$MISSING_COMMANDS")
+        log_output "$OUTPUT" 2
+
+        if [ "$AGENT_ID" != "" ] ; then
+            report_failure 6
+        fi
+        
+        exit 123
+    fi
+}
 
 while getopts :i:o:c:H:x:p:a:r:v:h OPT ; do
     case "$OPT" in
@@ -122,11 +153,6 @@ while getopts :i:o:c:H:x:p:a:r:v:h OPT ; do
     esac
 done
 
-report_failure()
-{
-    call_url -s $PROXY -H "Content-Type: application/json" -X PUT -d "{\"reason\":\"$1\"}"  "$API_URL/orgs/$ORG_TOKEN/agents/$AGENT_ID/updatefail" >/dev/null 2>&1
-}
-
 INSTALL_PATH=$(eval echo "$INSTALL_PATH")
 
 if [[ "$INSTALL_PATH" != "" && ${INSTALL_PATH:0:1} != "/" ]] ; then
@@ -134,6 +160,7 @@ if [[ "$INSTALL_PATH" != "" && ${INSTALL_PATH:0:1} != "/" ]] ; then
 fi
 
 INSTALL_PATH=${INSTALL_PATH%/}
+check_dependency
 TMP_DATA_FILE=$(mktemp "$TMP_DATA_FILE")
 log_output "Getting agent installer details..."
 SUB_URL=$([ "$AGENT_ID" != "" ] && echo "/agents/$AGENT_ID" || echo "")
@@ -145,12 +172,12 @@ if [[ $? -ne 0 || "$RET" != "200" ]] ; then
     exit 117
 fi
 
-VERSION=$(cat "$TMP_DATA_FILE" | grep '"agentVersion"\s*:\s*"[^"]*"' -o |  sed 's/"agentVersion"\s*:\s*"\([^"]*\)"/\1/')
+VERSION=$(grep '"agentVersion"\s*:\s*"[^"]*"' "$TMP_DATA_FILE" -o | sed 's/"agentVersion"\s*:\s*"\([^"]*\)"/\1/')
 MAJOR_VERSION=$(echo $VERSION | grep '^[0-9]\+' -o)
-TAR_DOWNLOAD_URL=$(cat "$TMP_DATA_FILE" | grep '"agentDownloadURL"\s*:\s*"[^"]*"' -o |  sed 's/"agentDownloadURL"\s*:\s*"\([^"]*\)"/\1/')
+TAR_DOWNLOAD_URL=$(grep '"agentDownloadURL"\s*:\s*"[^"]*"' "$TMP_DATA_FILE" -o | sed 's/"agentDownloadURL"\s*:\s*"\([^"]*\)"/\1/')
 
 if [ $MAJOR_VERSION -le 2 ] ; then
-    call_url -s $PROXY "$DOWNLOAD_URL/curl-install-node.sh" 2>/dev/null | bash /dev/stdin "$@" -t $TAR_DOWNLOAD_URL 1> >( while read line; do log_output "${line}"; done ) 2> >( while read line; do log_output "${line}" 2; done )
+    call_url -s $PROXY "$DOWNLOAD_URL/curl-install-node.sh" 2>/dev/null | bash /dev/stdin "$@" -t $TAR_DOWNLOAD_URL 1> >( read_and_log ) 2> >( read_and_log 2 )
     RET=$?
     rm -f "$TMP_DATA_FILE"
     sleep 2
@@ -192,7 +219,7 @@ if [ $? -ne 0 ] ; then
     exit 1
 fi
 
-bash "$TMP_FILE_PATH/sealion-agent/install.sh" "$@" -r curl 1> >( while read line; do log_output "${line}"; done ) 2> >( while read line; do log_output "${line}" 2; done )
+bash "$TMP_FILE_PATH/sealion-agent/install.sh" "$@" -r curl  1> >( read_and_log ) 2> >( read_and_log 2 )
 RET=$?
 
 if [[ "$AGENT_ID" != "" && $RET -ne 0 ]] ; then
