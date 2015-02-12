@@ -88,7 +88,7 @@ read_and_log()
         OUTPUT_STREAM=2
     fi
 
-    while read -t 1800 line; do 
+    while read -t 600 line; do 
         log_output "${line}" $OUTPUT_STREAM 
     done
 }

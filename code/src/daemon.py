@@ -52,36 +52,33 @@ class Daemon(object):
             if pid > 0:
                 #parent can terminate now. which means any controlling terminal wont block
                 sys.stdout.write('%s started successfully\n' % self.daemon_name)
-                os._exit(exit_status.AGENT_ERR_SUCCESS)
+                sys.exit(exit_status.AGENT_ERR_SUCCESS)
         except OSError as e: 
             sys.stderr.write('Failed to daemonize sealion: %d (%s)\n' % (e.errno, e.strerror))
             sys.exit(exit_status.AGENT_ERR_DAEMONIZE_1)
      
+        os.chdir('/')  #change the directory to root, so that the daemon can run even when the device it invoked from does not exist
         os.setsid()  #session leader
+        os.umask(0)  #umask
     
         try: 
             pid = os.fork()  #second fork  
             
             if pid > 0:  #parent can exit now
-                os._exit(exit_status.AGENT_ERR_SUCCESS)
+                sys.exit(exit_status.AGENT_ERR_SUCCESS)
         except OSError as e: 
             sys.stderr.write('Failed to daemonize sealion: %d (%s)\n' % (e.errno, e.strerror))
             sys.exit(exit_status.AGENT_ERR_DAEMONIZE_2) 
             
-        os.chdir('/')  #change the directory to root, so that the daemon can run even when the device it invoked from does not exist
-        os.umask(0)  #umask
-        
-        #flush and close standard input/output/error
+        #redirect stream handlers
         sys.stdout.flush()
         sys.stderr.flush()
-        sys.stdin.close()
-        sys.stdout.close()
-        sys.stderr.close()
-            
-        #redirect standard input/output/error 
-        sys.stdin = open(self.stdin, 'r')
-        sys.stdout = open(self.stdout, 'a+')
-        sys.stderr = open(self.stderr, 'a+')
+        si = open(self.stdin, 'r')
+        so = open(self.stdout, 'a+')
+        se = open(self.stderr, 'a+')
+        os.dup2(si.fileno(), sys.stdin.fileno())
+        os.dup2(so.fileno(), sys.stdout.fileno())
+        os.dup2(se.fileno(), sys.stderr.fileno())
         
         atexit.register(self.cleanup)  #register cleanup on exit
         
