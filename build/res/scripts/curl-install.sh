@@ -88,7 +88,7 @@ read_and_log()
         OUTPUT_STREAM=2
     fi
 
-    while read -t 600 line; do 
+    while read -t 300 line; do 
         log_output "${line}" $OUTPUT_STREAM 
     done
 }
@@ -173,7 +173,6 @@ if [[ $? -ne 0 || "$RET" != "200" ]] ; then
 fi
 
 VERSION=$(grep '"agentVersion"\s*:\s*"[^"]*"' "$TMP_DATA_FILE" -o | sed 's/"agentVersion"\s*:\s*"\([^"]*\)"/\1/')
-log_output "Available agent version is $VERSION"
 MAJOR_VERSION=$(echo $VERSION | grep '^[0-9]\+' -o)
 TAR_DOWNLOAD_URL=$(grep '"agentDownloadURL"\s*:\s*"[^"]*"' "$TMP_DATA_FILE" -o | sed 's/"agentDownloadURL"\s*:\s*"\([^"]*\)"/\1/')
 
@@ -194,7 +193,7 @@ rm -f "$TMP_DATA_FILE"
 TMP_FILE_PATH=$(mktemp -d "$TMP_FILE_PATH")
 TMP_FILE_PATH=${TMP_FILE_PATH%/}
 TMP_FILE_NAME="$TMP_FILE_PATH/sealion-agent.tar.gz"
-log_output "Downloading agent installer..."
+log_output "Downloading agent installer version $VERSION..."
 RET=$(call_url -s $PROXY -w "%{http_code}" $TAR_DOWNLOAD_URL -o "$TMP_FILE_NAME" 2>&1)
 
 if [[ $? -ne 0 || "$RET" == "404" ]] ; then
