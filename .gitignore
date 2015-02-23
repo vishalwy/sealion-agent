@@ -1,6 +1,7 @@
 # Ignore temp files
 *~
 *.pyc
+.DS_Store
 
 
 # Ignore dynamic directories created
