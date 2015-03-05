@@ -56,7 +56,7 @@ fi
 API_URL="https://api$DOMAIN"
 AGENT_URL="https://agent$DOMAIN"
 
-BASEDIR=$([ ${0:0:1} != "/" ] && echo "$(pwd)/$0" || echo $0)
+BASEDIR=$([ ${0:0:1} != "/" ] && echo "$(pwd)/$0" || echo "$0")
 BASEDIR=${BASEDIR%/*}
 OUTPUT="sealion-agent"
 ORIG_DOMAIN="$TARGET"
@@ -119,11 +119,11 @@ mkdir -p $TARGET/$OUTPUT/agent/etc/init.d
 generate_scripts
 
 if [ "$ORIG_DOMAIN"  != "$DEFAULT_DOMAIN" ] ; then
-    sed -i 's/\("level"\s*:\s*\)"[^"]\+"/\1"debug"/' "$TARGET/$OUTPUT/agent/etc/config.json"
+    "$TARGET/$OUTPUT/agent/bin/configure.py" -a "set" -k "logging:level" -v "\"debug\"" "$TARGET/$OUTPUT/agent/etc/config.json"
     echo "Setting agent logging level to 'debug'"
 fi
 
 echo "Generating $TARGET/$OUTPUT-$VERSION-noarch.tar.gz..."
-tar -zcvf "$TARGET/$OUTPUT-$VERSION-noarch.tar.gz" --exclude="*.pyc" --exclude="__pycache__" --exclude="*~" --exclude-vcs --exclude-backups --directory=$TARGET $OUTPUT/
+tar -zcvf "$TARGET/$OUTPUT-$VERSION-noarch.tar.gz" --exclude="*.pyc" --exclude="__pycache__" --exclude="*~" --exclude-vcs --exclude-backups --directory=$TARGET $OUTPUT/ | (while read LINE; do echo "    $LINE"; done)
 rm -rf $TARGET/$OUTPUT
 

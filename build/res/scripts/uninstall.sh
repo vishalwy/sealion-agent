@@ -4,7 +4,7 @@
 #Author     : Vishal P.R
 #Email      : hello@sealion.com
 
-BASEDIR=$([ ${0:0:1} != "/" ] && echo "$(pwd)/$0" || echo $0)
+BASEDIR=$([ ${0:0:1} != "/" ] && echo "$(pwd)/$0" || echo "$0")
 BASEDIR=${BASEDIR%/*}
 USER_NAME="sealion"
 

@@ -15,7 +15,7 @@ ERR_INCOMPATIBLE_PYTHON = 2
 ERR_FAILED_DEPENDENCY = 3
 ERR_INVALID_USAGE=7
 
-usage = 'Usage: check_dependency.py {[-x <proxy address>] [-p <padding for output>] [-a <api url>] | -h for Help}\n'
+usage = 'Usage: check_dependency.py {[-x <proxy address>] [-a <api url>] | -h for Help}\n'
 
 #Python 2.x vs 3.x
 try:
@@ -24,16 +24,13 @@ except:
     def unicode(object, *args, **kwargs):
         return str(object)
     
-i, arg_len, padding, proxies, api_url = 1, len(sys.argv), '', {}, ''
+i, arg_len, proxies, api_url = 1, len(sys.argv), {}, ''
 
 try:
     while i < arg_len:  #read all the arguments
         if sys.argv[i] == '-x':  #proxy
             i += 1  #read option value
             proxies = {'https': sys.argv[i]}
-        elif sys.argv[i] == '-p':  #padding for output
-            i += 1  #read option value
-            padding = sys.argv[i]
         elif sys.argv[i] == '-a':  #api url to test for connection tunneling
             i += 1  #read option value
             api_url = sys.argv[i]
@@ -52,7 +49,7 @@ except Exception:
 
 #Python version check. SeaLion agent works only with Python version >= 2.6
 if float('%d.%d' % (sys.version_info[0], sys.version_info[1])) < 2.6:
-    sys.stderr.write(padding + 'SeaLion agent requires python version 2.6 or above\n')
+    sys.stderr.write('SeaLion agent requires python version 2.6 or above\n')
     sys.exit(ERR_INCOMPATIBLE_PYTHON)
     
 try:
@@ -138,7 +135,7 @@ except:
 
 #display any errors
 if len(errors):
-    sys.stderr.write(padding + ('\n' + padding).join(errors) + '\n')
+    sys.stderr.write('\n'.join(errors) + '\n')
     sys.exit(ERR_FAILED_DEPENDENCY)
 
 sys.stdout.write('Success\n')

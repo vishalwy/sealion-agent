@@ -12,7 +12,7 @@ if [ "$#" != "2" ]; then
 fi
 
 #change to base directory of the script
-BASEDIR=$([ ${0:0:1} != "/" ] && echo "$(pwd)/$0" || echo $0)
+BASEDIR=$([ ${0:0:1} != "/" ] && echo "$(pwd)/$0" || echo "$0")
 BASEDIR=${BASEDIR%/*}
 cd "$BASEDIR"
 

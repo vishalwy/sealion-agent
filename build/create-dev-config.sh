@@ -56,7 +56,7 @@ if [ "$VERSION" == "" ] ; then
     exit 1
 fi
 
-BASEDIR=$([ ${0:0:1} != "/" ] && echo "$(pwd)/$0" || echo $0)
+BASEDIR=$([ ${0:0:1} != "/" ] && echo "$(pwd)/$0" || echo "$0")
 BASEDIR=${BASEDIR%/*}
 cp -r "$BASEDIR/res/etc" "$BASEDIR/../code/"
 

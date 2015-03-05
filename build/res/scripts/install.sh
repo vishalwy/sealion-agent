@@ -21,7 +21,7 @@ API_URL="<api-url>"
 VERSION="<version>"
 
 #script variables
-BASEDIR=$([ ${0:0:1} != "/" ] && echo "$(pwd)/$0" || echo $0)
+BASEDIR=$([ ${0:0:1} != "/" ] && echo "$(pwd)/$0" || echo "$0")
 BASEDIR=${BASEDIR%/*}
 USER_NAME="sealion"
 PYTHON="python"
@@ -40,6 +40,7 @@ HOST_NAME=$(hostname)
 PROXY=$https_proxy
 NO_PROXY=$no_proxy
 REF="tarball"
+ENV_VARS=()
 PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin
 
 if [ "$(uname -s)" != "Linux" ] ; then
@@ -57,7 +58,7 @@ if [[ $KERNEL_MAJOR_VERSION -lt 2 || ($KERNEL_MAJOR_VERSION -eq 2 && $KERNEL_MIN
     exit $SCRIPT_ERR_INCOMPATIBLE_PLATFORM
 fi
 
-while getopts :i:o:c:H:x:p:a:r:v:h OPT ; do
+while getopts :i:o:c:H:x:p:a:r:v:e:h OPT ; do
     case "$OPT" in
         i)
             INSTALL_PATH=$OPTARG
@@ -88,6 +89,9 @@ while getopts :i:o:c:H:x:p:a:r:v:h OPT ; do
         r)
             REF=$OPTARG
             ;;
+        e)
+            ENV_VARS=(${ENV_VARS[@]} "$OPTARG")
+            ;;
         \?)
             echo "Invalid option '-$OPTARG'" >&2
             echo $USAGE
@@ -106,15 +110,6 @@ if [ "$ORG_TOKEN" == '' ] ; then
     echo $USAGE
     exit $SCRIPT_ERR_INVALID_USAGE
 fi
-
-update_config()
-{
-    KEY="$(echo "$1" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
-    VALUE="$(echo "$2" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
-    ARGS="-i 's/\(\"$KEY\"\s*:\s*\)\(\"[^\"]\+\"\)/\1\"$VALUE\"/'"
-    CONFIG_FILE=$([ "$3" == "" ] && echo "agent.json" || echo "$3")
-    eval sed "$ARGS" "\"$INSTALL_PATH/etc/$CONFIG_FILE\""
-}
 
 install_service()
 {
@@ -162,30 +157,31 @@ check_dependency()
         WHICH_COMMANDS=("${WHICH_COMMANDS[@]}" "groupadd" "useradd" "userdel" "groupdel")
     fi
 
-    MISSING_COMMANDS=""
+    MISSING_COMMANDS=()
     PADDING="      "
 
     for COMMAND in "${WHICH_COMMANDS[@]}" ; do
         if [ "$(type -P $COMMAND 2>/dev/null)" == "" ] ; then
-            MISSING_COMMANDS=$([ "$MISSING_COMMANDS" != "" ] && echo "$MISSING_COMMANDS\n$PADDING Cannot locate command '$COMMAND'" || echo "$PADDING Cannot locate command '$COMMAND'")
+            MISSING_COMMANDS=(${MISSING_COMMANDS[@]} "$PADDING Cannot locate command '$COMMAND'")
         fi
     done
 
-    if [ "$MISSING_COMMANDS" != "" ] ; then
-        echo -e "Error: Command dependency check failed\n$MISSING_COMMANDS" >&2
+    if [ "${#MISSING_COMMANDS[@]}" != "0" ] ; then
+        echo -e "Error: Command dependency check failed\n$(IFS=$'\n'; echo "${MISSING_COMMANDS[*]}")" >&2
         exit $SCRIPT_ERR_COMMAND_NOT_FOUND
     fi
 
     cd agent/lib
     PROXY_OPTION=$([ "$PROXY" == "" ] && echo "" || echo "-x $PROXY")
-    RET=$("$PYTHON" ../bin/check_dependency.py -p "       " -a "$API_URL" $PROXY_OPTION 2>&1)
+    RET=$("$PYTHON" ../bin/check_dependency.py -a "$API_URL" $PROXY_OPTION 2>&1)
     RET_CODE=$?
 
     if [[ $RET_CODE -eq $SCRIPT_ERR_SUCCESS && "$RET" != "Success" ]] ; then
         echo "Error: '$PYTHON' is not a valid python binary" >&2
         exit $SCRIPT_ERR_INVALID_PYTHON
     elif [ $RET_CODE -ne $SCRIPT_ERR_SUCCESS ] ; then
-        echo -e "Error: Python dependency check failed\n$RET" >&2
+        echo "Error: Python dependency check failed" >&2
+        echo -e $RET | (while read LINE; do echo "$PADDING $LINE" >&2; done)
         rm -rf *.pyc
         find . -type d -name '__pycache__' -exec rm -rf {} \; >/dev/null 2>&1
         exit $RET_CODE
@@ -208,22 +204,22 @@ setup_config()
     if [ "$AGENT_ID" != "" ] ; then
         CONFIG="$CONFIG, \"_id\": \"$AGENT_ID\""
     fi
-        
-    echo "{$CONFIG}" >"$INSTALL_PATH/etc/agent.json"
+    
+    "$PYTHON" agent/bin/configure.py -a "set" -k "" -v "{$CONFIG}" -n "$INSTALL_PATH/etc/agent.json"
+    VARS=()
 
     if [ "$PROXY" != "" ] ; then
-        PROXY="$(echo "$PROXY" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
-        ARGS="-i 's/\(\"env\"\s*:\s*\[\)/\1{\"https\_proxy\": \"$PROXY\"}/'"
-        eval sed "$ARGS" "\"$INSTALL_PATH/etc/config.json\""
-        TEMP_VAR=", "
+        VARS=(${VARS[@]} "{\"https_proxy\": \"$PROXY\"}")
     fi
 
     if [ "$NO_PROXY" != "" ] ; then
-        NO_PROXY="$(echo "$NO_PROXY" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
-        ARGS="-i 's/\(\"env\"\s*:\s*\[\)/\1{\"no\_proxy\": \"$NO_PROXY\"}$TEMP_VAR/'"
-        eval sed "$ARGS" "\"$INSTALL_PATH/etc/config.json\""
+        VARS=(${VARS[@]} "{\"no_proxy\": \"$NO_PROXY\"}")
     fi
 
+    CONFIG=$(IFS=$', '; echo "${VARS[*]}")
+    [ "$CONFIG" != "" ] && "$PYTHON" agent/bin/configure.py -a "add" -k "env" -v "[$CONFIG]" "$INSTALL_PATH/etc/config.json"
+    CONFIG=$(IFS=$', '; echo "${ENV_VARS[*]}")
+    [ "$CONFIG" != "" ] && "$PYTHON" agent/bin/configure.py -a "add" -k "env" -v "[$CONFIG]" "$INSTALL_PATH/etc/config.json"
     PYTHON="$(echo "$PYTHON" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
     ARGS="-i 's/python/\"$PYTHON\"/'"
     eval sed "$ARGS" "\"$INSTALL_PATH/etc/init.d/sealion\""
@@ -231,11 +227,7 @@ setup_config()
 }
 
 INSTALL_PATH=$(eval echo "$INSTALL_PATH")
-
-if [[ "$INSTALL_PATH" != "" && ${INSTALL_PATH:0:1} != "/" ]] ; then
-    INSTALL_PATH="$(pwd)/$INSTALL_PATH"
-fi
-
+INSTALL_PATH=$([[ "$INSTALL_PATH" != "" && ${INSTALL_PATH:0:1} != "/" ]] && echo "$(pwd)/$INSTALL_PATH" || echo "$INSTALL_PATH")
 INSTALL_PATH=${INSTALL_PATH%/}
 cd "$BASEDIR"
 check_dependency
@@ -351,8 +343,8 @@ else
     else
         find "$INSTALL_PATH" -mindepth 1 -maxdepth 1 ! -name 'var' ! -name 'etc' ! -name 'tmp' -exec rm -rf "{}" \; >/dev/null 2>&1
         find agent/ -mindepth 1 -maxdepth 1 ! -name 'etc' -exec cp -r {} "$INSTALL_PATH" \;
-        update_config "agentVersion" $VERSION
-        update_config "apiUrl" $API_URL
+        "$PYTHON" agent/bin/configure.py -a "set" -k "agentVersion" -v "\"$VERSION\"" -n "$INSTALL_PATH/etc/agent.json"
+        "$PYTHON" agent/bin/configure.py -a "set" -k "apiUrl" -v "\"$API_URL\"" -n "$INSTALL_PATH/etc/agent.json"
     fi
 
     echo "Sealion agent updated successfully"
