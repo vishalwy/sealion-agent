@@ -21,9 +21,8 @@ API_URL="<api-url>"
 VERSION="<version>"
 
 #script variables
-BASEDIR=$(readlink -f "$0")
-BASEDIR=$(dirname "$BASEDIR")
-BASEDIR=${BASEDIR%/}
+BASEDIR=$([ ${0:0:1} != "/" ] && echo "$(pwd)/$0" || echo $0)
+BASEDIR=${BASEDIR%/*}
 USER_NAME="sealion"
 PYTHON="python"
 DEFAULT_INSTALL_PATH="/usr/local/sealion-agent"
@@ -157,7 +156,7 @@ check_dependency()
         exit $SCRIPT_ERR_INVALID_PYTHON
     fi
 
-    WHICH_COMMANDS=("sed" "readlink" "cat" "find" "chown" "bash" "grep")
+    WHICH_COMMANDS=("sed" "cat" "find" "chown" "bash" "grep")
 
     if [ $UPDATE_AGENT -eq 0 ] ; then
         WHICH_COMMANDS=("${WHICH_COMMANDS[@]}" "groupadd" "useradd" "userdel" "groupdel")

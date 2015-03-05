@@ -11,9 +11,8 @@
 # Description: SeaLion is cloud based server debugging tool. This is SeaLion's agent to send monitoring data to SeaLion server
 ### END INIT INFO
 
-BASEDIR=$(readlink -f "$0")
-BASEDIR=$(dirname "$BASEDIR")
-BASEDIR=${BASEDIR%/}
+BASEDIR=$([ ${0:0:1} != "/" ] && echo "$(pwd)/$0" || echo $0)
+BASEDIR=${BASEDIR%/*}
 python "$BASEDIR/../../src/sealion.py" $1
 exit $?
 

@@ -56,9 +56,8 @@ fi
 API_URL="https://api$DOMAIN"
 AGENT_URL="https://agent$DOMAIN"
 
-BASEDIR=$(readlink -f "$0")
-BASEDIR=$(dirname "$BASEDIR")
-BASEDIR=${BASEDIR%/}
+BASEDIR=$([ ${0:0:1} != "/" ] && echo "$(pwd)/$0" || echo $0)
+BASEDIR=${BASEDIR%/*}
 OUTPUT="sealion-agent"
 ORIG_DOMAIN="$TARGET"
 TARGET="bin/$TARGET"
