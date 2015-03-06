@@ -1,3 +1,10 @@
+#!/usr/bin/env bash
+
+#Copyright  : (c) Webyog, Inc
+#Author     : Vishal P.R
+#Email      : hello@sealion.com
+
+#script variables
 USAGE="Usage: $0 {-o <Organization token> -v <Agent version> [-c <Category name>] [-H <Host name>] [-x <Proxy address>] [-a <API URL>] | -h for Help}"
 ORG_TOKEN=
 VERSION=
@@ -7,6 +14,7 @@ PROXY=$https_proxy
 NO_PROXY=$no_proxy
 API_URL="https://api-test.sealion.com"
 
+#parse command line options
 while getopts :o:c:H:x:a:r:v:h OPT ; do
     case "$OPT" in
         o)
@@ -44,44 +52,54 @@ while getopts :o:c:H:x:a:r:v:h OPT ; do
     esac
 done
 
+#you need to specify organization token
 if [ "$ORG_TOKEN" == "" ] ; then
     echo "Missing option '-o'" >&2
     echo $USAGE
     exit 1
 fi
 
+#you need to specify agent version
 if [ "$VERSION" == "" ] ; then
     echo "Missing option '-v'" >&2
     echo $USAGE
     exit 1
 fi
 
+#script directory
 BASEDIR=$([ ${0:0:1} != "/" ] && echo "$(pwd)/$0" || echo "$0")
 BASEDIR=${BASEDIR%/*}
+
+#copy etc from res to code
 cp -r "$BASEDIR/res/etc" "$BASEDIR/../code/"
 
-CONFIG="\"orgToken\": \"$ORG_TOKEN\", \"apiUrl\": \"$API_URL\", \"agentVersion\": \"$VERSION\", \"name\": \"$HOST_NAME\", \"ref\": \"tarball\""
-TEMP_VAR=""
+#agent.json config
+CONFIG="\"orgToken\": \"$ORG_TOKEN\", \"apiUrl\": \"$API_URL\", \"agentVersion\": \"$VERSION\", \"name\": \"$HOST_NAME\", \"ref\": \"$REF\""
 
+#add category if specified
 if [ "$CATEGORY" != "" ] ; then
     CONFIG="$CONFIG, \"category\": \"$CATEGORY\""
 fi
 
-echo "{$CONFIG}" >"$BASEDIR/../code/etc/agent.json"
-sed -i 's/\("level"\s*:\s*\)"[^"]\+"/\1"debug"/' "$BASEDIR/../code/etc/config.json"
+"$BASEDIR/../code/bin/configure.py" -a "set" -k "" -v "{$CONFIG}" -n "$BASEDIR/../code/etc/agent.json"  #set the configuration
+VARS=()  #array to hold proxy vars
 
+#export https_proxy
 if [ "$PROXY" != "" ] ; then
-    PROXY="$(echo "$PROXY" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
-    ARGS="-i 's/\(\"env\"\s*:\s*\[\)/\1{\"https\_proxy\": \"$PROXY\"}/'"
-    eval sed "$ARGS" "\"$BASEDIR/../code/etc/config.json\""
-    TEMP_VAR=", "
+    VARS=(${VARS[@]} "{\"https_proxy\": \"$PROXY\"}")
 fi
 
+#export no_proxy
 if [ "$NO_PROXY" != "" ] ; then
-    NO_PROXY="$(echo "$NO_PROXY" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
-    ARGS="-i 's/\(\"env\"\s*:\s*\[\)/\1{\"no\_proxy\": \"$NO_PROXY\"}$TEMP_VAR/'"
-    eval sed "$ARGS" "\"$BASEDIR/../code/etc/config.json\""
+    VARS=(${VARS[@]} "{\"no_proxy\": \"$NO_PROXY\"}")
 fi
+
+#update config.json with proxy variables
+CONFIG=$(IFS=$', '; echo "${VARS[*]}")
+[ "$CONFIG" != "" ] && "$BASEDIR/../code/bin/configure.py" -a "add" -k "env" -v "[$CONFIG]" "$BASEDIR/../code/etc/config.json"
+
+#update config.json with logging level
+"$BASEDIR/../code/bin/configure.py" -a "set" -k "logging:level" -v "\"debug\"" "$BASEDIR/../code/etc/config.json"
 
 echo "Generated config files at $BASEDIR/../code/etc"
 

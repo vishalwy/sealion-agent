@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 #Copyright  : (c) Webyog, Inc
 #Author     : Vishal P.R
@@ -12,6 +12,7 @@ DEFAULT_DOMAIN="sealion.com"
 DOMAIN=$DEFAULT_DOMAIN
 VERSION=
 
+#parse command line options
 while getopts :d:v:h OPT ; do
     case "$OPT" in
         d)
@@ -41,12 +42,16 @@ VERSION="$(echo "$VERSION" | sed -e 's/^\s*//' -e 's/\s*$//')"
 DOMAIN="$(echo "$DOMAIN" | sed -e 's/^\s*//' -e 's/\s*$//')"
 TARGET=$DOMAIN
 
+#you need to specify the version
 if [ "$VERSION" == "" ] ; then
     echo "Please specify a valid version for the build"
     echo $USAGE
     exit 1
 fi
 
+#if domain is sealion.com then api url is api.sealion.com
+#if domain is something lik test.sealion.com then api url is api-test.sealion.com
+#agent download url also follows this naming convention
 if [ "$DOMAIN" != "$DEFAULT_DOMAIN" ] ; then
     DOMAIN="-$DOMAIN"
 else
@@ -56,16 +61,23 @@ fi
 API_URL="https://api$DOMAIN"
 AGENT_URL="https://agent$DOMAIN"
 
+#directory of the script
 BASEDIR=$([ ${0:0:1} != "/" ] && echo "$(pwd)/$0" || echo "$0")
 BASEDIR=${BASEDIR%/*}
+
 OUTPUT="sealion-agent"
 ORIG_DOMAIN="$TARGET"
 TARGET="bin/$TARGET"
+
+#move to current dir so that all the paths are available
 cd "$BASEDIR"
+
+#cleanup and recreate the output directories
 rm -rf $TARGET >/dev/null 2>&1
 mkdir -p $TARGET/$OUTPUT/agent
 chmod +x $TARGET/$OUTPUT
 
+#function to generate various scripts
 generate_scripts()
 {
     cp res/scripts/sealion $TARGET/$OUTPUT/agent/etc/init.d
@@ -109,20 +121,26 @@ generate_scripts()
         REVISION="- $REVISION"
     fi
 
+    #add version, date and git revision at the top ReADME
     sed -i "1iSeaLion Agent $VERSION - $DATE $REVISION" $TARGET/$OUTPUT/agent/README
+
     echo "README generated"
 }
 
+#copy the src directories to output
 find ../code/ -mindepth 1 -maxdepth 1 -type d -regextype sed -regex '.*/\(\(lib\)\|\(opt\)\|\(src\)\|\(bin\)\)' -exec cp -r {} $TARGET/$OUTPUT/agent \;
-cp -r res/etc $TARGET/$OUTPUT/agent
-mkdir -p $TARGET/$OUTPUT/agent/etc/init.d
-generate_scripts
 
+cp -r res/etc $TARGET/$OUTPUT/agent  #copy etc folder from res
+mkdir -p $TARGET/$OUTPUT/agent/etc/init.d  #make init.d folder
+generate_scripts  #generate scripts
+
+#if domain is not sealion.com, then set the logging level to debug
 if [ "$ORIG_DOMAIN"  != "$DEFAULT_DOMAIN" ] ; then
     "$TARGET/$OUTPUT/agent/bin/configure.py" -a "set" -k "logging:level" -v "\"debug\"" "$TARGET/$OUTPUT/agent/etc/config.json"
-    echo "Setting agent logging level to 'debug'"
+    echo "Agent logging level set to 'debug'"
 fi
 
+#generate tar in the output directory and cleanup temp folderes created
 echo "Generating $TARGET/$OUTPUT-$VERSION-noarch.tar.gz..."
 tar -zcvf "$TARGET/$OUTPUT-$VERSION-noarch.tar.gz" --exclude="*.pyc" --exclude="__pycache__" --exclude="*~" --exclude-vcs --exclude-backups --directory=$TARGET $OUTPUT/ | (while read LINE; do echo "    $LINE"; done)
 rm -rf $TARGET/$OUTPUT
