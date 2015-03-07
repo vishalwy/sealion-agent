@@ -62,7 +62,7 @@ API_URL="https://api$DOMAIN"
 AGENT_URL="https://agent$DOMAIN"
 
 #directory of the script
-BASEDIR=$([ ${0:0:1} != "/" ] && echo "$(pwd)/$0" || echo "$0")
+BASEDIR=$(readlink -f "$0")
 BASEDIR=${BASEDIR%/*}
 
 OUTPUT="sealion-agent"

@@ -5,7 +5,7 @@
 #Email      : hello@sealion.com
 
 #directory of the script
-BASEDIR=$([ ${0:0:1} != "/" ] && echo "$(pwd)/$0" || echo "$0")
+BASEDIR=$(readlink -f "$0")
 BASEDIR=${BASEDIR%/*}
 
 USER_NAME="sealion"  #username for the agent
