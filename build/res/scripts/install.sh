@@ -43,6 +43,7 @@ NO_PROXY=$no_proxy  #export no proxy
 REF="tarball"  #the method used to install agent. curl or tarball
 ENV_VARS=()  #any other environment variables to export
 PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin  #common paths found in various linux distributions
+PADDING="      "  #padding for messages
 
 #check if it is Linux
 if [ "$(uname -s)" != "Linux" ] ; then
@@ -95,7 +96,7 @@ while getopts :i:o:c:H:x:p:a:r:v:e:h OPT ; do
             REF=$OPTARG
             ;;
         e)
-            ENV_VARS=(${ENV_VARS[@]} "$OPTARG")
+            ENV_VARS=("${ENV_VARS[@]}" "$OPTARG")
             ;;
         \?)
             echo "Invalid option '-$OPTARG'" >&2
@@ -156,8 +157,6 @@ install_service()
 #function to check command and python module dependency 
 check_dependency()
 {
-    echo "Performing dependency check..."
-
     #check if python binary is valid
     if [ "$(type -P "$PYTHON")" == "" ] ; then
         echo "Error: No python found" >&2
@@ -173,12 +172,11 @@ check_dependency()
     fi
 
     MISSING_COMMANDS=()  #array to hold missing commands
-    PADDING="      "  #padding for messages
 
     #loop through the commands and find the missing commands
     for COMMAND in "${WHICH_COMMANDS[@]}" ; do
         if [ "$(type -P $COMMAND 2>/dev/null)" == "" ] ; then
-            MISSING_COMMANDS=(${MISSING_COMMANDS[@]} "$PADDING Cannot locate command '$COMMAND'")
+            MISSING_COMMANDS=("${MISSING_COMMANDS[@]}" "$PADDING Cannot locate command '$COMMAND'")
         fi
     done
 
@@ -188,8 +186,7 @@ check_dependency()
         exit $SCRIPT_ERR_COMMAND_NOT_FOUND
     fi
 
-    PROXY_OPTION=$([ "$PROXY" == "" ] && echo "" || echo "-x $PROXY")  #set proxy option if any
-    RET=$("$PYTHON" agent/bin/check_dependency.py -a "$API_URL" $PROXY_OPTION 2>&1)  #execute the script to find out any missing modules
+    RET=$("$PYTHON" agent/bin/check_dependency.py 2>&1)  #execute the script to find out any missing modules
     RET_CODE=$?
 
     if [[ $RET_CODE -eq $SCRIPT_ERR_SUCCESS && "$RET" != "Success" ]] ; then  #is python really a python binary. check the output to validate it
@@ -211,6 +208,26 @@ check_dependency()
     find . -type d -name '__pycache__' -exec rm -rf {} \; >/dev/null 2>&1
 }
 
+#function to export environment variables stored in $ENV_VARS
+export_env_var()
+{
+    ERROR_EN_VARS=()  #array to hold erroneous JSON objects for env vars
+
+    for ENV_VAR in "${ENV_VARS[@]}" ; do
+        TEMP_OUTPUT=$("$PYTHON" agent/bin/configure.py -a "add" -k "env" -v "$ENV_VAR" "$INSTALL_PATH/etc/config.json" 2>&1)
+
+        #add to error list if it failed
+        if [ $? -ne 0 ] ; then
+            ERROR_EN_VARS=("${ERROR_EN_VARS[@]}" "$PADDING $ENV_VAR - ${TEMP_OUTPUT#Error: }")
+        fi
+    done
+
+    #print any errors as warnings
+    if [ "${#ERROR_EN_VARS[@]}" != "0" ] ; then
+        echo -e "Warning: Failed to export the folloing environment variables\n$(IFS=$'\n'; echo "${ERROR_EN_VARS[*]}")" >&2
+    fi
+}
+
 #function to setup the configuration for the agent
 setup_config()
 {
@@ -228,25 +245,7 @@ setup_config()
     fi
     
     "$PYTHON" agent/bin/configure.py -a "set" -k "" -v "{$CONFIG}" -n "$INSTALL_PATH/etc/agent.json"  #set the configuration
-    VARS=()  #array to hold proxy vars
-
-    #export https_proxy
-    if [ "$PROXY" != "" ] ; then
-        VARS=(${VARS[@]} "{\"https_proxy\": \"$PROXY\"}")
-    fi
-
-    #export no_proxy
-    if [ "$NO_PROXY" != "" ] ; then
-        VARS=(${VARS[@]} "{\"no_proxy\": \"$NO_PROXY\"}")
-    fi
-
-    #update config.json with proxy variables
-    CONFIG=$(IFS=$', '; echo "${VARS[*]}")
-    [ "$CONFIG" != "" ] && "$PYTHON" agent/bin/configure.py -a "add" -k "env" -v "[$CONFIG]" "$INSTALL_PATH/etc/config.json"
-    
-    #update config.json with other variables specified in the command line
-    CONFIG=$(IFS=$', '; echo "${ENV_VARS[*]}")
-    [ "$CONFIG" != "" ] && "$PYTHON" agent/bin/configure.py -a "add" -k "env" -v "[$CONFIG]" "$INSTALL_PATH/etc/config.json"
+    export_env_var  #export the environment variables specified
 
     #specify the python binary in the control script and uninstaller
     PYTHON="$(echo "$PYTHON" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
@@ -262,6 +261,16 @@ INSTALL_PATH=${INSTALL_PATH%/}  #remove / from the end
 
 cd "$BASEDIR"  #move to the script base dir so that all paths can be found
 check_dependency  #perform dependency check
+
+#export https_proxy env
+if [ "$PROXY" != "" ] ; then
+    ENV_VARS=("${ENV_VARS[@]}" "{\"https_proxy\": \"$PROXY\"}")
+fi
+
+#export no_proxy env
+if [ "$NO_PROXY" != "" ] ; then
+    ENV_VARS=("${ENV_VARS[@]}" "{\"no_proxy\": \"$NO_PROXY\"}")
+fi
 
 #install service if installing to the default path
 if [ "$INSTALL_PATH" != "$DEFAULT_INSTALL_PATH" ] ; then

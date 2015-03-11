@@ -15,7 +15,7 @@ ERR_INCOMPATIBLE_PYTHON = 2
 ERR_FAILED_DEPENDENCY = 3
 ERR_INVALID_USAGE=7
 
-usage = 'Usage: check_dependency.py {[-x <proxy address>] [-a <api url>] | -h for Help}\n'
+usage = 'Usage: check_dependency.py {-h for Help}\n'
 
 #Python 2.x vs 3.x
 try:
@@ -24,17 +24,11 @@ except:
     def unicode(object, *args, **kwargs):
         return str(object)
     
-i, arg_len, proxies, api_url = 1, len(sys.argv), {}, ''
+i, arg_len = 1, len(sys.argv)
 
 try:
     while i < arg_len:  #read all the arguments
-        if sys.argv[i] == '-x':  #proxy
-            i += 1  #read option value
-            proxies = {'https': sys.argv[i]}
-        elif sys.argv[i] == '-a':  #api url to test for connection tunneling
-            i += 1  #read option value
-            api_url = sys.argv[i]
-        elif sys.argv[i] == '-h':  #help
+        if sys.argv[i] == '-h':  #help
             sys.stdout.write(usage)
             sys.exit(0)
             
@@ -123,15 +117,6 @@ except ImportError:
     except ImportError:
         e = sys.exc_info()[1]
         errors.append(unicode(e))
-
-#check whether the connection tunneling works
-try:
-    api_url and requests.get(api_url, proxies = proxies, timeout = 10)
-except (ImportError, TypeError, AttributeError):
-    e = sys.exc_info()[1]
-    errors.append(unicode(e))
-except:
-    pass
 
 #display any errors
 if len(errors):
