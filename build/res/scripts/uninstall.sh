@@ -4,6 +4,8 @@
 #Author     : Vishal P.R
 #Email      : hello@sealion.com
 
+trap '[ $? -eq 127 ] && exit 127' ERR  #exit in case command not found
+
 #directory of the script
 BASEDIR=$(readlink -f "$0")
 BASEDIR=${BASEDIR%/*}

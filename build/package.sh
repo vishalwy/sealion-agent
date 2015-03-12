@@ -4,6 +4,8 @@
 #Author     : Vishal P.R
 #Email      : hello@sealion.com
 
+trap '[ $? -eq 127 ] && exit 127' ERR  #exit in case command not found
+
 #script variables
 USAGE="Usage: $0 {-v <version> [-d <domain>]} | -h"
 

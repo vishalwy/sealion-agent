@@ -4,6 +4,8 @@
 #Author     : Vishal P.R
 #Email      : hello@sealion.com
 
+trap '[ $? -eq 127 ] && exit 127' ERR  #exit in case command not found
+
 #script variables
 USAGE="Usage: $0 {-o <Organization token> -v <Agent version> [-c <Category name>] [-H <Host name>] [-x <Proxy address>] [-a <API URL>] | -h for Help}"
 ORG_TOKEN=
@@ -86,16 +88,16 @@ VARS=()  #array to hold proxy vars
 
 #export https_proxy
 if [ "$PROXY" != "" ] ; then
-    VARS=(${VARS[@]} "{\"https_proxy\": \"$PROXY\"}")
+    VARS=("${VARS[@]}" "{\"https_proxy\": \"$PROXY\"}")
 fi
 
 #export no_proxy
 if [ "$NO_PROXY" != "" ] ; then
-    VARS=(${VARS[@]} "{\"no_proxy\": \"$NO_PROXY\"}")
+    VARS=("${VARS[@]}" "{\"no_proxy\": \"$NO_PROXY\"}")
 fi
 
 #update config.json with proxy variables
-CONFIG=$(IFS=$', '; echo "${VARS[*]}")
+CONFIG=$(IFS=', '; echo "${VARS[*]}")
 [ "$CONFIG" != "" ] && "$BASEDIR/../code/bin/configure.py" -a "add" -k "env" -v "[$CONFIG]" "$BASEDIR/../code/etc/config.json"
 
 #update config.json with logging level

@@ -4,6 +4,8 @@
 #Author     : Vishal P.R
 #Email      : hello@sealion.com
 
+trap '[ $? -eq 127 ] && exit 127' ERR  #exit in case command not found
+
 #script error codes
 SCRIPT_ERR_SUCCESS=0
 SCRIPT_ERR_INVALID_PYTHON=1
@@ -164,7 +166,7 @@ check_dependency()
     fi
 
     #various commands required for installer and the agent
-    WHICH_COMMANDS=("sed" "cat" "find" "chown" "bash" "grep")
+    WHICH_COMMANDS=("sed" "cat" "find" "chown" "bash" "grep" "readlink")
 
     #we need commands for user/group management if it is an agent installation and not update
     if [ $UPDATE_AGENT -eq 0 ] ; then

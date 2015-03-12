@@ -4,6 +4,8 @@
 #Author     : Vishal P.R
 #Email      : hello@sealion.com
 
+trap '[ $? -eq 127 ] && exit 127' ERR  #exit in case command not found
+
 #config variables
 API_URL="<api-url>"
 DOWNLOAD_URL="<agent-download-url>"

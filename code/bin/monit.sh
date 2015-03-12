@@ -6,6 +6,8 @@
 #Author     : Vishal P.R
 #Email      : hello@sealion.com
 
+trap '[ $? -eq 127 ] && exit 127' ERR  #exit in case command not found
+
 if [ "$#" != "2" ]; then
     echo "Usage: $0 <PID> <Monit interval>"
     exit 1
