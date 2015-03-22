@@ -205,11 +205,14 @@ class SeaLion(Daemon):
         """
         
         try:
-            user_regex = universal.SealionConfig.schema['user'].get('regex')
+            user_regex = universal.SealionConfig.schema['user'].get('regex')  #get the regex used for validation
+            
+            #read the user name from the config
             f = open(exe_path + 'etc/config.json', 'r')
             user_name = json.load(f)['user'];
             f.close()
             
+            #update the user name if it is valid
             if not user_regex or re.match(user_regex, user_name):
                 self.user_name = user_name
         except:

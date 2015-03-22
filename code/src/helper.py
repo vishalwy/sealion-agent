@@ -229,6 +229,7 @@ class Utils(Namespace):
         trace, threads = '', {}
         curr_thread = threading.current_thread()
         
+        #create thread name dict for lookup while saving stack trace
         for thread in threading.enumerate():
             threads[thread.ident] = thread.name
 

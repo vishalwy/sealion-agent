@@ -27,7 +27,7 @@ import helper
 from constructs import *
 
 _log = logging.getLogger(__name__)  #module level logging
-_active_signals = {}
+_active_signals = {}  #dict to keep track of the active signal handlers, for logging purpose only
 
 class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):    
     """
@@ -257,7 +257,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                 _log.debug('Waiting for %s' % unicode(thread))
                 thread.join()
                 
-def set_signal_handler(sig, handler):
+def set_signal_handler(signum, handler):
     """
     Callback function to handle various signals.
     
@@ -266,15 +266,17 @@ def set_signal_handler(sig, handler):
         handler: callback function
     """
     
-    key = [n for n in dir(signal) if n.startswith('SIG') and not n.startswith('SIG_') and getattr(signal, n) == sig][0]
+    #find the symbolic name of the signal if exists, else use the signal number
+    key = ([n for n in dir(signal) if n.startswith('SIG') and not n.startswith('SIG_') and getattr(signal, n) == signum] or [signum])[0]
     
+    #update the lookup dict based on the handler
     if handler == signal.SIG_IGN:
         if key in _active_signals:
             del _active_signals[key]
     else:
         _active_signals[key] = 1
         
-    signal.signal(sig, handler)
+    signal.signal(signum, handler)  #install signal handler
 
 def sig_handler(signum, *args):    
     """
