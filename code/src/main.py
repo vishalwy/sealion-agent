@@ -143,6 +143,7 @@ def run(is_update_only_mode = False):
     univ.is_update_only_mode = is_update_only_mode
     _log.info('Agent starting up')
     _log.info('Using python binary at %s' % sys.executable)
+    _log.info('User name      : %s' % univ.details['user'])
     _log.info('Python version : %s' % univ.details['pythonVersion'])
     _log.info('Agent version  : %s' % univ.config.agent.agentVersion)   
     controller.run()  #call the run method controller module to start the controller
