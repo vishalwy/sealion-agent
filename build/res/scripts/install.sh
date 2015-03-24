@@ -233,25 +233,30 @@ export_env_var()
 #function to setup the configuration for the agent
 setup_config()
 {
-    #agent.json config
-    CONFIG="\"orgToken\": \"$ORG_TOKEN\", \"apiUrl\": \"$API_URL\", \"agentVersion\": \"$VERSION\", \"name\": \"$HOST_NAME\", \"ref\": \"$REF\""
+    if [ "$1" == "1" ] ; then
+        "$PYTHON" agent/bin/configure.py -a "set" -k "agentVersion" -v "\"$VERSION\"" -n "$INSTALL_PATH/etc/agent.json"
+        "$PYTHON" agent/bin/configure.py -a "set" -k "apiUrl" -v "\"$API_URL\"" -n "$INSTALL_PATH/etc/agent.json"
+    else
+        #agent.json config
+        CONFIG="\"orgToken\": \"$ORG_TOKEN\", \"apiUrl\": \"$API_URL\", \"agentVersion\": \"$VERSION\", \"name\": \"$HOST_NAME\", \"ref\": \"$REF\""
 
-    #add category if specified
-    if [ "$CATEGORY" != "" ] ; then
-        CONFIG="$CONFIG, \"category\": \"$CATEGORY\""
-    fi
+        #add category if specified
+        if [ "$CATEGORY" != "" ] ; then
+            CONFIG="$CONFIG, \"category\": \"$CATEGORY\""
+        fi
 
-    #add agent id if specified
-    if [ "$AGENT_ID" != "" ] ; then
-        CONFIG="$CONFIG, \"_id\": \"$AGENT_ID\""
+        #add agent id if specified
+        if [ "$AGENT_ID" != "" ] ; then
+            CONFIG="$CONFIG, \"_id\": \"$AGENT_ID\""
+        fi
+
+        "$PYTHON" agent/bin/configure.py -a "set" -k "" -v "{$CONFIG}" -n "$INSTALL_PATH/etc/agent.json"  #set the configuration
+        export_env_var  #export the environment variables specified
     fi
-    
-    "$PYTHON" agent/bin/configure.py -a "set" -k "" -v "{$CONFIG}" -n "$INSTALL_PATH/etc/agent.json"  #set the configuration
-    export_env_var  #export the environment variables specified
 
     #specify the python binary in the control script and uninstaller
-    PYTHON="$(echo "$PYTHON" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
-    ARGS="-i 's/python/\"$PYTHON\"/'"
+    TEMP_VAR="$(echo "$PYTHON" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
+    ARGS="-i 's/python/\"$TEMP_VAR\"/'"
     eval sed "$ARGS" "\"$INSTALL_PATH/etc/init.d/sealion\""
     eval sed "$ARGS" "\"$INSTALL_PATH/uninstall.sh\""
 }
@@ -412,9 +417,7 @@ else  #update
         find "$INSTALL_PATH" -mindepth 1 -maxdepth 1 ! -name 'var' ! -name 'etc' ! -name 'tmp' -exec rm -rf "{}" \; >/dev/null 2>&1
         find agent/ -mindepth 1 -maxdepth 1 ! -name 'etc' -exec cp -r {} "$INSTALL_PATH" \;
 
-        #update the agent version and api url in agent.json
-        "$PYTHON" agent/bin/configure.py -a "set" -k "agentVersion" -v "\"$VERSION\"" -n "$INSTALL_PATH/etc/agent.json"
-        "$PYTHON" agent/bin/configure.py -a "set" -k "apiUrl" -v "\"$API_URL\"" -n "$INSTALL_PATH/etc/agent.json"
+        setup_config 1 #update the agent version and api url in agent.json
     fi
 
     echo "Sealion agent updated successfully"
