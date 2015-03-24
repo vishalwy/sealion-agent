@@ -26,6 +26,27 @@ class SealionConfig(helper.Config):
     Implements configurable settings for the agent.
     """
     
+    #schema defining possible keys and values for this class. check helper.Config for details
+    schema = {
+        'whitelist': {'type': ['str,unicode'], 'optional': True, 'is_regex': True},
+        'env': {
+            'type': [{'.': {'type': 'str,unicode'}}],
+            'optional': True
+        },
+        'logging': {
+            'type': {
+                'level': {'type': 'str,unicode', 'regex': '^\s*(info|error|debug|none)\s*$', 'optional': True},
+                'modules': {'type': ['str,unicode'], 'depends': ['level'], 'regex': '^.+$', 'optional': True}
+            },
+            'optional': True
+        },
+        'commandTimeout': {
+            'type': 'int,float', 
+            'optional': True, 
+            'regex': '^\+?((0?[5-9]{1}|(0?[1-9][0-9]+))|((0?[5-9]{1}|(0?[1-9][0-9]+))\.[0-9]*))$'
+        }
+    }
+    
     def __init__(self, file):
         """
         Constructor.
@@ -36,23 +57,6 @@ class SealionConfig(helper.Config):
         
         helper.Config.__init__(self)  #initialize base class
         self.file = file  #settings file
-        
-        #schema defining possible keys and values for this class. check helper.Config for details
-        self.schema = {
-            'whitelist': {'type': ['str,unicode'], 'optional': True, 'is_regex': True},
-            'env': {
-                'type': [{'.': {'type': 'str,unicode'}}],
-                'optional': True
-            },
-            'logging': {
-                'type': {
-                    'level': {'type': 'str,unicode', 'regex': '^\s*(info|error|debug|none)\s*$', 'optional': True},
-                    'modules': {'type': ['str,unicode'], 'depends': ['level'], 'regex': '^.+$', 'optional': True}
-                },
-                'optional': True
-            },
-            'commandTimeout': {'type': 'int,float', 'optional': True, 'regex': '^\+?((0?[5-9]{1}|(0?[1-9][0-9]+))|((0?[5-9]{1}|(0?[1-9][0-9]+))\.[0-9]*))$'}
-        }
         
     def set(self, data = None):
         """
@@ -81,6 +85,30 @@ class AgentConfig(helper.Config):
     Implements private settings for the agent.
     """
     
+    #schema defining possible keys and values for this class. check helper.Config for details
+    schema = {
+        'orgToken': {'type': 'str,unicode', 'depends': ['name'], 'regex': '^[a-zA-Z0-9\-]{36}$'},
+        '_id': {'type': 'str,unicode', 'depends': ['agentVersion'], 'regex': '^[a-zA-Z0-9]{24}$', 'optional': True},
+        'apiUrl': {'type': 'str,unicode', 'regex': '^https://[^\s:]+(:[0-9]+)?$' },
+        'name': {'type': 'str,unicode',  'regex': '^.+$'},
+        'category': {'type': 'str,unicode', 'regex': '^.+$', 'optional': True},
+        'agentVersion': {'type': 'str,unicode', 'regex': '^(\d+\.){2}\d+(\.[a-z0-9]+)?$'},
+        'activities': {
+            'type': [{
+                '_id': {'type': 'str,unicode', 'regex': '^[a-zA-Z0-9]{24}$'}, 
+                'name': {'type': 'str,unicode', 'regex': '^.+$'},
+                'service': {'type': 'str,unicode', 'regex': '^.+$', 'optional': True},
+                'command': {'type': 'str,unicode', 'regex': '^.+$'},
+                'interval': {'type': 'int'}
+            }],
+            'depends': ['_id', 'agentVersion'],
+            'optional': True
+        },
+        'org': {'type': 'str,unicode', 'depends': ['orgToken', '_id', 'agentVersion'], 'regex': '^[a-zA-Z0-9]{24}$', 'optional': True},
+        'ref': {'type': 'str,unicode', 'depends': ['orgToken', 'agentVersion'], 'regex': 'curl|tarball', 'optional': True},
+        'updateUrl': {'type': 'str,unicode', 'optional': True}
+    }
+    
     def __init__(self, file):
         """
         Constructor.
@@ -91,30 +119,6 @@ class AgentConfig(helper.Config):
         
         helper.Config.__init__(self)  #initialize base class
         self.file = file  #settings file
-        
-        #schema defining possible keys and values for this class. check helper.Config for details
-        self.schema = {
-            'orgToken': {'type': 'str,unicode', 'depends': ['name'], 'regex': '^[a-zA-Z0-9\-]{36}$'},
-            '_id': {'type': 'str,unicode', 'depends': ['agentVersion'], 'regex': '^[a-zA-Z0-9]{24}$', 'optional': True},
-            'apiUrl': {'type': 'str,unicode', 'regex': '^https://[^\s:]+(:[0-9]+)?$' },
-            'name': {'type': 'str,unicode',  'regex': '^.+$'},
-            'category': {'type': 'str,unicode', 'regex': '^.+$', 'optional': True},
-            'agentVersion': {'type': 'str,unicode', 'regex': '^(\d+\.){2}\d+(\.[a-z0-9]+)?$'},
-            'activities': {
-                'type': [{
-                    '_id': {'type': 'str,unicode', 'regex': '^[a-zA-Z0-9]{24}$'}, 
-                    'name': {'type': 'str,unicode', 'regex': '^.+$'},
-                    'service': {'type': 'str,unicode', 'regex': '^.+$', 'optional': True},
-                    'command': {'type': 'str,unicode', 'regex': '^.+$'},
-                    'interval': {'type': 'int'}
-                }],
-                'depends': ['_id', 'agentVersion'],
-                'optional': True
-            },
-            'org': {'type': 'str,unicode', 'depends': ['orgToken', '_id', 'agentVersion'], 'regex': '^[a-zA-Z0-9]{24}$', 'optional': True},
-            'ref': {'type': 'str,unicode', 'depends': ['orgToken', 'agentVersion'], 'regex': 'curl|tarball', 'optional': True},
-            'updateUrl': {'type': 'str,unicode', 'optional': True}
-        }
         
     def update(self, data):   
         """
@@ -156,12 +160,10 @@ class Universal(SingletonType('UniversalMetaClass', (object, ), {})):
         exe_path = os.path.dirname(os.path.abspath(__file__))  #absolute path to the directory of this module
         exe_path = exe_path[:-1] if exe_path[len(exe_path) - 1] == '/' else exe_path  #remove the trailing /
         self.exe_path = exe_path[:exe_path.rfind('/') + 1]  #absolute path of the base dir, as it is one level up
-        self.db_path = helper.Utils.get_safe_path(self.exe_path + 'var/db/')  #absolute path to database dir
-        self.temp_path = helper.Utils.get_safe_path(self.exe_path + 'tmp/')  #absolute path to temporary dir
         self.is_update_only_mode = False  #no update only mode
         self.config = EmptyClass()
-        self.config.sealion = SealionConfig(helper.Utils.get_safe_path(self.exe_path + 'etc/config.json'))  #instance of configurable settings
-        self.config.agent = AgentConfig(helper.Utils.get_safe_path(self.exe_path + 'etc/agent.json'))  #instance of private settings
+        self.config.sealion = SealionConfig(self.exe_path + 'etc/config.json')  #instance of configurable settings
+        self.config.agent = AgentConfig(self.exe_path + 'etc/agent.json')  #instance of private settings
         ret = self.config.sealion.set()  #load the config from the file
         
         if ret != True:  #raise an exception on error
@@ -172,6 +174,8 @@ class Universal(SingletonType('UniversalMetaClass', (object, ), {})):
         if ret != True:  #raise an exception on error
             raise RuntimeError(ret)
         
+        self.db_path = helper.Utils.get_safe_path(self.exe_path + 'var/db/')  #absolute path to database dir
+        self.temp_path = helper.Utils.get_safe_path(self.exe_path + 'tmp/')  #absolute path to temporary dir
         self.stop_event = threading.Event()  #event that tells whether the agent should stop
         self.post_event = threading.Event()  #event that tell whether the api.session can request
         self.event_dispatcher = helper.event_dispatcher  #event dispatcher for communication across modules

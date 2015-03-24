@@ -158,9 +158,9 @@ class Utils(Namespace):
                 if Utils.sanitize_type(d[key], schema[key]['type'], is_delete_extra, 
                     schema[key].get('regex'), schema[key].get('is_regex', False), file) == False:
                     if file:
-                        _log.warn('Ignoring config key \'%s\' in \'%s\' as value is in improper format' % (key, file))
+                        _log.warn('Ignoring config key \'%s\' in \'%s\' as the value is in improper format' % (key, file))
                     else:
-                        _log.error('Config key \'%s\' is in improper format' % key)
+                        _log.warn('Ignoring config key \'%s\' as the value is in improper format' % key)
                         
                     del d[key]
                     ret = False if is_optional == False else ret  #if it is optional return value remains as it is, else zero
@@ -226,17 +226,21 @@ class Utils(Namespace):
             string representing the stack trace.
         """
         
-        trace = ''
+        trace, threads = '', {}
         curr_thread = threading.current_thread()
+        
+        #create thread name dict for lookup while saving stack trace
+        for thread in threading.enumerate():
+            threads[thread.ident] = thread.name
 
         #loop throught the sys frames and form the trace
         for thread_id, frame in sys._current_frames().items():
             if thread_id != curr_thread.ident:
-                trace += '# Thread ID: %s\n' % thread_id
+                trace += '# Thread ID: %s, Thread Name: %s\n' % (thread_id, threads[thread_id])
                 trace += ''.join(traceback.format_list(traceback.extract_stack(frame))) + '\n\n'
             else: 
                 curr_thread_trace = curr_thread_trace if curr_thread_trace else ''.join(traceback.format_list(traceback.extract_stack(frame)))
-                curr_thread_trace = '# Thread ID: %s(Current thread)\n%s' % (thread_id, curr_thread_trace)
+                curr_thread_trace = '# Thread ID: %s(Current thread), Thread Name: %s\n%s' % (thread_id, threads[thread_id], curr_thread_trace)
                 trace = '%s\n\n%s' % (curr_thread_trace, trace)
 
         return trace
@@ -246,12 +250,13 @@ class Config:
     Class abstracs JSON based configuration.
     """
     
+    schema = {}  #schema representing the rules for configuration. subclass should modify this to provide custom rules
+    
     def __init__(self):
         """
         Constructor
         """
         
-        self.schema = {}  #schema representing the rules for configuration. subclass should modify this to provide custom rules
         self.file = ''  #filename for this config
         self.data = {}  #dict for config 
         self.lock = threading.RLock()  #thread lock

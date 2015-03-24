@@ -27,6 +27,7 @@ import helper
 from constructs import *
 
 _log = logging.getLogger(__name__)  #module level logging
+_active_signals = {}  #dict to keep track of the active signal handlers, for logging purpose only
 
 class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):    
     """
@@ -225,9 +226,6 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
                 break
 
         self.stop()  #stop controller
-        
-        #monitor current thread to prevent agent from hanging, as the next stmt waits for all the threads to stop
-        helper.ThreadMonitor().register(callback = exit_status.AGENT_ERR_NOT_RESPONDING)
         self.stop_threads()  
         self.is_stop = True
         _log.debug('%s generating SIGALRM', self.name)
@@ -239,6 +237,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         """
         
         api.session.stop()  #set the global stop event
+        helper.ThreadMonitor().register(callback = exit_status.AGENT_ERR_NOT_RESPONDING)  #monitor current thread to prevent agent from hanging
         
     def stop_threads(self):
         """
@@ -257,19 +256,40 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
             if thread.ident != curr_thread.ident and thread.ident != self.main_thread.ident and thread.daemon != True:
                 _log.debug('Waiting for %s' % unicode(thread))
                 thread.join()
+                
+def set_signal_handler(signum, handler):
+    """
+    Callback function to handle various signals.
+    
+    Args:
+        sig: signal to handle
+        handler: callback function
+    """
+    
+    #find the symbolic name of the signal if exists, else use the signal number
+    key = ([n for n in dir(signal) if n.startswith('SIG') and not n.startswith('SIG_') and getattr(signal, n) == signum] or [signum])[0]
+    
+    #update the lookup dict based on the handler
+    if handler == signal.SIG_IGN:
+        if key in _active_signals:
+            del _active_signals[key]
+    else:
+        _active_signals[key] = 1
+        
+    signal.signal(signum, handler)  #install signal handler
 
-def sig_handler(signum, frame):    
+def sig_handler(signum, *args):    
     """
     Callback function to handle various signals.
     """
     
     if signum == signal.SIGTERM:
         _log.info('Received SIGTERM')
-        signal.signal(signal.SIGTERM, signal.SIG_IGN)  #ignore this event from now on
+        set_signal_handler(signal.SIGTERM, signal.SIG_IGN)  #ignore this event from now on
         Controller().stop()  #ask the controller to stop
     elif signum == signal.SIGINT:
         _log.info('Received SIGINT')
-        signal.signal(signal.SIGINT, signal.SIG_IGN)  #ignore this event from now on
+        set_signal_handler(signal.SIGINT, signal.SIG_IGN)  #ignore this event from now on
         Controller().stop()  #ask the controller to stop
     elif signum == signal.SIGALRM:
         _log.debug('Received SIGALRM')
@@ -304,15 +324,16 @@ def run():
     controller = Controller()  #Controller instance
     
     #install signal handlers
-    signal.signal(signal.SIGALRM, sig_handler)
-    signal.signal(signal.SIGTERM, sig_handler)
-    signal.signal(signal.SIGINT, sig_handler)
-    signal.signal(signal.SIGUSR1, sig_handler)
+    set_signal_handler(signal.SIGALRM, sig_handler)
+    set_signal_handler(signal.SIGTERM, sig_handler)
+    set_signal_handler(signal.SIGINT, sig_handler)
+    set_signal_handler(signal.SIGUSR1, sig_handler)
     
     controller.start()
     
     while 1:  #wait and process the signals
-        _log.debug('Waiting for signals SIGALRM or SIGTERM or SIGINT or SIGUSR1')
+        active_signals = ' or '.join(_active_signals.keys())
+        active_signals and _log.debug('Waiting for signals %s' % active_signals)
         signal.pause()
         
         if controller.is_stop == True:  #is controller stopped
