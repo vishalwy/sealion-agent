@@ -13,9 +13,6 @@ import sys
 ERR_SUCCESS = 0
 ERR_INCOMPATIBLE_PYTHON = 2
 ERR_FAILED_DEPENDENCY = 3
-ERR_INVALID_USAGE=7
-
-usage = 'Usage: check_dependency.py {-h for Help}\n'
 
 #Python 2.x vs 3.x
 try:
@@ -23,23 +20,6 @@ try:
 except:
     def unicode(object, *args, **kwargs):
         return str(object)
-    
-i, arg_len = 1, len(sys.argv)
-
-try:
-    while i < arg_len:  #read all the arguments
-        if sys.argv[i] == '-h':  #help
-            sys.stdout.write(usage)
-            sys.exit(0)
-            
-        i += 1
-except IndexError:
-    sys.stderr.write('Error: %s requires an argument\n%s' % (sys.argv[i - 1], usage))  #missing option value
-    sys.exit(ERR_INVALID_USAGE)
-except Exception:
-    e = sys.exc_info()[1]
-    sys.stderr.write('Error: ' + unicode(e) + '\n')  #some error
-    sys.exit(ERR_INVALID_USAGE)
 
 #Python version check. SeaLion agent works only with Python version >= 2.6
 if float('%d.%d' % (sys.version_info[0], sys.version_info[1])) < 2.6:

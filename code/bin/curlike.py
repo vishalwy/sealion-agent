@@ -13,6 +13,7 @@ __email__ = 'hello@sealion.com'
 import sys
 import os.path
 import re
+import getopt
 
 #get the exe path, which is the absolute path to the parent directory of the module's direcotry
 exe_path = os.path.dirname(os.path.abspath(__file__))
@@ -32,7 +33,7 @@ if sys.version_info[0] == 3:
 import requests
 from constructs import unicode
 
-i, arg_len, output_format, output_file, urls, f = 1, len(sys.argv), '', '', [], None
+output_format, output_file, urls, f = '', '', [], None
 usage = 'Usage: curlike.py {[-x <proxy>] [-H <header>] [-X <http method>] [-d <data>] [-w <write out>] [-o <output file>] [-L <allow redirects>] URLs | -h for Help}\n'
 
 #keyword arguments for requests
@@ -94,61 +95,47 @@ def exception_hook(*args, **kwargs):
 sys.excepthook = exception_hook  #set the exception hook
 
 try:
-    while i < arg_len:  #read all the arguments
-        arg = sys.argv[i]
-
-        if arg[:1] == '-':  #considering single letter options only
-            if arg == '-x':  #proxy
-                i += 1  #read option value
-                
-                #set proxy for both http and https. depending on the url scheme it will use the right one
-                kwargs['proxies'] = {}
-                kwargs['proxies']['https'] = sys.argv[i]
-                kwargs['proxies']['http'] = sys.argv[i]
-            elif arg == '-H':  #headers
-                i += 1  #read option value
-                
-                #update the headers. header will be in the form "header:value"
-                kwargs['headers'] = kwargs.get('headers') or {}
-                iterator = iter([str.strip() for str in sys.argv[i].split(':')])
-                kwargs['headers'].update(dict(zip(iterator, iterator)))
-            elif arg == '-X':  #http method to use
-                i += 1  #read option value
-                
-                if sys.argv[i].strip().lower() in ['post', 'get', 'put', 'delete', 'patch', 'options']:
-                    method = getattr(session, sys.argv[i].strip().lower())  #get the session method currusponding to the value
-                else:
-                    raise Exception('unknown http method \'%s\'' % sys.argv[i].strip().lower())
-            elif arg == '-d':  #data to be send
-                i += 1  #read option value
-                kwargs['data'] = sys.argv[i]  #set the data
-            elif arg == '-w':  #what to write to stdout after completion
-                i += 1  #read option value
-                output_format = sys.argv[i]
-            elif arg == '-o':  #output file
-                i += 1  #read option value
-                output_file = sys.argv[i]
-            elif arg == '-L':  #allow url redirection
-                kwargs['allow_redirects'] = True
-            elif arg == '-h':
-                sys.stdout.write(usage)
-                sys.exit(0)
-        else:  #anything else is considered as url to fetch
-            url = arg.strip()
+    options, args = getopt.getopt(sys.argv[1:], 'x:H:X:d:w:o:Lh')
+    
+    for option, arg in options:
+        if option == '-x':  #proxy
+            kwargs['proxies'] = {'https': arg, 'http': arg}  #set proxy for both http and https. depending on the url scheme it will use the right one
+        elif option == '-H':  #headers
+            #update the headers. header will be in the form "header:value"
+            kwargs['headers'] = kwargs.get('headers', {})
+            iterator = iter([str.strip() for str in arg.split(':')])
+            kwargs['headers'].update(dict(zip(iterator, iterator)))
+        elif option == '-X':  #http method to use
+            if arg.lower() in ['post', 'get', 'put', 'delete', 'patch', 'options']:
+                method = getattr(session, arg.lower())  #get the session method currusponding to the value
+            else:
+                raise Exception('unknown http method \'%s\'' % arg.lower())
+        elif option == '-d':  #data to be send
+            kwargs['data'] = arg  #set the data
+        elif option == '-w':  #what to write to stdout after completion
+            output_format = arg
+        elif option == '-o':  #output file
+            output_file = arg
+        elif option == '-L':  #allow url redirection
+            kwargs['allow_redirects'] = True
+        elif option == '-h':
+            sys.stdout.write(usage)
+            sys.exit(0)
             
-            if url:
-                url = url if re.match('https?://.*', url) else 'http://' + url  #default to http scheme if no scheme specified
-                urls.append(url)
-
-        i += 1  #next option
-except IndexError:
-    sys.stderr.write('Error: %s requires an argument\n%s' % (sys.argv[i - 1], usage))  #missing option value
+    #all the non option arguments are considered the urls to fetch
+    for arg in args: 
+        url = arg.strip()
+        
+        #default to http scheme if no scheme specified an then add to list of urls
+        url and urls.append(url if re.match('https?://.*', url) else 'http://' + url)
+except getopt.GetoptError as e:
+    sys.stderr.write('Error: ' + unicode(e) + '\n' + usage)  #missing option value
     sys.exit(1)
 except Exception as e:
     sys.stderr.write('Error: ' + unicode(e) + '\n')
     sys.exit(1)
     
-if len(urls) == 0:  #no urls specified
+if not urls:  #no urls specified
     sys.stderr.write('Error: please specify atleast one URL\n%s' % usage)
     sys.exit(1)
                     

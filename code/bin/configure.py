@@ -10,6 +10,7 @@ __email__ = 'hello@sealion.com'
 
 import sys
 import json
+import getopt
 
 #Python 2.x vs 3.x
 try:
@@ -65,38 +66,33 @@ def set_value(obj, key, value):
 
 actions = ['get', 'set', 'add', 'rem', 'del']  #possible operations on the JSON file
 usage = 'Usage: configure.py {-k <key1[:key2[:key3[:...]]> [-a <%s>] [-v <value>] [-n] <JSON file> | -h for Help}\n' % '|'.join(actions)
-keys, value, action, pretty_print, file, i, arg_len = None, None, 'get', True, None, 1, len(sys.argv)
+keys, value, action, pretty_print, file = None, None, 'get', True, None
 
 try:
-    while i < arg_len:  #read all the arguments
-        arg = sys.argv[i]
-
-        if arg[:1] == '-':  #considering single letter options only
-            if arg == '-k':  #key
-                i += 1  #read option value
-                keys = sys.argv[i]
-            elif arg == '-v':  #value for the key
-                i += 1  #read option value
-                value = sys.argv[i]  #set the value
-            elif arg == '-n':  #do not pretty print while writing to file
-                pretty_print = False
-            elif arg == '-a':  #operation to be performed; default to 'get'
-                i += 1  #read option value
-                
-                if sys.argv[i] in actions:
-                    action = sys.argv[i]  #set the action
-                else:
-                    sys.stderr.write('Error: uknown argument \'%s\' for %s\n%s' % (sys.argv[i], arg, usage))  #unknown action value
-                    sys.exit(1)
-            elif arg == '-h':
-                sys.stdout.write(usage)
-                sys.exit(0)
+    options, args = getopt.getopt(sys.argv[1:], 'k:v:a:nh')
+    
+    for option, arg in options:        
+        if option == '-k':  #key
+            keys = arg
+        elif option == '-v':  #value for the key
+            value = arg  #set the value
+        elif option == '-n':  #do not pretty print while writing to file
+            pretty_print = False
+        elif option == '-a':  #operation to be performed; default to 'get'
+            if arg in actions:
+                action = arg  #set the action
+            else:
+                sys.stderr.write('Error: uknown argument \'%s\' for %s\n%s' % (arg, option, usage))  #unknown action value
+                sys.exit(1)
+        elif option == '-h':
+            sys.stdout.write(usage)
+            sys.exit(0)
         else:  #anything else is considered as the file to read
             file = arg.strip()
-            
-        i += 1  #next option
-except IndexError:
-    sys.stderr.write('Error: %s requires an argument\n%s' % (sys.argv[i - 1], usage))  #missing option value
+    
+    file = args[-1] if args else file
+except getopt.GetoptError as e:
+    sys.stderr.write('Error: ' + unicode(e) + '\n' + usage)  #missing option value
     sys.exit(1)
 except Exception as e:
     sys.stderr.write('Error: ' + unicode(e) + '\n')  #any other exception
@@ -110,7 +106,7 @@ if value == None and action != 'get' and action != 'del':  #any action other tha
     sys.stderr.write('Error: please specify a value to %s\n%s' % (action, usage))
     sys.exit(1)
     
-if not(file):  #no file specified
+if not file:  #no file specified
     sys.stderr.write('Error: please specify a file to read/write\n%s' % usage)
     sys.exit(1)
     
