@@ -7,37 +7,46 @@
 trap '[ $? -eq 127 ] && exit 127' ERR  #exit in case command not found
 
 #script variables
-USAGE="Usage: $0 {-v <version> [-d <domain>]} | -h"
+USAGE="Usage: $0 [options] <version>\nOptions:\n"
+USAGE="$USAGE -d,\t--domain <arg>\t\tDomain for which the tarball to be generated; default to sealion.com\n"
+USAGE="$USAGE -h,\t--help\t\t\tDisplay this information"
 
 #config variables
 DEFAULT_DOMAIN="sealion.com"
 DOMAIN=$DEFAULT_DOMAIN
 VERSION=
 
-#parse command line options
-while getopts :d:v:h OPT ; do
-    case "$OPT" in
-        d)
-            DOMAIN=$OPTARG
+#directory of the script
+BASEDIR=$(readlink -f "$0")
+BASEDIR=${BASEDIR%/*}
+
+source "$BASEDIR/res/scripts/opt-parse.sh"
+opt_parse :d:v:h "domain= help" OPTIONS ARGS "$@"
+
+if [ $? -ne 0 ] ; then
+    echo "Error: $OPTIONS" >&2
+    echo -e $USAGE
+    exit 125
+fi
+
+for INDEX in "${!OPTIONS[@]}" ; do
+    if [ $(( INDEX%2 )) -ne 0 ] ; then
+        continue
+    fi
+
+    case "${OPTIONS[$INDEX]}" in
+        d|domain)
+            DOMAIN=${OPTIONS[$(( INDEX+1 ))]}
             ;;
-        v)
-            VERSION=$OPTARG
-            ;;
-        h)
-            echo $USAGE
+        h|help)
+            echo -e $USAGE
             exit 0
             ;;
-        \?)
-            echo "Invalid option -$OPTARG" >&2
-            echo $USAGE
-            exit 126
-            ;;
-        :)
-            echo "Option $OPTARG requires an argument." >&2
-            echo $USAGE
-            exit 125
-            ;;
     esac
+done
+
+for ARG in "${ARGS[@]}" ; do
+    VERSION=$ARG
 done
 
 VERSION="$(echo "$VERSION" | sed -e 's/^\s*//' -e 's/\s*$//')"
@@ -47,7 +56,7 @@ TARGET=$DOMAIN
 #you need to specify the version
 if [ "$VERSION" == "" ] ; then
     echo "Please specify a valid version for the build"
-    echo $USAGE
+    echo -e $USAGE
     exit 1
 fi
 
@@ -62,11 +71,6 @@ fi
 
 API_URL="https://api$DOMAIN"
 AGENT_URL="https://agent$DOMAIN"
-
-#directory of the script
-BASEDIR=$(readlink -f "$0")
-BASEDIR=${BASEDIR%/*}
-
 OUTPUT="sealion-agent"
 ORIG_DOMAIN="$TARGET"
 TARGET="bin/$TARGET"
