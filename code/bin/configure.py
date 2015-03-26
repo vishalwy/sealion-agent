@@ -24,9 +24,19 @@ except:
 unicode = t_unicode  #export symbol unicode
 
 def usage(is_help = False):
+    """
+    Function to show usage information
+    
+    Args:
+        is_help: Whether to show the full help or just the command to show help
+        
+    Returns:
+        True
+    """
+    
     if is_help == False:
         sys.stdout.write('Run \'%s --help\' for more information\n' % sys.argv[0])
-        return
+        return True
         
     usage = 'Usage: %s [options] <JSON config file>\nOptions:\n' % sys.argv[0]
     usage += ' -a,\t--action <arg>    \tOperation to be performed; %s\n' % '|'.join(actions)
@@ -36,6 +46,7 @@ def usage(is_help = False):
     usage += ' -n,\t--no-pretty-print \tDo not pretty print while writing to the file; Pretty print is ON by default\n'
     usage += ' -h,\t--help            \tDisplay this information\n'
     sys.stdout.write(usage)
+    return True
 
 def get_value(obj, key):
     """
@@ -95,38 +106,32 @@ try:
             if arg in actions:
                 action = arg  #set the action
             else:
-                sys.stderr.write('Uknown argument \'%s\' for %s\n' % (arg, option))  #unknown action value
-                usage()
-                sys.exit(1)
+                sys.stderr.write('Uknown argument \'%s\' for %s\n' % (arg, option))  #unknown action
+                usage() and sys.exit(1)
         elif option in ['-h', '--help']:
-            usage(True)
-            sys.exit(0)
+            usage(True) and sys.exit(0)
         else:  #anything else is considered as the file to read
             file = arg.strip()
     
     file = args[-1] if args else file
 except getopt.GetoptError as e:
     sys.stderr.write(unicode(e).capitalize() + '\n')  #missing option value
-    usage()
-    sys.exit(1)
+    usage() and sys.exit(1)
 except Exception as e:
     sys.stderr.write('Error: ' + unicode(e) + '\n')  #any other exception
     sys.exit(1)
     
 if keys == None:  #no keys specified for the operation
     sys.stderr.write('Please specify a key\n')
-    usage()
-    sys.exit(1)
+    usage() and sys.exit(1)
     
 if value == None and action != 'get' and action != 'del':  #any action other than get and del requires a value to be set
     sys.stderr.write('Please specify a value to %s\n' % action)
-    usage()
-    sys.exit(1)
+    usage() and sys.exit(1)
     
 if not file:  #no file specified
     sys.stderr.write('Please specify a file to read/write\n')
-    usage()
-    sys.exit(1)
+    usage() and sys.exit(1)
     
 try:
     try:

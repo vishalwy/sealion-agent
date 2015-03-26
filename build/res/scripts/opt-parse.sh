@@ -41,10 +41,10 @@ opt_parse()
                 done
 
                 if [ "$LONG_OPT" == "" ] ; then
-                    eval "$3=\"Option '--${OPTARG%%=*}' not recognized\""
+                    eval "$3=\"Option --${OPTARG%%=*} not recognized\""
                     return 1
                 elif [[ $NEED_ARG -eq 1 && "$LONG_OPTARG" == "" ]] ; then
-                    eval "$3=\"Option '--$LONG_OPT' requires an argument\""
+                    eval "$3=\"Option --$LONG_OPT requires an argument\""
                     return 2
                 elif [ $NEED_ARG -eq 0 ] ; then
                     LONG_OPTARG="NONE"
@@ -53,11 +53,11 @@ opt_parse()
                 eval "$3+=($LONG_OPT $LONG_OPTARG)"
                 ;;
             \?)
-                eval "$3=\"Option '-$OPTARG' not recognized\""
+                eval "$3=\"Option -$OPTARG not recognized\""
                 return 1
                 ;;
             :)
-                eval "$3=\"Option '-$OPTARG' requires an argument\""
+                eval "$3=\"Option -$OPTARG requires an argument\""
                 return 2
                 ;;
             *)

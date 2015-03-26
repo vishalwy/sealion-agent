@@ -33,8 +33,34 @@ if sys.version_info[0] == 3:
 import requests
 from constructs import unicode
 
+def usage(is_help = False):
+    """
+    Function to show usage information
+    
+    Args:
+        is_help: Whether to show the full help or just the command to show help
+        
+    Returns:
+        True
+    """
+    
+    if is_help == False:
+        sys.stdout.write('Run \'%s --help\' for more information\n' % sys.argv[0])
+        return True
+        
+    usage = 'Usage: %s [options] <URL1>, ...\nOptions:\n' % sys.argv[0]
+    usage += ' -x,\t--proxy <arg>     \tProxy server details\n'
+    usage += ' -X,\t--request <arg>   \tRequest method to be used; %s\n' % '|'.join(methods)
+    usage += ' -H,\t--header <arg>    \tCustom header to be sent to the server; It should be in the form \'header:value\'\n'
+    usage += ' -d,\t--data <arg>      \tData for the request\n'
+    usage += ' -w,\t--write-out <arg> \tWhat to output after request completes; Only variable supported is %{http_code}\n'
+    usage += ' -o,\t--output <arg>    \tWrite outpt to file instead of stdout\n'
+    usage += ' -L,\t--location        \tFollow redirects; OFF by default\n'
+    usage += ' -h,\t--help            \tDisplay this information\n'
+    sys.stdout.write(usage)
+    return True
+
 output_format, output_file, urls, f = '', '', [], None
-usage = 'Usage: curlike.py {[-x <proxy>] [-H <header>] [-X <http method>] [-d <data>] [-w <write out>] [-o <output file>] [-L <allow redirects>] URLs | -h for Help}\n'
 
 #keyword arguments for requests
 kwargs = {
@@ -42,8 +68,9 @@ kwargs = {
     'allow_redirects': False  #follow redirects
 }
 
-session = requests.Session()
+session = requests.Session()  #create the request session to use
 method = session.get  #default request method
+methods = ['post', 'get', 'put', 'delete', 'patch', 'options']  #available http methods
 
 def convert_special(data):
     """
@@ -95,32 +122,32 @@ def exception_hook(*args, **kwargs):
 sys.excepthook = exception_hook  #set the exception hook
 
 try:
-    options, args = getopt.getopt(sys.argv[1:], 'x:H:X:d:w:o:Lh')
+    options, args = getopt.getopt(sys.argv[1:], 'x:H:X:d:w:o:Lh', ['proxy=', 'request=', 'header=', 'data=', 'write-out=', 'output=', 'location', 'help'])
     
     for option, arg in options:
-        if option == '-x':  #proxy
+        if option in ['-x', '--proxy']:  #proxy
             kwargs['proxies'] = {'https': arg, 'http': arg}  #set proxy for both http and https. depending on the url scheme it will use the right one
-        elif option == '-H':  #headers
+        elif option in ['-H', '--header']:  #headers
             #update the headers. header will be in the form "header:value"
             kwargs['headers'] = kwargs.get('headers', {})
             iterator = iter([str.strip() for str in arg.split(':')])
             kwargs['headers'].update(dict(zip(iterator, iterator)))
-        elif option == '-X':  #http method to use
-            if arg.lower() in ['post', 'get', 'put', 'delete', 'patch', 'options']:
+        elif option in ['-X', '--request']:  #http method to use
+            if arg.lower() in methods:
                 method = getattr(session, arg.lower())  #get the session method currusponding to the value
             else:
-                raise Exception('unknown http method \'%s\'' % arg.lower())
-        elif option == '-d':  #data to be send
+                sys.stderr.write('Uknown argument \'%s\' for %s\n' % (arg, option))  #unknown method
+                usage() and sys.exit(1)
+        elif option in ['-d', '--data']:  #data to be send
             kwargs['data'] = arg  #set the data
-        elif option == '-w':  #what to write to stdout after completion
+        elif option in ['-w', '--write-out']:  #what to write to stdout after completion
             output_format = arg
-        elif option == '-o':  #output file
+        elif option in ['-o', '--output']:  #output file
             output_file = arg
-        elif option == '-L':  #allow url redirection
+        elif option in ['-L', '--location']:  #allow url redirection
             kwargs['allow_redirects'] = True
-        elif option == '-h':
-            sys.stdout.write(usage)
-            sys.exit(0)
+        elif option in ['-h', '--help']:
+            usage(True) and sys.exit(0)
             
     #all the non option arguments are considered the urls to fetch
     for arg in args: 
@@ -129,15 +156,15 @@ try:
         #default to http scheme if no scheme specified an then add to list of urls
         url and urls.append(url if re.match('https?://.*', url) else 'http://' + url)
 except getopt.GetoptError as e:
-    sys.stderr.write('Error: ' + unicode(e) + '\n' + usage)  #missing option value
-    sys.exit(1)
+    sys.stderr.write(unicode(e).capitalize() + '\n')  #missing option value
+    usage() and sys.exit(1)
 except Exception as e:
     sys.stderr.write('Error: ' + unicode(e) + '\n')
     sys.exit(1)
     
 if not urls:  #no urls specified
-    sys.stderr.write('Error: please specify atleast one URL\n%s' % usage)
-    sys.exit(1)
+    sys.stderr.write('Please specify atleast one URL\n')
+    usage() and sys.exit(1)
                     
 try:
     f = sys.stdout if not output_file else open(output_file, 'wb')  #if no output file is specified, write to stdout
