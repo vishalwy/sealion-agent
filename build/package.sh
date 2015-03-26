@@ -30,7 +30,7 @@ BASEDIR=$(readlink -f "$0")
 BASEDIR=${BASEDIR%/*}
 
 source "$BASEDIR/res/scripts/opt-parse.sh"
-opt_parse d:v:h "domain= help" OPTIONS ARGS "$@"
+opt_parse d:h "domain= help" OPTIONS ARGS "$@"
 
 if [ $? -ne 0 ] ; then
     echo "$OPTIONS" >&2
@@ -94,6 +94,15 @@ rm -rf $TARGET >/dev/null 2>&1
 mkdir -p $TARGET/$OUTPUT/agent
 chmod +x $TARGET/$OUTPUT
 
+import_script()
+{
+    local IMPORT_SCRIPT=$1
+    local IMPORT_SCRIPT_PATTERN="$(echo "$1" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
+    IMPORT_SCRIPT_PATTERN="${IMPORT_SCRIPT_PATTERN##*/}"
+    local ARGS=$(echo "-i -e '/^\s*source\s\+[^\s]*$IMPORT_SCRIPT_PATTERN.*$/ r $IMPORT_SCRIPT' -e 's/^\s*source\s\+[^\s]*$IMPORT_SCRIPT_PATTERN.*$//'")
+    eval sed "$ARGS" $2
+}
+
 #function to generate various scripts
 generate_scripts()
 {
@@ -112,6 +121,7 @@ generate_scripts()
     eval sed "$ARGS" $INSTALLER
     ARGS="-i 's/\(^VERSION=\)\(\"[^\"]\+\"\)/\1\"$VERSION\"/'"
     eval sed "$ARGS" $INSTALLER
+    import_script res/scripts/opt-parse.sh $INSTALLER
     chmod +x $INSTALLER
     echo "Installer generated"
     cp res/scripts/curl-install.sh $CURL_INSTALLER
@@ -121,6 +131,7 @@ generate_scripts()
     URL="$(echo "$AGENT_URL" | sed 's/[^-A-Za-z0-9_]/\\&/g')"
     ARGS="-i 's/\(^DOWNLOAD\_URL=\)\(\"[^\"]\+\"\)/\1\"$URL\"/'"
     eval sed "$ARGS" $CURL_INSTALLER    
+    import_script res/scripts/opt-parse.sh $CURL_INSTALLER
     chmod +x $CURL_INSTALLER
     echo "Curl installer generated"
     cp res/scripts/curl-install-node.sh $CURL_INSTALLER_NODE
