@@ -14,12 +14,12 @@ usage()
     fi
 
     local USAGE="Usage: $0 [options] <organization token>\nOptions:\n"
-    USAGE+=" -c,\t--category <arg> \tCategory name under which the server to be registered\n"
-    USAGE+=" -H,\t--host <arg>     \tServer name to be used\n"
-    USAGE+=" -x,\t--proxy <arg>    \tProxy server details\n"
-    USAGE+=" -p,\t--python <arg>   \tPath to the python binary used for executing agent code\n"
-    USAGE+=" -e,\t--env <arg>, ... \tJSON document representing the environment variables to be exported\n"
-    USAGE+=" -h,\t--help           \tDisplay this information"
+    USAGE+=" -c,\t--category <arg>  \tCategory name under which the server to be registered\n"
+    USAGE+=" -H,\t--host-name <arg> \tServer name to be used\n"
+    USAGE+=" -x,\t--proxy <arg>     \tProxy server details\n"
+    USAGE+=" -p,\t--python <arg>    \tPath to the python binary used for executing agent code\n"
+    USAGE+=" -e,\t--env <arg>, ...  \tJSON document representing the environment variables to be exported\n"
+    USAGE+=" -h,\t--help            \tDisplay this information"
     echo -e "$USAGE"
     return 0
 }
@@ -83,7 +83,7 @@ if [[ $KERNEL_MAJOR_VERSION -lt 2 || ($KERNEL_MAJOR_VERSION -eq 2 && $KERNEL_MIN
 fi
 
 source "$BASEDIR/opt-parse.sh"
-opt_parse i:o:c:H:x:p:a:r:v:e:h "install-dir=  help" OPTIONS ARGS "$@"
+opt_parse i:o:c:H:x:p:a:r:v:e:h "category= host-name= proxy= python= env= help" OPTIONS ARGS "$@"
 
 if [ $? -ne 0 ] ; then
     echo "$OPTIONS" >&2
@@ -116,7 +116,7 @@ for INDEX in "${!OPTIONS[@]}" ; do
             usage 1
             exit $SCRIPT_ERR_SUCCESS
             ;;
-        H|host)
+        H|host-name)
             HOST_NAME=$OPT_ARG
             ;;
         x|proxy)

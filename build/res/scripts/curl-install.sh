@@ -6,11 +6,28 @@
 
 trap '[ $? -eq 127 ] && exit 127' ERR  #exit in case command not found
 
+usage()
+{
+    if [ "$1" != "1" ] ; then
+        echo "Run 'curl -s $DOWNLOAD_URL | sudo bash /dev/stdin --help' for more information"
+        return 0
+    fi
+
+    local USAGE="Usage: curl -s $DOWNLOAD_URL | sudo bash /dev/stdin [options] <organization token>\nOptions:\n"
+    USAGE+=" -c,\t--category <arg>  \tCategory name under which the server to be registered\n"
+    USAGE+=" -H,\t--host-name <arg> \tServer name to be used\n"
+    USAGE+=" -x,\t--proxy <arg>     \tProxy server details\n"
+    USAGE+=" -p,\t--python <arg>    \tPath to the python binary used for executing agent code\n"
+    USAGE+=" -e,\t--env <arg>, ...  \tJSON document representing the environment variables to be exported\n"
+    USAGE+=" -h,\t--help            \tDisplay this information"
+    echo -e "$USAGE"
+    return 0
+}
+
 #config variables
 API_URL="<api-url>"
 DOWNLOAD_URL="<agent-download-url>"
 
-USAGE="Usage: curl -s $DOWNLOAD_URL | sudo bash /dev/stdin {-o <Organization token> [-c <Category name>] [-H <Host name>] [-x <Proxy address>] [-p <Python binary>] | -h for Help}"
 USER_NAME="sealion"  #username for the agent
 ORIG_URL_CALLER=$([ "$URL_CALLER" != "" ] && echo "$URL_CALLER" || echo "curl")  #command for api url calls
 unset -v URL_CALLER  #reset url caller so that child scripts wont inherit it
@@ -138,13 +155,27 @@ check_dependency()
     fi
 }
 
-#parse command line options
-while getopts :i:o:c:H:x:p:a:r:v:e:h OPT ; do
-    case "$OPT" in
+source "opt-parse.sh"
+opt_parse i:o:c:H:x:p:a:r:v:e:h "category= host-name= proxy= python= env= help" OPTIONS ARGS "$@"
+
+if [ $? -ne 0 ] ; then
+    echo "$OPTIONS" >&2
+    usage
+    exit 125
+fi
+
+for INDEX in "${!OPTIONS[@]}" ; do
+    if [ $(( INDEX%2 )) -ne 0 ] ; then
+        continue
+    fi
+
+    OPT_ARG=${OPTIONS[$(( INDEX+1 ))]}
+
+    case "${OPTIONS[$INDEX]}" in
         i)
             INSTALL_PATH=$OPTARG
             ;;
-        x)
+        x|proxy)
             PROXY="-x $OPTARG"
             ;;
         a)
@@ -153,19 +184,9 @@ while getopts :i:o:c:H:x:p:a:r:v:e:h OPT ; do
         o)
             ORG_TOKEN=$OPTARG
             ;;
-        h)
-            log_output $USAGE
+        h|help)
+            usage 1
             exit 0
-            ;;
-        \?)
-            log_output "Invalid option '-$OPTARG'" 2
-            log_output $USAGE
-            exit 126
-            ;;
-        :)
-            log_output "Option '-$OPTARG' requires an argument" 2
-            log_output $USAGE
-            exit 125
             ;;
     esac
 done
