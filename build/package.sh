@@ -6,10 +6,19 @@
 
 trap '[ $? -eq 127 ] && exit 127' ERR  #exit in case command not found
 
-#script variables
-USAGE="Usage: $0 [options] <version>\nOptions:\n"
-USAGE="$USAGE -d,\t--domain <arg>\t\tDomain for which the tarball to be generated; default to sealion.com\n"
-USAGE="$USAGE -h,\t--help\t\t\tDisplay this information"
+usage()
+{
+    if [ "$1" != "1" ] ; then
+        echo "Run '$0 --help' for more information"
+        return 0
+    fi
+
+    local USAGE="Usage: $0 [options] <version>\nOptions:\n"
+    USAGE+=" -d,\t--domain <arg> \tDomain for which the tarball to be generated; default to 'sealion.com'\n"
+    USAGE+=" -h,\t--help         \tDisplay this information"
+    echo -e "$USAGE"
+    return 0
+}
 
 #config variables
 DEFAULT_DOMAIN="sealion.com"
@@ -21,11 +30,11 @@ BASEDIR=$(readlink -f "$0")
 BASEDIR=${BASEDIR%/*}
 
 source "$BASEDIR/res/scripts/opt-parse.sh"
-opt_parse :d:v:h "domain= help" OPTIONS ARGS "$@"
+opt_parse d:v:h "domain= help" OPTIONS ARGS "$@"
 
 if [ $? -ne 0 ] ; then
-    echo "Error: $OPTIONS" >&2
-    echo -e $USAGE
+    echo "$OPTIONS" >&2
+    usage
     exit 125
 fi
 
@@ -34,12 +43,14 @@ for INDEX in "${!OPTIONS[@]}" ; do
         continue
     fi
 
+    OPT_ARG=${OPTIONS[$(( INDEX+1 ))]}
+
     case "${OPTIONS[$INDEX]}" in
         d|domain)
-            DOMAIN=${OPTIONS[$(( INDEX+1 ))]}
+            DOMAIN=$OPT_ARG
             ;;
         h|help)
-            echo -e $USAGE
+            usage 1
             exit 0
             ;;
     esac
@@ -56,7 +67,7 @@ TARGET=$DOMAIN
 #you need to specify the version
 if [ "$VERSION" == "" ] ; then
     echo "Please specify a valid version for the build"
-    echo -e $USAGE
+    usage
     exit 1
 fi
 

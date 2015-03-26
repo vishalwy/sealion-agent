@@ -6,6 +6,24 @@
 
 trap '[ $? -eq 127 ] && exit 127' ERR  #exit in case command not found
 
+usage()
+{
+    if [ "$1" != "1" ] ; then
+        echo "Run '$0 --help' for more information"
+        return 0
+    fi
+
+    local USAGE="Usage: $0 [options] <organization token>\nOptions:\n"
+    USAGE+=" -c,\t--category <arg> \tCategory name under which the server to be registered\n"
+    USAGE+=" -H,\t--host <arg>     \tServer name to be used\n"
+    USAGE+=" -x,\t--proxy <arg>    \tProxy server details\n"
+    USAGE+=" -p,\t--python <arg>   \tPath to the python binary used for executing agent code\n"
+    USAGE+=" -e,\t--env <arg>, ... \tJSON document representing the environment variables to be exported\n"
+    USAGE+=" -h,\t--help           \tDisplay this information"
+    echo -e "$USAGE"
+    return 0
+}
+
 #script error codes
 SCRIPT_ERR_SUCCESS=0
 SCRIPT_ERR_INVALID_PYTHON=1
@@ -32,7 +50,6 @@ DEFAULT_INSTALL_PATH="/usr/local/sealion-agent"  #default install directory
 INSTALL_AS_SERVICE=1  #whether to install agent as system service
 SEALION_NODE_FOUND=0  #evil twin
 UPDATE_AGENT=0  #install or update
-USAGE="Usage: $0 {-o <Organization token> [-c <Category name>] [-H <Host name>] [-x <Proxy address>] [-p <Python binary>] | -h for Help}"
 
 #setup variables
 INSTALL_PATH=$DEFAULT_INSTALL_PATH
@@ -49,7 +66,7 @@ PADDING="      "  #padding for messages
 
 #check if it is Linux
 if [ "$(uname -s)" != "Linux" ] ; then
-    echo 'Error: SeaLion agent works on Linux only' >&2
+    echo 'SeaLion agent works on Linux only' >&2
     exit $SCRIPT_ERR_INCOMPATIBLE_PLATFORM
 fi
 
@@ -61,62 +78,70 @@ KERNEL_MINOR_VERSION="${KERNEL_VERSION%%.*}"
 
 #check if the kernel version is >2.6
 if [[ $KERNEL_MAJOR_VERSION -lt 2 || ($KERNEL_MAJOR_VERSION -eq 2 && $KERNEL_MINOR_VERSION -lt 6) ]] ; then
-    echo 'Error: SeaLion agent requires kernel version 2.6 or above' >&2
+    echo 'SeaLion agent requires kernel version 2.6 or above' >&2
     exit $SCRIPT_ERR_INCOMPATIBLE_PLATFORM
 fi
 
-#parse command line options
-while getopts :i:o:c:H:x:p:a:r:v:e:h OPT ; do
-    case "$OPT" in
+source "$BASEDIR/opt-parse.sh"
+opt_parse i:o:c:H:x:p:a:r:v:e:h "install-dir=  help" OPTIONS ARGS "$@"
+
+if [ $? -ne 0 ] ; then
+    echo "$OPTIONS" >&2
+    usage
+    exit $SCRIPT_ERR_INVALID_USAGE
+fi
+
+for ARG in "${ARGS[@]}" ; do
+    ORG_TOKEN=$ARG
+done
+
+for INDEX in "${!OPTIONS[@]}" ; do
+    if [ $(( INDEX%2 )) -ne 0 ] ; then
+        continue
+    fi
+
+    OPT_ARG=${OPTIONS[$(( INDEX+1 ))]}
+
+    case "${OPTIONS[$INDEX]}" in
         i)
-            INSTALL_PATH=$OPTARG
+            INSTALL_PATH=$OPT_ARG
             ;;
         o)
-            ORG_TOKEN=$OPTARG
+            ORG_TOKEN=$OPT_ARG
             ;;
-        c)
-            CATEGORY=$OPTARG
+        c|category)
+            CATEGORY=$OPT_ARG
             ;;
-        h)
-            echo $USAGE
+        h|help)
+            usage 1
             exit $SCRIPT_ERR_SUCCESS
             ;;
-        H)
-            HOST_NAME=$OPTARG
+        H|host)
+            HOST_NAME=$OPT_ARG
             ;;
-        x)
-            PROXY=$OPTARG
+        x|proxy)
+            PROXY=$OPT_ARG
             ;;
-        p)
-            PYTHON=$OPTARG
+        p|python)
+            PYTHON=$OPT_ARG
             ;;
         a)
-            AGENT_ID=$OPTARG
+            AGENT_ID=$OPT_ARG
             UPDATE_AGENT=1
             ;;
         r)
-            REF=$OPTARG
+            REF=$OPT_ARG
             ;;
-        e)
-            ENV_VARS=("${ENV_VARS[@]}" "$OPTARG")
-            ;;
-        \?)
-            echo "Invalid option '-$OPTARG'" >&2
-            echo $USAGE
-            exit $SCRIPT_ERR_INVALID_USAGE
-            ;;
-        :)
-            echo "Option '-$OPTARG' requires an argument" >&2
-            echo $USAGE
-            exit $SCRIPT_ERR_INVALID_USAGE
+        e|env)
+            ENV_VARS+=("$OPT_ARG")
             ;;
     esac
 done
 
 #there should be an organization token
 if [ "$ORG_TOKEN" == '' ] ; then
-    echo "Missing option '-o'" >&2
-    echo $USAGE
+    echo "Please specify an organization token" >&2
+    usage
     exit $SCRIPT_ERR_INVALID_USAGE
 fi
 
@@ -170,7 +195,7 @@ check_dependency()
 
     #we need commands for user/group management if it is an agent installation and not update
     if [ $UPDATE_AGENT -eq 0 ] ; then
-        WHICH_COMMANDS=("${WHICH_COMMANDS[@]}" "groupadd" "useradd" "userdel" "groupdel")
+        WHICH_COMMANDS+=("groupadd" "useradd" "userdel" "groupdel")
     fi
 
     MISSING_COMMANDS=()  #array to hold missing commands
@@ -178,7 +203,7 @@ check_dependency()
     #loop through the commands and find the missing commands
     for COMMAND in "${WHICH_COMMANDS[@]}" ; do
         if [ "$(type -P $COMMAND 2>/dev/null)" == "" ] ; then
-            MISSING_COMMANDS=("${MISSING_COMMANDS[@]}" "$PADDING Cannot locate command '$COMMAND'")
+            MISSING_COMMANDS+=("$PADDING Cannot locate command '$COMMAND'")
         fi
     done
 
