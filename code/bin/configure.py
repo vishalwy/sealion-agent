@@ -23,6 +23,20 @@ except:
     
 unicode = t_unicode  #export symbol unicode
 
+def usage(is_help = False):
+    if is_help == False:
+        sys.stdout.write('Run \'%s --help\' for more information\n' % sys.argv[0])
+        return
+        
+    usage = 'Usage: %s [options] <JSON config file>\nOptions:\n' % sys.argv[0]
+    usage += ' -a,\t--action <arg>    \tOperation to be performed; %s\n' % '|'.join(actions)
+    usage += ' -k,\t--key <arg>       \tKey to be looked up; It should be in the form \'key1:key2:key3\' based on the heirarchy\n'
+    usage += '                        \tSupply empty key \'\' to read the whole JSON\n'
+    usage += ' -v,\t--value <arg>     \tJSON document representing the value to be used for write operations\n'
+    usage += ' -n,\t--no-pretty-print \tDo not pretty print while writing to the file; Pretty print is ON by default\n'
+    usage += ' -h,\t--help            \tDisplay this information\n'
+    sys.stdout.write(usage)
+
 def get_value(obj, key):
     """
     Function gets the value for the key from the dict given
@@ -65,49 +79,53 @@ def set_value(obj, key, value):
         obj[key] = value;
 
 actions = ['get', 'set', 'add', 'rem', 'del']  #possible operations on the JSON file
-usage = 'Usage: configure.py {-k <key1[:key2[:key3[:...]]> [-a <%s>] [-v <value>] [-n] <JSON file> | -h for Help}\n' % '|'.join(actions)
 keys, value, action, pretty_print, file = None, None, 'get', True, None
 
 try:
-    options, args = getopt.getopt(sys.argv[1:], 'k:v:a:nh')
+    options, args = getopt.getopt(sys.argv[1:], 'k:v:a:nh', ['key=', 'value=', 'action=', 'no-pretty-print', 'help'])
     
     for option, arg in options:        
-        if option == '-k':  #key
+        if option in ['-k', '--key']:  #key
             keys = arg
-        elif option == '-v':  #value for the key
+        elif option in ['-v', '--value']:  #value for the key
             value = arg  #set the value
-        elif option == '-n':  #do not pretty print while writing to file
+        elif option in ['-n', '--no-pretty-print']:  #do not pretty print while writing to file
             pretty_print = False
-        elif option == '-a':  #operation to be performed; default to 'get'
+        elif option in ['-a', '--action']:  #operation to be performed; default to 'get'
             if arg in actions:
                 action = arg  #set the action
             else:
-                sys.stderr.write('Error: uknown argument \'%s\' for %s\n%s' % (arg, option, usage))  #unknown action value
+                sys.stderr.write('Uknown argument \'%s\' for %s\n' % (arg, option))  #unknown action value
+                usage()
                 sys.exit(1)
-        elif option == '-h':
-            sys.stdout.write(usage)
+        elif option in ['-h', '--help']:
+            usage(True)
             sys.exit(0)
         else:  #anything else is considered as the file to read
             file = arg.strip()
     
     file = args[-1] if args else file
 except getopt.GetoptError as e:
-    sys.stderr.write('Error: ' + unicode(e) + '\n' + usage)  #missing option value
+    sys.stderr.write(unicode(e).capitalize() + '\n')  #missing option value
+    usage()
     sys.exit(1)
 except Exception as e:
     sys.stderr.write('Error: ' + unicode(e) + '\n')  #any other exception
     sys.exit(1)
     
 if keys == None:  #no keys specified for the operation
-    sys.stderr.write('Error: please specify a key\n%s' % usage)
+    sys.stderr.write('Please specify a key\n')
+    usage()
     sys.exit(1)
     
 if value == None and action != 'get' and action != 'del':  #any action other than get and del requires a value to be set
-    sys.stderr.write('Error: please specify a value to %s\n%s' % (action, usage))
+    sys.stderr.write('Please specify a value to %s\n' % action)
+    usage()
     sys.exit(1)
     
 if not file:  #no file specified
-    sys.stderr.write('Error: please specify a file to read/write\n%s' % usage)
+    sys.stderr.write('Please specify a file to read/write\n')
+    usage()
     sys.exit(1)
     
 try:

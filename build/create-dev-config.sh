@@ -82,14 +82,14 @@ done
 
 #there should be an organization token
 if [ "$ORG_TOKEN" == '' ] ; then
-    echo "Please specify an organization token using '-o'" >&2
+    echo "Please specify an organization token" >&2
     usage
     exit 1
 fi
 
 #you need to specify agent version
 if [ "$VERSION" == "" ] ; then
-    echo "Please specify a version token using '-v'" >&2
+    echo "Please specify the agent version" >&2
     usage
     exit 1
 fi
