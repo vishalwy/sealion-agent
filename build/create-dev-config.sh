@@ -6,8 +6,26 @@
 
 trap '[ $? -eq 127 ] && exit 127' ERR  #exit in case command not found
 
+usage()
+{
+    if [ "$1" != "1" ] ; then
+        echo "Run '$0 --help' for more information"
+        return 0
+    fi
+
+    local USAGE="Usage: $0 [options]\nOptions:\n"
+    USAGE+=" -o,\t--org-token <arg>  \tOrganization token to be used\n"
+    USAGE+=" -c,\t--category <arg>   \tCategory name under which the server to be registered\n"
+    USAGE+=" -H,\t--host-name <arg>  \tServer name to be used\n"
+    USAGE+=" -x,\t--proxy <arg>      \tProxy server details\n"
+    USAGE+=" -a,\t--api-url <arg>    \tAPI URL for the agent; default to 'https://api-test.sealion.com'\n"
+    USAGE+=" -v,\t--version <arg>    \tAgent version to be used\n"
+    USAGE+=" -h,\t--help             \tDisplay this information"
+    echo -e "$USAGE"
+    return 0
+}
+
 #script variables
-USAGE="Usage: $0 {-o <Organization token> -v <Agent version> [-c <Category name>] [-H <Host name>] [-x <Proxy address>] [-a <API URL>] | -h for Help}"
 ORG_TOKEN=
 VERSION=
 CATEGORY=
@@ -16,61 +34,65 @@ PROXY=$https_proxy
 NO_PROXY=$no_proxy
 API_URL="https://api-test.sealion.com"
 
-#parse command line options
-while getopts :o:c:H:x:a:r:v:h OPT ; do
-    case "$OPT" in
-        o)
-            ORG_TOKEN=$OPTARG
+#script directory
+BASEDIR=$(readlink -f "$0")
+BASEDIR=${BASEDIR%/*}
+
+source "$BASEDIR/res/scripts/opt-parse.sh"
+opt_parse o:c:H:x:a:v:h "org-token= category= host-name= proxy= api-url= version= help" OPTIONS ARGS "$@"
+
+if [ $? -ne 0 ] ; then
+    echo "$OPTIONS" >&2
+    usage
+    exit 1
+fi
+
+for INDEX in "${!OPTIONS[@]}" ; do
+    if [ $(( INDEX%2 )) -ne 0 ] ; then
+        continue
+    fi
+
+    OPT_ARG=${OPTIONS[$(( INDEX+1 ))]}
+
+    case "${OPTIONS[$INDEX]}" in
+        o\org-token)
+            ORG_TOKEN=$OPT_ARG
             ;;
-        c)
-            CATEGORY=$OPTARG
+        c|category)
+            CATEGORY=$OPT_ARG
             ;;
-        h)
-            echo $USAGE
+        h|help)
+            usage 1
             exit 0
             ;;
-        H)
-            HOST_NAME=$OPTARG
+        H|host-name)
+            HOST_NAME=$OPT_ARG
             ;;
-        x)
-            PROXY=$OPTARG
+        x|proxy)
+            PROXY=$OPT_ARG
             ;;
-        a)
-            API_URL=$OPTARG
+        a|api-url)
+            API_URL=$OPT_ARG
             ;;
-        v)
-            VERSION=$OPTARG
-            ;;
-        \?)
-            echo "Invalid option '-$OPTARG'" >&2
-            echo $USAGE
-            exit 1
-            ;;
-        :)
-            echo "Option '-$OPTARG' requires an argument" >&2
-            echo $USAGE
-            exit 1
+        v|version)
+            VERSION=$OPT_ARG
             ;;
     esac
 done
 
-#you need to specify organization token
-if [ "$ORG_TOKEN" == "" ] ; then
-    echo "Missing option '-o'" >&2
-    echo $USAGE
+#there should be an organization token
+if [ "$ORG_TOKEN" == '' ] ; then
+    echo "Please specify an organization token using '-o'" >&2
+    usage
     exit 1
 fi
 
 #you need to specify agent version
 if [ "$VERSION" == "" ] ; then
-    echo "Missing option '-v'" >&2
-    echo $USAGE
+    echo "Please specify a version token using '-v'" >&2
+    usage
     exit 1
 fi
-
-#script directory
-BASEDIR=$(readlink -f "$0")
-BASEDIR=${BASEDIR%/*}
 
 #copy etc from res to code
 cp -r "$BASEDIR/res/etc" "$BASEDIR/../code/"
