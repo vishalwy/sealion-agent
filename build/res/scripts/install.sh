@@ -46,7 +46,7 @@ install_service() {
     for (( i = 0 ; i < $rc_path_count ; i++ )) ; do
         rc_path=$(find /etc/ -type d -name "rc$(( i + 1 )).d")
         [[ "$rc_path" == "" ]] && break
-        rc_paths+=(rc_path)
+        rc_paths+=($rc_path)
     done
     
     #if init.d is not found or rc paths are missing

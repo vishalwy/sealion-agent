@@ -103,10 +103,10 @@ generate_scripts() {
     
     #copy and update readme
     cp res/README "${build_target}/${output}/agent"
-    local build_date="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<< $(date +'%F %T %Z'))"  #package timestamp
+    local build_date="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<< $(date -u +'%F %T %Z'))"  #package timestamp
 
     #revision from which the build was generated; available only if it is a git repo
-    local build_revision=$([[ "$(type -P git 2>/dev/null)" == "" ]] && echo git rev-parse --short=10 HEAD 2>/dev/null)
+    local build_revision=$([[ "$(type -P git 2>/dev/null)" != "" ]] && git rev-parse --short=10 HEAD 2>/dev/null)
     [[ "$build_revision" != "" ]] && build_revision="- $(sed 's/[^-A-Za-z0-9_]/\\&/g' <<< ${build_revision})"
     
     #add version, date and git revision at the top README
