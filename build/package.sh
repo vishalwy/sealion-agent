@@ -10,7 +10,7 @@ trap '[[ $? -eq 127 ]] && exit 127' ERR  #exit in case command not found
 script_base_dir=$(readlink -f "$0")
 script_base_dir=${script_base_dir%/*}
 
-source "${script_base_dir}/res/scripts/opt-parse.sh"  #import utility functions
+source "${script_base_dir}/res/scripts/helper.sh"  #import utility functions
 
 #Function to print usage info
 #Arguments
@@ -70,7 +70,7 @@ set_script_details() {
     args="-i 's/\\(^REGISTRATION\\_URL=\\)\\(\"[^\"]\\+\"\\)/\\1\"${temp_var}\"/'"
     eval sed $args "$1"
 
-    import_script res/scripts/opt-parse.sh $1  #import the script
+    import_script res/scripts/helper.sh $1  #import the script
     chmod +x $1  #add exe flag
 }
 

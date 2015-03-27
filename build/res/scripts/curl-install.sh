@@ -155,7 +155,7 @@ check_dependency()
     fi
 }
 
-source "opt-parse.sh"
+source "helper.sh"
 opt_parse i:o:c:H:x:p:a:r:v:e:h "category= host-name= proxy= python= env= help" OPTIONS ARGS "$@"
 
 if [ $? -ne 0 ] ; then
