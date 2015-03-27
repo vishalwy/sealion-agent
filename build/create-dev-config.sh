@@ -38,7 +38,7 @@ API_URL="https://api-test.sealion.com"
 BASEDIR=$(readlink -f "$0")
 BASEDIR=${BASEDIR%/*}
 
-source "$BASEDIR/res/scripts/opt-parse.sh"
+source "$BASEDIR/res/scripts/helper.sh"
 opt_parse o:c:H:x:a:v:h "org-token= category= host-name= proxy= api-url= version= help" OPTIONS ARGS "$@"
 
 if [ $? -ne 0 ] ; then

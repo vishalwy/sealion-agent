@@ -82,7 +82,7 @@ if [[ $KERNEL_MAJOR_VERSION -lt 2 || ($KERNEL_MAJOR_VERSION -eq 2 && $KERNEL_MIN
     exit $SCRIPT_ERR_INCOMPATIBLE_PLATFORM
 fi
 
-source "$BASEDIR/opt-parse.sh"
+source "$BASEDIR/helper.sh"
 opt_parse i:o:c:H:x:p:a:r:v:e:h "category= host-name= proxy= python= env= help" OPTIONS ARGS "$@"
 
 if [ $? -ne 0 ] ; then
