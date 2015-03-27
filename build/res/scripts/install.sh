@@ -10,7 +10,7 @@ trap '[[ $? -eq 127 ]] && exit 127' ERR  #exit in case command not found
 script_base_dir=$(readlink -f "$0")
 script_base_dir=${script_base_dir%/*}
 
-source "$script_base_dir/helper.sh"  #import utility functions
+source "${script_base_dir}/helper.sh"  #import utility functions
 
 #Function to print usage info
 #Arguments

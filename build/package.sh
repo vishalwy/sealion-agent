@@ -35,12 +35,12 @@ usage() {
 #   $2 - target script
 import_script() {
     #sed escape import script name and extract only the file name
-    local import_script_pattern="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<< $1)"   
+    local import_script_pattern="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<< ${1})"   
     import_script_pattern="${import_script_pattern##*/}"
 
     #import it by first reading the file after the source statement and then deleting the line
-    local pattern="^\\s*source\\s\\+[^\\s]*$import_script_pattern.*$"
-    local args=$(echo "-i -e '/$pattern/ r $1' -e '/$pattern/d'")
+    local pattern="^\\s*source\\s\\+.*${import_script_pattern}.*$"
+    local args="-i -e '/${pattern}/ r $1' -e '/${pattern}/d'"
     eval sed "$args" $2
 }
 
@@ -52,22 +52,22 @@ set_script_details() {
     
     #set api url
     temp_var="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<< ${api_url})"
-    args="-i 's/\\(^API\\_URL=\\)\\(\"[^\"]\\+\"\\)/\\1\"${temp_var}\"/'"
+    args="-i 's/\\(^API\\_URL=\\)\\(\"[^\"]\\+\"\\)/\\1\"${temp_var}\"/i'"
     eval sed $args "$1"
     
     #set version
     temp_var="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<< ${version})"
-    args="-i 's/\\(^VERSION=\\)\\(\"[^\"]\\+\"\\)/\\1\"${temp_var}\"/'"
+    args="-i 's/\\(^VERSION=\\)\\(\"[^\"]\\+\"\\)/\\1\"${temp_var}\"/i'"
     eval sed $args "$1"
 
     #set agent download url
     temp_var="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<< ${agent_url})"
-    args="-i 's/\\(^DOWNLOAD\\_URL=\\)\\(\"[^\"]\\+\"\\)/\\1\"${temp_var}\"/'"
+    args="-i 's/\\(^DOWNLOAD\\_URL=\\)\\(\"[^\"]\\+\"\\)/\\1\"${temp_var}\"/i'"
     eval sed $args "$1"
 
     #set registration url; applicable only for curl installer for node
     temp_var="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<< ${api_url}/agents)"
-    args="-i 's/\\(^REGISTRATION\\_URL=\\)\\(\"[^\"]\\+\"\\)/\\1\"${temp_var}\"/'"
+    args="-i 's/\\(^REGISTRATION\\_URL=\\)\\(\"[^\"]\\+\"\\)/\\1\"${temp_var}\"/i'"
     eval sed $args "$1"
 
     import_script res/scripts/helper.sh $1  #import the script

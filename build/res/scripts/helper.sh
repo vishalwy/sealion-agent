@@ -83,7 +83,7 @@ opt_parse() {
     return 0  #success
 }
 
-#Function to perform command availability
+#Function to perform command availability check
 #Arguments:
 #   $@ - commands to check for availability
 #Returns 0 on success else 1
