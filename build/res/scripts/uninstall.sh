@@ -27,7 +27,7 @@ uninstall_service() {
     
     #if init.d is not found or rc paths are missing
     if [[ "$init_d_path" == "" || "${#rc_paths[@]}" != "$rc_path_count" ]] ; then
-        echo "Error: Could not locate init.d/rc folders" >&2
+        echo "Error: Could not locate init.d/rc directories" >&2
         return 1
     fi
 
@@ -36,7 +36,7 @@ uninstall_service() {
         rc_path="${rc_paths[$i]}/${symlink_paths[$i]}99sealion"
         rm -f "$rc_path"
 
-        if [ $? -ne 0 ] ; then
+        if [[ $? -ne 0 ]] ; then
             echo "Error: Failed to remove ${rc_path} file" >&2
             return 1
         fi

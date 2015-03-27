@@ -35,6 +35,111 @@ usage()
     return 0
 }
 
+#Function to install service
+#Returns 0 on success; 1 on error
+install_service() {
+    local rc_path rc_index service_paths=()
+    local symlink_paths=(K S S S S K)  #symlinks for each rc path
+    local init_d_path=$(find /etc/ -type d -name init.d)  #inti.d path
+    local rc_path_count="${#symlink_paths[@]}"
+
+    #find all rc paths
+    for (( i = 0 ; i < $rc_path_count ; i++ )) ; do
+        rc_path=$(find /etc/ -type d -name "rc$(( i + 1 )).d")
+        [[ "$rc_path" == "" ]] && break
+        rc_paths+=(rc_path)
+    done
+    
+    #if init.d is not found or rc paths are missing
+    if [[ "$init_d_path" == "" || "${#rc_paths[@]}" != "$rc_path_count" ]] ; then
+        echo "Error: Could not locate init.d/rc directories" >&2
+        return 1
+    fi
+
+    #create a symlink to the control script. the same script can be used directly to control the agent
+    ln -sf "$service_file" "${init_d_path}/sealion"
+
+    #loop through and update rc paths
+    for (( i = 0 ; i < $rc_path_count ; i++ )) ; do 
+        rc_path="${rc_paths[$i]}/${symlink_paths[$i]}99sealion"
+        ln -sf "$service_file" "$rc_path"
+        
+        if [[ $? -ne 0 ]] ; then
+            echo "Error: Cannot create service sealion. Unable to update ${rc_path} file" >&2
+            return 1
+        fi
+    done
+    
+    return 0  #success
+}
+
+#Function to check command and python module dependencies
+#Terminates the script on error
+check_dependency() {
+    #check if python binary is valid
+    type "$python_binary" >/dev/null 2>&1
+    
+    if [[ $? -ne 0 ]] ; then
+        echo "Error: No python found" >&2
+        exit $SCRIPT_ERR_INVALID_PYTHON
+    fi
+    
+    local which_commands missing_items ret_code
+
+    #various commands required for installer and the agent
+    #we need commands for user/group management if it is an agent installation and not update
+    which_commands=("sed" "cat" "find" "chown" "bash" "grep" "readlink")
+    [[ $update_agent -eq 0 ]] && which_commands+=("groupadd" "useradd" "userdel" "groupdel")
+
+    missing_items=$(check_for_commands "${which_commands[@]}")
+
+    if [[ $? -ne 0 ]] ; then
+        echo "Error: Command dependency check failed; could not locate follwoing commands" >&2
+        echo -e $missing_items | (while read line; do echo "${padding}${line}" >&2; done)  #print the missing commands with some padding
+        exit $SCRIPT_ERR_COMMAND_NOT_FOUND
+    fi
+
+    missing_items=$("$python_binary" agent/bin/check_dependency.py 2>&1)  #execute the script to find out any missing modules
+    ret_code=$?
+
+    if [[ $ret_code -eq $SCRIPT_ERR_SUCCESS && "$missing_items" != "Success" ]] ; then  #is python really a python binary. check the output to validate it
+        echo "Error: '$python_binary' is not a valid python binary" >&2
+        exit $SCRIPT_ERR_INVALID_PYTHON
+    elif [[ $ret_code -ne $SCRIPT_ERR_SUCCESS ]] ; then  #dependency check failed
+        echo "Error: Python dependency check failed; could not locate the following modules" >&2
+        echo -e $missing_items | (while read line; do echo "${padding}${line}" >&2; done)  #print the missing modules with some padding
+
+        #cleanup the temp files generated while performing python dependency check
+        rm -rf *.pyc
+        find . -type d -name '__pycache__' -exec rm -rf {} \; >/dev/null 2>&1
+
+        exit $ret_code
+    fi
+
+    #cleanup the temp files generated while performing python dependency check
+    rm -rf *.pyc
+    find . -type d -name '__pycache__' -exec rm -rf {} \; >/dev/null 2>&1
+}
+
+#Function to export environment variables stored in $env_vars
+export_env_vars()
+{
+    local export_errors=()  #array to hold erroneous JSON objects for env vars
+
+    for env_var in "${env_vars[@]}" ; do
+        local output=$("$python_binary" agent/bin/configure.py -a "add" -k "env" -v "$env_var" "${install_path}/etc/config.json" 2>&1)
+
+        #add to error list if it failed
+        [[ $? -ne 0 ]] && export_errors+=("${padding}${env_var} - ${output#Error: }")
+    done
+
+    #print any errors as warnings
+    if [[ "${#export_errors[@]}" != "0" ]] ; then
+        echo "Warning: Failed to export the folloing environment variables" >&2
+        echo -e $(IFS=$'\n'; echo "${export_errors[*]}")
+    fi
+}
+
 #script error codes
 SCRIPT_ERR_SUCCESS=0
 SCRIPT_ERR_INVALID_PYTHON=1
@@ -139,121 +244,10 @@ for option_index in "${!options[@]}" ; do
 done
 
 #there should be an organization token
-if [ "$org_token" == '' ] ; then
+if [[ "$org_token" == '' ]] ; then
     echo "Please specify an organization token" >&2
-    usage
-    exit $SCRIPT_ERR_INVALID_USAGE
+    usage ; exit $SCRIPT_ERR_INVALID_USAGE
 fi
-
-#function to create service scripts
-install_service()
-{
-    #service file paths
-    RC1_PATH=`find /etc/ -type d -name rc1.d`
-    RC2_PATH=`find /etc/ -type d -name rc2.d`
-    RC3_PATH=`find /etc/ -type d -name rc3.d`
-    RC4_PATH=`find /etc/ -type d -name rc4.d`
-    RC5_PATH=`find /etc/ -type d -name rc5.d`
-    RC6_PATH=`find /etc/ -type d -name rc6.d`
-    INIT_D_PATH=`find /etc/ -type d -name init.d`
-    SYMLINK_PATHS=(K K S S S S K)
-
-    #locate paths
-    if [[ -z $RC1_PATH || -z $RC2_PATH || -z $RC3_PATH || -z $RC4_PATH || -z $RC5_PATH || -z $RC6_PATH || -z $INIT_D_PATH ]] ; then
-        echo "Error: Cannot create service sealion. Could not locate init.d/rc directories." >&2
-        return 1
-    fi
-    
-    #create a symlink to the control script. the same scriot can be used directly to control the agent
-    ln -sf "$SERVICE_FILE" $INIT_D_PATH/sealion
-    
-    #update init.d files
-    for (( i = 1 ; i < 7 ; i++ )) ; do
-        VAR_NAME="RC"$i"_PATH"
-        ln -sf "$SERVICE_FILE" ${!VAR_NAME}/${SYMLINK_PATHS[$i]}99sealion
-        
-        if [ $? -ne 0 ] ; then
-            echo "Error: Cannot create service sealion. Unable to update init.d files." >&2
-            return 1
-        fi
-    done
-    
-    return 0  #success
-}
-
-#function to check command and python module dependency 
-check_dependency()
-{
-    #check if python binary is valid
-    if [ "$(type -P "$python_binary")" == "" ] ; then
-        echo "Error: No python found" >&2
-        exit $SCRIPT_ERR_INVALID_PYTHON
-    fi
-
-    #various commands required for installer and the agent
-    WHICH_COMMANDS=("sed" "cat" "find" "chown" "bash" "grep" "readlink")
-
-    #we need commands for user/group management if it is an agent installation and not update
-    if [ $update_agent -eq 0 ] ; then
-        WHICH_COMMANDS+=("groupadd" "useradd" "userdel" "groupdel")
-    fi
-
-    MISSING_COMMANDS=()  #array to hold missing commands
-
-    #loop through the commands and find the missing commands
-    for COMMAND in "${WHICH_COMMANDS[@]}" ; do
-        if [ "$(type -P $COMMAND 2>/dev/null)" == "" ] ; then
-            MISSING_COMMANDS+=("$padding Cannot locate command '$COMMAND'")
-        fi
-    done
-
-    #print out and exit if there are any commands missing
-    if [ "${#MISSING_COMMANDS[@]}" != "0" ] ; then
-        echo -e "Error: Command dependency check failed\n$(IFS=$'\n'; echo "${MISSING_COMMANDS[*]}")" >&2
-        exit $SCRIPT_ERR_COMMAND_NOT_FOUND
-    fi
-
-    RET=$("$python_binary" agent/bin/check_dependency.py 2>&1)  #execute the script to find out any missing modules
-    RET_CODE=$?
-
-    if [[ $RET_CODE -eq $SCRIPT_ERR_SUCCESS && "$RET" != "Success" ]] ; then  #is python really a python binary. check the output to validate it
-        echo "Error: '$python_binary' is not a valid python binary" >&2
-        exit $SCRIPT_ERR_INVALID_PYTHON
-    elif [ $RET_CODE -ne $SCRIPT_ERR_SUCCESS ] ; then  #dependency check failed
-        echo "Error: Python dependency check failed" >&2
-        echo -e $RET | (while read LINE; do echo "$padding $LINE" >&2; done)  #print the missing modules with some padding
-
-        #cleanup the temp files generated while performing python dependency check
-        rm -rf *.pyc
-        find . -type d -name '__pycache__' -exec rm -rf {} \; >/dev/null 2>&1
-
-        exit $RET_CODE
-    fi
-
-    #cleanup the temp files generated while performing python dependency check
-    rm -rf *.pyc
-    find . -type d -name '__pycache__' -exec rm -rf {} \; >/dev/null 2>&1
-}
-
-#function to export environment variables stored in $env_vars
-export_env_var()
-{
-    ERROR_EN_VARS=()  #array to hold erroneous JSON objects for env vars
-
-    for ENV_VAR in "${env_vars[@]}" ; do
-        TEMP_OUTPUT=$("$python_binary" agent/bin/configure.py -a "add" -k "env" -v "$ENV_VAR" "$install_path/etc/config.json" 2>&1)
-
-        #add to error list if it failed
-        if [ $? -ne 0 ] ; then
-            ERROR_EN_VARS=("${ERROR_EN_VARS[@]}" "$padding $ENV_VAR - ${TEMP_OUTPUT#Error: }")
-        fi
-    done
-
-    #print any errors as warnings
-    if [ "${#ERROR_EN_VARS[@]}" != "0" ] ; then
-        echo -e "Warning: Failed to export the folloing environment variables\n$(IFS=$'\n'; echo "${ERROR_EN_VARS[*]}")" >&2
-    fi
-}
 
 #function to setup the configuration for the agent
 setup_config()
@@ -276,7 +270,7 @@ setup_config()
         fi
 
         "$python_binary" agent/bin/configure.py -a "set" -k "" -v "{$CONFIG}" -n "$install_path/etc/agent.json"  #set the configuration
-        export_env_var  #export the environment variables specified
+        export_env_vars  #export the environment variables specified
     fi
 
     #specify the python binary in the control script and uninstaller
@@ -304,7 +298,7 @@ if [ "$no_proxy" != "" ] ; then
     env_vars=("${env_vars[@]}" "{\"no_proxy\": \"$no_proxy\"}")
 fi
 
-SERVICE_FILE="$install_path/etc/init.d/sealion"  #service file for the agent
+service_file="$install_path/etc/init.d/sealion"  #service file for the agent
 
 #check for existence of evil twin
 if [ -f "$install_path/bin/sealion-node" ] ; then
@@ -369,7 +363,7 @@ else
 
     #validate the install path by checking the presence of service file
     #if this is an update from SeaLion node agent, then ignore it
-    if [[ ! -f "$SERVICE_FILE" && $sealion_node_found -eq 0 ]] ; then
+    if [[ ! -f "$service_file" && $sealion_node_found -eq 0 ]] ; then
         echo "Error: '$install_path' is not a valid sealion installation directory" >&2
         exit $SCRIPT_ERR_INVALID_USAGE
     fi
@@ -389,9 +383,9 @@ if [ $sealion_node_found -eq 1 ] ; then
 fi
 
 #stop the agent if it is an update or re-install
-if [ -f "$SERVICE_FILE" ] ; then
+if [ -f "$service_file" ] ; then
     echo "Stopping agent..."
-    "$SERVICE_FILE" stop
+    "$service_file" stop
     RET=$?
 
     #exit if the user interrupted the operation or the command was not found
@@ -416,12 +410,12 @@ if [ $update_agent -eq 0 ] ; then  #if it is not an update
         install_service
 
         if [ $? -ne 0 ] ; then
-            echo "Use '$SERVICE_FILE' to control sealion"
+            echo "Use '$service_file' to control sealion"
         else
             echo "Service created"
         fi
     else
-        echo "Use '$SERVICE_FILE' to control sealion"
+        echo "Use '$service_file' to control sealion"
     fi
 else  #update
     if [ $sealion_node_found -eq 1 ] ; then  #if updating sealion node
@@ -431,7 +425,7 @@ else  #update
         #since update is run as unprivileged sealion user, we wont be able to modify /etc/sealion
         #instead convert the sealion node service file to point it to the new service file.
         #in effect it becomes /etc/sealion -> install_path/etc/sealion -> install_path/etc/init.d/sealion
-        ln -sf "$SERVICE_FILE" "$install_path/etc/sealion"
+        ln -sf "$service_file" "$install_path/etc/sealion"
     else
         #remove all files except var/ etc/ and tmp/ and copy files except etc/
         find "$install_path" -mindepth 1 -maxdepth 1 ! -name 'var' ! -name 'etc' ! -name 'tmp' -exec rm -rf "{}" \; >/dev/null 2>&1
@@ -444,7 +438,7 @@ else  #update
 fi
 
 echo "Starting agent..."
-"$SERVICE_FILE" start
+"$service_file" start
 RET=$?
 
 if [[ $update_agent -eq 0 && $RET -eq 0 ]] ; then

@@ -87,17 +87,20 @@ opt_parse() {
 #Arguments:
 #   $@ - commands to check for availability
 #Returns 0 on success else 1
-check_commands()
+check_for_commands()
 {
-    local missing_commands=()  #array to hold missing commands
+    local command_missing=0
 
     #loop through the commands and find the missing commands
     for which_command in "$@" ; do
-        type $which_command >/dev/null 2>&1
-        [[ $? -ne 0 ]] && missing_commands+=($which_command)
-    done
+        type "$which_command" >/dev/null 2>&1
 
-    echo "${missing_commands[@]}"
-    [[ "${#missing_commands[@]}" != "0" ]] && return 1 || return 0
+        if [[ $? -ne 0 ]] ; then
+            echo "$which_command"
+            command_missing=1
+        fi
+    done
+    
+    return $command_missing
 }
 
