@@ -16,8 +16,7 @@ source "$script_base_dir/res/scripts/helper.sh"  #import utility functions
 #Arguments
 #   $1 - whether to print the whole help or just the prompt
 #Returns 0
-usage()
-{
+usage() {
     if [ "$1" != "1" ] ; then
         echo "Run '$0 --help' for more information"
         return 0
@@ -97,7 +96,7 @@ cp -r "${script_base_dir}/res/etc" "${script_base_dir}/../code/"
 
 #agent.json config
 config="\"orgToken\": \"${org_token}\", \"apiUrl\": \"{$api_url}\", \"agentVersion\": \"${version}\", \"name\": \"${host_name}\""
-[[ "$category" != "" ]] && config+=", \"category\": \"$category\""  #add category if specified
+[[ "$category" != "" ]] && config+=", \"category\": \"${category}\""  #add category if specified
 
 "${script_base_dir}/../code/bin/configure.py" -a "set" -k "" -v "{$config}" -n "${script_base_dir}/../code/etc/agent.json"  #set the configuration
 proxy_vars=()  #array to hold proxy vars

@@ -87,8 +87,7 @@ opt_parse() {
 #Arguments:
 #   $@ - commands to check for availability
 #Returns 0 on success else 1
-check_for_commands()
-{
+check_for_commands() {
     local command_missing=0
 
     #loop through the commands and find the missing commands
@@ -103,4 +102,3 @@ check_for_commands()
     
     return $command_missing
 }
-

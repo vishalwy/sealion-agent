@@ -75,8 +75,7 @@ set_script_details() {
 }
 
 #Function to generate various scripts
-generate_scripts()
-{
+generate_scripts() {
     #copy service script
     cp res/scripts/sealion "${build_target}/${output}/agent/etc/init.d/sealion"
     chmod +x "${build_target}/${output}/agent/etc/init.d/sealion"
