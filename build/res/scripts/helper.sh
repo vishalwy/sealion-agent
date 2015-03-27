@@ -1,3 +1,5 @@
+PATH="${PATH}:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"  #common paths found in various linux distros
+
 #Function to parse command line arguments
 #Arguments
 #   $1 - short options; for example '-h'; if the option takes an argument suffix it with ':'
@@ -26,7 +28,7 @@ opt_parse() {
                 #loop through our list of long options to find a match
                 for parse_long_option in "${parse_long_options[@]}" ; do
                     #look for a match; we can ignore anything starting from the '=' character 
-                    if [ "${parse_long_option%=}" == "${OPTARG%%=*}" ] ; then
+                    if [[ "${parse_long_option%=}" == "${OPTARG%%=*}" ]] ; then
                         #find out whether this option requires an argument by looking for '=' at the end
                         local len="${#parse_long_option}"
                         [[ "${parse_long_option:$(( len - 1 )):1}" == "=" ]] && arg_required=1
@@ -50,7 +52,7 @@ opt_parse() {
                 elif [[ $arg_required -eq 1 && "$long_opt_arg" == "" ]] ; then  #error since we could not read the argument for the option
                     eval "$3=\"Option --$long_opt requires an argument\""
                     return 2
-                elif [ $arg_required -eq 0 ] ; then  #set option argument to special string
+                elif [[ $arg_required -eq 0 ]] ; then  #set option argument to special string
                     long_opt_arg="NONE"
                 fi
 
@@ -73,11 +75,29 @@ opt_parse() {
     done
 
     #now add the remaining arguments to non option arguments array
-    while [ "$OPTIND" -le "$#" ] ; do
+    while [[ "$OPTIND" -le "$#" ]] ; do
         eval "$4+=(${!OPTIND})"
         OPTIND=$(( $OPTIND + 1 ))
     done
 
     return 0  #success
+}
+
+#Function to perform command availability
+#Arguments:
+#   $@ - commands to check for availability
+#Returns 0 on success else 1
+check_commands()
+{
+    local missing_commands=()  #array to hold missing commands
+
+    #loop through the commands and find the missing commands
+    for which_command in "$@" ; do
+        type $which_command >/dev/null 2>&1
+        [[ $? -ne 0 ]] && missing_commands+=($which_command)
+    done
+
+    echo "${missing_commands[@]}"
+    [[ "${#missing_commands[@]}" != "0" ]] && return 1 || return 0
 }
 

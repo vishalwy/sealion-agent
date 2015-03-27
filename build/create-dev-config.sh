@@ -96,7 +96,7 @@ fi
 cp -r "${script_base_dir}/res/etc" "${script_base_dir}/../code/"
 
 #agent.json config
-config="\"orgToken\": \"${org_token}\", \"apiUrl\": \"{$api_url}\", \"agentVersion\": \"${version}\", \"name\": \"${host_name}\", \"ref\": \"$REF\""
+config="\"orgToken\": \"${org_token}\", \"apiUrl\": \"{$api_url}\", \"agentVersion\": \"${version}\", \"name\": \"${host_name}\""
 [[ "$category" != "" ]] && config+=", \"category\": \"$category\""  #add category if specified
 
 "${script_base_dir}/../code/bin/configure.py" -a "set" -k "" -v "{$config}" -n "${script_base_dir}/../code/etc/agent.json"  #set the configuration
