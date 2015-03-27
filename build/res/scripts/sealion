@@ -11,12 +11,12 @@
 # Description: SeaLion is cloud based server debugging tool. This is SeaLion's agent to send monitoring data to SeaLion server
 ### END INIT INFO
 
-trap '[ $? -eq 127 ] && exit 127' ERR  #exit in case command not found
+trap '[[ $? -eq 127 ]] && exit 127' ERR  #exit in case command not found
 
 #find out the base dir of the script
-BASEDIR=$(readlink -f "$0")
-BASEDIR=${BASEDIR%/*}
+script_base_dir=$(readlink -f "$0")
+script_base_dir=${script_base_dir%/*}
 
-python "$BASEDIR/../../src/sealion.py" $1
+python "${script_base_dir}/../../src/sealion.py" $1
 exit $?
 
