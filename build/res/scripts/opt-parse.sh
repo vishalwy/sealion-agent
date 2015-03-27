@@ -1,38 +1,30 @@
 
 opt_parse() 
 {
-    local LOCAL_OPTIONS="$1-:"
-    local LOCAL_LONG_OPTIONS
-    IFS=" "; read -a LOCAL_LONG_OPTIONS <<< "$2"
+    local parse_options="$1-:" parse_long_options
+    IFS=" "; read -a parse_long_options <<< "$2"
     eval "$3=(); $4=()"
     
-    if [ "${LOCAL_OPTIONS:0:1}" != ":" ] ; then
-        LOCAL_OPTIONS=":$LOCAL_OPTIONS"
+    if [[ "${parse_options:0:1}" != ":" ]] ; then
+        parse_options=":$parse_options"
     fi
 
     OPTIND=5
 
-    while getopts $LOCAL_OPTIONS OPT ; do
-        case "$OPT" in
+    while getopts $parse_options opt ; do
+        case "$opt" in
             -)
-                local LONG_OPT=
-                local LONG_OPTARG=
-                local NEED_ARG=0
+                local long_opt= long_opt_arg= arg_required=0
+                
+                for parse_long_option in "${parse_long_options[@]}" ; do
+                    if [ "${parse_long_option%=}" == "${OPTARG%%=*}" ] ; then
+                        local len="${#parse_long_option}"
+                        [[ "${parse_long_option:$(( len - 1 )):1}" == "=" ]] && arg_required=1
+                        long_opt="${parse_long_option%=}"
+                        long_opt_arg="${OPTARG#*=}"
 
-                for LONG_OPTION in "${LOCAL_LONG_OPTIONS[@]}" ; do
-                    if [ "${LONG_OPTION%=}" == "${OPTARG%%=*}" ] ; then
-                        local LEN="${#LONG_OPTION}"
-                        LEN=$(( LEN - 1 ))
-                        
-                        if [ "${LONG_OPTION:$LEN:1}" == "=" ] ; then
-                            NEED_ARG=1
-                        fi
-
-                        LONG_OPT="${LONG_OPTION%=}"
-                        LONG_OPTARG="${OPTARG#*=}"
-
-                        if [[ "$LONG_OPTARG" == "$OPTARG" && $NEED_ARG -eq 1 ]] ; then
-                            LONG_OPTARG=${!OPTIND}
+                        if [[ "$long_opt_arg" == "$OPTARG" && $arg_required -eq 1 ]] ; then
+                            long_opt_arg=${!OPTIND}
                             OPTIND=$(( $OPTIND + 1 ))
                         fi
 
@@ -40,17 +32,17 @@ opt_parse()
                     fi
                 done
 
-                if [ "$LONG_OPT" == "" ] ; then
+                if [[ "$long_opt" == "" ]] ; then
                     eval "$3=\"Option --${OPTARG%%=*} not recognized\""
                     return 1
-                elif [[ $NEED_ARG -eq 1 && "$LONG_OPTARG" == "" ]] ; then
-                    eval "$3=\"Option --$LONG_OPT requires an argument\""
+                elif [[ $arg_required -eq 1 && "$long_opt_arg" == "" ]] ; then
+                    eval "$3=\"Option --$long_opt requires an argument\""
                     return 2
-                elif [ $NEED_ARG -eq 0 ] ; then
-                    LONG_OPTARG="NONE"
+                elif [ $arg_required -eq 0 ] ; then
+                    long_opt_arg="NONE"
                 fi
 
-                eval "$3+=($LONG_OPT $LONG_OPTARG)"
+                eval "$3+=($long_opt $long_opt_arg)"
                 ;;
             \?)
                 eval "$3=\"Option -$OPTARG not recognized\""
@@ -61,7 +53,7 @@ opt_parse()
                 return 2
                 ;;
             *)
-                eval "$3+=($OPT $OPTARG)"
+                eval "$3+=($opt $OPTARG)"
                 ;;
         esac
     done
@@ -70,5 +62,7 @@ opt_parse()
         eval "$4+=(${!OPTIND})"
         OPTIND=$(( $OPTIND + 1 ))
     done
+
+    return 0
 }
 
