@@ -135,7 +135,7 @@ for option_index in "${!options[@]}" ; do
     option_arg=${options[$(( option_index + 1 ))]}  #option argument for the current option
 
     #find the proper option and perform the action
-    case "${options[$option_index]}" in
+    case "${options[${option_index}]}" in
         d|domain)
             domain=$option_arg
             ;;
@@ -151,8 +151,8 @@ for arg in "${args[@]}" ; do
 done
 
 #trim whitespace from both ends
-version="$(sed -e 's/^\s*//' -e 's/\s*$//' <<< $version)"
-domain="$(sed -e 's/^\s*//' -e 's/\s*$//' <<< $domain)"
+version="$(sed -e 's/^\s*//' -e 's/\s*$//' <<< ${version})"
+domain="$(sed -e 's/^\s*//' -e 's/\s*$//' <<< ${domain})"
 
 build_target=$domain  #build target is the domain for which packaging is done
 
