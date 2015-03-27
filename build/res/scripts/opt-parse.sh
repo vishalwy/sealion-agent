@@ -1,14 +1,16 @@
-
-opt_parse() 
-{
+#Function to parse command line arguments
+#Arguments
+#   $1 - short options; for example '-h'; if the option takes an argument suffix it with ':'
+#   $2 - space separated list of long options; for example '--h'; if the option takes an argument suffix it with '='
+#   $3 - variable to hold the array of options and their arguments; options will be at even indexes
+#   $4 - variable to hold the array of non option arguments
+#   $@ - the remaining arguments are the argument to be parsed
+#Returns 0 on success; 1 if option is not recognized; 2 if the argument is missing;
+opt_parse() {
     local parse_options="$1-:" parse_long_options
     IFS=" "; read -a parse_long_options <<< "$2"
     eval "$3=(); $4=()"
-    
-    if [[ "${parse_options:0:1}" != ":" ]] ; then
-        parse_options=":$parse_options"
-    fi
-
+    [[ "${parse_options:0:1}" != ":" ]] && parse_options=":$parse_options"
     OPTIND=5
 
     while getopts $parse_options opt ; do
