@@ -18,11 +18,11 @@ source "${script_base_dir}/res/scripts/helper.sh"  #import utility functions
 #Returns 0
 usage() {
     if [[ "$1" != "1" ]] ; then
-        echo "Run '$0 --help' for more information"
+        echo "Run '${0} --help' for more information"
         return 0
     fi
 
-    local usage_info="Usage: $0 [options] <version>\nOptions:\n"
+    local usage_info="Usage: ${0} [options] <version>\nOptions:\n"
     usage_info+=" -d,\t--domain <arg>   \tDomain for which the tarball to be generated; Default to 'sealion.com'\n"
     usage_info+="    \t--gen-curl-node  \tGenerate curl installer for node agent\n"
     usage_info+=" -h,\t--help           \tDisplay this information"

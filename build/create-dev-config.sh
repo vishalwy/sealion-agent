@@ -18,11 +18,11 @@ source "$script_base_dir/res/scripts/helper.sh"  #import utility functions
 #Returns 0
 usage() {
     if [ "$1" != "1" ] ; then
-        echo "Run '$0 --help' for more information"
+        echo "Run '${0} --help' for more information"
         return 0
     fi
 
-    local usage_info="Usage: $0 [options]\nOptions:\n"
+    local usage_info="Usage: ${0} [options]\nOptions:\n"
     usage_info+=" -o,\t--org-token <arg>  \tOrganization token to be used\n"
     usage_info+=" -c,\t--category <arg>   \tCategory name under which the server to be registered\n"
     usage_info+=" -H,\t--host-name <arg>  \tServer name to be used\n"

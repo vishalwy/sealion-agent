@@ -18,12 +18,12 @@ source "${script_base_dir}/helper.sh"  #import utility functions
 #Returns 0
 usage() {
     if [ "$1" != "1" ] ; then
-        echo "Run '$0 --help' for more information"
+        echo "Run '${0} --help' for more information"
         return 0
     fi
 
-    local usage_info="Usage: $0 [options] <organization token>\nOptions:\n"
-    usage_info+=" -o,\t                  \tOrganization token; Kept for backward compatibility and has a higher precedence\n"
+    local usage_info="Usage: ${0} [options] <organization token>\nOptions:\n"
+    usage_info+=" -o,\t                  \tOrganization token; Kept for backward compatibility\n"
     usage_info+=" -c,\t--category <arg>  \tCategory name under which the server to be registered\n"
     usage_info+=" -H,\t--host-name <arg> \tServer name to be used\n"
     usage_info+=" -x,\t--proxy <arg>     \tProxy server details\n"
