@@ -23,8 +23,9 @@ usage() {
     fi
 
     local usage_info="Usage: $0 [options] <version>\nOptions:\n"
-    usage_info+=" -d,\t--domain <arg> \tDomain for which the tarball to be generated; Default to 'sealion.com'\n"
-    usage_info+=" -h,\t--help         \tDisplay this information"
+    usage_info+=" -d,\t--domain <arg>   \tDomain for which the tarball to be generated; Default to 'sealion.com'\n"
+    usage_info+="    \t--gen-curl-node  \tGenerate curl installer for node agent\n"
+    usage_info+=" -h,\t--help           \tDisplay this information"
     echo -e "$usage_info"
     return 0
 }
@@ -74,53 +75,13 @@ set_script_details() {
     chmod +x $1  #add exe flag
 }
 
-#Function to generate various scripts
-generate_scripts() {
-    #copy service script
-    cp res/scripts/sealion "${build_target}/${output}/agent/etc/init.d/sealion"
-    chmod +x "${build_target}/${output}/agent/etc/init.d/sealion"
-    echo "Service script generated"
-
-    #copy uninstall script
-    cp res/scripts/uninstall.sh "${build_target}/${output}/agent/uninstall.sh"
-    chmod +x "${build_target}/${output}/agent/uninstall.sh"
-    echo "Uninstaller generated"
-
-    #copy and update install script
-    cp res/scripts/install.sh "${build_target}/${output}/install.sh"
-    set_script_details "${build_target}/${output}/install.sh"
-    echo "Installer generated"
-
-    #copy and update curl install script
-    cp res/scripts/curl-install.sh "${build_target}/curl-install.sh"
-    set_script_details "${build_target}/curl-install.sh"
-    echo "Curl installer generated"
-
-    #copy and update curl install script for node
-    cp res/scripts/curl-install-node.sh "${build_target}/curl-install-node.sh"
-    set_script_details "${build_target}/curl-install-node.sh"
-    echo "Curl installer for node generated"
-    
-    #copy and update readme
-    cp res/README "${build_target}/${output}/agent"
-    local build_date="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<< $(date -u +'%F %T %Z'))"  #package timestamp
-
-    #revision from which the build was generated; available only if it is a git repo
-    local build_revision=$([[ "$(type -P git 2>/dev/null)" != "" ]] && git rev-parse --short=10 HEAD 2>/dev/null)
-    [[ "$build_revision" != "" ]] && build_revision="- $(sed 's/[^-A-Za-z0-9_]/\\&/g' <<< ${build_revision})"
-    
-    #add version, date and git revision at the top README
-    sed -i "1iSeaLion Agent ${version} - ${build_date} ${build_revision}" "${build_target}/${output}/agent/README" 
-    
-    echo "README generated"
-}
-
 #script variables
 default_domain="sealion.com"
 domain=$default_domain version=
+gen_curl_node=0 padding="    "
 
 #parse command line
-opt_parse d:h "domain= help" options args "$@"
+opt_parse d:h "domain= gen-curl-node help" options args "$@"
 
 #if parsing failed print the usage and exit
 if [[ $? -ne 0 ]] ; then
@@ -137,6 +98,9 @@ for option_index in "${!options[@]}" ; do
     case "${options[${option_index}]}" in
         d|domain)
             domain=$option_arg
+            ;;
+        gen-curl-node)
+            gen_curl_node=1
             ;;
         h|help)
             usage 1 ; exit 0
@@ -182,22 +146,62 @@ rm -rf $build_target >/dev/null 2>&1
 mkdir -p $build_target/$output/agent
 chmod +x $build_target/$output
 
-#copy the src directories to output
-find ../code/ -mindepth 1 -maxdepth 1 -type d -regextype sed -regex '.*/\(\(lib\)\|\(opt\)\|\(src\)\|\(bin\)\)' -exec cp -r {} "${build_target}/${output}/agent" \;
+echo "Generating '${build_target}/${output}'..."
 
+#copy the directories to output
+find ../code/ -mindepth 1 -maxdepth 1 -type d -regextype sed -regex '.*/\(\(lib\)\|\(opt\)\|\(src\)\|\(bin\)\)' -exec cp -r {} "${build_target}/${output}/agent" \;
 cp -r res/etc "${build_target}/${output}/agent"  #copy etc folder from res
 mkdir -p "${build_target}/${output}/agent/etc/init.d"  #make init.d folder
-generate_scripts  #generate scripts
+echo "${padding}Copied files from '${script_base_dir}/../code'"
+
+#copy service script
+cp res/scripts/sealion "${build_target}/${output}/agent/etc/init.d/sealion"
+chmod +x "${build_target}/${output}/agent/etc/init.d/sealion"
+echo "${padding}Service script generated"
+
+#copy uninstall script
+cp res/scripts/uninstall.sh "${build_target}/${output}/agent/uninstall.sh"
+chmod +x "${build_target}/${output}/agent/uninstall.sh"
+echo "${padding}Uninstaller generated"
+
+#copy and update install script
+cp res/scripts/install.sh "${build_target}/${output}/install.sh"
+set_script_details "${build_target}/${output}/install.sh"
+echo "${padding}Installer generated"
+
+#copy and update readme
+cp res/README "${build_target}/${output}/agent"
+build_date="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<< $(date -u +'%F %T %Z'))"  #package timestamp
+
+#revision from which the build was generated; available only if it is a git repo
+build_revision=$([[ "$(type -P git 2>/dev/null)" != "" ]] && git rev-parse --short=10 HEAD 2>/dev/null)
+[[ "$build_revision" != "" ]] && build_revision="- $(sed 's/[^-A-Za-z0-9_]/\\&/g' <<< ${build_revision})"
+
+#add version, date and git revision at the top README
+sed -i "1iSeaLion Agent ${version} - ${build_date} ${build_revision}" "${build_target}/${output}/agent/README" 
+echo "${padding}README generated"
 
 #if domain is not sealion.com, then set the logging level to debug
 if [ "$orig_domain"  != "$default_domain" ] ; then
     "${build_target}/${output}/agent/bin/configure.py" -a "set" -k "logging:level" -v "\"debug\"" "${build_target}/${output}/agent/etc/config.json"
-    echo "Agent logging level set to 'debug'"
+    echo "${padding}Agent logging level set to 'debug'"
+fi
+
+#copy and update curl install script
+cp res/scripts/curl-install.sh "${build_target}/curl-install.sh"
+set_script_details "${build_target}/curl-install.sh"
+echo "Curl installer generated at '${build_target}/curl-install.sh'"
+
+#copy and update curl install script for node
+if [[ gen_curl_node -eq 1 ]] ; then
+    cp res/scripts/curl-install-node.sh "${build_target}/curl-install-node.sh"
+    set_script_details "${build_target}/curl-install-node.sh"
+    echo "Curl installer for node generated at '${build_target}/curl-install-node.sh'"
 fi
 
 #generate tar in the output directory and cleanup temp directory created
 tarfile="${build_target}/${output}-${version}-noarch.tar.gz"
-echo "Generating ${tarfile}..."
-tar -zcvf "$tarfile" --exclude="*.pyc" --exclude="__pycache__" --exclude="*~" --exclude-vcs --exclude-backups --directory=$build_target "${output}/"  | (while read line; do echo "    ${line}"; done)
+echo "Generating '${tarfile}'..."
+tar -zcvf "$tarfile" --exclude="*.pyc" --exclude="__pycache__" --exclude="*~" --exclude-vcs --exclude-backups --directory=$build_target "${output}/"  | (while read line; do echo "${padding}${line}"; done)
 rm -rf "${build_target}/${output}"
 
