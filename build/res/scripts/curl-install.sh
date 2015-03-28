@@ -5,6 +5,7 @@
 #Email      : hello@sealion.com
 
 trap '[[ $? -eq 127 ]] && exit 127' ERR  #exit in case command not found
+PATH="${PATH}:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"  #common paths found in various linux distros
 
 source helper.sh   #import utility functions
 
@@ -21,11 +22,11 @@ usage() {
     fi
 
     local usage_info="Usage: ${bin} [options] <organization token>\nOptions:\n"
-    usage_info+=" -o,\t                  \tOrganization token; Kept for backward compatibility\n"
+    usage_info+=" -o,\t                  \tOrganization token; kept for backward compatibility\n"
     usage_info+=" -c,\t--category <arg>  \tCategory name under which the server to be registered\n"
     usage_info+=" -H,\t--host-name <arg> \tServer name to be used\n"
     usage_info+=" -x,\t--proxy <arg>     \tProxy server details\n"
-    usage_info+=" -p,\t--python <arg>    \tPath to the python binary used for executing agent code\n"
+    usage_info+=" -p,\t--python <arg>    \tPath to Python binary used for executing agent code\n"
     usage_info+=" -e,\t--env <arg>, ...  \tJSON document representing the environment variables to be exported\n"
     usage_info+=" -h,\t--help            \tDisplay this information"
     echo -e "$usage_info"

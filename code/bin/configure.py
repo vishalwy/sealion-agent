@@ -40,10 +40,10 @@ def usage(is_help = False):
         
     usage = 'Usage: %s [options] <JSON config file>\nOptions:\n' % sys.argv[0]
     usage += ' -a,\t--action <arg>    \tOperation to be performed; %s\n' % '|'.join(actions)
-    usage += ' -k,\t--key <arg>       \tKey to be looked up; It should be in the form \'key1:key2:key3\' based on the heirarchy\n'
+    usage += ' -k,\t--key <arg>       \tKey to be looked up; it should be in the form \'key1:key2:key3\' based on the heirarchy\n'
     usage += '                        \tSupply empty key \'\' to read the whole JSON\n'
     usage += ' -v,\t--value <arg>     \tJSON document representing the value to be used for write operations\n'
-    usage += ' -n,\t--no-pretty-print \tDo not pretty print while writing to the file; Pretty print is ON by default\n'
+    usage += ' -n,\t--no-pretty-print \tDo not pretty print while writing to the file; pretty print is ON by default\n'
     usage += ' -h,\t--help            \tDisplay this information\n'
     sys.stdout.write(usage)
     return True

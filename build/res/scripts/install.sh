@@ -5,6 +5,7 @@
 #Email      : hello@sealion.com
 
 trap '[[ $? -eq 127 ]] && exit 127' ERR  #exit in case command not found
+PATH="${PATH}:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"  #common paths found in various linux distros
 
 #script directory
 script_base_dir=$(readlink -f "$0")
@@ -23,11 +24,11 @@ usage() {
     fi
 
     local usage_info="Usage: ${0} [options] <organization token>\nOptions:\n"
-    usage_info+=" -o,\t                  \tOrganization token; Kept for backward compatibility\n"
+    usage_info+=" -o,\t                  \tOrganization token; kept for backward compatibility\n"
     usage_info+=" -c,\t--category <arg>  \tCategory name under which the server to be registered\n"
     usage_info+=" -H,\t--host-name <arg> \tServer name to be used\n"
     usage_info+=" -x,\t--proxy <arg>     \tProxy server details\n"
-    usage_info+=" -p,\t--python <arg>    \tPath to the python binary used for executing agent code\n"
+    usage_info+=" -p,\t--python <arg>    \tPath to Python binary used for executing agent code\n"
     usage_info+=" -e,\t--env <arg>, ...  \tJSON document representing the environment variables to be exported\n"
     usage_info+=" -h,\t--help            \tDisplay this information"
     echo -e "$usage_info"
@@ -79,7 +80,7 @@ check_dependency() {
     type "$python_binary" >/dev/null 2>&1
     
     if [[ $? -ne 0 ]] ; then
-        echo "Error: No python found" >&2
+        echo "Error: Could not locate Python binary" >&2
         exit $SCRIPT_ERR_INVALID_PYTHON
     fi
     
@@ -102,7 +103,7 @@ check_dependency() {
     ret_code=$?
 
     if [[ $ret_code -eq $SCRIPT_ERR_SUCCESS && "$missing_items" != "Success" ]] ; then  #is python really a python binary. check the output to validate it
-        echo "Error: '$python_binary' is not a valid python binary" >&2
+        echo "Error: '$python_binary' is not a valid Python binary" >&2
         exit $SCRIPT_ERR_INVALID_PYTHON
     elif [[ $ret_code -ne $SCRIPT_ERR_SUCCESS ]] ; then  #dependency check failed
         echo "Error: Python dependency check failed; could not locate the following modules" >&2

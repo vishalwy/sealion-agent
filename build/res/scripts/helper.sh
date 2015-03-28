@@ -1,5 +1,3 @@
-PATH="${PATH}:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"  #common paths found in various linux distros
-
 #Function to parse command line arguments
 #Arguments
 #   $1 - short options; for example '-h'; if the option takes an argument suffix it with ':'

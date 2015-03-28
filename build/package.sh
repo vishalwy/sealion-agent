@@ -5,6 +5,7 @@
 #Email      : hello@sealion.com
 
 trap '[[ $? -eq 127 ]] && exit 127' ERR  #exit in case command not found
+PATH="${PATH}:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"  #common paths found in various linux distros
 
 #directory of the script
 script_base_dir=$(readlink -f "$0")
@@ -23,9 +24,9 @@ usage() {
     fi
 
     local usage_info="Usage: ${0} [options] <version>\nOptions:\n"
-    usage_info+=" -d,\t--domain <arg>   \tDomain for which the tarball to be generated; Default to 'sealion.com'\n"
-    usage_info+="    \t--gen-curl-node  \tGenerate curl installer for node agent\n"
-    usage_info+=" -h,\t--help           \tDisplay this information"
+    usage_info+=" -d,\t--domain <arg>  \tDomain for which the tarball to be generated; Default to 'sealion.com'\n"
+    usage_info+="    \t--gen-curl-node \tGenerate curl installer for node agent\n"
+    usage_info+=" -h,\t--help          \tDisplay this information"
     echo -e "$usage_info"
     return 0
 }

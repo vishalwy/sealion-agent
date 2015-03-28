@@ -6,8 +6,8 @@
 #Author     : Vishal P.R
 #Email      : hello@sealion.com
 
-#trap exit, and send signal to sub-shell jobs, which in turn kills their children
-trap "terminate" EXIT
+trap "terminate" EXIT  #trap exit, and send signal to sub-shell jobs, which in turn kills their children
+PATH="${PATH}:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"  #common paths found in various linux distros
 
 #Function to close the output streams and kill background jobs.
 terminate() {
@@ -29,8 +29,6 @@ kill_children() {
 timestamp_index=0  #unique timestamp of the activity
 output_index=1  #filename of output
 command_index=2  #command to be executed, this has to be the last index as a command can have spaces in it
-
-PATH="${PATH}:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"  #common paths found in various linux distros
 
 #check whether we have setsid available
 type setsid >/dev/null 2>&1
