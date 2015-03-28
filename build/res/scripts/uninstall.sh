@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+#Uninstall script for SeaLion agent
+#If not run as root, then it removes the files except the log and this script, otherwise a complete uninstall 
+
 #Copyright  : (c) Webyog, Inc
 #Author     : Vishal P.R
 #Email      : hello@sealion.com

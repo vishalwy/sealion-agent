@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+#Script to create configuration files to run the agent. Used for development purpose.
+
 #Copyright  : (c) Webyog, Inc
 #Author     : Vishal P.R
 #Email      : hello@sealion.com

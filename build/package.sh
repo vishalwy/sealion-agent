@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+#Script to generate the tarball and curl installer.
+
 #Copyright  : (c) Webyog, Inc
 #Author     : Vishal P.R
 #Email      : hello@sealion.com

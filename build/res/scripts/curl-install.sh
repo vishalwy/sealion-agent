@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+#Single line install script for SeaLion agent.
+#The script downloads the appropriate agent tarball, extracts it and then calls the actual installer.
+#During agent update it logs stdout/stderr from the installer to a file.
+
 #Copyright  : (c) Webyog, Inc
 #Author     : Vishal P.R
 #Email      : hello@sealion.com

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+#Install/update script for SeaLion agent
+
 #Copyright  : (c) Webyog, Inc
 #Author     : Vishal P.R
 #Email      : hello@sealion.com
