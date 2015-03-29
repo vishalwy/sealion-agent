@@ -48,16 +48,17 @@ def usage(is_help = False):
         sys.stdout.write('Run \'%s --help\' for more information\n' % sys.argv[0])
         return True
         
-    usage = 'Usage: %s [options] <URL1>, ...\nOptions:\n' % sys.argv[0]
-    usage += ' -x,\t--proxy <arg>     \tProxy server details\n'
-    usage += ' -X,\t--request <arg>   \tRequest method to be used; %s\n' % '|'.join(methods)
-    usage += ' -H,\t--header <arg>    \tCustom header to be sent to the server; it should be in the form \'header:value\'\n'
-    usage += ' -d,\t--data <arg>      \tData for the request\n'
-    usage += ' -w,\t--write-out <arg> \tWhat to output after request completes; only variable supported is %{http_code}\n'
-    usage += ' -o,\t--output <arg>    \tWrite outpt to file instead of stdout\n'
-    usage += ' -L,\t--location        \tFollow redirects; OFF by default\n'
-    usage += ' -h,\t--help            \tDisplay this information\n'
-    sys.stdout.write(usage)
+    usage_info = 'Usage: %s [options] <URL1>, ...\nOptions:\n' % sys.argv[0]
+    usage_info += ' -x,\t--proxy <arg>     \tProxy server details\n'
+    usage_info += ' -X,\t--request <arg>   \tRequest method to be used; %s\n' % '|'.join(methods)
+    usage_info += ' -H,\t--header <arg>    \tCustom header to be sent to the server; it should be in the form \'header:value\'\n'
+    usage_info += ' -d,\t--data <arg>      \tData for the request\n'
+    usage_info += ' -w,\t--write-out <arg> \tWhat to output after request completes; only variable supported is %{http_code}\n'
+    usage_info += ' -o,\t--output <arg>    \tWrite outpt to file instead of stdout\n'
+    usage_info += ' -L,\t--location        \tFollow redirects; OFF by default\n'
+    usage_info += ' -s,\t--silent          \tDoest nothing; kept only for compatability with curl command\n'
+    usage_info += ' -h,\t--help            \tDisplay this information\n'
+    sys.stdout.write(usage_info)
     return True
 
 output_format, output_file, urls, f = '', '', [], None
@@ -122,7 +123,8 @@ def exception_hook(*args, **kwargs):
 sys.excepthook = exception_hook  #set the exception hook
 
 try:
-    options, args = getopt.getopt(sys.argv[1:], 'x:H:X:d:w:o:Lh', ['proxy=', 'request=', 'header=', 'data=', 'write-out=', 'output=', 'location', 'help'])
+    long_options = ['silent', 'proxy=', 'request=', 'header=', 'data=', 'write-out=', 'output=', 'location', 'help']
+    options, args = getopt.getopt(sys.argv[1:], 's:x:H:X:d:w:o:Lh', long_options)
     
     for option, arg in options:
         if option in ['-x', '--proxy']:  #proxy

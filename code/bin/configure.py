@@ -38,14 +38,14 @@ def usage(is_help = False):
         sys.stdout.write('Run \'%s --help\' for more information\n' % sys.argv[0])
         return True
         
-    usage = 'Usage: %s [options] <JSON config file>\nOptions:\n' % sys.argv[0]
-    usage += ' -a,\t--action <arg>    \tOperation to be performed; %s\n' % '|'.join(actions)
-    usage += ' -k,\t--key <arg>       \tKey to be looked up; it should be in the form \'key1:key2:key3\' based on the heirarchy\n'
-    usage += '                        \tSupply empty key \'\' to read the whole JSON\n'
-    usage += ' -v,\t--value <arg>     \tJSON document representing the value to be used for write operations\n'
-    usage += ' -n,\t--no-pretty-print \tDo not pretty print while writing to the file; pretty print is ON by default\n'
-    usage += ' -h,\t--help            \tDisplay this information\n'
-    sys.stdout.write(usage)
+    usage_info = 'Usage: %s [options] <JSON config file>\nOptions:\n' % sys.argv[0]
+    usage_info += ' -a,\t--action <arg>    \tOperation to be performed; %s\n' % '|'.join(actions)
+    usage_info += ' -k,\t--key <arg>       \tKey to be looked up; it should be in the form \'key1:key2:key3\' based on the heirarchy\n'
+    usage_info += '                        \tSupply empty key \'\' to read the whole JSON\n'
+    usage_info += ' -v,\t--value <arg>     \tJSON document representing the value to be used for write operations\n'
+    usage_info += ' -n,\t--no-pretty-print \tDo not pretty print while writing to the file; pretty print is ON by default\n'
+    usage_info += ' -h,\t--help            \tDisplay this information\n'
+    sys.stdout.write(usage_info)
     return True
 
 def get_value(obj, key):

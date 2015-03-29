@@ -58,7 +58,7 @@ for option_index in "${!options[@]}" ; do
 
     #find the proper option and perform the action
     case "${options[${option_index}]}" in
-        o\org-token)
+        o|org-token)
             org_token=$option_arg
             ;;
         c|category)
@@ -83,7 +83,7 @@ for option_index in "${!options[@]}" ; do
 done
 
 #there should be an organization token
-if [[ "$org_token" == '' ]] ; then
+if [[ "$org_token" == "" ]] ; then
     echo "Please specify an organization token" >&2
     usage ; exit 1
 fi
@@ -98,7 +98,7 @@ fi
 cp -r "${script_base_dir}/res/etc" "${script_base_dir}/../code/"
 
 #agent.json config
-config="\"orgToken\": \"${org_token}\", \"apiUrl\": \"{$api_url}\", \"agentVersion\": \"${version}\", \"name\": \"${host_name}\""
+config="\"orgToken\": \"${org_token}\", \"apiUrl\": \"${api_url}\", \"agentVersion\": \"${version}\", \"name\": \"${host_name}\""
 [[ "$category" != "" ]] && config+=", \"category\": \"${category}\""  #add category if specified
 
 "${script_base_dir}/../code/bin/configure.py" -a "set" -k "" -v "{$config}" -n "${script_base_dir}/../code/etc/agent.json"  #set the configuration
