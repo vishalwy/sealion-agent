@@ -86,7 +86,7 @@ report_failure() {
     [[ "$agent_id" == "" ]] && return  #abort if no agent id is specified
 
     #make the request
-    call_url -s $proxy -H "Content-Type: application/json" -X PUT -d "{\"reason\": \"$1\"}"  "$api_url/orgs/$org_token/agents/$agent_id/updatefail" >/dev/null 2>&1
+    call_url -s $proxy -H "Content-Type: application/json" -X PUT -d "{\"reason\": \"${1}\"}" "${api_url}/orgs/${org_token}/agents/{$agent_id}/updatefail" >/dev/null 2>&1
 }
 
 #Function to log the output in terminal as well as a file 
@@ -193,17 +193,13 @@ if [[ $? -ne 0 || "$status" != "200" ]] ; then
     exit 117
 fi
 
-#read the agent version from the response and find the major version
+#read the agent version and download url from the response
 version=$(grep '"agentVersion"\s*:\s*"[^"]*"' "$tmp_data_file" -o | sed 's/"agentVersion"\s*:\s*"\([^"]*\)"/\1/')
-major_version=$(grep '^[0-9]\+' -o <<< $version)
-
-#read the download url from the response
 tar_download_url=$(grep '"agentDownloadURL"\s*:\s*"[^"]*"' "$tmp_data_file" -o | sed 's/"agentDownloadURL"\s*:\s*"\([^"]*\)"/\1/')
-
 rm -f "$tmp_data_file"  #we no longer require it
 
-#if the major version is less than 2, means it requesting for node agent
-if [[ $major_version -le 2 ]] ; then
+#if the major version is <= 2, means it requesting for node agent
+if [[ "$(grep '^[0-9]\+' -o <<< $version)" -le "2" ]] ; then
     call_url -s $proxy "${download_url}/curl-install-node.sh" 2>/dev/null | bash /dev/stdin -t $tar_download_url "$@" 1> >( read_and_log ) 2> >( read_and_log 2 )
     status=$?
     sleep 2

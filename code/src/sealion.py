@@ -304,6 +304,7 @@ class SeaLion(Daemon):
             is_update_only_mode = True
         
         import main
+        main.stop_stream_logging()  #stop logging on stdout/stderr
         main.run(is_update_only_mode)  #start executing agent
         
     def cleanup(self): 

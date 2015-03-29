@@ -131,6 +131,10 @@ logger.setLevel(logging_level)  #set the logging level
 #set the formatter for all the logging handlers, including StreamHandler
 for handler in logging.root.handlers:
     handler.setFormatter(formatter)
+    
+def stop_stream_logging():
+    for handler in logging.root.handlers:
+        type(handler) is logging.StreamHandler and logger.removeHandler(handler)
                
 def run(is_update_only_mode = False):
     """

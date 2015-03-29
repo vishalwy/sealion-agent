@@ -179,7 +179,7 @@ SCRIPT_ERR_FAILED_DIR_CREATE=8
 SCRIPT_ERR_FAILED_GROUP_CREATE=9
 SCRIPT_ERR_FAILED_USER_CREATE=10
 
-#config variables
+#config variables, they should be updated while building the tarball
 api_url="<api-url>"
 version="<version>"
 
