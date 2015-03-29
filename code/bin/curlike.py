@@ -123,8 +123,8 @@ def exception_hook(*args, **kwargs):
 sys.excepthook = exception_hook  #set the exception hook
 
 try:
-    long_options = ['silent', 'proxy=', 'request=', 'header=', 'data=', 'write-out=', 'output=', 'location', 'help']
-    options, args = getopt.getopt(sys.argv[1:], 's:x:H:X:d:w:o:Lh', long_options)
+    long_options = ['proxy=', 'request=', 'header=', 'data=', 'write-out=', 'output=', 'location', 'silent', 'help']
+    options, args = getopt.getopt(sys.argv[1:], 'x:H:X:d:w:o:Lsh', long_options)
     
     for option, arg in options:
         if option in ['-x', '--proxy']:  #proxy

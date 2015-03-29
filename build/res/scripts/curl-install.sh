@@ -184,7 +184,7 @@ log_output "Getting agent installer details..."
 
 #call the url and get the response
 sub_url=$([ "$agent_id" != "" ] && echo "/agents/${agent_id}" || echo "")  #we need to include agent id also if this is an update
-status=$(call_url -s $proxy -w "%{http_code}" -H "Content-Type: application/json" "${api_url}/orgs/${org_token}${sub_url}/agentVersion" -o "$tmp_data_file" 2>&1)
+status=$(call_url -s $proxy -w "%{http_code}" -H "Content-Type: application/json" -o "$tmp_data_file" "${api_url}/orgs/${org_token}${sub_url}/agentVersion" 2>&1)
 
 #check the return value and status code
 if [[ $? -ne 0 || "$status" != "200" ]] ; then
@@ -204,7 +204,7 @@ rm -f "$tmp_data_file"  #we no longer require it
 
 #if the major version is less than 2, means it requesting for node agent
 if [[ $major_version -le 2 ]] ; then
-    call_url -s $proxy "${download_url}/curl-install-node.sh" 2>/dev/null | bash /dev/stdin "$@" -t $tar_download_url 1> >( read_and_log ) 2> >( read_and_log 2 )
+    call_url -s $proxy "${download_url}/curl-install-node.sh" 2>/dev/null | bash /dev/stdin -t $tar_download_url "$@" 1> >( read_and_log ) 2> >( read_and_log 2 )
     status=$?
     sleep 2
     [[ $status -ne 0 ]] && report_failure $status
