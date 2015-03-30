@@ -56,16 +56,16 @@ while read -r line ; do
             BASHPID=${BASHPID[4]}  #pid is at the 4th index
         fi
 
-        echo "data: ${activity[$timestamp_index]} pid $BASHPID"  #write out the process id for tracking purpose
+        echo "data: ${activity[${timestamp_index}]} pid ${BASHPID}"  #write out the process id for tracking purpose
 
         if [ $no_setsid -eq 0 ] ; then  #run it in a new session
-            setsid bash -c "${activity[$command_index]}" 1>"${activity[$output_index]}" 2>"${activity[$output_index]}" &
+            setsid bash -c "${activity[${command_index}]}" 1>"${activity[${output_index}]}" 2>"${activity[${output_index}]}" &
         else
-            bash -c "${activity[$command_index]}" 1>"${activity[$output_index]}" 2>"${activity[$output_index]}" &
+            bash -c "${activity[${command_index}]}" 1>"${activity[${output_index}]}" 2>"${activity[${output_index}]}" &
         fi
 
         SESSION_PID=$!  #pid of the bash process
         wait  #wait for the background job to finish
-        echo "data: ${activity[$timestamp_index]} return_code $?"  #write out the return code which indicates that the process has finished
+        echo "data: ${activity[${timestamp_index}]} return_code ${?}"  #write out the return code which indicates that the process has finished
     ) &
 done

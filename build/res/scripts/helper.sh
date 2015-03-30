@@ -7,14 +7,14 @@
 #   $@ - the remaining arguments are the argument to be parsed
 #Returns 0 on success; 1 if option is not recognized; 2 if the argument is missing;
 opt_parse() {
-    local parse_options="$1-:"  #add '-' at the end of short options so that we can use getopts to parse long options
+    local parse_options="${1}-:"  #add '-' at the end of short options so that we can use getopts to parse long options
 
     #read the long options as an array; we need it do lookup for match
     local parse_long_options
     IFS=" "; read -a parse_long_options <<< "$2"
 
-    eval "$3=(); $4=()"  #initialize the out variable to empty array;
-    [[ "${parse_options:0:1}" != ":" ]] && parse_options=":$parse_options"  #enable silent mode for getopts if it is not done already
+    eval "${3}=(); ${4}=()"  #initialize the out variable to empty array;
+    [[ "${parse_options:0:1}" != ":" ]] && parse_options=":${parse_options}"  #enable silent mode for getopts if it is not done already
     OPTIND=5  #start index for getopts as this function has 4 fixed parameters
 
     #parse the arguments
@@ -45,36 +45,36 @@ opt_parse() {
                 done
 
                 if [[ "$long_opt" == "" ]] ; then  #error since we could not find a match for the option given
-                    eval "$3=\"Option --${OPTARG%%=*} not recognized\""
+                    eval "${3}=\"Option --${OPTARG%%=*} not recognized\""
                     return 1
                 elif [[ $arg_required -eq 1 && "$long_opt_arg" == "" ]] ; then  #error since we could not read the argument for the option
-                    eval "$3=\"Option --$long_opt requires an argument\""
+                    eval "${3}=\"Option --$long_opt requires an argument\""
                     return 2
                 elif [[ $arg_required -eq 0 ]] ; then  #set option argument to special string
                     long_opt_arg="NONE"
                 fi
 
-                eval "$3+=($long_opt $long_opt_arg)"  #add it to the array
+                eval "${3}+=(${long_opt} ${long_opt_arg})"  #add it to the array
                 ;;
             \?)  #unknown option
-                eval "$3=\"Option -$OPTARG not recognized\""
+                eval "${3}=\"Option -${OPTARG} not recognized\""
                 return 1
                 ;;
             :)  #argument for the option is missing
-                eval "$3=\"Option -$OPTARG requires an argument\""
+                eval "${3}=\"Option -${OPTARG} requires an argument\""
                 return 2
                 ;;
             *)  #valid option; add it to the array
                 local opt_arg=$OPTARG
                 [[ -z $OPTARG ]] && opt_arg="NONE"
-                eval "$3+=($opt $opt_arg)"
+                eval "${3}+=(${opt} ${opt_arg})"
                 ;;
         esac
     done
 
     #now add the remaining arguments to non option arguments array
     while [[ "$OPTIND" -le "$#" ]] ; do
-        eval "$4+=(${!OPTIND})"
+        eval "${4}+=(${!OPTIND})"
         OPTIND=$(( $OPTIND + 1 ))
     done
 

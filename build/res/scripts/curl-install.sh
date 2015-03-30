@@ -18,7 +18,7 @@ source helper.sh   #import utility functions
 #   $1 - whether to print the whole help or just the prompt
 #Returns 0
 usage() {
-    local bin="curl -s $download_url | sudo bash /dev/stdin"
+    local bin="curl -s ${download_url} | sudo bash /dev/stdin"
 
     if [ "$1" != "1" ] ; then
         echo "Run '${bin} --help' for more information"
@@ -62,10 +62,10 @@ call_url() {
 
     for arg in "$@" ; do
         arg=${arg//\"/\\\"}
-        params+=" \"$arg\""
+        params+=" \"${arg}\""
     done
 
-    bash -c "$orig_url_caller ${params}"
+    bash -c "${orig_url_caller} ${params}"
     return $?
 }
 
@@ -86,7 +86,7 @@ report_failure() {
     [[ "$agent_id" == "" ]] && return  #abort if no agent id is specified
 
     #make the request
-    call_url -s $proxy -H "Content-Type: application/json" -X PUT -d "{\"reason\": \"${1}\"}" "${api_url}/orgs/${org_token}/agents/{$agent_id}/updatefail" >/dev/null 2>&1
+    call_url -s $proxy -H "Content-Type: application/json" -X PUT -d "{\"reason\": \"${1}\"}" "${api_url}/orgs/${org_token}/agents/${agent_id}/updatefail" >/dev/null 2>&1
 }
 
 #Function to log the output in terminal as well as a file 
@@ -116,7 +116,7 @@ log_output() {
         fi
     fi
 
-    [[ "$update_log" != " " ]] && echo $(date +"%F %T,%3N - $stream_text: $output") >>"$update_log"
+    [[ "$update_log" != " " ]] && echo $(date +"%F %T,%3N - ${stream_text}: ${output}") >>"$update_log"
     return 0
 }
 
@@ -199,7 +199,7 @@ tar_download_url=$(grep '"agentDownloadURL"\s*:\s*"[^"]*"' "$tmp_data_file" -o |
 rm -f "$tmp_data_file"  #we no longer require it
 
 #if the major version is <= 2, means it requesting for node agent
-if [[ "$(grep '^[0-9]\+' -o <<< $version)" -le "2" ]] ; then
+if [[ "$(grep '^[0-9]\+' -o <<< ${version})" -le "2" ]] ; then
     call_url -s $proxy "${download_url}/curl-install-node.sh" 2>/dev/null | bash /dev/stdin -t $tar_download_url "$@" 1> >( read_and_log ) 2> >( read_and_log 2 )
     status=$?
     sleep 2
@@ -233,7 +233,7 @@ status=$(tar -xf "$tmp_file_name" --directory="$temp_file_path" 2>&1)
 
 #check for tar extract failure 
 if [[ $? -ne 0 ]] ; then
-    log_output "Error: Failed to extract files; $status" 2
+    log_output "Error: Failed to extract files; ${status}" 2
     rm -rf "$temp_file_path"
     exit 1
 fi

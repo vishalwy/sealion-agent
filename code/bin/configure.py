@@ -61,12 +61,13 @@ def get_value(obj, key):
     """
     
     if type(obj) is list:
-        items = [item for item in obj if type(item) is dict and item.get(key) is not None]
+        items = [item[key] for item in obj if type(item) is dict and item.get(key) is not None]
+        length = len(items)
 
-        if not len(items):
+        if not length:
             raise KeyError(key)
-
-        return items[0][key]
+        
+        return items[0] if length == 1 else items
     
     return obj[key]
 
@@ -80,16 +81,12 @@ def set_value(obj, key, value):
     """
     
     if type(obj) is list:
-        items = [item for item in obj if type(item) is dict and item.get(key) is not None]
-        
-        if not len(items):
-            raise KeyError(key)
-        
-        items[0][key] = value
+        raise Exception('possible actions on an array are %s' % '|'.join(array_actions))
     else:
         obj[key] = value;
 
-actions = ['get', 'set', 'add', 'rem', 'del']  #possible operations on the JSON file
+array_actions = ['get', 'add', 'rem']  #possible operatiions on a JSON array
+actions = ['set', 'del'] + array_actions  #possible operations on the JSON file
 keys, value, action, pretty_print, file = None, None, 'get', True, None
 
 try:
@@ -184,6 +181,9 @@ try:
         else:
             temp_data_value.remove(temp_value)
     else:
+        if type(temp_data) is list:
+            raise Exception('possible actions on an array are %s' % '|'.join(array_actions))
+        
         del temp_data[keys[-1]]  #delete the key
     
     #write JSON to file

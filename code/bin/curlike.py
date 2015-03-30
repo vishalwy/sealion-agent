@@ -56,7 +56,7 @@ def usage(is_help = False):
     usage_info += ' -w,\t--write-out <arg> \tWhat to output after request completes; only variable supported is %{http_code}\n'
     usage_info += ' -o,\t--output <arg>    \tWrite outpt to file instead of stdout\n'
     usage_info += ' -L,\t--location        \tFollow redirects; OFF by default\n'
-    usage_info += ' -s,\t--silent          \tDoest nothing; kept only for compatability with curl command\n'
+    usage_info += ' -s,\t--silent          \tDoes nothing; kept only for compatability with curl command\n'
     usage_info += ' -h,\t--help            \tDisplay this information\n'
     sys.stdout.write(usage_info)
     return True
@@ -132,7 +132,7 @@ try:
         elif option in ['-H', '--header']:  #headers
             #update the headers. header will be in the form "header:value"
             kwargs['headers'] = kwargs.get('headers', {})
-            iterator = iter([str.strip() for str in arg.split(':')])
+            iterator = iter([str.strip() for str in arg.split(':', 1)])
             kwargs['headers'].update(dict(zip(iterator, iterator)))
         elif option in ['-X', '--request']:  #http method to use
             if arg.lower() in methods:

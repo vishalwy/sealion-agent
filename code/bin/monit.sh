@@ -14,7 +14,7 @@ script_base_dir=$(readlink -f "$0")
 script_base_dir=${script_base_dir%/*}
 
 if [ "$#" != "2" ] ; then
-    echo "Usage: $0 <Process ID> <Monit interval>"
+    echo "Usage: ${0} <Process ID> <Monit interval>"
     exit 1
 fi
 
@@ -38,7 +38,7 @@ while [[ 1 ]] ; do
 
     #check the /proc to determine if the process exist, else restart the agent
     if [ ! -d "/proc/$pid" ] ; then
-        echo $(date +"%F %T,%3N CRITICAL ERROR - sealion was terminated; Resurrecting.") >>$log_file
+        echo $(date +"%F %T,%3N CRITICAL ERROR - sealion was terminated; Resurrecting.") >>"$log_file"
         $service_file start
         exit 0
     fi

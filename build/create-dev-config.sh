@@ -13,7 +13,7 @@ PATH="${PATH}:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"  #co
 script_base_dir=$(readlink -f "$0")
 script_base_dir=${script_base_dir%/*}
 
-source "$script_base_dir/res/scripts/helper.sh"  #import utility functions
+source "${script_base_dir}/res/scripts/helper.sh"  #import utility functions
 
 #Function to print usage info
 #Arguments
@@ -103,8 +103,8 @@ config="\"orgToken\": \"${org_token}\", \"apiUrl\": \"${api_url}\", \"agentVersi
 
 "${script_base_dir}/../code/bin/configure.py" -a "set" -k "" -v "{$config}" -n "${script_base_dir}/../code/etc/agent.json"  #set the configuration
 proxy_vars=()  #array to hold proxy vars
-[[ "$proxy" != "" ]] && proxy_vars+=("{\"https_proxy\": \"$proxy\"}")  #export https_proxy
-[[ "$no_proxy" != "" ]] && proxy_vars=("${proxy_vars[@]}" "{\"no_proxy\": \"$no_proxy\"}")  #export no_proxy
+[[ "$proxy" != "" ]] && proxy_vars+=("{\"https_proxy\": \"${proxy}\"}")  #export https_proxy
+[[ "$no_proxy" != "" ]] && proxy_vars=("${proxy_vars[@]}" "{\"no_proxy\": \"${no_proxy}\"}")  #export no_proxy
 
 #update config.json with proxy variables
 config=$(IFS=', '; echo "${proxy_vars[*]}")

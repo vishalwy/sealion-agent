@@ -37,7 +37,7 @@ uninstall_service() {
 
     #loop through and remove rc paths
     for (( i = 0 ; i < $rc_path_count ; i++ )) ; do        
-        rc_path="${rc_paths[$i]}/${symlink_paths[$i]}99sealion"
+        rc_path="${rc_paths[${i}]}/${symlink_paths[${i}]}99sealion"
         rm -f "$rc_path"
 
         if [[ $? -ne 0 ]] ; then
@@ -62,7 +62,7 @@ cd "$script_base_dir"  #move to the script base dir so that all paths can be fou
 
 #validate current user
 if [[ "$(id -u -n)" != "$user_name" && $EUID -ne 0 ]] ; then
-    echo "Error: You need to run this script as either root or $user_name" >&2
+    echo "Error: You need to run this script as either 'root' or '${user_name}'" >&2
     exit 1
 fi
 
@@ -100,7 +100,7 @@ else
         if [[ $? -eq 0 ]] ; then
             pkill -KILL -u $user_name
             userdel $user_name
-            echo "User ${user_name} removed"
+            echo "User '${user_name}' removed"
         fi
 
         id -g $user_name >/dev/null 2>&1
@@ -108,7 +108,7 @@ else
         #remove the group
         if [[ $? -eq 0 ]] ; then
             groupdel $user_name
-            echo "Group ${user_name} removed"
+            echo "Group '${user_name}' removed"
         fi
 
         uninstall_service  #uninstall the service

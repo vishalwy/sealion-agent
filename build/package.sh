@@ -44,7 +44,7 @@ import_script() {
 
     #import it by first reading the file after the source statement and then deleting the line
     local pattern="^\\s*source\\s\\+.*${import_script_pattern}.*$"
-    local args="-i -e '/${pattern}/ r $1' -e '/${pattern}/d'"
+    local args="-i -e '/${pattern}/ r ${1}' -e '/${pattern}/d'"
     eval sed "$args" $2
 }
 
@@ -137,17 +137,17 @@ else
     domain=".$domain"
 fi
 
-api_url="https://api$domain" agent_url="https://agent$domain"  #set the urls
+api_url="https://api${domain}" agent_url="https://agent${domain}"  #set the urls
 output="sealion-agent" orig_domain="$build_target"
-build_target="bin/$build_target"  #update build target
+build_target="bin/${build_target}"  #update build target
 
 #move to current dir so that all the paths are available
 cd "$script_base_dir"
 
 #cleanup and recreate the output directories
 rm -rf $build_target >/dev/null 2>&1
-mkdir -p $build_target/$output/agent
-chmod +x $build_target/$output
+mkdir -p "${build_target}/{$output}/agent"
+chmod +x "${build_target}/${output}}
 
 echo "Generating '${build_target}/${output}'..."
 

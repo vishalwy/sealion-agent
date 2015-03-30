@@ -63,7 +63,7 @@ install_service() {
 
     #loop through and update rc paths
     for (( i = 0 ; i < $rc_path_count ; i++ )) ; do 
-        rc_path="${rc_paths[$i]}/${symlink_paths[$i]}99sealion"
+        rc_path="${rc_paths[${i}]}/${symlink_paths[${i}]}99sealion"
         ln -sf "$service_file" "$rc_path"
         
         if [[ $? -ne 0 ]] ; then
@@ -105,7 +105,7 @@ check_dependency() {
     ret_code=$?
 
     if [[ $ret_code -eq $SCRIPT_ERR_SUCCESS && "$missing_items" != "Success" ]] ; then  #is python really a python binary. check the output to validate it
-        echo "Error: '$python_binary' is not a valid Python binary" >&2
+        echo "Error: '${python_binary}' is not a valid Python binary" >&2
         exit $SCRIPT_ERR_INVALID_PYTHON
     elif [[ $ret_code -ne $SCRIPT_ERR_SUCCESS ]] ; then  #dependency check failed
         echo "Error: Python dependency check failed; could not locate the following modules" >&2
@@ -277,7 +277,7 @@ for option_index in "${!options[@]}" ; do
 done
 
 #there should be an organization token
-if [[ "$org_token" == '' ]] ; then
+if [[ "$org_token" == "" ]] ; then
     echo "Please specify an organization token" >&2
     usage ; exit $SCRIPT_ERR_INVALID_USAGE
 fi
@@ -288,8 +288,8 @@ install_path=${install_path%/}  #remove / from the end
 
 cd "$script_base_dir"  #move to the script base dir so that all paths can be found
 check_dependency  #perform dependency check
-[[ "$proxy" != "" ]] && env_vars+=("{\"https_proxy\": \"$proxy\"}")  #export proxy
-[[ "$no_proxy" != "" ]] && env_vars+=("{\"no_proxy\": \"$no_proxy\"}")  #export no_proxy
+[[ "$proxy" != "" ]] && env_vars+=("{\"https_proxy\": \"${proxy}\"}")  #export proxy
+[[ "$no_proxy" != "" ]] && env_vars+=("{\"no_proxy\": \"${no_proxy}\"}")  #export no_proxy
 service_file="${install_path}/etc/init.d/sealion"  #service file for the agent
 [[ -f "${install_path}/bin/sealion-node" ]] && sealion_node_found=1  #check for existence of evil twin
 
