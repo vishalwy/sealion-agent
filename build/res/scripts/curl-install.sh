@@ -120,7 +120,7 @@ log_output() {
     return 0
 }
 
-#config variables
+#config variables, they should be updated while building the tarball
 api_url="<api-url>"
 download_url="<agent-download-url>"
 

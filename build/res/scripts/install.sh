@@ -160,11 +160,17 @@ setup_config() {
         export_env_vars  #export the environment variables specified
     fi
 
-    #specify the python binary in the control script and uninstaller
-    temp_var="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<< ${python_binary})"
-    args="-i 's/python/\"${temp_var}\"/'"
-    eval sed $args "$service_file"
-    eval sed $args "${install_path}/uninstall.sh"
+    
+    temp_var=$(type -p "$python_binary")  #get the location of the python binary given
+
+    #compare the default python location with the python binary given
+    #if no match, then specify the python binary in the control script and uninstaller
+    if [[ "$(type -p python)" != "$temp_var" ]] ; then
+        temp_var="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<< ${python_binary})"
+        args="-i 's/\\(^python_binary=\\)\\(\"[^\"]\\+\"\\)/\\1\"${temp_var}\"/'"
+        eval sed $args "$service_file"
+        eval sed $args "${install_path}/uninstall.sh"
+    fi
 }
 
 #script error codes

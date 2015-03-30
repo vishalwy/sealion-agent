@@ -18,6 +18,7 @@ PATH="${PATH}:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"  #co
 script_base_dir=$(readlink -f "$0")
 script_base_dir=${script_base_dir%/*}
 
-python "${script_base_dir}/../../src/sealion.py" $1
+python_binary="python"
+"$python_binary" "${script_base_dir}/../../src/sealion.py" $1
 exit $?
 

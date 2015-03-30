@@ -56,6 +56,7 @@ uninstall_service() {
     return 0
 }
 
+python_binary="python"
 user_name="sealion"  #username for the agent
 cd "$script_base_dir"  #move to the script base dir so that all paths can be found
 
@@ -76,7 +77,7 @@ fi
 #the script may not be available if the user already removed the agent from the web interface
 if [[ -f "bin/unregister.py" ]] ; then
     echo "Unregistering agent..."
-    python bin/unregister.py >/dev/null 2>&1
+    "$python_binary" bin/unregister.py >/dev/null 2>&1
 
     if [[ $? -ne 0 ]] ; then  #exit if unregistering the agent failed
         echo "Error: Failed to unregister agent" >&2

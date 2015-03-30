@@ -133,6 +133,11 @@ for handler in logging.root.handlers:
     handler.setFormatter(formatter)
     
 def stop_stream_logging():
+    """
+    Function to disable logging to stdout/stderr
+    """
+    
+    #loop through handlers and remove stream handlers
     for handler in logging.root.handlers:
         type(handler) is logging.StreamHandler and logger.removeHandler(handler)
                
