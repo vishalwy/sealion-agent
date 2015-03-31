@@ -216,9 +216,9 @@ log_output "Downloading agent installer version ${version}..."
 status=$(call_url -s $proxy -w "%{http_code}" -o "$tmp_file_name" $tar_download_url 2>&1)
 
 #check return value and status code
-if [[ $? -ne 0 || "$status" == "404" ]] ; then
+if [[ $? -ne 0 || "$status" -ge "400" ]] ; then
     log_output "Error: Failed to download agent installer; ${status}" 2
-    [[ "$status" == "404" ]] && report_failure 5
+    [[ "$status" -ge "400" ]] && report_failure 5
     
     if [[ -f "${install_path}/bin/sealion-node" && -f "${install_path}/etc/sealion" ]] ; then
         "${install_path}/etc/sealion" start
