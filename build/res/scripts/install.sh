@@ -89,8 +89,8 @@ check_dependency() {
     local which_commands missing_items ret_code
 
     #various commands required for installer and the agent
-    #we need commands for user/group management if it is an agent installation and not update
-    which_commands=("sed" "cat" "find" "chown" "bash" "grep" "readlink")
+    #we also need commands for user/group management if it is an agent installation and not update
+    which_commands=("sed" "find" "chown" "bash" "grep")
     [[ $update_agent -eq 0 ]] && which_commands+=("groupadd" "useradd" "userdel" "groupdel")
 
     missing_items=$(check_for_commands "${which_commands[@]}")
@@ -296,7 +296,7 @@ service_file="${install_path}/etc/init.d/sealion"  #service file for the agent
 if [[ $update_agent -eq 0 ]] ; then  #if this is a fresh install
     #run install script as root as it require some privileged operations like creating user/group etc
     if [[ $EUID -ne 0 ]] ; then  
-        echo "Error: You need to run this as root" >&2
+        echo "Error: You need to run this script as 'root'" >&2
         exit $SCRIPT_ERR_INVALID_USAGE
     fi
 
@@ -344,7 +344,7 @@ if [[ $update_agent -eq 0 ]] ; then  #if this is a fresh install
 else
     #update should run as sealion user only
     if [[ "$(id -u -n)" != "$user_name" ]] ; then
-        echo "Error: You need to run this as '${user_name}' user" >&2
+        echo "Error: You need to run this script as '${user_name}'" >&2
         exit $SCRIPT_ERR_INVALID_USAGE
     fi
 
@@ -387,7 +387,7 @@ if [[ $update_agent -eq 0 ]] ; then  #if it is not an update
     cp -r agent/* "$install_path"
 
     setup_config  #create the configuration
-    chown -R ${user_name}:${user_name} "$install_path"  #change ownership
+    chown -R "${user_name}:${user_name}" "$install_path"  #change ownership
     echo "Sealion agent installed successfully"    
 
     #create service if agent is installed at default location

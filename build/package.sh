@@ -147,7 +147,7 @@ cd "$script_base_dir"
 #cleanup and recreate the output directories
 rm -rf $build_target >/dev/null 2>&1
 mkdir -p "${build_target}/${output}/agent"
-chmod +x "${build_target}/${output}}"
+chmod +x "${build_target}/${output}"
 
 echo "Generating '${build_target}/${output}'..."
 

@@ -18,6 +18,7 @@ if [ "$#" != "2" ] ; then
     exit 1
 fi
 
+exec >/dev/null 2>&1  #do not output anything
 cd "$script_base_dir"  #change to base directory of the script
 pid_file="../var/run/sealion.pid"  #pid file to be checked for
 service_file="../etc/init.d/sealion"  #the service script to be used for restarting agent
@@ -29,7 +30,7 @@ interval=$2  #monitor interval
 while [[ 1 ]] ; do
     #read the pid from pid file after monitor interval
     sleep $interval
-    pid=$(cat $pid_file 2>/dev/null)
+    read pid <"$pid_file"
 
     #exit if pid file does not exist, or the pid is changed
     if [[ $? -ne 0 || "$pid" != "$orig_pid" ]] ; then
