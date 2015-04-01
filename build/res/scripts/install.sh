@@ -324,7 +324,7 @@ if [[ $update_agent -eq 0 ]] ; then  #if this is a fresh install
         exit $SCRIPT_ERR_INVALID_USAGE
     fi
 
-    mkdir -p "${install_path}/var/log"  #create install directory
+    mkdir -p "${install_path}/var/log" >/dev/null 2>&1  #create install directory
 
     #error check
     if [[ $? -ne 0 ]] ; then
