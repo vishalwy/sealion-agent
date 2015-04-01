@@ -198,9 +198,8 @@ sealion_node_found=0  #evil twin
 update_agent=0  #install or update
 
 #setup variables
-org_token= category= agent_id=
-install_path=$default_install_path host_name=$(hostname)
-proxy=$https_proxy no_proxy=$no_proxy
+org_token= category= agent_id= install_path=
+host_name=$(hostname) proxy=$https_proxy no_proxy=$no_proxy
 install_source="tarball"  #the method used to install agent. curl or tarball
 env_vars=()  #any other environment variables to export
 padding="       "  #padding for messages
@@ -286,6 +285,21 @@ done
 if [[ "$org_token" == "" ]] ; then
     echo "Please specify an organization token" >&2
     usage ; exit $SCRIPT_ERR_INVALID_USAGE
+fi
+
+#if no install path is set, we will need to fill the default
+if [[ "$install_path" == "" ]] ; then
+    #if we have a user specified, set install path under home directory of the user
+    if [[ $create_user -eq 0 ]] ; then
+        install_path=$(eval echo "~${user_name}/sealion-agent")
+
+        if [[ "$install_path" == "~${user_name}/sealion-agent" ]] ; then
+            echo "Error: Cannot find the home directory of '${user_name}'" >&2
+            exit $SCRIPT_ERR_FAILED_DIR_CREATE
+        fi
+    else
+        install_path=$default_install_path
+    fi
 fi
 
 #set the absolute path for installation
