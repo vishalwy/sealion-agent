@@ -118,10 +118,8 @@ if [[ $EUID -eq 0 && "$script_base_dir" == "/usr/local/sealion-agent" ]] ; then
             echo "User '${user_name}' removed"
         fi
 
-        id -g $user_name >/dev/null 2>&1
-
         #remove the group
-        if [[ $? -eq 0 ]] ; then
+        if [[ "$(grep ^${user_name}: /etc/group)" != "" ]] ; then
             groupdel $user_name
             echo "Group '${user_name}' removed"
         fi

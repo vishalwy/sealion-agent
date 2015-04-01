@@ -344,7 +344,7 @@ if [[ $update_agent -eq 0 ]] ; then  #if this is a fresh install
     #should we create the user and group
     if [[ $create_user -eq 1 ]] ; then
         #create sealion group
-        if [[ "$(grep ^${user_name} /etc/group)" == "" ]] ; then
+        if [[ "$(grep ^${user_name}: /etc/group)" == "" ]] ; then
             groupadd -r $user_name >/dev/null 2>&1
 
             if [[ $? -ne 0 ]] ; then
