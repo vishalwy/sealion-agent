@@ -19,6 +19,7 @@ source helper.sh   #import utility functions
 #Returns 0
 usage() {
     local bin="curl -s ${download_url} | sudo bash /dev/stdin"
+    [[ "$0" != "/dev/stdin" ]] && bin="$0"
 
     if [ "$1" != "1" ] ; then
         echo "Run '${bin} --help' for more information"
@@ -32,6 +33,7 @@ usage() {
     usage_info+=" -x,\t--proxy <arg>     \tProxy server details\n"
     usage_info+=" -p,\t--python <arg>    \tPath to Python binary used for executing agent code\n"
     usage_info+=" -e,\t--env <arg>, ...  \tJSON document representing the environment variables to be exported\n"
+    usage_info+="    \t--no-create-user  \tDo not create 'sealion' user; instead use current user to run agent\n"
     usage_info+=" -h,\t--help            \tDisplay this information"
     echo -e "$usage_info"
     return 0
@@ -135,7 +137,7 @@ tmp_data_file="/tmp/sealion-agent.response.XXXX"  #temp file for api url respons
 proxy= agent_id= org_token=
 
 #parse command line
-opt_parse i:o:c:H:x:p:a:r:v:e:h "category= host-name= proxy= python= env= help" options args "$@"
+opt_parse i:o:c:H:x:p:a:r:v:e:h "category= host-name= proxy= python= env= no-create-user help" options args "$@"
 
 #if parsing failed print the usage and exit
 if [[ $? -ne 0 ]] ; then
@@ -175,8 +177,9 @@ for option_index in "${!options[@]}" ; do
 done
 
 #set the absolute path for installation
-install_path=$(readlink -f "$install_path") 
-install_path=${install_path%/}  #remove / from the end
+install_path=$(eval echo "$install_path")
+[[ ${install_path:0:1} != "/" ]] && install_path="$(pwd)/${install_path}" 
+[[ "${#install_path}" != "0" ]] && install_path=${install_path%/}  #remove / from the end
 
 check_dependency  #perform command dependency check
 tmp_data_file=$(mktemp "$tmp_data_file")  #create temp data file for api response

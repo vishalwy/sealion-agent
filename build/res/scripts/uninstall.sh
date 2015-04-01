@@ -56,11 +56,12 @@ uninstall_service() {
     return 0
 }
 
-python_binary="python"
+python_binary="python"  #python binary to be used; installer will update this if required 
 user_name="sealion"  #username for the agent
 user_delete=1  #whether to delete the user identified by user_name
 cd "$script_base_dir"  #move to the script base dir so that all paths can be found
 
+#try to find out whether a user is defined in the config
 if [[ -f "bin/configure.py" ]] ; then
     temp_user_name=$("$python_binary" bin/configure.py -k "user" etc/config.json 2>/dev/null)
     temp_user_name="${temp_user_name#\"}"
@@ -104,45 +105,46 @@ if [[ -f "bin/unregister.py" ]] ; then
     fi
 fi
 
-if [[ $EUID -ne 0 ]]; then  #if not running as root user
+#if install dir is the default install dir, then only we will remove user, group and service
+if [[ $EUID -eq 0 && "$script_base_dir" == "/usr/local/sealion-agent" ]] ; then
+    #should we delete the user and group
+    if [[ $user_delete -eq 1 ]] ; then
+        id $user_name >/dev/null 2>&1
+
+        #kill all the process and remove the user sealion
+        if [[ $? -eq 0 ]] ; then
+            pkill -KILL -u $user_name
+            userdel $user_name
+            echo "User '${user_name}' removed"
+        fi
+
+        id -g $user_name >/dev/null 2>&1
+
+        #remove the group
+        if [[ $? -eq 0 ]] ; then
+            groupdel $user_name
+            echo "Group '${user_name}' removed"
+        fi
+    fi
+
+    uninstall_service  #uninstall the service
+
+    if [[ $? -ne 0 ]] ; then
+        echo "Service sealion removed"
+    fi  
+fi
+
+if [[ $EUID -eq 0 || $user_delete -eq 0 ]] ; then
+    #remove all the files if the current user is root or the script is running a user that the installer did not create
+    echo "Removing files..."
+    cd ../
+    rm -rf "$script_base_dir"
+else
     #we remove all the files except var/log and uninstall.sh. 
     #we wont be able to remove the user, group and service as it requires super privileges
     echo "Removing files except logs, README and uninstall.sh"
     find var -mindepth 1 -maxdepth 1 ! -name 'log' ! -name 'crash' -exec rm -rf {} \;
     find . -mindepth 1 -maxdepth 1 -type d ! -name 'var' -exec rm -rf {} \;
-else
-    #if install dir is the default install dir, then only we will remove user, group and service
-    if [[ "$script_base_dir" == "/usr/local/sealion-agent" ]] ; then
-        #should we delete the user and group
-        if [[ $user_delete -eq 1 ]] ; then
-            id $user_name >/dev/null 2>&1
-
-            #kill all the process and remove the user sealion
-            if [[ $? -eq 0 ]] ; then
-                pkill -KILL -u $user_name
-                userdel $user_name
-                echo "User '${user_name}' removed"
-            fi
-
-            id -g $user_name >/dev/null 2>&1
-
-            #remove the group
-            if [[ $? -eq 0 ]] ; then
-                groupdel $user_name
-                echo "Group '${user_name}' removed"
-            fi
-        fi
-
-        uninstall_service  #uninstall the service
-
-        if [[ $? -ne 0 ]] ; then
-            echo "Service sealion removed"
-        fi  
-    fi
-
-    echo "Removing files..."
-    cd /
-    rm -rf "$script_base_dir"
 fi
 
 echo "Sealion agent uninstalled successfully"

@@ -32,7 +32,7 @@ usage() {
     usage_info+=" -x,\t--proxy <arg>     \tProxy server details\n"
     usage_info+=" -p,\t--python <arg>    \tPath to Python binary used for executing agent code\n"
     usage_info+=" -e,\t--env <arg>, ...  \tJSON document representing the environment variables to be exported\n"
-    usage_info+="    \t--run-as-user     \tRun agent as the current user\n"
+    usage_info+="    \t--no-create-user  \tDo not create 'sealion' user; instead use current user to run agent\n"
     usage_info+=" -h,\t--help            \tDisplay this information"
     echo -e "$usage_info"
     return 0
@@ -226,7 +226,7 @@ if [[ $kernel_major_version -lt 2 || ($kernel_major_version -eq 2 && $kernel_min
 fi
 
 #parse command line
-opt_parse i:o:c:H:x:p:a:r:v:e:h "category= host-name= proxy= python= env= run-as-user help" options args "$@"
+opt_parse i:o:c:H:x:p:a:r:v:e:h "category= host-name= proxy= python= env= no-create-user help" options args "$@"
 
 #if parsing failed print the usage and exit
 if [[ $? -ne 0 ]] ; then
@@ -274,7 +274,7 @@ for option_index in "${!options[@]}" ; do
         e|env)
             env_vars+=("$option_arg")
             ;;
-        run-as-user)
+        no-create-user)
             user_name=$(id -u -n)  #run as the current user
             create_user=0  #do not create the user
             ;;
@@ -306,8 +306,9 @@ if [[ "$install_path" == "" ]] ; then
 fi
 
 #set the absolute path for installation
-install_path=$(readlink -f "$install_path") 
-install_path=${install_path%/}  #remove / from the end
+install_path=$(eval echo "$install_path")
+[[ ${install_path:0:1} != "/" ]] && install_path="$(pwd)/${install_path}" 
+[[ "${#install_path}" != "0" ]] && install_path=${install_path%/}  #remove / from the end
 
 cd "$script_base_dir"  #move to the script base dir so that all paths can be found
 check_dependency  #perform dependency check
