@@ -159,6 +159,9 @@ setup_config() {
         
         "$python_binary" agent/bin/configure.py -a "set" -k "" -v "{$config}" -n "${install_path}/etc/agent.json"  #set the configuration
         export_env_vars  #export the environment variables specified
+
+        #if the user specified, set that in the config
+        [[ $create_user -eq 0 ]] && "$python_binary" agent/bin/configure.py -a "set" -k "user" -v "\"${user_name}\"" "${install_path}/etc/config.json" 2>&1
     fi
 
     
@@ -374,6 +377,8 @@ else
     #try to find out whether a user is defined in the config
     if [[ -f "agent/bin/configure.py" ]] ; then
         temp_user_name=$("$python_binary" agent/bin/configure.py -k "user" "${install_path}/etc/config.json" 2>/dev/null)
+        temp_user_name="${temp_user_name#\"}"
+        temp_user_name="${temp_user_name%\"}"
         [[ "$temp_user_name" != "" ]] && user_name=$temp_user_name
     fi
 

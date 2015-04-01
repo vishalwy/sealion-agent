@@ -34,7 +34,7 @@ sys.path.insert(0, exe_path + 'lib')
 import exit_status
 from daemon import Daemon
 import helper
-from universal import Universal
+import universal
 from constructs import unicode, ThreadEx
 
 _log = logging.getLogger(__name__)  #module level logging
@@ -67,7 +67,7 @@ class SeaLion(Daemon):
             Path to the crash dump on success else False
         """
         
-        univ = Universal()  #get Universal
+        univ = universal.Universal()  #get Universal
         timestamp = int(time.time() * 1000)  #timestamp for the unique crash dump filename
         path = self.crash_dump_path + ('sealion-%s-%d.dmp' % (univ.config.agent.agentVersion, timestamp))  #crash dump filename
         f = None
@@ -136,7 +136,7 @@ class SeaLion(Daemon):
         """
         
         import api
-        univ = Universal()  #get Universal
+        univ = universal.Universal()  #get Universal
         
         #how much time the crash dump sender wait before start sending.
         #this is required not to affect crash loop detection, since crash loop detection is done by checking number crash dumps generated in a span of time
@@ -256,7 +256,7 @@ class SeaLion(Daemon):
             Tupple (is crah loop, crash dump count)
         """
         
-        univ = Universal()  #get Universal
+        univ = universal.Universal()  #get Universal
         t = int(time.time())  #current epoch time for crash loop detection
         crash_loop_timeout = self.crash_loop_count * self.monit_interval  #time span for crash loop detection
         file_count, loop_file_count = 0, 0

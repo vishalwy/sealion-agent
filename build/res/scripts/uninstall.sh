@@ -63,6 +63,8 @@ cd "$script_base_dir"  #move to the script base dir so that all paths can be fou
 
 if [[ -f "bin/configure.py" ]] ; then
     temp_user_name=$("$python_binary" bin/configure.py -k "user" etc/config.json 2>/dev/null)
+    temp_user_name="${temp_user_name#\"}"
+    temp_user_name="${temp_user_name%\"}"
     
     #if we find a user_name, it means we should not delete the user or group
     if [[ "$temp_user_name" != "" ]] ; then
@@ -79,7 +81,7 @@ fi
 
 #check for write permission 
 if [[ ! -w "$script_base_dir" ]] ; then
-    echo "Error: No write permission to '${$script_base_dir}'" >&2
+    echo "Error: No write permission to '${script_base_dir}'" >&2
     exit 1
 fi
 
