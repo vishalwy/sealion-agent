@@ -32,6 +32,7 @@ usage() {
     usage_info+=" -x,\t--proxy <arg>     \tProxy server details\n"
     usage_info+=" -p,\t--python <arg>    \tPath to Python binary used for executing agent code\n"
     usage_info+=" -e,\t--env <arg>, ...  \tJSON document representing the environment variables to be exported\n"
+    usage_info+="    \t--run-as-user     \tRun agent as the current user\n"
     usage_info+=" -h,\t--help            \tDisplay this information"
     echo -e "$usage_info"
     return 0
@@ -90,7 +91,7 @@ check_dependency() {
 
     #various commands required for installer and the agent
     #we also need commands for user/group management if it is an agent installation and not update
-    which_commands=("sed" "find" "chown" "bash" "grep")
+    which_commands=("sed" "find" "chown" "chmod" "bash" "grep")
     [[ $update_agent -eq 0 ]] && which_commands+=("groupadd" "useradd" "userdel" "groupdel")
 
     missing_items=$(check_for_commands "${which_commands[@]}")
@@ -190,6 +191,7 @@ api_url="<api-url>"
 version="<version>"
 
 user_name="sealion"  #username for the agent
+create_user=1  #whether to create the user identified by user_name
 python_binary="python"  #default python binary
 default_install_path="/usr/local/sealion-agent"  #default install directory
 sealion_node_found=0  #evil twin
@@ -222,7 +224,7 @@ if [[ $kernel_major_version -lt 2 || ($kernel_major_version -eq 2 && $kernel_min
 fi
 
 #parse command line
-opt_parse i:o:c:H:x:p:a:r:v:e:h "category= host-name= proxy= python= env= help" options args "$@"
+opt_parse i:o:c:H:x:p:a:r:v:e:h "category= host-name= proxy= python= env= run-as-user help" options args "$@"
 
 #if parsing failed print the usage and exit
 if [[ $? -ne 0 ]] ; then
@@ -270,6 +272,10 @@ for option_index in "${!options[@]}" ; do
         e|env)
             env_vars+=("$option_arg")
             ;;
+        run-as-user)
+            user_name=$(id -u -n)  #run as the current user
+            create_user=0  #do not create the user
+            ;;
         h|help)
             usage 1 ; exit $SCRIPT_ERR_SUCCESS
             ;;
@@ -295,7 +301,7 @@ service_file="${install_path}/etc/init.d/sealion"  #service file for the agent
 
 if [[ $update_agent -eq 0 ]] ; then  #if this is a fresh install
     #run install script as root as it require some privileged operations like creating user/group etc
-    if [[ $EUID -ne 0 ]] ; then  
+    if [[ $create_user -eq 1 && $EUID -ne 0 ]] ; then  
         echo "Error: You need to run this script as 'root'" >&2
         exit $SCRIPT_ERR_INVALID_USAGE
     fi
@@ -308,41 +314,56 @@ if [[ $update_agent -eq 0 ]] ; then  #if this is a fresh install
         exit $SCRIPT_ERR_FAILED_DIR_CREATE    
     fi
 
+    #check for write permission to install path
+    if [[ ! -w "$install_path" ]] ; then
+        echo "Error: No write permission to '${install_path}'" >&2
+        exit $SCRIPT_ERR_FAILED_DIR_CREATE
+    fi
+
     echo "Install directory created at '${install_path}'"
     chmod +x "$install_path"
 
-    #create sealion group
-    if [[ "$(grep ^${user_name} /etc/group)" == "" ]] ; then
-        groupadd -r $user_name >/dev/null 2>&1
-        
-        if [[ $? -ne 0 ]] ; then
-            echo "Error: Cannot create '${user_name}' group" >&2
-            exit $SCRIPT_ERR_FAILED_GROUP_CREATE
-        else
-            echo "Group '${user_name}' created"
-        fi
-    else
-        echo "Group '${user_name}' already exists"
-    fi
+    #should we create the user and group
+    if [[ $create_user -eq 1 ]] ; then
+        #create sealion group
+        if [[ "$(grep ^${user_name} /etc/group)" == "" ]] ; then
+            groupadd -r $user_name >/dev/null 2>&1
 
-    #check for sealion user
-    id $user_name >/dev/null 2>&1
-
-    #create sealion user if it doesn't exists
-    if [[ $? -ne 0 ]] ; then
-        useradd -rM -g $user_name $user_name >/dev/null 2>&1
-        
-        if [[ $? -ne 0 ]] ; then
-            echo "Error: Cannot create user '${user_name}'" >&2
-            exit $SCRIPT_ERR_FAILED_USER_CREATE
+            if [[ $? -ne 0 ]] ; then
+                echo "Error: Cannot create '${user_name}' group" >&2
+                exit $SCRIPT_ERR_FAILED_GROUP_CREATE
+            else
+                echo "Group '${user_name}' created"
+            fi
         else
-            echo "User '${user_name}' created"
+            echo "Group '${user_name}' already exists"
         fi
-    else
-        echo "User '${user_name}' already exists"
+
+        #check for sealion user
+        id $user_name >/dev/null 2>&1
+
+        #create sealion user if it doesn't exists
+        if [[ $? -ne 0 ]] ; then
+            useradd -rM -g $user_name $user_name >/dev/null 2>&1
+
+            if [[ $? -ne 0 ]] ; then
+                echo "Error: Cannot create user '${user_name}'" >&2
+                exit $SCRIPT_ERR_FAILED_USER_CREATE
+            else
+                echo "User '${user_name}' created"
+            fi
+        else
+            echo "User '${user_name}' already exists"
+        fi
     fi
 else
-    #update should run as sealion user only
+    #try to find out whether a user is defined in the config
+    if [[ -f "agent/bin/configure.py" ]] ; then
+        temp_user_name=$("$python_binary" agent/bin/configure.py -k "user" "${install_path}/etc/config.json" 2>/dev/null)
+        [[ "$temp_user_name" != "" ]] && user_name=$temp_user_name
+    fi
+
+    #update should run as the given user only
     if [[ "$(id -u -n)" != "$user_name" ]] ; then
         echo "Error: You need to run this script as '${user_name}'" >&2
         exit $SCRIPT_ERR_INVALID_USAGE
@@ -351,8 +372,14 @@ else
     #validate the install path by checking the presence of service file
     #if this is an update from SeaLion node agent, then ignore it
     if [[ ! -f "$service_file" && $sealion_node_found -eq 0 ]] ; then
-        echo "Error: '${install_path}' is not a valid sealion installation directory" >&2
+        echo "Error: '${install_path}' is not a valid SeaLion agent installation directory" >&2
         exit $SCRIPT_ERR_INVALID_USAGE
+    fi
+
+    #check for the write permission to the install path
+    if [[ ! -w "$install_path" ]] ; then
+        echo "Error: No write permission to '${install_path}'" >&2
+        exit $SCRIPT_ERR_FAILED_DIR_CREATE
     fi
 fi
 
@@ -387,11 +414,11 @@ if [[ $update_agent -eq 0 ]] ; then  #if it is not an update
     cp -r agent/* "$install_path"
 
     setup_config  #create the configuration
-    chown -R "${user_name}:${user_name}" "$install_path"  #change ownership
+    [[ $create_user -eq 1 ]] && chown -R "${user_name}:${user_name}" "$install_path"  #change ownership if required
     echo "Sealion agent installed successfully"    
 
-    #create service if agent is installed at default location
-    if [[ "$install_path" == "$default_install_path" ]] ; then
+    #create service if agent is installed at default location and running as root
+    if [[ $EUID -eq 0 && "$install_path" == "$default_install_path" ]] ; then
         install_service
 
         if [[ $? -ne 0 ]] ; then

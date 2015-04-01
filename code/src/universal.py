@@ -9,6 +9,7 @@ __email__ = 'hello@sealion.com'
 
 import threading
 import os
+import pwd
 import logging
 import platform
 import sys
@@ -44,7 +45,8 @@ class SealionConfig(helper.Config):
             'type': 'int,float', 
             'optional': True, 
             'regex': '^\+?((0?[5-9]{1}|(0?[1-9][0-9]+))|((0?[5-9]{1}|(0?[1-9][0-9]+))\.[0-9]*))$'
-        }
+        },
+        'user': {'type': 'str,unicode', 'regex': '^.+$', 'optional': True}
     }
     
     def __init__(self, file):
@@ -187,6 +189,7 @@ class Universal(SingletonType('UniversalMetaClass', (object, ), {})):
         
         #various system details
         self.details = {
+            'user': pwd.getpwuid(os.getuid())[0],
             'type': uname[0],
             'kernel': uname[2],
             'arch': platform.machine(),

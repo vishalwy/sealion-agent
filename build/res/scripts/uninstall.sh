@@ -58,11 +58,28 @@ uninstall_service() {
 
 python_binary="python"
 user_name="sealion"  #username for the agent
+user_delete=1  #whether to delete the user identified by user_name
 cd "$script_base_dir"  #move to the script base dir so that all paths can be found
+
+if [[ -f "bin/configure.py" ]] ; then
+    temp_user_name=$("$python_binary" bin/configure.py -k "user" etc/config.json 2>/dev/null)
+    
+    #if we find a user_name, it means we should not delete the user or group
+    if [[ "$temp_user_name" != "" ]] ; then
+        user_name=$temp_user_name
+        user_delete=0
+    fi
+fi
 
 #validate current user
 if [[ "$(id -u -n)" != "$user_name" && $EUID -ne 0 ]] ; then
     echo "Error: You need to run this script as either 'root' or '${user_name}'" >&2
+    exit 1
+fi
+
+#check for write permission 
+if [[ ! -w "$script_base_dir" ]] ; then
+    echo "Error: No write permission to '${$script_base_dir}'" >&2
     exit 1
 fi
 
@@ -94,21 +111,24 @@ if [[ $EUID -ne 0 ]]; then  #if not running as root user
 else
     #if install dir is the default install dir, then only we will remove user, group and service
     if [[ "$script_base_dir" == "/usr/local/sealion-agent" ]] ; then
-        id $user_name >/dev/null 2>&1
+        #should we delete the user and group
+        if [[ $user_delete -eq 1 ]] ; then
+            id $user_name >/dev/null 2>&1
 
-        #kill all the process and remove the user sealion
-        if [[ $? -eq 0 ]] ; then
-            pkill -KILL -u $user_name
-            userdel $user_name
-            echo "User '${user_name}' removed"
-        fi
+            #kill all the process and remove the user sealion
+            if [[ $? -eq 0 ]] ; then
+                pkill -KILL -u $user_name
+                userdel $user_name
+                echo "User '${user_name}' removed"
+            fi
 
-        id -g $user_name >/dev/null 2>&1
+            id -g $user_name >/dev/null 2>&1
 
-        #remove the group
-        if [[ $? -eq 0 ]] ; then
-            groupdel $user_name
-            echo "Group '${user_name}' removed"
+            #remove the group
+            if [[ $? -eq 0 ]] ; then
+                groupdel $user_name
+                echo "Group '${user_name}' removed"
+            fi
         fi
 
         uninstall_service  #uninstall the service
