@@ -43,8 +43,13 @@ import_script() {
     import_script_pattern="${import_script_pattern##*/}"
 
     #import it by first reading the file after the source statement and then deleting the line
-    local pattern="^\\s*source\\s\\+.*${import_script_pattern}.*$"
-    local args="-i -e '/${pattern}/ r ${1}' -e '/${pattern}/d'"
+    local pattern separator args
+    pattern="^\\s*source\\s\\+.*${import_script_pattern}.*$"
+    printf -v separator "#%.0s" {1..30}
+    separator="${separator} ${import_script_pattern} ${separator}"
+    args="-i 's/\\(${pattern}\\)/${separator}\\n\\1\\n${separator}/'"
+    eval sed "$args" $2
+    args="-i -e '/${pattern}/ r ${1}' -e '/${pattern}/d'"
     eval sed "$args" $2
 }
 

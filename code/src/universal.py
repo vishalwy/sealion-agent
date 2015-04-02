@@ -160,7 +160,7 @@ class Universal(SingletonType('UniversalMetaClass', (object, ), {})):
         cur_time = time.time()
         self.metric = {'starting_time': cur_time, 'stopping_time': cur_time}  #save the timestamps
         exe_path = os.path.dirname(os.path.abspath(__file__))  #absolute path to the directory of this module
-        exe_path = exe_path[:-1] if exe_path[len(exe_path) - 1] == '/' else exe_path  #remove the trailing /
+        exe_path = exe_path[:-1] if exe_path != '/' and exe_path[-1] == '/' else exe_path  #remove the trailing /
         self.exe_path = exe_path[:exe_path.rfind('/') + 1]  #absolute path of the base dir, as it is one level up
         self.is_update_only_mode = False  #no update only mode
         self.config = EmptyClass()

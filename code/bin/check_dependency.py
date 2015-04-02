@@ -35,10 +35,7 @@ except Exception:
     
 #get the exe path, which is the absolute path to the parent directory of the module's direcotry
 exe_path = os.path.dirname(os.path.abspath(__file__))
-
-if exe_path[len(exe_path) - 1] == '/':
-    exe_path = exe_path[:-1]
-    
+exe_path = exe_path[:-1] if exe_path != '/' and exe_path[-1] == '/' else exe_path
 exe_path = exe_path[:exe_path.rfind('/') + 1]
 
 #add module lookup paths to sys.path so that import can find them

@@ -170,8 +170,7 @@ for option_index in "${!options[@]}" ; do
             org_token=$option_arg
             ;;
         h|help)
-            usage 1
-            exit 0
+            usage 1 ; exit 0
             ;;
     esac
 done

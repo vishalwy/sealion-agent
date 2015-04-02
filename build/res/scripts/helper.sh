@@ -1,3 +1,9 @@
+#Helper script containing utility functions
+
+#Copyright  : (c) Webyog, Inc
+#Author     : Vishal P.R
+#Email      : hello@sealion.com
+
 #Function to parse command line arguments
 #Arguments
 #   $1 - short options; for example '-h'; if the option takes an argument suffix it with ':'
