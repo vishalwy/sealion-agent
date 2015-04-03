@@ -132,6 +132,8 @@ logger.setLevel(logging_level)  #set the logging level
 for handler in logging.root.handlers:
     handler.setFormatter(formatter)
     
+os.environ['HOME'] = exe_path  #set the home folder for the process
+    
 def stop_stream_logging():
     """
     Function to disable logging to stdout/stderr

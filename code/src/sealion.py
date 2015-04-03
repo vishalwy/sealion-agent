@@ -228,7 +228,6 @@ class SeaLion(Daemon):
                 os.setgroups(groups)  #set the suplimentary groups
                 os.setgid(user.pw_gid)  #set group id
                 os.setuid(user.pw_uid)  #set user id
-                os.environ['HOME'] = '/'  #reset the environment
         except KeyError as e:
             sys.stderr.write('Failed to find user %s; %s\n' % (self.user_name, unicode(e)))
             sys.exit(exit_status.AGENT_ERR_FAILED_FIND_USER)
