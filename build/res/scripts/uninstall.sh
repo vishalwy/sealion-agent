@@ -127,7 +127,7 @@ if [[ $EUID -eq 0 && "$script_base_dir" == "/usr/local/sealion-agent" ]] ; then
 
     uninstall_service  #uninstall the service
 
-    if [[ $? -ne 0 ]] ; then
+    if [[ $? -eq 0 ]] ; then
         echo "Service sealion removed"
     fi  
 fi
