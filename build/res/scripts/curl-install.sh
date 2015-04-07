@@ -48,7 +48,7 @@ check_dependency() {
     missing_items=$(check_for_commands "sed" "tar" "bash" "grep" "mktemp")
 
     if [[ $? -ne 0 ]] ; then
-        echo "Error: Command dependency check failed; could not locate follwoing commands" >&2
+        echo "Error: Command dependency check failed" >&2
         echo -e $missing_items | (while read line; do log_output "       ${line}" 2; done)  #print the missing commands with some padding
         [[ "$agent_id" != "" ]] && report_failure 6
         exit 123

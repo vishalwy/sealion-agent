@@ -2,7 +2,7 @@
 
 """
 Use this as the main script to run agent as a daemon.
-It gives a commandline interface to the program, makes the process daemon, sets up crash dump handling and starts monitoring script.
+It gives a commandline interface to the program, makes the process daemon and sets up crash dump handling.
 """
 
 __copyright__ = '(c) Webyog, Inc'
@@ -17,7 +17,6 @@ import traceback
 import signal
 import pwd
 import grp
-import subprocess
 import json
 import re
 
@@ -51,9 +50,8 @@ class SeaLion(Daemon):
         
         Daemon.__init__(self, *args, **kwargs)  #initialize the base class
         self.user_name = 'sealion'  #user name for daemon
-        self.monit_interval = 30  #monitoring interval for monit.sh
+        self.crash_loop_timeout = 30  #timeout between each crash and resurrect
         self.crash_loop_count = 5  #count of crash dumps to determine crash loop
-        self.monit_pid = -1  #pid of monit.sh
         self.crash_dump_path = '%svar/crash/' % exe_path  #crash dump path
     
     def save_dump(self, stack_trace):
@@ -140,7 +138,7 @@ class SeaLion(Daemon):
         
         #how much time the crash dump sender wait before start sending.
         #this is required not to affect crash loop detection, since crash loop detection is done by checking number crash dumps generated in a span of time
-        crash_dump_timeout = (self.crash_loop_count * self.monit_interval) + 10 
+        crash_dump_timeout = (self.crash_loop_count * self.crash_loop_timeout) + 10 
         
         #get the agent version regex to differentiate dumps from any other file
         agent_version_regex = univ.config.agent.schema['agentVersion'].get('regex', '.*')
@@ -257,7 +255,7 @@ class SeaLion(Daemon):
         
         univ = universal.Universal()  #get Universal
         t = int(time.time())  #current epoch time for crash loop detection
-        crash_loop_timeout = self.crash_loop_count * self.monit_interval  #time span for crash loop detection
+        crash_loop_timeout = self.crash_loop_count * self.crash_loop_timeout  #time span for crash loop detection
         file_count, loop_file_count = 0, 0
         
         #crash loop is detected only for the current agent version running
@@ -297,13 +295,7 @@ class SeaLion(Daemon):
         Method runs in the daemon.
         """
         
-        try:
-            #monit.sh to restart agent if it is killed
-            self.monit_pid = subprocess.Popen([exe_path + 'bin/monit.sh', unicode(os.getpid()), '%d' % self.monit_interval], preexec_fn = os.setpgrp).pid
-        except Exception as e:
-            _log.error('Failed to open monitoring script; %s' % unicode(e))
-        
-        self.set_procname('sealiond')  #set process name for display purpose
+        self.set_procname(self.daemon_name + ('d' if self.daemon_name[-1] != 'd' else ''))  #set process name for display purpose
         is_update_only_mode = False
         crash_dump_details = self.get_crash_dump_details()  #get crash dump details
         helper.terminatehook = self.termination_hook  #set the termination hook called whenever agent shutdown disgracefully
@@ -319,18 +311,6 @@ class SeaLion(Daemon):
         import main
         main.stop_stream_logging()  #stop logging on stdout/stderr
         main.run(is_update_only_mode)  #start executing agent
-        
-    def cleanup(self): 
-        """
-        Method does cleanup when agent is terminating.
-        """
-        
-        try:
-            self.monit_pid != -1 and os.killpg(self.monit_pid, signal.SIGKILL)  #kill monit.sh
-        except:
-            pass
-        
-        Daemon.cleanup(self)  #call the base class version
         
     def termination_hook(self, message, stack_trace):
         """

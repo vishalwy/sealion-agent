@@ -97,7 +97,7 @@ check_dependency() {
     missing_items=$(check_for_commands "${which_commands[@]}")
 
     if [[ $? -ne 0 ]] ; then
-        echo "Error: Command dependency check failed; could not locate follwoing commands" >&2
+        echo "Error: Command dependency check failed" >&2
         echo -e $missing_items | (while read line; do echo "${padding}${line}" >&2; done)  #print the missing commands with some padding
         exit $SCRIPT_ERR_COMMAND_NOT_FOUND
     fi
@@ -109,7 +109,7 @@ check_dependency() {
         echo "Error: '${python_binary}' is not a valid Python binary" >&2
         exit $SCRIPT_ERR_INVALID_PYTHON
     elif [[ $ret_code -ne $SCRIPT_ERR_SUCCESS ]] ; then  #dependency check failed
-        echo "Error: Python dependency check failed; could not locate the following modules" >&2
+        echo "Error: Python dependency check failed" >&2
         echo -e $missing_items | (while read line; do echo "${padding}${line}" >&2; done)  #print the missing modules with some padding
 
         #cleanup the temp files generated while performing python dependency check

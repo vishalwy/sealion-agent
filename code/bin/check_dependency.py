@@ -49,9 +49,10 @@ sys.path.insert(0, exe_path + 'lib')
 if sys.version_info[0] == 3:
     sys.path.insert(0, exe_path + 'lib/httplib')    
     
-errors = []  #any errors
+error = False  #any errors
 
 #modules to be checked for
+#a module can provide alternative modules by enclosing them in a list
 modules = [
     'os', 
     'logging', 
@@ -71,35 +72,32 @@ modules = [
     'pwd',
     'tempfile',
     'sqlite3',
+    ['queue', 'Queue'],
     'ssl',
     'socketio_client',
     'requests'
 ]
 
 for module in modules:
-    try:
-        __import__(module)  #try to import the modules
-    except (ImportError, TypeError, AttributeError):
-        e = sys.exc_info()[1]
-        errors.append(unicode(e))
-    except:
-        pass
-    
-#also import queue
-try:
-    __import__('queue')
-except ImportError:
-    try:
-        __import__('Queue')
-    except ImportError:
-        e = sys.exc_info()[1]
-        errors.append(unicode(e))
+    module_list = module if type(module) is list else [module]  #list of modules and alternatives
+    module_list_count, i = len(module), 0
 
-#display any errors
-if len(errors):
-    sys.stderr.write('\n'.join(errors) + '\n')
-    sys.exit(ERR_FAILED_DEPENDENCY)
+    while i < module_list_count:
+        try:
+            __import__(module_list[i])  #try to import the module
+            break
+        except (ImportError, TypeError, AttributeError):
+            #if this is the last alternative available; then catch the error
+            if i + 1 == module_list_count:
+                e = sys.exc_info()[1]
+                error = True
+                sys.stderr.write(unicode(e) + '\n')
+        except:
+            pass
+        finally:
+            i += 1
 
+error and sys.exit(ERR_FAILED_DEPENDENCY)
 sys.stdout.write('Success\n')
 sys.exit(ERR_SUCCESS)
 

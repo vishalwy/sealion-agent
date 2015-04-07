@@ -99,7 +99,7 @@ check_for_commands() {
         type "$which_command" >/dev/null 2>&1
 
         if [[ $? -ne 0 ]] ; then
-            echo "$which_command"
+            echo "No command named ${which_command}"
             command_missing=1
         fi
     done
