@@ -39,7 +39,7 @@ usage() {
 #   $2 - target script
 import_script() {
     #sed escape import script name and extract only the file name
-    local import_script_pattern="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<< ${1})"   
+    local import_script_pattern="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<<${1})"   
     import_script_pattern="${import_script_pattern##*/}"
 
     #import it by first reading the file after the source statement and then deleting the line
@@ -60,22 +60,22 @@ set_script_details() {
     local temp_var args
     
     #set api url
-    temp_var="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<< ${api_url})"
+    temp_var="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<<${api_url})"
     args="-i 's/\\(^API\\_URL=\\)\\(\"[^\"]\\+\"\\)/\\1\"${temp_var}\"/i'"
     eval sed $args "$1"
     
     #set version
-    temp_var="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<< ${version})"
+    temp_var="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<<${version})"
     args="-i 's/\\(^VERSION=\\)\\(\"[^\"]\\+\"\\)/\\1\"${temp_var}\"/i'"
     eval sed $args "$1"
 
     #set agent download url
-    temp_var="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<< ${agent_url})"
+    temp_var="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<<${agent_url})"
     args="-i 's/\\(^DOWNLOAD\\_URL=\\)\\(\"[^\"]\\+\"\\)/\\1\"${temp_var}\"/i'"
     eval sed $args "$1"
 
     #set registration url; applicable only for curl installer for node
-    temp_var="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<< ${api_url}/agents)"
+    temp_var="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<<${api_url}/agents)"
     args="-i 's/\\(^REGISTRATION\\_URL=\\)\\(\"[^\"]\\+\"\\)/\\1\"${temp_var}\"/i'"
     eval sed $args "$1"
 
@@ -122,8 +122,8 @@ for arg in "${args[@]}" ; do
 done
 
 #trim whitespace from both ends
-version="$(sed -e 's/^\s*//' -e 's/\s*$//' <<< ${version})"
-domain="$(sed -e 's/^\s*//' -e 's/\s*$//' <<< ${domain})"
+version="$(sed -e 's/^\s*//' -e 's/\s*$//' <<<${version})"
+domain="$(sed -e 's/^\s*//' -e 's/\s*$//' <<<${domain})"
 
 build_target=$domain  #build target is the domain for which packaging is done
 
@@ -179,11 +179,11 @@ echo "${padding}Installer generated"
 
 #copy and update readme
 cp res/README "${build_target}/${output}/agent"
-build_date="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<< $(date -u +'%F %T %Z'))"  #package timestamp
+build_date="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<<$(date -u +'%F %T %Z'))"  #package timestamp
 
 #revision from which the build was generated; available only if it is a git repo
 build_revision=$([[ "$(type -P git 2>/dev/null)" != "" ]] && git rev-parse --short=10 HEAD 2>/dev/null)
-[[ "$build_revision" != "" ]] && build_revision="- $(sed 's/[^-A-Za-z0-9_]/\\&/g' <<< ${build_revision})"
+[[ "$build_revision" != "" ]] && build_revision="- $(sed 's/[^-A-Za-z0-9_]/\\&/g' <<<${build_revision})"
 
 #add version, date and git revision at the top README
 sed -i "1iSeaLion Agent ${version} - ${build_date} ${build_revision}" "${build_target}/${output}/agent/README" 

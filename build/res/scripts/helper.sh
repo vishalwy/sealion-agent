@@ -17,7 +17,7 @@ opt_parse() {
 
     #read the long options as an array; we need it do lookup for match
     local parse_long_options
-    IFS=" "; read -a parse_long_options <<< "$2"
+    local old_ifs=$IFS ; IFS=" " ; read -a parse_long_options <<<"$2" ; IFS=$old_ifs
 
     eval "${3}=(); ${4}=()"  #initialize the out variable to empty array;
     [[ "${parse_options:0:1}" != ":" ]] && parse_options=":${parse_options}"  #enable silent mode for getopts if it is not done already

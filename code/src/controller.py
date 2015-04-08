@@ -66,7 +66,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         elif status == api.Status.NOT_FOUND:  #uninstall if the agent is not found in the organization
             try:
                 _log.info('Uninstalling agent')
-                subprocess.Popen([self.univ.exe_path + 'uninstall.sh'])
+                subprocess.Popen([self.univ.exe_path + '/uninstall.sh'])
             except Exception as e:
                 _log.error('Failed to open uninstall script; %s' % unicode(e))
         elif status == api.Status.UNAUTHORIZED:
@@ -133,7 +133,7 @@ class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):
         """
         
         _log.info('Update found; Installing update version %s' % version_details['agentVersion'])
-        curllike = self.univ.exe_path + 'bin/curlike.py'  #curl like functionality
+        curllike = self.univ.exe_path + '/bin/curlike.py'  #curl like functionality
         url_caller = '"%s" "%s"' % (sys.executable, curllike)  #commandline for curlike.py
         
         #frame the full commandline to download and execute the curl-install.sh
@@ -307,7 +307,7 @@ def dump_stack_traces():
     f, timestamp = None, int(time.time() * 1000)
     
     try:
-        path = helper.Utils.get_safe_path(universal.Universal().exe_path + ('var/log/stack-trace-%d.log' % timestamp))  #unique filename for stack trace
+        path = helper.Utils.get_safe_path(universal.Universal().exe_path + ('/var/log/stack-trace-%d.log' % timestamp))  #unique filename for stack trace
         f = open(path, 'w')
         f.write(trace)
         _log.info('Stack trace saved at %s' % path)

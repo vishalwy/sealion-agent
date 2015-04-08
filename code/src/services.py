@@ -14,7 +14,6 @@ import subprocess
 import re
 import signal
 import os
-import tempfile
 import universal
 from constructs import *
 
@@ -59,6 +58,8 @@ class Job:
             '_id': activity['details']['_id'],  #activity id
             'command': activity['details']['command']  #command to be executed for commandline job, else the python module name for plugin job
         }
+        
+        self.univ = universal.Universal()  #reference to Universal for optimized access
 
     def prepare(self):
         """
@@ -78,7 +79,7 @@ class Job:
             #if it is not a plugin job, then we create a temperory file to capture the output
             #a plugin job return the data directly
             if not self.is_plugin:
-                self.exec_details['output'] = tempfile.NamedTemporaryFile(dir = universal.Universal().temp_path)
+                self.exec_details['output'] = '%d' % t
                 
             self.status = JobStatus.RUNNING  #change the state to running
         else:
@@ -163,7 +164,7 @@ class Job:
     def read_output(self):
         """
         Public method to read the output for commandline job.
-        A side effect of this method is that it closes any ouput file, so that next attempt will return empty string.
+        A side effect of this method is that it removes any ouput file, so that next attempt will return empty string.
         
         Returns:
             Output read.
@@ -171,8 +172,9 @@ class Job:
         
         try:
             #for a commandline job, output is the file containing data
-            self.exec_details['output'].seek(0, os.SEEK_SET)
-            data = self.exec_details['output'].read(256 * 1024).decode('utf-8', 'replace')
+            output_file = open('%s/%s' % (self.univ.temp_path, self.exec_details['output']), 'r')
+            data = output_file.read(256 * 1024).decode('utf-8', 'replace')
+            output_file.close()
 
             if not data:  #if the file is empty
                 data = 'No output produced'
@@ -183,18 +185,18 @@ class Job:
             data = ''
             _log.error('Could not read output from activity (%s @ %d); %s' % (self.exec_details['_id'], self.exec_details['timestamp'], unicode(e)))
             
-        self.close_file()  #close the file so that it is removed from the disk            
+        self.remove_file()  #remove the output file
         return data
 
-    def close_file(self):
+    def remove_file(self):
         """
-        Public method to close the output file if any
+        Public method to delete output file if any
         """
         
         try:
-            #close the file. it is possible that output is not a file, in that case it will raise an exception which is ignored
-            self.exec_details['output'].close()
-            os.remove(self.exec_details['output'].name)
+            #it is possible that output is not a file, in that case it will raise an exception which is ignored
+            os.remove('%s/%s' % (self.univ.temp_path, self.exec_details['output']))
+            _log.debug('Removed the output file for activity (%s @ %d)' % (self.exec_details['_id'], self.exec_details['timestamp']))
         except:
             pass
         
@@ -353,7 +355,7 @@ class Executer(ThreadEx):
  
         #self.wait returns True if the bash suprocess is terminated, in that case we will create a new bash process instance
         if self.wait() and not self.is_stop:
-            self.exec_process = subprocess.Popen(['bash', self.univ.exe_path + 'src/execute.sh', self.univ.exe_path, unicode(os.getpid())], 
+            self.exec_process = subprocess.Popen(['bash', self.univ.exe_path + '/src/execute.sh', self.univ.exe_path, self.univ.temp_path, unicode(os.getpid())], 
                 stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, preexec_fn = os.setpgrp)
             self.exec_count = 0
             _log.info('Executer bash process %d created' % self.exec_process.pid)
@@ -374,7 +376,7 @@ class Executer(ThreadEx):
         
         try:
             #it is possible that the pipe is broken or the subprocess was terminated
-            self.process.stdin.write(('%d %s: %s\n' % (job.exec_details['timestamp'], job.exec_details['output'].name, job.exec_details['command'])).encode('utf-8'))
+            self.process.stdin.write(('%d %s\n' % (job.exec_details['timestamp'], job.exec_details['command'])).encode('utf-8'))
             self.exec_count += 1
         except Exception as e:
             _log.error('Failed to write to bash; %s' % unicode(e))
@@ -450,10 +452,10 @@ class Executer(ThreadEx):
         
         Executer.jobs_lock.acquire()  #this has to be atomic as multiple threads reads/writes
         
-        #loop throgh the jobs and close temperory files
+        #loop throgh the jobs and remove temperory files
         for job_timestamp in list(Executer.jobs.keys()):  
             job = Executer.jobs[job_timestamp]
-            job.close_file()
+            job.remove_file()
         
         Executer.jobs_lock.release()
         

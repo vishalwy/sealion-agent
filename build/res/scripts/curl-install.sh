@@ -201,7 +201,7 @@ tar_download_url=$(grep '"agentDownloadURL"\s*:\s*"[^"]*"' "$tmp_data_file" -o |
 rm -f "$tmp_data_file"  #we no longer require it
 
 #if the major version is <= 2, means it requesting for node agent
-if [[ "$(grep '^[0-9]\+' -o <<< ${version})" -le "2" ]] ; then
+if [[ "$(grep '^[0-9]\+' -o <<<${version})" -le "2" ]] ; then
     call_url -s $proxy "${download_url}/curl-install-node.sh" 2>/dev/null | bash /dev/stdin -t $tar_download_url "$@" 1> >( read_and_log ) 2> >( read_and_log 2 )
     status=$?
     sleep 2

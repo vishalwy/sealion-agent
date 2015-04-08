@@ -185,18 +185,24 @@ class Utils(Namespace):
         Public static function to create path if path does not exists
         
         Args:
-            path: path to create.
+            path: path to create. it should end with a / if meant to be a directory
             
         Returns:
-            path
+            path with no trailing /
         """
         
-        dir = os.path.dirname(path)
+        path.strip()
+        
+        if path != '/' and path[-1] == '/':
+            dir = os.path.dirname(path)
+            path = path[:-1]  #remove the / athe end
+        else:
+            dir = os.path.dirname(path)
 
         if os.path.isdir(dir) != True:
             os.makedirs(dir)
 
-        return path    
+        return path
     
     @staticmethod
     def restart_agent(message = '', stack_trace = ''):
@@ -212,7 +218,7 @@ class Utils(Namespace):
         notify_terminate(False, message, stack_trace)
         main_module = sys.modules['__main__'];
         _log.info('Restarting agent')
-        os.execl(sys.executable, sys.executable, main_module.exe_path + 'src/' + os.path.basename(main_module.__file__), *sys.argv[1:])
+        os.execl(sys.executable, sys.executable, main_module.exe_path + '/src/' + os.path.basename(main_module.__file__), *sys.argv[1:])
         
     @staticmethod
     def get_stack_trace(curr_thread_trace = ''):

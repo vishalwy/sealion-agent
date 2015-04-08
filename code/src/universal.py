@@ -161,11 +161,11 @@ class Universal(SingletonType('UniversalMetaClass', (object, ), {})):
         self.metric = {'starting_time': cur_time, 'stopping_time': cur_time}  #save the timestamps
         exe_path = os.path.dirname(os.path.abspath(__file__))  #absolute path to the directory of this module
         exe_path = exe_path[:-1] if exe_path != '/' and exe_path[-1] == '/' else exe_path  #remove the trailing /
-        self.exe_path = exe_path[:exe_path.rfind('/') + 1]  #absolute path of the base dir, as it is one level up
+        self.exe_path = exe_path[:exe_path.rfind('/')]  #absolute path of the base dir, as it is one level up
         self.is_update_only_mode = False  #no update only mode
         self.config = EmptyClass()
-        self.config.sealion = SealionConfig(self.exe_path + 'etc/config.json')  #instance of configurable settings
-        self.config.agent = AgentConfig(self.exe_path + 'etc/agent.json')  #instance of private settings
+        self.config.sealion = SealionConfig(self.exe_path + '/etc/config.json')  #instance of configurable settings
+        self.config.agent = AgentConfig(self.exe_path + '/etc/agent.json')  #instance of private settings
         ret = self.config.sealion.set()  #load the config from the file
         
         if ret != True:  #raise an exception on error
@@ -176,8 +176,8 @@ class Universal(SingletonType('UniversalMetaClass', (object, ), {})):
         if ret != True:  #raise an exception on error
             raise RuntimeError(ret)
         
-        self.db_path = helper.Utils.get_safe_path(self.exe_path + 'var/db/')  #absolute path to database dir
-        self.temp_path = helper.Utils.get_safe_path(self.exe_path + 'tmp/')  #absolute path to temporary dir
+        self.db_path = helper.Utils.get_safe_path(self.exe_path + '/var/db/')  #absolute path to database dir
+        self.temp_path = helper.Utils.get_safe_path(self.exe_path + '/tmp/')  #absolute path to temporary dir
         self.stop_event = threading.Event()  #event that tells whether the agent should stop
         self.post_event = threading.Event()  #event that tell whether the api.session can request
         self.event_dispatcher = helper.event_dispatcher  #event dispatcher for communication across modules

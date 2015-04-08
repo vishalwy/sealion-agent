@@ -170,7 +170,7 @@ setup_config() {
     #compare the default python location with the python binary given
     #if no match, then specify the python binary in the control script and uninstaller
     if [[ "$(type -p python)" != "$temp_var" ]] ; then
-        temp_var="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<< ${python_binary})"
+        temp_var="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<<${python_binary})"
         args="-i 's/\\(^python_binary=\\)\\(\"[^\"]\\+\"\\)/\\1\"${temp_var}\"/'"
         eval sed $args "$service_file"
         eval sed $args "${install_path}/uninstall.sh"
@@ -476,7 +476,7 @@ ret_status=$?
 #finishing quote
 if [[ $update_agent -eq 0 && $ret_status -eq 0 ]] ; then
     echo "Find more info at '${install_path}/README'"
-    echo "Please continue on $(sed 's/api\(\.\|-\)//' <<< ${api_url})"
+    echo "Please continue on $(sed 's/api\(\.\|-\)//' <<<${api_url})"
 fi
 
 exit $ret_status

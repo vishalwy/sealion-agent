@@ -23,12 +23,12 @@ import re
 #get the exe path, which is the absolute path to the parent directory of the module's direcotry
 exe_path = os.path.dirname(os.path.abspath(__file__))
 exe_path = exe_path[:-1] if exe_path != '/' and exe_path[-1] == '/' else exe_path
-exe_path = exe_path[:exe_path.rfind('/') + 1]
+exe_path = exe_path[:exe_path.rfind('/')]
 
 #add module lookup paths to sys.path so that import can find them
 #we are inserting at the begining of sys.path so that we can be sure that we are importing the right module
-sys.path.insert(0, exe_path + 'src') 
-sys.path.insert(0, exe_path + 'lib') 
+sys.path.insert(0, exe_path + '/src') 
+sys.path.insert(0, exe_path + '/lib') 
 
 import exit_status
 from daemon import Daemon
@@ -52,7 +52,7 @@ class SeaLion(Daemon):
         self.user_name = 'sealion'  #user name for daemon
         self.crash_loop_timeout = 30  #timeout between each crash and resurrect
         self.crash_loop_count = 5  #count of crash dumps to determine crash loop
-        self.crash_dump_path = '%svar/crash/' % exe_path  #crash dump path
+        self.crash_dump_path = '%s/var/crash/' % exe_path  #crash dump path
     
     def save_dump(self, stack_trace):
         """
@@ -206,7 +206,7 @@ class SeaLion(Daemon):
             user_regex = universal.SealionConfig.schema['user'].get('regex')  #get the regex used for validation
 
             #read the user name from the config
-            f = open(exe_path + 'etc/config.json', 'r')
+            f = open(exe_path + '/etc/config.json', 'r')
             user_name = json.load(f)['user'];
             f.close()
 
@@ -341,7 +341,7 @@ def sig_handler(signum, frame):
         sys.exit(exit_status.AGENT_ERR_INTERRUPTED)
     
 signal.signal(signal.SIGINT, sig_handler)  #setup signal handling for SIGINT
-daemon = SeaLion(exe_path + 'var/run/sealion.pid')  #SeaLion daemon instance
+daemon = SeaLion(exe_path + '/var/run/sealion.pid')  #SeaLion daemon instance
 valid_usage = ['start', 'stop', 'restart', 'status']
 
 #perform the operation based on the commandline
