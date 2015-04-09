@@ -220,7 +220,7 @@ class Executer(ThreadEx):
         ThreadEx.__init__(self)  #inititalize the base class
         self.exec_process = None  #bash process instance
         self.process_lock = threading.RLock()  #thread lock for bash process instance
-        self.exec_count = 0  #2254 total number of commands executed in the bash process
+        self.exec_count = -1  #total number of commands executed in the bash process
         self.is_stop = False  #stop flag for the thread
         self.univ = universal.Universal()  #reference to Universal for optimized access
         self.daemon = True  #run this thread as daemon as it should not block agent from shutting down
@@ -355,9 +355,11 @@ class Executer(ThreadEx):
  
         #self.wait returns True if the bash suprocess is terminated, in that case we will create a new bash process instance
         if self.wait() and not self.is_stop:
-            self.exec_process = subprocess.Popen(['bash', self.univ.exe_path + '/src/execute.sh', self.univ.exe_path, self.univ.temp_path, unicode(os.getpid())], 
-                stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, preexec_fn = os.setpgrp)
-            self.exec_count = 0
+            exec_args = ['bash', self.univ.exe_path + '/src/execute.sh', self.univ.exe_path, self.univ.temp_path, unicode(os.getpid())]
+            self.exec_count == -1 and exec_args.append('clean')  #if this is the first time the process is being created, ask to cleanup the temp directory
+            self.exec_count = 0  #reset the number of commands executed
+            self.exec_process = subprocess.Popen(exec_args, preexec_fn = os.setpgrp, 
+                stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
             _log.info('Executer bash process %d created' % self.exec_process.pid)
         
         self.process_lock.release()
@@ -376,7 +378,7 @@ class Executer(ThreadEx):
         
         try:
             #it is possible that the pipe is broken or the subprocess was terminated
-            self.process.stdin.write(('%d %s\n' % (job.exec_details['timestamp'], job.exec_details['command'])).encode('utf-8'))
+            self.process.stdin.write(('%d %s: %s\n' % (job.exec_details['timestamp'], job.exec_details['output'], job.exec_details['command'])).encode('utf-8'))
             self.exec_count += 1
         except Exception as e:
             _log.error('Failed to write to bash; %s' % unicode(e))

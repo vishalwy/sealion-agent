@@ -155,7 +155,8 @@ def run(is_update_only_mode = False):
     _log.info('Agent starting up')
     _log.info('Using python binary at %s' % sys.executable)
     _log.info('Python version : %s' % univ.details['pythonVersion'])
-    _log.info('Agent version  : %s' % univ.config.agent.agentVersion)   
+    _log.info('Agent user     : %s' % univ.details['user'])  
+    _log.info('Agent version  : %s' % univ.config.agent.agentVersion)  
     controller.run()  #call the run method controller module to start the controller
     _log.info('Agent shutting down with status code 0')
     _log.debug('Took %f seconds to shutdown' % (univ.get_stoppage_time()))
