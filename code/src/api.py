@@ -61,6 +61,7 @@ class API(requests.Session):
         self.authenticate_status = AuthStatus.UNAUTHORIZED  #authentication status
         self.auth_lock = threading.RLock()  #lock for authentication status
         self.is_conn_err = False  #last api call returned error
+        self.session_conflict_count = 0  #counter to keep track of subsequant session conflicts
             
     @staticmethod
     def is_success(response):
@@ -441,7 +442,9 @@ class API(requests.Session):
             is_ignore_status == False and self.univ.stop_event.is_set() == False and self.set_events(post_event = False)
             return Status.NOT_CONNECTED
         
-        status, ret, post_event, exec_func, args = response.status_code, Status.UNKNOWN, True, None, ()
+        status, ret = response.status_code, Status.UNKNOWN
+        post_event, is_session_conflict, session_conflict_limit = True, False, 15
+        exec_func, args = None, ()
         
         try:
             code = response.json()['code']  #try to extract the error code
@@ -475,7 +478,24 @@ class API(requests.Session):
             if code == 204011:
                 ret = Status.DATA_CONFLICT  #duplicate data
             elif code == 204012:  #another agent session running for the same agent id
-                post_event = None  #just ignore this, as cookie handling is not thread safe and can cause this
+                is_session_conflict = True
+                
+        #keep track of subsequent session conflicts
+        if is_session_conflict:
+            self.session_conflict_count += 1
+            post_event = None
+            
+            #we should consider only if we get N continuous conflicts, 
+            #because it can also happen due to cookie handling not being thread safe.
+            if self.session_conflict_count > session_conflict_limit:
+                #call stop with conflict as status code
+                exec_func = self.stop
+                args = (Status.SESSION_CONFLICT,)
+                
+                _log.error('Received session conflict for the last %d requests' % session_conflict_limit)
+                ret = Status.SESSION_CONFLICT  #enough, this should be a session conflict
+        else:
+            self.session_conflict_count = 0
                 
         if is_ignore_status == False:  #perform any actions
             self.set_events(post_event = post_event)

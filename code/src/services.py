@@ -399,7 +399,9 @@ class Executer(ThreadEx):
             line = self.process.stdout.readline().decode('utf-8', 'replace').rstrip()
             data = line.split()
             
-            if data[0] == 'warning:':  #bash has given some warning
+            if not data:  #bash wrote an empty line; ignore it
+                return False
+            elif data[0] == 'warning:':  #bash has given some warning
                 _log.warn(line[line.find(' ') + 1:])
             elif data[0] == 'data:':  #data
                 self.update_job(int(data[1]), {data[2]: data[3]})

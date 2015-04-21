@@ -118,6 +118,18 @@ def enum(*sequential, **named):
     enums = dict(zip(sequential, range(len(sequential))), **named)
     return type('Enum', (), enums)
 
+def with_static_vars(**kwargs):
+    """
+    Decorator to initialize function level static variables
+    """
+    
+    def decorate(func):
+        for key in kwargs:
+            setattr(func, key, kwargs[key])
+        return func
+    
+    return decorate
+
 class ThreadEx(threading.Thread):
     """
     Class inherited from threading.Thread to enable exception handling.

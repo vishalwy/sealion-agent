@@ -20,7 +20,7 @@ source "${script_base_dir}/helper.sh"  #import utility functions
 #   $1 - whether to print the whole help or just the prompt
 #Returns 0
 usage() {
-    if [ "$1" != "1" ] ; then
+    if [[ "$1" != "1" ]] ; then
         echo "Run '${0} --help' for more information"
         return 0
     fi
@@ -55,7 +55,8 @@ install_service() {
     
     #if init.d is not found or rc paths are missing
     if [[ "$init_d_path" == "" || "${#rc_paths[@]}" != "$rc_path_count" ]] ; then
-        echo "Error: Could not locate init.d/rc directories" >&2
+        echo "Error: Cannot create service 'sealion'. Could not locate init.d/rc directories" >&2
+        echo "Use '${service_file}' to control sealion"
         return 1
     fi
 
@@ -68,11 +69,13 @@ install_service() {
         ln -sf "$service_file" "$rc_path"
         
         if [[ $? -ne 0 ]] ; then
-            echo "Error: Cannot create service sealion. Unable to update ${rc_path} file" >&2
+            echo "Error: Cannot create service 'sealion'. Unable to update '${rc_path}' file" >&2
+            echo "Use '${service_file}' to control sealion"
             return 1
         fi
     done
     
+    echo "Service 'sealion' created"
     return 0  #success
 }
 
@@ -435,17 +438,11 @@ if [[ $update_agent -eq 0 ]] ; then  #if it is not an update
 
     setup_config  #create the configuration
     [[ $create_user -eq 1 ]] && chown -R "${user_name}:${user_name}" "$install_path"  #change ownership if required
-    echo "Sealion agent installed successfully"    
+    echo "SeaLion agent installed successfully"    
 
     #create service if agent is installed at default location and running as root
     if [[ $EUID -eq 0 && "$install_path" == "$default_install_path" ]] ; then
         install_service
-
-        if [[ $? -ne 0 ]] ; then
-            echo "Use '${service_file}' to control sealion"
-        else
-            echo "Service created"
-        fi
     else
         echo "Use '${service_file}' to control sealion"
     fi
@@ -466,7 +463,7 @@ else  #update
         setup_config 1 #update the agent version and api url in agent.json
     fi
 
-    echo "Sealion agent updated successfully"
+    echo "SeaLion agent updated successfully"
 fi
 
 echo "Starting agent..."

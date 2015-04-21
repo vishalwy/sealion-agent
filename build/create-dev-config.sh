@@ -20,7 +20,7 @@ source "${script_base_dir}/res/scripts/helper.sh"  #import utility functions
 #   $1 - whether to print the whole help or just the prompt
 #Returns 0
 usage() {
-    if [ "$1" != "1" ] ; then
+    if [[ "$1" != "1" ]] ; then
         echo "Run '${0} --help' for more information"
         return 0
     fi

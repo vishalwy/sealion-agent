@@ -31,7 +31,7 @@ uninstall_service() {
     
     #if init.d is not found or rc paths are missing
     if [[ "$init_d_path" == "" || "${#rc_paths[@]}" != "$rc_path_count" ]] ; then
-        echo "Error: Could not locate init.d/rc directories" >&2
+        echo "Error: Cannot destroy service 'sealion'. Could not locate init.d/rc directories" >&2
         return 1
     fi
 
@@ -41,7 +41,7 @@ uninstall_service() {
         rm -f "$rc_path"
 
         if [[ $? -ne 0 ]] ; then
-            echo "Error: Failed to remove ${rc_path} file" >&2
+            echo "Error: Cannot destroy service 'sealion'. Failed to remove ${rc_path} file" >&2
             return 1
         fi
     done
@@ -49,10 +49,11 @@ uninstall_service() {
     rm -f "${init_d_path}/sealion"  #remove init.d path
         
     if [[ $? -ne 0 ]] ; then
-        echo "Error: Failed to remove ${init_d_path}/sealion file" >&2
+        echo "Error: Cannot destroy service 'sealion'. Failed to remove ${init_d_path}/sealion file" >&2
         return 1
     fi
     
+    echo "Service 'sealion' destroyed"
     return 0
 }
 
@@ -126,10 +127,6 @@ if [[ $EUID -eq 0 && "$script_base_dir" == "/usr/local/sealion-agent" ]] ; then
     fi
 
     uninstall_service  #uninstall the service
-
-    if [[ $? -eq 0 ]] ; then
-        echo "Service sealion removed"
-    fi  
 fi
 
 if [[ $EUID -eq 0 || $user_delete -eq 0 ]] ; then

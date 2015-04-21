@@ -7,7 +7,7 @@
 #Function to parse command line arguments
 #Arguments
 #   $1 - short options; for example '-h'; if the option takes an argument suffix it with ':'
-#   $2 - space separated list of long options; for example '--h'; if the option takes an argument suffix it with '='
+#   $2 - space separated list of long options; for example '--help'; if the option takes an argument suffix it with '='
 #   $3 - variable to hold the array of options and their arguments; options will be at even indexes and their args at odd indexes
 #   $4 - variable to hold the array of non option arguments
 #   $@ - the remaining arguments are the argument to be parsed

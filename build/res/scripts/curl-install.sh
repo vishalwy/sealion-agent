@@ -21,7 +21,7 @@ usage() {
     local bin="curl -s ${download_url} | sudo bash /dev/stdin"
     [[ "$0" != "/dev/stdin" ]] && bin="$0"
 
-    if [ "$1" != "1" ] ; then
+    if [[ "$1" != "1" ]] ; then
         echo "Run '${bin} --help' for more information"
         return 0
     fi
@@ -33,7 +33,7 @@ usage() {
     usage_info+=" -x,\t--proxy <arg>     \tProxy server details\n"
     usage_info+=" -p,\t--python <arg>    \tPath to Python binary used for executing agent code\n"
     usage_info+=" -e,\t--env <arg>, ...  \tJSON document representing the environment variables to be exported\n"
-    usage_info+="    \t--no-create-user  \tDo not create 'sealion' user; instead use current user to run agent\n"
+    usage_info+="    \t--no-create-user  \tDo not create 'sealion' user; use current user instead to run agent\n"
     usage_info+=" -h,\t--help            \tDisplay this information"
     echo -e "$usage_info"
     return 0

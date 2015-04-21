@@ -128,7 +128,7 @@ domain="$(sed -e 's/^\s*//' -e 's/\s*$//' <<<${domain})"
 build_target=$domain  #build target is the domain for which packaging is done
 
 #you need to specify the version
-if [ "$version" == "" ] ; then
+if [[ "$version" == "" ]] ; then
     echo "Please specify a valid version for the build"
     usage ; exit 1
 fi
@@ -136,7 +136,7 @@ fi
 #if domain is sealion.com then api url is api.sealion.com
 #if domain is something like test.sealion.com then api url is api-test.sealion.com
 #agent download url also follows this naming convention
-if [ "$domain" != "$default_domain" ] ; then
+if [[ "$domain" != "$default_domain" ]] ; then
     domain="-$domain"
 else
     domain=".$domain"
@@ -190,7 +190,7 @@ sed -i "1iSeaLion Agent ${version} - ${build_date} ${build_revision}" "${build_t
 echo "${padding}README generated"
 
 #if domain is not sealion.com, then set the logging level to debug
-if [ "$orig_domain"  != "$default_domain" ] ; then
+if [[ "$orig_domain"  != "$default_domain" ]] ; then
     "${build_target}/${output}/agent/bin/configure.py" -a "set" -k "logging:level" -v "\"debug\"" "${build_target}/${output}/agent/etc/config.json"
     echo "${padding}Agent logging level set to 'debug'"
 fi
@@ -202,9 +202,13 @@ echo "Curl installer generated at '${build_target}/curl-install.sh'"
 
 #copy and update curl install script for node
 if [[ gen_curl_node -eq 1 ]] ; then
-    cp res/scripts/curl-install-node.sh "${build_target}/curl-install-node.sh"
-    set_script_details "${build_target}/curl-install-node.sh"
-    echo "Curl installer for node generated at '${build_target}/curl-install-node.sh'"
+    if [[ -f res/scripts/curl-install-node.sh ]] ; then
+        cp res/scripts/curl-install-node.sh "${build_target}/curl-install-node.sh"
+        set_script_details "${build_target}/curl-install-node.sh"
+        echo "Curl installer for node generated at '${build_target}/curl-install-node.sh'"
+    else
+        echo "Could not locate 'res/scripts/curl-install-node.sh'" >&2
+    fi
 fi
 
 #generate tar in the output directory and cleanup temp directory created

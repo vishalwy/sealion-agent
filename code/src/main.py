@@ -65,6 +65,11 @@ except Exception as e:
     sys.exit(exit_status.AGENT_ERR_FAILED_OPEN_LOG)
     
 try:
+    os.nice(0)  #set process niceness to default; this is required as the older version set it to a higher value
+    
+    #set the home folder for the process; do it before parsing config files so that user can override it in config file
+    os.environ['HOME'] = exe_path 
+    
     #initialize Universal and create api sessions
     #this can raise exception if universal is failed to find/create config files
     univ = Universal()
@@ -131,8 +136,6 @@ logger.setLevel(logging_level)  #set the logging level
 #set the formatter for all the logging handlers, including StreamHandler
 for handler in logging.root.handlers:
     handler.setFormatter(formatter)
-    
-os.environ['HOME'] = exe_path  #set the home folder for the process
     
 def stop_stream_logging():
     """

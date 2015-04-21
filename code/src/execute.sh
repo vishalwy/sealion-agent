@@ -21,7 +21,7 @@ terminate() {
 
     #resurrect agent if the pid read from the file is matching to the original pid and is missing from /proc
     #this is not an attempt to prevent SIGKILL from users; rather a way to resurrect when killed by OOM killer
-    if [[ $? -eq 0 && "$pid" == "$sealion_pid" && ! -d "/proc/$pid" ]] ; then
+    if [[ $? -eq 0 && "$pid" == "$sealion_pid" && ! -d "/proc/${pid}" ]] ; then
         type date >/dev/null 2>&1
         [[ $? -eq 0 ]] && timestamp=$(date +"%F %T,%3N")
         echo "${timestamp} CRITICAL                - Abnormal termination detected for process ${sealion_pid}; Resurrecting..." >>"$log_file"
@@ -31,12 +31,19 @@ terminate() {
 
 #Function to kill children
 kill_children() {
-    if [ $no_setsid -eq 0 ] ; then  #kill process group if we have setsid
+    if [[ $no_setsid -eq 0 ]] ; then  #kill process group if we have setsid
         kill -SIGKILL -- -$SESSION_PID  >/dev/null 2>&1
     else 
         kill -SIGKILL $SESSION_PID >/dev/null 2>&1  #bad luck; the grand children are still alive
     fi
 }
+
+usage="Usage: ${0} <agent base directory> <output files directory> <agent pid> [clean]"
+
+if [[ "$#" -lt "3" ]] ; then
+    echo "Missing arguments" >&2
+    echo $usage ; exit 1
+fi
 
 exe_dir=${1%/}  #sealion agent dir
 output_dir=${2%/}  #directory for output files
@@ -55,6 +62,9 @@ if [[ "$4" == "clean" ]] ; then
     #check whether we have rm available; if so remove the files in the output directory
     type rm >/dev/null 2>&1
     [[ $? -eq 0 ]] && rm -rf "${output_dir}"/* >/dev/null 2>&1
+elif [[ "$4" != "" ]] ; then
+    echo "Unknown startup command '${4}'" >&2
+    echo $usage ; exit 1
 fi
 
 #check whether we have setsid available
@@ -63,7 +73,7 @@ no_setsid=$?
 
 #if setsid is not available we wont be able to run the activities in a new session
 #which means, we wont be able to kill the process tree if the command timeout
-[[ $no_setsid -ne 0 ]] && echo "warning: Cannot run commands as process group; setsid not available"
+[[ $no_setsid -ne 0 ]] && echo "warning: Cannot run commands as process group; 'setsid' not available"
 
 #continuously read line from stdin, blocking read.
 #format of a line is 'TIMESTAMP OUTPUT_FILE: COMMAND_WITH_SPACES'
