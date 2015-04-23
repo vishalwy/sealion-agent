@@ -60,7 +60,7 @@ opt_parse() {
                     long_opt_arg="NONE"
                 fi
 
-                eval "${3}+=(${long_opt} ${long_opt_arg})"  #add it to the array
+                eval "${3}+=(${long_opt} \"${long_opt_arg}\")"  #add it to the array
                 ;;
             \?)  #unknown option
                 eval "${3}=\"Option -${OPTARG} not recognized\""
@@ -73,14 +73,14 @@ opt_parse() {
             *)  #valid option; add it to the array
                 local opt_arg=$OPTARG
                 [[ -z $OPTARG ]] && opt_arg="NONE"
-                eval "${3}+=(${opt} ${opt_arg})"
+                eval "${3}+=(${opt} \"${opt_arg}\")"
                 ;;
         esac
     done
 
     #now add the remaining arguments to non option arguments array
     while [[ "$OPTIND" -le "$#" ]] ; do
-        eval "${4}+=(${!OPTIND})"
+        eval "${4}+=(\"${!OPTIND}\")"
         OPTIND=$(( $OPTIND + 1 ))
     done
 
