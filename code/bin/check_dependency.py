@@ -35,7 +35,10 @@ except Exception:
     
 #get the exe path, which is the absolute path to the parent directory of the module's direcotry
 exe_path = os.path.dirname(os.path.abspath(__file__))
-exe_path = exe_path[:-1] if exe_path != '/' and exe_path[-1] == '/' else exe_path
+
+if exe_path != '/' and exe_path[-1] == '/':
+    exe_path = exe_path[:-1]
+
 exe_path = exe_path[:exe_path.rfind('/')]
 
 #add module lookup paths to sys.path so that import can find them
@@ -79,7 +82,11 @@ modules = [
 ]
 
 for module in modules:
-    module_list = module if type(module) is list else [module]  #list of modules and alternatives
+    if type(module) is list:
+        module_list = module
+    else:
+        module_list = [module]
+    
     module_list_count, i = len(module), 0
 
     while i < module_list_count:
@@ -94,8 +101,8 @@ for module in modules:
                 sys.stderr.write(unicode(e) + '\n')
         except:
             pass
-        finally:
-            i += 1
+        
+        i += 1
 
 error and sys.exit(ERR_FAILED_DEPENDENCY)
 sys.stdout.write('Success\n')
