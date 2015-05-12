@@ -8,6 +8,7 @@
 #Email      : hello@sealion.com
 
 trap "terminate" EXIT  #trap exit, and send signal to sub-shell jobs, which in turn kills their children
+trap "exit" SIGTERM  #exit on SIGTERM 
 PATH="${PATH}:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"  #common paths found in various linux distros
 
 #Function to close the output streams and kill background jobs.
@@ -86,7 +87,7 @@ while read -r line ; do
         #we run this as a background job to enable parallel execution.
         #format of output is 'data: TIMESTAMP pid|return_code VALUE'
 
-        trap "kill_children" SIGTERM  #kill children on exit
+        trap "kill_children" SIGTERM  #kill children on SIGTERM
 
         if [[ "$BASHPID" == "" ]] ; then  #for bash versions where BASHPID does not exist
             read BASHPID </proc/self/stat
