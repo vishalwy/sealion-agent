@@ -355,8 +355,16 @@ class Executer(ThreadEx):
  
         #self.wait returns True if the bash suprocess is terminated, in that case we will create a new bash process instance
         if self.wait() and not self.is_stop:
-            exec_args = ['bash', self.univ.exe_path + '/src/execute.sh', self.univ.exe_path, self.univ.temp_path, unicode(os.getpid())]
-            self.exec_count == -1 and exec_args.append('clean')  #if this is the first time the process is being created, ask to cleanup the temp directory
+            #refer execute.sh to read more about arguments to be passed in 
+            exec_args = ['bash', 
+                '%s/src/execute.sh' % self.univ.exe_path, 
+                '%s/src/%s' % (self.univ.exe_path, sys.modules['__main__'].__file__.split('/')[-1]), 
+                self.univ.temp_path
+            ]
+            
+            #if this is the first time the process is being created, ask to cleanup the temp directory
+            self.exec_count == -1 and exec_args.append('clean')  
+            
             self.exec_count = 0  #reset the number of commands executed
             self.exec_process = subprocess.Popen(exec_args, preexec_fn = os.setpgrp, 
                 stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)

@@ -12,7 +12,6 @@ import os
 import time
 import atexit
 import signal
-import os.path
 import exit_status
 from constructs import unicode
 
@@ -102,7 +101,7 @@ class Daemon(object):
         After demonizing the process, it calls the run method.
         """
         
-        if self.status(True):  #if the daemon already running
+        if self.get_status():  #if the daemon already running
             sys.stdout.write('%s is already running\n' % self.daemon_name)
             sys.exit(exit_status.AGENT_ERR_ALREADY_RUNNING)            
         
@@ -114,7 +113,7 @@ class Daemon(object):
         Public method to stop daemon.
         """
         
-        if self.status(True) == False:  #make sure it is running
+        if self.get_status() == False:  #make sure it is running
             sys.stdout.write('%s is not running\n' % self.daemon_name)
             return
         
@@ -124,21 +123,17 @@ class Daemon(object):
             while 1:  #send SIGTERM to pid until we get a exception
                 os.kill(pid, signal.SIGTERM)
                 time.sleep(0.5)
-        except OSError as err:
-            err = unicode(err)
-            
+        except OSError as e:
+            err = unicode(e)
+        
             if err.find('No such process') > 0:  #check whether system reported unknown process
-                if os.path.exists(self.pidfile):
-                    try:
-                        os.remove(self.pidfile)  #remove pid file
-                    except Exception as e:
-                        sys.stderr.write(unicode(e) + '\n')
-                        sys.exit(exit_status.AGENT_ERR_FAILED_PID_FILE)
-                    
                 sys.stdout.write('%s stopped successfully\n' % self.daemon_name)
             else:
                 sys.stderr.write(err + '\n')
                 sys.exit(exit_status.AGENT_ERR_FAILED_TERMINATE)
+        except Exception as e:
+            sys.stderr.write(unicode(e) + '\n')
+            sys.exit(exit_status.AGENT_ERR_FAILED_TERMINATE)
 
     def restart(self):
         """
@@ -149,26 +144,33 @@ class Daemon(object):
         self.stop()
         self.start()
         
-    def status(self, is_only_query = False):
+    def status(self):
         """
-        Public method to get running state of daemon.
+        Public method to print run state of daemon.
+        """
         
-        Args:
-            query: True if dont want to print the status.
+        if self.get_status():
+            sys.stdout.write('%s is running\n' % self.daemon_name)
+        else:
+            sys.stdout.write('%s is not running\n' % self.daemon_name)
+            sys.exit(exit_status.AGENT_ERR_NOT_RUNNING)
+    
+    def get_status(self):
+        """
+        Method to get running state of daemon.
             
         Returns:
             True if daemon is running else False
         """
         
-        pid = self.get_pid()  #pid
-    
-        if pid and os.path.exists('/proc/%d' % pid):  #check /proc/pid to see if process is running
-            is_only_query == False and sys.stdout.write('%s is running\n' % self.daemon_name)
-        else:
-            is_only_query == False and sys.stdout.write('%s is not running\n' % self.daemon_name)
-            return False
+        try:
+            f = open('/proc/%d/cmdline' % self.get_pid(), 'r')
+            cmdline = f.read()
+            f.close()
+        except:
+            cmdline = ''
             
-        return True
+        return True if sys.argv[0] in cmdline else False
     
     def get_pid(self):
         """

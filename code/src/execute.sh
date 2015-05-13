@@ -20,13 +20,14 @@ terminate() {
     kill -SIGTERM $(jobs -p) >/dev/null 2>&1
     read pid <"$pid_file"  #read pid from file
 
-    #resurrect agent if the pid read from the file is matching to the original pid and is missing from /proc
+    #resurrect agent if the pid read from the file is matching to the original pid and is not running
+    #we do resurrection only if the agent is running as a daemon which is identified by looking at the main script name
     #this is not an attempt to prevent SIGKILL from users; rather a way to resurrect when killed by OOM killer
-    if [[ $? -eq 0 && "$pid" == "$sealion_pid" && ! -d "/proc/${pid}" ]] ; then
+    if [[ "$pid" == "$PPID" && "$main_script" == "sealion.py" && ! -d "/proc/${pid}" ]] ; then
         type date >/dev/null 2>&1
         [[ $? -eq 0 ]] && timestamp=$(date +"%F %T,%3N")
-        echo "${timestamp} CRITICAL                - Abnormal termination detected for process ${sealion_pid}; Resurrecting..." >>"$log_file"
-        $service_file start
+        echo "${timestamp} CRITICAL                - Abnormal termination detected for process ${PPID}; Resurrecting..." >>"$log_file"
+        eval $cmdline  #replace the executable with command line
     fi
 }
 
@@ -39,19 +40,43 @@ kill_children() {
     fi
 }
 
-usage="Usage: ${0} <agent base directory> <output files directory> <agent pid> [clean]"
+usage="Usage: ${0} <agent main script> <output files directory> [clean]"
 
-if [[ "$#" -lt "3" ]] ; then
+if [[ "$#" -lt "2" ]] ; then
     echo "Missing arguments" >&2
     echo $usage ; exit 1
 fi
 
-exe_dir=${1%/}  #sealion agent dir
+#sealion agent dir
+exe_dir=${1%/*}
+exe_dir=${exe_dir%/*}
+
+main_script="${1##*/}"  #extract the main python script
+read -r cmdline </proc/${PPID}/cmdline  #extract the command line for the parent process
+
+#main script has to be one of them
+if [[ "$main_script" != "sealion.py" && "$main_script" != "main.py" ]] ; then
+    echo "Invalid agent main script"
+    echo $usage ; exit 1
+fi
+
+#check whether the script is same as the one present in the command line of the parent process
+if [[ "$exe_dir" == "" || "$cmdline" != *"$main_script"* ]] ; then
+    echo "Invalid agent main script"
+    echo $usage ; exit 1
+fi
+
 output_dir=${2%/}  #directory for output files
-sealion_pid=$3  #sealion agent pid
 pid_file="${exe_dir}/var/run/sealion.pid"  #pid file to be checked for
-service_file="${exe_dir}/etc/init.d/sealion"  #the service script to be used for restarting agent
 log_file="${exe_dir}/var/log/sealion.log"  #log file to be written
+cmdline=""  #command to restart the agent 
+
+#frame the executable command line by space separating the arguments
+while read -r -d $'\0' line ; do 
+    [[ "$line" == *"$main_script" ]] && line=$1  #if it is the script, replace it with full path
+    line=${line//\"/\\\"}  #escape any double quotes and append it
+    cmdline+=" \"${line}\""
+done </proc/${PPID}/cmdline
 
 #initialize the indexes of each column in the line read from stdin
 timestamp_index=0  #unique timestamp of the activity
@@ -59,12 +84,12 @@ output_index=1  #filename of output
 command_index=2  #command to be executed, this has to be the last index as a command can have spaces in it
 
 #whether to clean the output directory
-if [[ "$4" == "clean" ]] ; then
+if [[ "$3" == "clean" ]] ; then
     #check whether we have rm available; if so remove the files in the output directory
     type rm >/dev/null 2>&1
     [[ $? -eq 0 ]] && rm -rf "${output_dir}"/* >/dev/null 2>&1
-elif [[ "$4" != "" ]] ; then
-    echo "Unknown startup command '${4}'" >&2
+elif [[ "$3" != "" ]] ; then
+    echo "Unknown startup command '${3}'" >&2
     echo $usage ; exit 1
 fi
 
