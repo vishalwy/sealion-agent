@@ -220,7 +220,7 @@ class Executer(ThreadEx):
         ThreadEx.__init__(self)  #inititalize the base class
         self.exec_process = None  #bash process instance
         self.process_lock = threading.RLock()  #thread lock for bash process instance
-        self.exec_count = -1  #total number of commands executed in the bash process
+        self.exec_count = 0  #total number of commands executed in the bash process
         self.is_stop = False  #stop flag for the thread
         self.univ = universal.Universal()  #reference to Universal for optimized access
         self.daemon = True  #run this thread as daemon as it should not block agent from shutting down
@@ -253,7 +253,7 @@ class Executer(ThreadEx):
         Executer.jobs_lock.release()  #we can safely release the lock as the rest the code in the function need not be atomic
         
         if job.is_plugin == False:  #write commandline job to bash
-            self.write(job)
+            self.write(job.exec_details)
         else:            
             try:
                 #we load the plugin and calls the get_data function and updates the job with the data
@@ -325,7 +325,7 @@ class Executer(ThreadEx):
             max_exec_count = 2222;  #maximum count of commands allowed in the bash process
 
             if self.exec_process and self.exec_count > max_exec_count:  #if number of commands executed execeeded the maximum allowed count
-                _log.debug('Terminatng executer bash process %d as it executed more than %d commands' % (self.exec_process.pid, max_exec_count))
+                _log.debug('Terminatng bash process %d as it executed more than %d commands' % (self.exec_process.pid, max_exec_count))
                 self.wait(True)
         finally:    
             self.process_lock.release()
@@ -335,12 +335,23 @@ class Executer(ThreadEx):
         Method executes in a new thread.
         """
         
+        #init command to remove temp files
+        self.write({'timestamp': 0, 'output': '/dev/stdout', 'command': 'rm -rf ./*'})
+        
         while 1:
             self.read()  #blocking read from bash suprocess
             
             if self.is_stop:  #should we stop now
                 _log.debug('%s received stop event' % self.name)
                 break
+    
+    def init_process(self):
+        """
+        Method to initialize the bash subprocess
+        """
+        
+        os.setpgrp()  #set process group
+        os.chdir(self.univ.temp_path)  #change the working directory
                 
     @property
     def process(self):
@@ -352,33 +363,29 @@ class Executer(ThreadEx):
         """
         
         self.process_lock.acquire()  #this has to be atomic as multiple threads reads/writes
- 
+        
         #self.wait returns True if the bash suprocess is terminated, in that case we will create a new bash process instance
         if self.wait() and not self.is_stop:
             #refer execute.sh to read more about arguments to be passed in 
             exec_args = ['bash', 
                 '%s/src/execute.sh' % self.univ.exe_path, 
-                '%s/src/%s' % (self.univ.exe_path, sys.modules['__main__'].__file__.split('/')[-1]), 
-                self.univ.temp_path
+                '%s/src/%s' % (self.univ.exe_path, sys.modules['__main__'].__file__.split('/')[-1])
             ]
             
-            #if this is the first time the process is being created, ask to cleanup the temp directory
-            self.exec_count == -1 and exec_args.append('clean')  
-            
             self.exec_count = 0  #reset the number of commands executed
-            self.exec_process = subprocess.Popen(exec_args, preexec_fn = os.setpgrp, 
+            self.exec_process = subprocess.Popen(exec_args, preexec_fn = self.init_process, 
                 stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
-            _log.info('Executer bash process %d created' % self.exec_process.pid)
+            _log.info('Bash process %d has been created to execute command line activities' % self.exec_process.pid)
         
         self.process_lock.release()
         return self.exec_process
     
-    def write(self, job):
+    def write(self, job_details):
         """
         Public method to write the commandline job to the bash subprocess
         
         Args:
-            job: the commandline job to be executed
+            job_details: dict representing the commandline job to be executed; this can also be a maintainance command.
             
         Returns:
             True on success else False
@@ -386,10 +393,10 @@ class Executer(ThreadEx):
         
         try:
             #it is possible that the pipe is broken or the subprocess was terminated
-            self.process.stdin.write(('%d %s: %s\n' % (job.exec_details['timestamp'], job.exec_details['output'], job.exec_details['command'])).encode('utf-8'))
+            self.process.stdin.write(('%d %s: %s\n' % (job_details['timestamp'], job_details['output'], job_details['command'])).encode('utf-8'))
             self.exec_count += 1
         except Exception as e:
-            _log.error('Failed to write to bash; %s' % unicode(e))
+            _log.error('Failed to write to bash process; %s' % unicode(e))
             return False
         
         return True
@@ -413,10 +420,10 @@ class Executer(ThreadEx):
                 _log.warn(line[line.find(' ') + 1:])
             elif data[0] == 'data:':  #data
                 self.update_job(int(data[1]), {data[2]: data[3]})
-            else:  #anything else is considered as an error
-                _log.error('Executer bash process returned \'%s\'' % line)
+            else:  #everything else
+                _log.info('Bash process returned \'%s\'' % line)
         except Exception as e:
-            _log.error('Failed to read from bash; %s' % unicode(e))
+            _log.error('Failed to read from bash process; %s' % unicode(e))
             return False
         
         return True
@@ -444,7 +451,7 @@ class Executer(ThreadEx):
                 
             #wait for the process if it is terminated
             if is_terminated == True:
-                is_force == False and _log.error('Executer bash process %d was terminated', self.exec_process.pid)
+                is_force == False and _log.error('Bash process %d was terminated', self.exec_process.pid)
                 os.waitpid(self.exec_process.pid, os.WUNTRACED)
                 self.exec_process = None
         except:
