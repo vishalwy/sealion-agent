@@ -183,7 +183,11 @@ build_date="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<<$(date -u +'%F %T %Z'))"  #package
 
 #revision from which the build was generated; available only if it is a git repo
 build_revision=$([[ "$(type -P git 2>/dev/null)" != "" ]] && git rev-parse --short=10 HEAD 2>/dev/null)
-[[ "$build_revision" != "" ]] && build_revision="- $(sed 's/[^-A-Za-z0-9_]/\\&/g' <<<${build_revision})"
+
+if [[ "$build_revision" != "" ]] ; then
+    [[ "$(git diff --name-only HEAD 2>&1)" != "" ]] && build_revision+="*"
+    build_revision="- $(sed 's/[^-A-Za-z0-9_]/\\&/g' <<<${build_revision})"
+fi
 
 #add version, date and git revision at the top README
 sed -i "1iSeaLion Agent ${version} - ${build_date} ${build_revision}" "${build_target}/${output}/agent/README" 

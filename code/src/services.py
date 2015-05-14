@@ -335,9 +335,6 @@ class Executer(ThreadEx):
         Method executes in a new thread.
         """
         
-        #init command to remove temp files
-        self.write({'timestamp': 0, 'output': '/dev/stdout', 'command': 'rm -rf ./*'})
-        
         while 1:
             self.read()  #blocking read from bash suprocess
             
@@ -622,6 +619,7 @@ class JobProducer(SingletonType('JobProducerMetaClass', (ThreadEx, ), {})):
         Method runs in a new thread.
         """
         
+        self.executer.write({'timestamp': 0, 'output': '/dev/stdout', 'command': 'rm -rf ./*'})  #init command to remove temp files
         self.executer.start()  #start the executer for bash suprocess
         self.set_activities();  #set ativities dict
         self.univ.event_dispatcher.bind('set_activities', self.set_activities)  #bind to 'set_activities' event so that we can update our activities dict
