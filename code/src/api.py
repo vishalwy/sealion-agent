@@ -443,7 +443,7 @@ class API(requests.Session):
             return Status.NOT_CONNECTED
         
         status, ret = response.status_code, Status.UNKNOWN
-        post_event, is_session_conflict, session_conflict_limit = True, False, 15
+        post_event, is_session_conflict, session_conflict_limit = True, False, 20
         exec_func, args = None, ()
         
         try:

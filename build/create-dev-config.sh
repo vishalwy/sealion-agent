@@ -26,13 +26,13 @@ usage() {
     fi
 
     local usage_info="Usage: ${0} [options]\nOptions:\n"
-    usage_info+=" -o,\t--org-token <arg>  \tOrganization token to be used\n"
-    usage_info+=" -c,\t--category <arg>   \tCategory name under which the server to be registered\n"
-    usage_info+=" -H,\t--host-name <arg>  \tServer name to be used\n"
-    usage_info+=" -x,\t--proxy <arg>      \tProxy server details\n"
-    usage_info+=" -a,\t--api-url <arg>    \tAPI URL for the agent; default to 'https://api-test.sealion.com'\n"
-    usage_info+=" -v,\t--version <arg>    \tAgent version to be used\n"
-    usage_info+=" -h,\t--help             \tDisplay this information"
+    usage_info+=" -o,  --org-token <arg>   Organization token to be used\n"
+    usage_info+=" -c,  --category <arg>    Category name under which the server to be registered\n"
+    usage_info+=" -H,  --host-name <arg>   Server name to be used\n"
+    usage_info+=" -x,  --proxy <arg>       Proxy server details\n"
+    usage_info+=" -a,  --api-url <arg>     API URL for the agent; default to 'https://api-test.sealion.com'\n"
+    usage_info+=" -v,  --version <arg>     Agent version to be used\n"
+    usage_info+=" -h,  --help              Display this information"
     echo -e "$usage_info"
     return 0
 }

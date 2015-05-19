@@ -26,9 +26,9 @@ usage() {
     fi
 
     local usage_info="Usage: ${0} [options] <version>\nOptions:\n"
-    usage_info+=" -d,\t--domain <arg>  \tDomain for which the tarball to be generated; Default to 'sealion.com'\n"
-    usage_info+="    \t--gen-curl-node \tGenerate curl installer for node agent\n"
-    usage_info+=" -h,\t--help          \tDisplay this information"
+    usage_info+=" -d,  --domain <arg>    Domain for which the tarball to be generated; Default to 'sealion.com'\n"
+    usage_info+="      --gen-curl-node   Generate curl installer for node agent\n"
+    usage_info+=" -h,  --help            Display this information"
     echo -e "$usage_info"
     return 0
 }
@@ -205,7 +205,7 @@ set_script_details "${build_target}/curl-install.sh"
 echo "Curl installer generated at '${build_target}/curl-install.sh'"
 
 #copy and update curl install script for node
-if [[ gen_curl_node -eq 1 ]] ; then
+if [[ $gen_curl_node -eq 1 ]] ; then
     if [[ -f res/scripts/curl-install-node.sh ]] ; then
         cp res/scripts/curl-install-node.sh "${build_target}/curl-install-node.sh"
         set_script_details "${build_target}/curl-install-node.sh"

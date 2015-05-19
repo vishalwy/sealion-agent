@@ -26,14 +26,14 @@ usage() {
     fi
 
     local usage_info="Usage: ${0} [options] <organization token>\nOptions:\n"
-    usage_info+=" -o,\t                  \tOrganization token; kept for backward compatibility\n"
-    usage_info+=" -c,\t--category <arg>  \tCategory name under which the server to be registered\n"
-    usage_info+=" -H,\t--host-name <arg> \tServer name to be used\n"
-    usage_info+=" -x,\t--proxy <arg>     \tProxy server details\n"
-    usage_info+=" -p,\t--python <arg>    \tPath to Python binary used for executing agent code\n"
-    usage_info+=" -e,\t--env <arg>, ...  \tJSON document representing the environment variables to be exported\n"
-    usage_info+="    \t--no-create-user  \tDo not create 'sealion' user; instead use current user to run agent\n"
-    usage_info+=" -h,\t--help            \tDisplay this information"
+    usage_info+=" -o,                      Organization token; kept for backward compatibility\n"
+    usage_info+=" -c,  --category <arg>    Category name under which the server to be registered\n"
+    usage_info+=" -H,  --host-name <arg>   Server name to be used\n"
+    usage_info+=" -x,  --proxy <arg>       Proxy server details\n"
+    usage_info+=" -p,  --python <arg>      Path to Python binary used for executing agent code\n"
+    usage_info+=" -e,  --env <arg>, ...    JSON document representing the environment variables to be exported\n"
+    usage_info+="      --no-create-user    Do not create 'sealion' user; instead use current user to run agent\n"
+    usage_info+=" -h,  --help              Display this information"
     echo -e "$usage_info"
     return 0
 }
@@ -94,8 +94,8 @@ check_dependency() {
 
     #various commands required for installer and the agent
     #we also need commands for user/group management if it is an agent installation and not update
-    which_commands=("sed" "find" "chown" "chmod" "bash" "grep")
-    [[ $update_agent -eq 0 ]] && which_commands+=("groupadd" "useradd" "userdel" "groupdel")
+    which_commands=("sed" "find" "chmod" "bash")
+    [[ $update_agent -eq 0 && $create_user -eq 1 ]] && which_commands+=("groupadd" "useradd" "userdel" "groupdel" "chown")
 
     missing_items=$(check_for_commands "${which_commands[@]}")
 
@@ -346,8 +346,13 @@ if [[ $update_agent -eq 0 ]] ; then  #if this is a fresh install
 
     #should we create the user and group
     if [[ $create_user -eq 1 ]] ; then
+        #check for existence of group
+        group_exists=0 ; while read line ; do 
+            [[ "${line%%:*}" == "$user_name" ]] && group_exists=1
+        done  </etc/group
+
         #create sealion group
-        if [[ "$(grep ^${user_name}: /etc/group)" == "" ]] ; then
+        if [[ $group_exists -eq 0 ]] ; then
             groupadd -r $user_name >/dev/null 2>&1
 
             if [[ $? -ne 0 ]] ; then

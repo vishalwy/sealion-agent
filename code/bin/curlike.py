@@ -49,15 +49,15 @@ def usage(is_help = False):
         return True
         
     usage_info = 'Usage: %s [options] <URL1>, ...\nOptions:\n' % sys.argv[0]
-    usage_info += ' -x,\t--proxy <arg>     \tProxy server details\n'
-    usage_info += ' -X,\t--request <arg>   \tRequest method to be used; %s\n' % '|'.join(methods)
-    usage_info += ' -H,\t--header <arg>    \tCustom header to be sent to the server; it should be in the form \'header:value\'\n'
-    usage_info += ' -d,\t--data <arg>      \tData for the request\n'
-    usage_info += ' -w,\t--write-out <arg> \tWhat to output after request completes; only variable supported is %{http_code}\n'
-    usage_info += ' -o,\t--output <arg>    \tWrite outpt to file instead of stdout\n'
-    usage_info += ' -L,\t--location        \tFollow redirects; OFF by default\n'
-    usage_info += ' -s,\t--silent          \tDoes nothing; kept only for compatability with curl command\n'
-    usage_info += ' -h,\t--help            \tDisplay this information\n'
+    usage_info += ' -x,  --proxy <arg>       Proxy server details\n'
+    usage_info += ' -X,  --request <arg>     Request method to be used; %s\n' % '|'.join(methods)
+    usage_info += ' -H,  --header <arg>      Custom header to be sent to the server; it should be in the form \'header:value\'\n'
+    usage_info += ' -d,  --data <arg>        Data for the request\n'
+    usage_info += ' -w,  --write-out <arg>   What to output after request completes; only variable supported is %{http_code}\n'
+    usage_info += ' -o,  --output <arg>      Write outpt to file instead of stdout\n'
+    usage_info += ' -L,  --location          Follow redirects; OFF by default\n'
+    usage_info += ' -s,  --silent            Does nothing; kept only for compatability with curl command\n'
+    usage_info += ' -h,  --help              Display this information\n'
     sys.stdout.write(usage_info)
     return True
 

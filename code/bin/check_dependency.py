@@ -65,8 +65,7 @@ modules = [
     're', 
     'threading', 
     'signal', 
-    'atexit', 
-    'os.path', 
+    'atexit',  
     'platform', 
     'multiprocessing', 
     'traceback', 
@@ -75,10 +74,11 @@ modules = [
     'pwd',
     'tempfile',
     'sqlite3',
-    ['queue', 'Queue'],
     'ssl',
-    'socketio_client',
-    'requests'
+    ['queue', 'Queue'],
+    'zlib',
+    ['websocket3', 'websocket2'],
+    'socketio_client'
 ]
 
 for module in modules:
@@ -93,15 +93,13 @@ for module in modules:
         try:
             __import__(module_list[i])  #try to import the module
             break
-        except (ImportError, TypeError, AttributeError):
+        except:
             #if this is the last alternative available; then catch the error
             if i + 1 == module_list_count:
                 e = sys.exc_info()[1]
                 error = True
                 sys.stderr.write(unicode(e) + '\n')
-        except:
-            pass
-        
+                
         i += 1
 
 error and sys.exit(ERR_FAILED_DEPENDENCY)
