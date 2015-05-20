@@ -64,7 +64,7 @@ fi
 cmdline="" ; while read -r -d $'\0' line ; do 
     [[ "$line" == *"$main_script" ]] && line=$1  #if it is the script, replace it with full path
     line=${line//\"/\\\"}  #escape any double quotes and append it
-    cmdline+=" \"${line}\""
+    cmdline="${cmdline} \"${line}\""
 done </proc/${PPID}/cmdline
 
 #initialize the indexes of each column in the line read from stdin
@@ -84,7 +84,7 @@ type setsid >/dev/null 2>&1
 #format of a line is 'TIMESTAMP OUTPUT_FILE: COMMAND_WITH_SPACES'
 while read -r line ; do
     old_ifs=$IFS ; IFS=" " ; read -a activity <<<"${line%%:*}" ; IFS=$old_ifs  #make activity array from string upto ':' character
-    activity+=("${line#*:}")  #add string after ':' character to activity array
+    activity=("${activity[@]}" "${line#*:}")  #add string after ':' character to activity array
 
     #execute maintenance commands; they are identified by looking at timestamp which is zero
     if [[ "${activity[${timestamp_index}]}" == "0" ]] ; then

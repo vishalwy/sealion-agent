@@ -26,14 +26,14 @@ usage() {
     fi
 
     local usage_info="Usage: ${0} [options] <organization token>\nOptions:\n"
-    usage_info+=" -o,                      Organization token; kept for backward compatibility\n"
-    usage_info+=" -c,  --category <arg>    Category name under which the server to be registered\n"
-    usage_info+=" -H,  --host-name <arg>   Server name to be used\n"
-    usage_info+=" -x,  --proxy <arg>       Proxy server details\n"
-    usage_info+=" -p,  --python <arg>      Path to Python binary used for executing agent code\n"
-    usage_info+=" -e,  --env <arg>, ...    JSON document representing the environment variables to be exported\n"
-    usage_info+="      --no-create-user    Do not create 'sealion' user; instead use current user to run agent\n"
-    usage_info+=" -h,  --help              Display this information"
+    usage_info="${usage_info} -o,                      Organization token; kept for backward compatibility\n"
+    usage_info="${usage_info} -c,  --category <arg>    Category name under which the server to be registered\n"
+    usage_info="${usage_info} -H,  --host-name <arg>   Server name to be used\n"
+    usage_info="${usage_info} -x,  --proxy <arg>       Proxy server details\n"
+    usage_info="${usage_info} -p,  --python <arg>      Path to Python binary used for executing agent code\n"
+    usage_info="${usage_info} -e,  --env <arg>, ...    JSON document representing the environment variables to be exported\n"
+    usage_info="${usage_info}      --no-create-user    Do not create 'sealion' user; instead use current user to run agent\n"
+    usage_info="${usage_info} -h,  --help              Display this information"
     echo -e "$usage_info"
     return 0
 }
@@ -50,7 +50,7 @@ install_service() {
     for (( i = 0 ; i < $rc_path_count ; i++ )) ; do
         rc_path=$(find /etc/ -type d -name "rc$(( i + 1 )).d")
         [[ "$rc_path" == "" ]] && break
-        rc_paths+=("$rc_path")
+        rc_paths=("${rc_paths[@]}" "$rc_path")
     done
     
     #if init.d is not found or rc paths are missing
@@ -95,7 +95,7 @@ check_dependency() {
     #various commands required for installer and the agent
     #we also need commands for user/group management if it is an agent installation and not update
     which_commands=("sed" "find" "chmod" "bash")
-    [[ $update_agent -eq 0 && $create_user -eq 1 ]] && which_commands+=("groupadd" "useradd" "userdel" "groupdel" "chown")
+    [[ $update_agent -eq 0 && $create_user -eq 1 ]] && which_commands=("${which_commands[@]}" "groupadd" "useradd" "userdel" "groupdel" "chown")
 
     missing_items=$(check_for_commands "${which_commands[@]}")
 
@@ -135,7 +135,7 @@ export_env_vars() {
         local output=$("$python_binary" agent/bin/configure.py -a "add" -k "env" -v "$env_var" "${install_path}/etc/config.json" 2>&1)
 
         #add to error list if it failed
-        [[ $? -ne 0 ]] && export_errors+=("${padding}${env_var} - ${output#Error: }")
+        [[ $? -ne 0 ]] && export_errors=("${export_errors[@]}"  "${padding}${env_var} - ${output#Error: }")
     done
 
     #print any errors as warnings
@@ -157,8 +157,8 @@ setup_config() {
     else
         #agent.json config
         local config="\"orgToken\": \"${org_token}\", \"apiUrl\": \"${api_url}\", \"agentVersion\": \"${version}\", \"name\": \"${host_name}\", \"ref\": \"${install_source}\""
-        [[ "$category" != "" ]] && config+=", \"category\": \"${category}\""
-        [[ "$agent_id" != "" ]] && config+=", \"_id\": \"${agent_id}\""
+        [[ "$category" != "" ]] && config="${config}, \"category\": \"${category}\""
+        [[ "$agent_id" != "" ]] && config="${config}, \"_id\": \"${agent_id}\""
         
         "$python_binary" agent/bin/configure.py -a "set" -k "" -v "{$config}" -n "${install_path}/etc/agent.json"  #set the configuration
         export_env_vars  #export the environment variables specified
@@ -275,7 +275,7 @@ for option_index in "${!options[@]}" ; do
             install_source=$option_arg
             ;;
         e|env)
-            env_vars+=("$option_arg")
+            env_vars=("${env_vars[@]}" "$option_arg")
             ;;
         no-create-user)
             user_name=$(id -u -n)  #run as the current user
@@ -315,8 +315,8 @@ install_path=$(eval echo "$install_path")
 
 cd "$script_base_dir"  #move to the script base dir so that all paths can be found
 check_dependency  #perform dependency check
-[[ "$proxy" != "" ]] && env_vars+=("{\"https_proxy\": \"${proxy}\"}")  #export proxy
-[[ "$no_proxy" != "" ]] && env_vars+=("{\"no_proxy\": \"${no_proxy}\"}")  #export no_proxy
+[[ "$proxy" != "" ]] && env_vars=("${env_vars[@]}" "{\"https_proxy\": \"${proxy}\"}")  #export proxy
+[[ "$no_proxy" != "" ]] && env_vars=("${env_vars[@]}" "{\"no_proxy\": \"${no_proxy}\"}")  #export no_proxy
 service_file="${install_path}/etc/init.d/sealion"  #service file for the agent
 [[ -f "${install_path}/bin/sealion-node" ]] && sealion_node_found=1  #check for existence of evil twin
 

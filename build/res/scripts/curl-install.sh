@@ -27,14 +27,14 @@ usage() {
     fi
 
     local usage_info="Usage: ${bin} [options] <organization token>\nOptions:\n"
-    usage_info+=" -o,                      Organization token; kept for backward compatibility\n"
-    usage_info+=" -c,  --category <arg>    Category name under which the server to be registered\n"
-    usage_info+=" -H,  --host-name <arg>   Server name to be used\n"
-    usage_info+=" -x,  --proxy <arg>       Proxy server details\n"
-    usage_info+=" -p,  --python <arg>      Path to Python binary used for executing agent code\n"
-    usage_info+=" -e,  --env <arg>, ...    JSON document representing the environment variables to be exported\n"
-    usage_info+="      --no-create-user    Do not create 'sealion' user; use current user instead to run agent\n"
-    usage_info+=" -h,  --help              Display this information"
+    usage_info="${usage_info} -o,                      Organization token; kept for backward compatibility\n"
+    usage_info="${usage_info} -c,  --category <arg>    Category name under which the server to be registered\n"
+    usage_info="${usage_info} -H,  --host-name <arg>   Server name to be used\n"
+    usage_info="${usage_info} -x,  --proxy <arg>       Proxy server details\n"
+    usage_info="${usage_info} -p,  --python <arg>      Path to Python binary used for executing agent code\n"
+    usage_info="${usage_info} -e,  --env <arg>, ...    JSON document representing the environment variables to be exported\n"
+    usage_info="${usage_info}      --no-create-user    Do not create 'sealion' user; use current user instead to run agent\n"
+    usage_info="${usage_info} -h,  --help              Display this information"
     echo -e "$usage_info"
     return 0
 }
@@ -64,7 +64,7 @@ call_url() {
 
     for arg in "$@" ; do
         arg=${arg//\"/\\\"}
-        params+=" \"${arg}\""
+        params="${params} \"${arg}\""
     done
 
     bash -c "${orig_url_caller} ${params}"
@@ -107,7 +107,7 @@ log_output() {
     if [[ "$update_log" == "" ]] ; then
         #set the destination based on the existence of the update.log file
         local destination="${install_path}/var/log"
-        [[ -f "${destination}/update.log" ]] && destination+="/update.log"
+        [[ -f "${destination}/update.log" ]] && destination="${destination}/update.log"
 
         #if this is an update and destination is writable, 
         #then set the variable otherwise set the variable to a space so that the next time we dont have to perform all these
@@ -231,7 +231,7 @@ if [[ $? -ne 0 || "$status" -ge "400" ]] ; then
 fi
 
 #extract the agent installer tar
-status=$(tar -xf "$tmp_file_name" --directory="$temp_file_path" 2>&1)
+status=$(tar -xzf "$tmp_file_name" --directory="$temp_file_path" 2>&1)
 
 #check for tar extract failure 
 if [[ $? -ne 0 ]] ; then

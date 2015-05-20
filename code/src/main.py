@@ -57,7 +57,7 @@ logger = logging.getLogger()  #get the root logger
 try:
     #create rotating file logger and add to root logger
     #this can raise exception if the file cannot be created
-    lf = logging.handlers.RotatingFileHandler(helper.Utils.get_safe_path(exe_path + '/var/log/sealion.log'), maxBytes = 1024 * 1024 * 100, backupCount = 5)
+    lf = logging.handlers.RotatingFileHandler(helper.Utils.get_safe_path(exe_path + '/var/log/sealion.log'), maxBytes = 1024 * 1024 * 10, backupCount = 5)
     lf.setFormatter(formatter)
     logger.addHandler(lf)
 except Exception as e:

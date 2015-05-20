@@ -56,6 +56,7 @@ def usage(is_help = False):
     usage_info += ' -w,  --write-out <arg>   What to output after request completes; only variable supported is %{http_code}\n'
     usage_info += ' -o,  --output <arg>      Write outpt to file instead of stdout\n'
     usage_info += ' -L,  --location          Follow redirects; OFF by default\n'
+    usage_info += ' -k,  --insecure          Allow connections to SSL sites without certificates\n'
     usage_info += ' -s,  --silent            Does nothing; kept only for compatability with curl command\n'
     usage_info += ' -h,  --help              Display this information\n'
     sys.stdout.write(usage_info)
@@ -123,8 +124,8 @@ def exception_hook(*args, **kwargs):
 sys.excepthook = exception_hook  #set the exception hook
 
 try:
-    long_options = ['proxy=', 'request=', 'header=', 'data=', 'write-out=', 'output=', 'location', 'silent', 'help']
-    options, args = getopt.getopt(sys.argv[1:], 'x:H:X:d:w:o:Lsh', long_options)
+    long_options = ['proxy=', 'request=', 'header=', 'data=', 'write-out=', 'output=', 'location', 'insecure', 'silent', 'help']
+    options, args = getopt.getopt(sys.argv[1:], 'x:H:X:d:w:o:Lksh', long_options)
     
     for option, arg in options:
         if option in ['-x', '--proxy']:  #proxy
@@ -148,6 +149,8 @@ try:
             output_file = arg
         elif option in ['-L', '--location']:  #allow url redirection
             kwargs['allow_redirects'] = True
+        elif option in ['-k', '--insecure']:  #allow url redirection
+            kwargs['verify'] = False
         elif option in ['-h', '--help']:
             usage(True) and sys.exit(0)
             

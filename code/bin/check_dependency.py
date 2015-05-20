@@ -87,7 +87,7 @@ for module in modules:
     else:
         module_list = [module]
     
-    module_list_count, i = len(module), 0
+    module_list_count, i = len(module_list), 0
 
     while i < module_list_count:
         try:

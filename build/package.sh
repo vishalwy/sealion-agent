@@ -26,9 +26,9 @@ usage() {
     fi
 
     local usage_info="Usage: ${0} [options] <version>\nOptions:\n"
-    usage_info+=" -d,  --domain <arg>    Domain for which the tarball to be generated; Default to 'sealion.com'\n"
-    usage_info+="      --gen-curl-node   Generate curl installer for node agent\n"
-    usage_info+=" -h,  --help            Display this information"
+    usage_info="${usage_info} -d,  --domain <arg>    Domain for which the tarball to be generated; Default to 'sealion.com'\n"
+    usage_info="${usage_info}      --gen-curl-node   Generate curl installer for node agent\n"
+    usage_info="${usage_info} -h,  --help            Display this information"
     echo -e "$usage_info"
     return 0
 }
@@ -185,7 +185,7 @@ build_date="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<<$(date -u +'%F %T %Z'))"  #package
 build_revision=$([[ "$(type -P git 2>/dev/null)" != "" ]] && git rev-parse --short=10 HEAD 2>/dev/null)
 
 if [[ "$build_revision" != "" ]] ; then
-    [[ "$(git diff --name-only HEAD 2>&1)" != "" ]] && build_revision+="*"
+    [[ "$(git diff --name-only HEAD 2>&1)" != "" ]] && build_revision="${build_revision}*"
     build_revision="- $(sed 's/[^-A-Za-z0-9_]/\\&/g' <<<${build_revision})"
 fi
 

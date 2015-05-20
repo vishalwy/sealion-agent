@@ -1,6 +1,6 @@
 """
 Some useful constructs
-Implements EmptyClass, SingletonType, Namespace, DictEx, enum, ThreadEx and EventDispatcher 
+Implements EmptyClass, SingletonType, Namespace, enum, with_static_vars, ThreadEx and EventDispatcher 
 """
 
 __copyright__ = '(c) Webyog, Inc'
@@ -66,46 +66,6 @@ class Namespace:
         """
         
         raise RuntimeError('Cannot instantiate class')
-    
-class DictEx(dict):
-    """
-    Class inherited from dict to provide some additional methods
-    """
-    
-    def __init__(self, *args, **kwargs):
-        """
-        Constructor
-        """
-        
-        super(DictEx, self).__init__(*args, **kwargs)  #intiailize the abse class
-    
-    def get_dict(self, keys = None, as_dict = True):
-        """
-        Method to get the value
-        
-        Args:
-            keys: keys to return, None indicates all the keys. keys can also be a list of tuples (key, default_value)
-            as_dict: whether to return as a dict or DictEx
-            
-        Returns:
-            dict or DictEx depending on as_dict arg
-        """
-        
-        ret = {} if as_dict else DictEx()
-        
-        if keys == None:
-            keys = zip(self.keys())
-        
-        for i in range(0, len(keys)):  #loop through the keys
-            is_tuple = True if type(keys[i]) is tuple else False  #is it a tuple
-            key = keys[i][0] if is_tuple else keys[i]  #get the key
-            
-            if (key in self):  #if key is avaliable
-                ret[key] = self[key]
-            elif is_tuple and len(keys[i]) > 1:  #use the default value for the key
-                ret[key] = keys[i][1]
-                
-        return ret
     
 def enum(*sequential, **named):
     """

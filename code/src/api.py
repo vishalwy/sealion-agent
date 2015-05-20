@@ -225,7 +225,7 @@ class API(requests.Session):
         ret = Status.SUCCESS
         
         #get data and make the request
-        data = self.univ.config.agent.get_dict(['orgToken', 'name', 'category', 'agentVersion', ('ref', 'tarball')])
+        data = self.univ.config.agent.get_dict('orgToken', 'name', 'category', 'agentVersion', ('ref', 'tarball'))
         response = self.exec_method('post', self.univ.get_url('agents'), data = data, options = kwargs)    
         
         if API.is_success(response):
@@ -272,7 +272,7 @@ class API(requests.Session):
         ret = Status.SUCCESS
         
         #get data and make the request
-        data = self.univ.config.agent.get_dict(['orgToken', 'agentVersion'])
+        data = self.univ.config.agent.get_dict('orgToken', 'agentVersion')
         data['timestamp'] = int(time.time() * 1000)
         data['platform'] = self.univ.details
         response = self.exec_method('post', self.univ.get_url('agents/' + self.univ.config.agent._id + '/sessions'), data = data, options = kwargs)    
@@ -370,7 +370,7 @@ class API(requests.Session):
         """
         
         #get the data, url and make the request
-        data = self.univ.config.agent.get_dict([('orgToken', ''), ('_id', ''), ('agentVersion', '')])
+        data = self.univ.config.agent.get_dict(('orgToken', ''), ('_id', ''), ('agentVersion', ''))
         url = self.univ.get_url('orgs/%s/agents/%s/agentVersion' % (data['orgToken'], data['_id']))
         response = self.exec_method('get', url, params = {'agentVersion': data['agentVersion']}, options = {'retry_count': 0})
         

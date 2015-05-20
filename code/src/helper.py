@@ -256,7 +256,19 @@ class Config:
     Class abstracs JSON based configuration.
     """
     
-    schema = {}  #schema representing the rules for configuration. subclass should modify this to provide custom rules
+    #schema is a dict containing 'key: key_config' pairs
+    #   'key'           - name of the key allowed; a dot('.') can represent any possible key name
+    #   'key_config'    - dict containing the properties of the 'key'
+    #       'type'      - data type of the value for the key
+    #                     can be a string containing 'comma,seperated,datatypes'  
+    #                     or a dict or list of dict containing 'key: key_config' pairs
+    #
+    #       'depends'   - the list of keys in the same level that this particular key has a dependency
+    #       'regex'     - regular expression to validate the value for the key
+    #       'optional'  - whether the key is optional True/False
+    #
+    #schema representing the rules for configuration. subclass should override this to provide custom rules
+    schema = {} 
     
     def __init__(self):
         """
@@ -281,26 +293,33 @@ class Config:
             raise AttributeError(unicode(e))
         finally:
             self.lock.release()
-        
-    def get_dict(self, keys = None, as_dict = True):
+            
+    def get_dict(self, *keys):
         """
         Public method to return filtered dict.
         
         Args:
-            keys: keys to return, None indicates all the keys. keys can also be a list of tuples (key, default_value)
-            as_dict: whether to return as a dict or DictEx
+            keys: keys to return, specify no keys to select all keys. a key can also be tuple (key, default_value)
             
         Returns:
-            dict or DictEx depending on as_dict arg
+            dict continaing the filtered keys
         """
         
         self.lock.acquire()  #this has to be atomic as multiple threads reads/writes
+        keys, ret = keys or list(self.data.keys()), {}
         
-        try:
-            return DictEx(self.data).get_dict(keys, as_dict)
-        finally:
-            self.lock.release()
-        
+        for key in keys:
+            key = key if type(key) is tuple else (key,)  #get the key
+
+            try:
+                ret[key[0]] = self.data[key[0]]  #if key is avaliable
+            except:
+                if len(key) > 1:  #use the default value for the key
+                    ret[key[0]] = key[1]
+                    
+        self.lock.release()
+        return ret
+
     @staticmethod
     def parse(file, is_data = False):
         """
