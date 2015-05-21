@@ -14,7 +14,6 @@ import subprocess
 import re
 import signal
 import os
-import sys
 import universal
 from constructs import *
 
@@ -174,7 +173,7 @@ class Job:
         try:
             #for a commandline job, output is the file containing data
             output_file = open('%s/%s' % (self.univ.temp_path, self.exec_details['output']), 'r')
-            data = output_file.read(256 * 1024).decode('utf-8', 'replace')
+            data = output_file.read(256 * 1024)
             output_file.close()
 
             if not data:  #if the file is empty
@@ -368,7 +367,7 @@ class Executer(ThreadEx):
             exec_args = ['bash', '%s/src/execute.sh' % self.univ.exe_path, self.univ.main_script]
             
             self.exec_count = 0  #reset the number of commands executed
-            self.exec_process = subprocess.Popen(exec_args, preexec_fn = self.init_process, 
+            self.exec_process = subprocess.Popen(exec_args, preexec_fn = self.init_process, universal_newlines = True,
                 stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
             _log.info('Bash process %d has been created to execute command line activities' % self.exec_process.pid)
         
@@ -388,7 +387,7 @@ class Executer(ThreadEx):
         
         try:
             #it is possible that the pipe is broken or the subprocess was terminated
-            self.process.stdin.write(('%d %s: %s\n' % (job_details['timestamp'], job_details['output'], job_details['command'])).encode('utf-8'))
+            self.process.stdin.write('%d %s: %s\n' % (job_details['timestamp'], job_details['output'], job_details['command']))
             self.exec_count += 1
         except Exception as e:
             _log.error('Failed to write to bash process; %s' % unicode(e))
@@ -406,7 +405,7 @@ class Executer(ThreadEx):
         
         try:
             #it is possible that the pipe is broken or the subprocess was terminated
-            line = self.process.stdout.readline().decode('utf-8', 'replace').rstrip()
+            line = self.process.stdout.readline().rstrip()
             data = line.split()
             
             if not data:  #bash wrote an empty line; ignore it
