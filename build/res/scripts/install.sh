@@ -348,8 +348,8 @@ if [[ $update_agent -eq 0 ]] ; then  #if this is a fresh install
     if [[ $create_user -eq 1 ]] ; then
         #check for existence of group
         group_exists=0 ; while read line ; do 
-            [[ "${line%%:*}" == "$user_name" ]] && group_exists=1
-        done  </etc/group
+            [[ "${line%%:*}" == "$user_name" ]] && group_exists=1 && break
+        done </etc/group
 
         #create sealion group
         if [[ $group_exists -eq 0 ]] ; then

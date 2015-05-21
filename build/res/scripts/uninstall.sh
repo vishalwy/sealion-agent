@@ -121,8 +121,8 @@ if [[ $EUID -eq 0 && "$script_base_dir" == "/usr/local/sealion-agent" ]] ; then
 
         #check for existence of group
         group_exists=0 ; while read line ; do 
-            [[ "${line%%:*}" == "$user_name" ]] && group_exists=1
-        done  </etc/group
+            [[ "${line%%:*}" == "$user_name" ]] && group_exists=1 && break
+        done </etc/group
 
         #remove the group
         if [[ $group_exists -eq 1 ]] ; then
