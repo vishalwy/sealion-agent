@@ -36,6 +36,7 @@ class Daemon(object):
         self.stdout = stdout  #output handle
         self.stderr = stderr  #error handle
         self.pidfile = pidfile  #pid file
+        self.main_script = os.path.realpath(sys.modules['__main__'].__file__)
     
     def daemonize(self):
         """
@@ -169,8 +170,8 @@ class Daemon(object):
             f.close()
         except:
             cmdline = ''
-            
-        return True if sys.argv[0] in cmdline else False
+        
+        return True if os.path.basename(self.main_script) in cmdline else False
     
     def get_pid(self):
         """

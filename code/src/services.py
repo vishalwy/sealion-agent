@@ -14,6 +14,7 @@ import subprocess
 import re
 import signal
 import os
+import sys
 import universal
 from constructs import *
 
@@ -364,10 +365,7 @@ class Executer(ThreadEx):
         #self.wait returns True if the bash suprocess is terminated, in that case we will create a new bash process instance
         if self.wait() and not self.is_stop:
             #refer execute.sh to read more about arguments to be passed in 
-            exec_args = ['bash', 
-                '%s/src/execute.sh' % self.univ.exe_path, 
-                '%s/src/%s' % (self.univ.exe_path, sys.modules['__main__'].__file__.split('/')[-1])
-            ]
+            exec_args = ['bash', '%s/src/execute.sh' % self.univ.exe_path, self.univ.main_script]
             
             self.exec_count = 0  #reset the number of commands executed
             self.exec_process = subprocess.Popen(exec_args, preexec_fn = self.init_process, 

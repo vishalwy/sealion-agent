@@ -47,6 +47,9 @@ def notify_terminate(is_gracefull = True, message = '', stack_trace = ''):
     is_gracefull == False and terminatehook(message, stack_trace)
 
 terminatehook = default_termination_hook  #terminate hook called for disgraceful shutdown
+
+#save executable path to main script
+main_script = os.path.realpath(sys.modules['__main__'].__file__)
    
 class Utils(Namespace):
     """
@@ -216,9 +219,8 @@ class Utils(Namespace):
         """
         
         notify_terminate(False, message, stack_trace)
-        main_module = sys.modules['__main__'];
         _log.info('Restarting agent')
-        os.execl(sys.executable, sys.executable, main_module.exe_path + '/src/' + os.path.basename(main_module.__file__), *sys.argv[1:])
+        os.execl(sys.executable, sys.executable, main_script, *sys.argv[1:])
         
     @staticmethod
     def get_stack_trace(curr_thread_trace = ''):
