@@ -29,7 +29,7 @@ from constructs import *
 _log = logging.getLogger(__name__)  #module level logging
 _active_signals = {}  #dict to keep track of the active signal handlers, for logging purpose only
 
-class Controller(SingletonType('ControllerMetaClass', (ThreadEx, ), {})):    
+class Controller(singleton(ThreadEx)):    
     """
     Singlton implementation of controller thread
     """

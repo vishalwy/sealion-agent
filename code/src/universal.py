@@ -147,7 +147,7 @@ class AgentConfig(helper.Config):
         univ.event_dispatcher.trigger('set_activities')  #trigger an event so that the other modules can act on the new activities
         return ret
 
-class Universal(SingletonType('UniversalMetaClass', (object, ), {})):
+class Universal(singleton()):
     """
     Implements global variables as a singleton class
     """

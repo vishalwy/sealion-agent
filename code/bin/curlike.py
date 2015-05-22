@@ -86,9 +86,9 @@ def convert_special(data):
     """
     
     try:
-        return data.encode('utf8').decode('unicode-escape').replace('%%', '%')
+        return data.encode('utf-8').decode('unicode-escape').replace('%%', '%')
     except:
-        return data.encode('utf8').decode('string-escape').replace('%%', '%')
+        return data.encode('utf-8').decode('string-escape').replace('%%', '%')
 
 def format_output(response):
     """

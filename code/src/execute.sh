@@ -89,7 +89,7 @@ while read -r line ; do
     #execute maintenance commands; they are identified by looking at timestamp which is zero
     if [[ "${activity[${timestamp_index}]}" == "0" ]] ; then
         eval ${activity[${command_index}]} >"${activity[${output_index}]}" 2>&1
-        continue;
+        continue
     fi
 
     (

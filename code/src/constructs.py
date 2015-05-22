@@ -13,60 +13,20 @@ import logging
 
 #Python 2.x vs 3.x
 try:
-    import queue as t_queue
+    import queue
 except ImportError:
-    import Queue as t_queue
+    import Queue as queue
     
 #Python 2.x vs 3.x
 try:
-    t_unicode = unicode
+    unicode = unicode
 except:
-    def unicode_3_x(object, *args, **kwargs):
+    def unicode(object, *args, **kwargs):
         return str(object)
     
-    t_unicode = unicode_3_x
-    
-queue = t_queue  #export symbol queue 
-unicode = t_unicode  #export symbol unicode
+queue = queue  #export symbol queue 
 _log = logging.getLogger(__name__)  #module level logging
 
-class EmptyClass:
-    """
-    An empty class with no attributes
-    """
-    
-    pass
-
-class SingletonType(type):
-    """
-    Metaclass for creating singletons.
-    It sores the instance in __instance attribute
-    """
-    
-    def __call__(cls, *args, **kwargs):
-        """
-        Called when the instance is called as a function.
-        """
-        
-        if hasattr(cls, '__instance') == False:  #if we dont have an instance already
-            setattr(cls, '__instance', super(SingletonType, cls).__call__(*args, **kwargs))  #create the instance and store it in __instance
-        elif cls is not getattr(getattr(cls, '__instance'), '__class__'):  #if the class of the instance is not the same
-            setattr(cls, '__instance', super(SingletonType, cls).__call__(*args, **kwargs))  #create the instance and store it in __instance
-            
-        return getattr(cls, '__instance')  #return the instance
-    
-class Namespace:    
-    """
-    Class for creating namespaces which cannot be instantiated.
-    """
-    
-    def __init__(self):
-        """
-        Constructor
-        """
-        
-        raise RuntimeError('Cannot instantiate class')
-    
 def enum(*sequential, **named):
     """
     Function to create enumeration
@@ -89,6 +49,57 @@ def with_static_vars(**kwargs):
         return func
     
     return decorate
+
+@with_static_vars(class_counter = 1)
+def singleton(*base_classes, **mappings):
+    """
+    Function to create singlton metaclass so that your class can inherit from it
+    
+    Returns:
+        Unique singleton class type
+    """
+    
+    class_name = 'SingletonMetaClass%s' % singleton.class_counter
+    base_classes = base_classes or (object,)
+    singleton.class_counter += 1
+    return SingletonType(class_name, base_classes, mappings)
+
+class EmptyClass:
+    """
+    An empty class with no attributes
+    """
+    
+    pass
+
+class Namespace:    
+    """
+    Class for creating namespaces which cannot be instantiated.
+    """
+    
+    def __init__(self):
+        """
+        Constructor
+        """
+        
+        raise RuntimeError('Cannot instantiate class')
+
+class SingletonType(type):
+    """
+    Metaclass for creating singletons.
+    It sores the instance in __instance attribute
+    """
+    
+    def __call__(cls, *args, **kwargs):
+        """
+        Called when the instance is called as a function.
+        """
+        
+        if hasattr(cls, '__instance') == False:  #if we dont have an instance already
+            setattr(cls, '__instance', super(SingletonType, cls).__call__(*args, **kwargs))  #create the instance and store it in __instance
+        elif cls is not getattr(getattr(cls, '__instance'), '__class__'):  #if the class of the instance is not the same
+            setattr(cls, '__instance', super(SingletonType, cls).__call__(*args, **kwargs))  #create the instance and store it in __instance
+            
+        return getattr(cls, '__instance')  #return the instance
 
 class ThreadEx(threading.Thread):
     """

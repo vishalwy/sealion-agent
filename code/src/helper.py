@@ -429,7 +429,7 @@ class Config:
         config.update(Config.parse(data, True)[0])
         return self.set(config)
 
-class ThreadMonitor(SingletonType('ThreadMonitorMetaClass', (object, ), {})):
+class ThreadMonitor(singleton()):
     """
     Singleton class to monitor the calling thread for a specified time interval.
     If the thread doesnt repond within the specified timeout, it will restart the agent.
