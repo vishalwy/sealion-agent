@@ -42,7 +42,6 @@ kill_children() {
 
 usage="Usage: ${0} <agent main script>"
 main_script="${1##*/}"  #extract the main python script
-read -r cmdline </proc/${PPID}/cmdline  #extract the command line for the parent process
 
 #sealion agent dir
 exe_dir=${1%/*}
@@ -54,18 +53,18 @@ if [[ "$main_script" != "sealion.py" && "$main_script" != "main.py" ]] ; then
     echo $usage ; exit 1
 fi
 
-#check whether the script is same as the one present in the command line of the parent process
-if [[ "$exe_dir" == "" || "$cmdline" != *"$main_script"* ]] ; then
-    echo "Missing or invalid agent main script"
-    echo $usage ; exit 1
-fi
-
 #frame the executable command line by space separating the arguments
 cmdline="" ; while read -r -d $'\0' line ; do 
     [[ "$line" == *"$main_script" ]] && line=$1  #if it is the script, replace it with full path
     line=${line//\"/\\\"}  #escape any double quotes and append it
     cmdline="${cmdline} \"${line}\""
 done </proc/${PPID}/cmdline
+
+#check whether the script is same as the one present in the command line of the parent process
+if [[ "$exe_dir" == "" || "$cmdline" != *"$main_script"* ]] ; then
+    echo "Missing or invalid agent main script"
+    echo $usage ; exit 1
+fi
 
 #initialize the indexes of each column in the line read from stdin
 timestamp_index=0  #unique timestamp of the activity
