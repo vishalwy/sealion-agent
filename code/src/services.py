@@ -74,7 +74,7 @@ class Job:
         self.exec_details['timestamp'] = t  #set the exec timestamp
 
         if self.is_whitelisted == True:  #if the job is whitelisted
-            _log.debug('Executing activity(%s @ %d)' % (self.exec_details['_id'], t))
+            _log.info('Executing activity(%s @ %d)' % (self.exec_details['_id'], t))
             
             #if it is not a plugin job, then we create a temperory file to capture the output
             #a plugin job return the data directly
@@ -96,14 +96,14 @@ class Job:
             True on success else False
         """
         
-        self.status = JobStatus.TIMED_OUT  #change the state to timed out
-        
         try:            
             if self.exec_details['pid'] == -1:
                 raise
             
-            #kill the job, it is possible that the pid does not exist by the time we execute this statement
+            #kill the job and change the state to timed out
+            #it is possible that the pid does not exist by the time we execute this statement
             os.kill(self.exec_details['pid'], signal.SIGTERM) 
+            self.status = JobStatus.TIMED_OUT
         except:
             return False
         
@@ -139,7 +139,7 @@ class Job:
         
         data = None
 
-        if self.status == JobStatus.RUNNING and self.exec_details['pid'] == -1:  #commandline job who's pid is unknown
+        if self.status == JobStatus.RUNNING and not self.is_plugin and self.exec_details['pid'] == -1:  #commandline job who's pid is unknown
             data = {'timestamp': self.exec_details['timestamp'], 'returnCode': 0, 'data': 'Failed to retreive execution status.'}
         elif self.status == JobStatus.BLOCKED:  #commandline job that is blocked by whitelist
             data = {'timestamp': self.exec_details['timestamp'], 'returnCode': 0, 'data': 'Command blocked by whitelist.'}
@@ -158,6 +158,16 @@ class Job:
                 #we supply the instance method to read the output on demand
                 #this reduces the memory used unneceserily reading the output and putting it in the queue
                 data['data'] = self.read_output
+        else:
+            format = 'No data for activity (%(activity)s @ %(timestamp)d); satus: %(status)d; pid: %(pid)d; output: %(output)s'
+            format_spec = {
+                'activity': self.exec_details['_id'],
+                'timestamp': self.exec_details['timestamp'],
+                'status': self.status,
+                'pid': self.exec_details['pid'],
+                'output': True if self.exec_details['output'] else False
+            }
+            _log.error(format % format_spec)
                 
         return data
 

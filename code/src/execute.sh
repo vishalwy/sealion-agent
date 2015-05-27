@@ -62,7 +62,7 @@ done </proc/${PPID}/cmdline
 
 #check whether the script is same as the one present in the command line of the parent process
 if [[ "$exe_dir" == "" || "$cmdline" != *"$main_script"* ]] ; then
-    echo "Missing or invalid agent main script"
+    echo "This script is designed to run only with SeaLion agent!"
     echo $usage ; exit 1
 fi
 

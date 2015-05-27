@@ -167,7 +167,6 @@ setup_config() {
         [[ $create_user -eq 0 ]] && "$python_binary" agent/bin/configure.py -a "set" -k "user" -v "\"${user_name}\"" "${install_path}/etc/config.json" 2>&1
     fi
 
-    
     temp_var=$(type -p "$python_binary")  #get the location of the python binary given
 
     #compare the default python location with the python binary given

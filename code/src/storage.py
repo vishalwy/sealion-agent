@@ -780,7 +780,8 @@ class Storage:
             data: data to send
         """
         
-        if self.univ.stop_event.is_set():  #check whether we need to stop
+        #return if we need to stop or no data to be pushed
+        if not data or self.univ.stop_event.is_set():
             return
         
         if self.realtime_sender.push({'activity': activity, 'data': data}) == False:  #try to push data to real time sender

@@ -175,6 +175,12 @@ for option_index in "${!options[@]}" ; do
     esac
 done
 
+#there should be an organization token
+if [[ "$org_token" == "" ]] ; then
+    echo "Please specify an organization token" >&2
+    usage ; exit 125
+fi
+
 #set the absolute path for installation
 install_path=$(eval echo "$install_path")
 [[ ${install_path:0:1} != "/" ]] && install_path="$(pwd)/${install_path}" 
