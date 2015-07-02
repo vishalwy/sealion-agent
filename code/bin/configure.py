@@ -8,20 +8,17 @@ __copyright__ = '(c) Webyog, Inc'
 __author__ = 'Vishal P.R'
 __email__ = 'hello@sealion.com'
 
+import os
 import sys
 import json
 import getopt
 
-#Python 2.x vs 3.x
-try:
-    t_unicode = unicode
-except:
-    def unicode_3_x(object, *args, **kwargs):
-        return str(object)
-    
-    t_unicode = unicode_3_x
-    
-unicode = t_unicode  #export symbol unicode
+#add module lookup paths to sys.path so that import can find them
+#we are inserting at the begining of sys.path so that we can be sure that we are importing the right module
+exe_path = os.path.dirname(os.path.realpath(__file__)).rsplit('/', 1)[0]
+sys.path.insert(0, exe_path + '/lib')
+
+from constructs import unicode
 
 def usage(is_help = False):
     """

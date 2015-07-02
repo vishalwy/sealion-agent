@@ -20,13 +20,9 @@ import grp
 import json
 import re
 
-#get the exe path, which is the absolute path to the parent directory of the module's direcotry
-exe_path = os.path.dirname(os.path.realpath(__file__))
-exe_path = exe_path[:-1] if exe_path != '/' and exe_path[-1] == '/' else exe_path
-exe_path = exe_path[:exe_path.rfind('/')]
-
 #add module lookup paths to sys.path so that import can find them
 #we are inserting at the begining of sys.path so that we can be sure that we are importing the right module
+exe_path = os.path.dirname(os.path.realpath(__file__)).rsplit('/', 1)[0]
 sys.path.insert(0, exe_path + '/src') 
 sys.path.insert(0, exe_path + '/lib') 
 

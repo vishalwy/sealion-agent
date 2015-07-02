@@ -13,14 +13,7 @@ import sys
 ERR_SUCCESS = 0
 ERR_INCOMPATIBLE_PYTHON = 2
 ERR_FAILED_DEPENDENCY = 3
-
-#Python 2.x vs 3.x
-try:
-    unicode = unicode
-except:
-    def unicode(object, *args, **kwargs):
-        return str(object)
-
+    
 #Python version check. SeaLion agent works only with Python version >= 2.6
 if float('%d.%d' % (sys.version_info[0], sys.version_info[1])) < 2.6:
     sys.stderr.write('SeaLion agent requires python version 2.6 or above\n')
@@ -33,25 +26,14 @@ except Exception:
     sys.stderr.write(unicode(e) + '\n')
     sys.exit(ERR_FAILED_DEPENDENCY)
     
-#get the exe path, which is the absolute path to the parent directory of the module's direcotry
-exe_path = os.path.dirname(os.path.realpath(__file__))
-
-if exe_path != '/' and exe_path[-1] == '/':
-    exe_path = exe_path[:-1]
-
-exe_path = exe_path[:exe_path.rfind('/')]
-
 #add module lookup paths to sys.path so that import can find them
 #we are inserting at the begining of sys.path so that we can be sure that we are importing the right module
+exe_path = os.path.dirname(os.path.realpath(__file__)).rsplit('/', 1)[0]
 sys.path.insert(0, exe_path + '/lib/socketio_client') 
 sys.path.insert(0, exe_path + '/lib/websocket_client')
 sys.path.insert(0, exe_path + '/lib')
-
-#to avoid the bug reported at http://bugs.python.org/issue13684 we use a stable httplib version available with CPython 2.7.3 and 3.2.3
-#since httplib has been renamed to http, we have to add that also in the path so that import can find it
-if sys.version_info[0] == 3:
-    sys.path.insert(0, exe_path + '/lib/httplib')    
     
+from constructs import unicode
 error = False  #any errors
 
 #modules to be checked for
@@ -72,6 +54,7 @@ modules = [
     'logging.handlers',
     'gc',
     'pwd',
+    'getopt',
     'tempfile',
     'sqlite3',
     'ssl',

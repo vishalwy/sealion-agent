@@ -159,12 +159,7 @@ class Universal(singleton()):
         
         cur_time = time.time()
         self.metric = {'starting_time': cur_time, 'stopping_time': cur_time}  #save the timestamps
-        
-        #save the agent base directory
-        exe_path = os.path.dirname(os.path.realpath(__file__))  #absolute path to the directory of this module
-        exe_path = exe_path[:-1] if exe_path != '/' and exe_path[-1] == '/' else exe_path  #remove the trailing /
-        self.exe_path = exe_path[:exe_path.rfind('/')]  #absolute path of the base dir, as it is one level up
-        
+        self.exe_path = os.path.dirname(os.path.realpath(__file__)).rsplit('/', 1)[0]  #absolute path of the base dir, as it is one level up
         self.main_script = helper.main_script  #main script
         self.is_update_only_mode = False  #no update only mode
         self.config = EmptyClass()

@@ -16,23 +16,13 @@ import logging
 import logging.handlers
 import gc
 
-#get the exe path, which is the absolute path to the parent directory of the module's direcotry
-exe_path = os.path.dirname(os.path.realpath(__file__))
-exe_path = exe_path[:-1] if exe_path != '/' and exe_path[-1] == '/' else exe_path
-exe_path = exe_path[:exe_path.rfind('/')]
-
 #add module lookup paths to sys.path so that import can find them
 #we are inserting at the begining of sys.path so that we can be sure that we are importing the right module
-sys.path.insert(0, exe_path + '/lib/socketio_client') 
-sys.path.insert(0, exe_path + '/lib/websocket_client')
+exe_path = os.path.dirname(os.path.realpath(__file__)).rsplit('/', 1)[0]
 sys.path.insert(0, exe_path + '/src')
 sys.path.insert(0, exe_path + '/lib')
-
-#to avoid the bug reported at http://bugs.python.org/issue13684 we use a stable httplib version available with CPython 2.7.3 and 3.2.3
-#since httplib has been renamed to http, we have to add that also in the path so that import can find it
-if sys.version_info[0] == 3:
-    sys.path.insert(0, exe_path + '/lib/httplib')
-    
+sys.path.insert(0, exe_path + '/lib/socketio_client') 
+sys.path.insert(0, exe_path + '/lib/websocket_client')
 sys.path.insert(0, exe_path + '/opt')  #path for plugins directory
 
 import helper
@@ -66,7 +56,7 @@ except Exception as e:
     
 try:
     #set the home folder for the process; do it before parsing config files so that user can override it in config file
-    os.environ['HOME'] = exe_path 
+    os.environ['HOME'] = exe_path or '/' 
     
     #initialize Universal and create api sessions
     #this can raise exception if universal is failed to find/create config files
@@ -165,5 +155,4 @@ def run(is_update_only_mode = False):
     helper.notify_terminate()  #send terminate event so that modules listening on the event will get a chance to cleanup
     sys.exit(0)
     
-if __name__ == '__main__':  #if this is the main script
-    run()
+__name__ == '__main__' and run()  #run agent if this is the main script
