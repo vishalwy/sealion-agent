@@ -103,11 +103,11 @@ try:
 except:
     logging_filters = []
     
-#add filter to all the logging handlers
+#setup log filtering   
 if logging_filters or logging_filters == None:
     logging_filters = logging_filters or []
     
-    for handler in logging.root.handlers:  
+    for handler in logger.handlers:  
         handler.addFilter(LoggingList(*logging_filters))
         
 #if the agent is already registerd, thare will be _id attribute
@@ -118,7 +118,7 @@ if hasattr(univ.config.agent, '_id') == False:
 logger.setLevel(logging_level)  #set the logging level
 
 #set the formatter for all the logging handlers, including StreamHandler
-for handler in logging.root.handlers:
+for handler in logger.handlers:
     handler.setFormatter(formatter)
     
 def stop_stream_logging():
@@ -127,8 +127,8 @@ def stop_stream_logging():
     """
     
     #loop through handlers and remove stream handlers
-    for handler in logging.root.handlers:
-        type(handler) is logging.StreamHandler and logger.removeHandler(handler)
+    for stream_handler in [handler for handler in logger.handlers if type(handler) is logging.StreamHandler]:
+        logger.removeHandler(stream_handler)
                
 def run(is_update_only_mode = False):
     """
