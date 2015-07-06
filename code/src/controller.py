@@ -21,7 +21,7 @@ import rtc
 import storage
 import universal
 import connection
-import services
+import runner
 import exit_status
 import helper
 from constructs import *
@@ -195,7 +195,7 @@ class Controller(singleton(ThreadEx)):
                     break
                     
                 store = storage.Storage()  #Storage instance
-                job_producer = services.JobProducer(store)  #JobProducer instance
+                job_producer = runner.JobProducer(store)  #JobProducer instance
 
                 if store.start() == False:  #try to start the store
                     self.univ.set_time_metric('stopping_time')

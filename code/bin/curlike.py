@@ -11,7 +11,7 @@ __author__ = 'Vishal P.R'
 __email__ = 'hello@sealion.com'
 
 import sys
-import os.path
+import os
 import re
 import getopt
 

@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 In a development environment this script is used as the main script.
 It sets up logging, Universal and api sessions.
@@ -15,15 +13,10 @@ import sys
 import logging
 import logging.handlers
 import gc
+import re
 
-#add module lookup paths to sys.path so that import can find them
-#we are inserting at the begining of sys.path so that we can be sure that we are importing the right module
+#agent base directory
 exe_path = os.path.dirname(os.path.realpath(__file__)).rsplit('/', 1)[0]
-sys.path.insert(0, exe_path + '/src')
-sys.path.insert(0, exe_path + '/lib')
-sys.path.insert(0, exe_path + '/lib/socketio_client') 
-sys.path.insert(0, exe_path + '/lib/websocket_client')
-sys.path.insert(0, exe_path + '/opt')  #path for plugins directory
 
 import helper
 import controller
@@ -34,7 +27,7 @@ from constructs import *
 
 _log = logging.getLogger(__name__)  #module level logging
 gc.set_threshold(50, 5, 5)  #set gc threshold
-logging_list = []  #modules to log for
+logging_filters = []  #modules to log for
 logging_level = logging.INFO  #default logging level
 
 #setup logging for StreamHandler
@@ -72,12 +65,12 @@ class LoggingList(logging.Filter):
     Class to filter module wise logging 
     """
     
-    def __init__(self, *logs):
+    def __init__(self, *logging_filters):
         """
         Constructor
         """
         
-        self.logs = [logging.Filter(log) for log in logs]  #create a filter list
+        self.log_filters = [re.compile('.*%s.*' % log_filter) for log_filter in logging_filters]  #create a filter list
 
     def filter(self, record):
         """
@@ -90,10 +83,10 @@ class LoggingList(logging.Filter):
             True if filter is successful else False
         """
         
-        return any(log.filter(record) for log in self.logs)
+        return any(log_filter.match(record.pathname) for log_filter in self.log_filters)
     
 try:
-    logging_list = univ.config.sealion.logging['modules']  #read any logging list defined in the config
+    logging_filters = univ.config.sealion.logging['modules']  #read any logging list defined in the config
 except:
     pass
 
@@ -106,16 +99,19 @@ try:
     elif temp == 'debug':
         logging_level = logging.DEBUG
     elif temp == 'none':
-        logging_list = []
+        logging_filters = None
 except:
-    logging_list = ['all']  #no logging level, means default to INFO and enable logging for all the modules
-
+    logging_filters = []
+    
 #add filter to all the logging handlers
-for handler in logging.root.handlers:    
-    if len(logging_list) != 1 or logging_list[0] != 'all':
-        handler.addFilter(LoggingList(*logging_list))
+if logging_filters or logging_filters == None:
+    logging_filters = logging_filters or []
+    
+    for handler in logging.root.handlers:  
+        handler.addFilter(LoggingList(*logging_filters))
         
-if hasattr(univ.config.agent, '_id') == False:  #if the agent is already registerd, thare will be _id attribute
+#if the agent is already registerd, thare will be _id attribute
+if hasattr(univ.config.agent, '_id') == False:  
     if api.session.register(retry_count = 2, retry_interval = 10) != api.Status.SUCCESS:
         sys.exit(exit_status.AGENT_ERR_FAILED_REGISTER)
         
@@ -153,6 +149,5 @@ def run(is_update_only_mode = False):
     _log.debug('Took %f seconds to shutdown' % (univ.get_stoppage_time()))
     _log.info('Ran for %s hours' %  univ.get_run_time_str())
     helper.notify_terminate()  #send terminate event so that modules listening on the event will get a chance to cleanup
-    sys.exit(0)
-    
-__name__ == '__main__' and run()  #run agent if this is the main script
+    sys.exit(exit_status.AGENT_ERR_SUCCESS)
+

@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 Use this as the main script to run agent as a daemon.
 It gives a commandline interface to the program, makes the process daemon and sets up crash dump handling.
@@ -20,11 +18,8 @@ import grp
 import json
 import re
 
-#add module lookup paths to sys.path so that import can find them
-#we are inserting at the begining of sys.path so that we can be sure that we are importing the right module
+#agent base directory
 exe_path = os.path.dirname(os.path.realpath(__file__)).rsplit('/', 1)[0]
-sys.path.insert(0, exe_path + '/src') 
-sys.path.insert(0, exe_path + '/lib') 
 
 import exit_status
 from daemon import Daemon
@@ -335,17 +330,22 @@ def sig_handler(signum, frame):
     
     if signum == signal.SIGINT:
         sys.exit(exit_status.AGENT_ERR_INTERRUPTED)
+        
+def run():
+    """
+    Function to run the module.
+    """
     
-signal.signal(signal.SIGINT, sig_handler)  #setup signal handling for SIGINT
-daemon = SeaLion(exe_path + '/var/run/sealion.pid')  #SeaLion daemon instance
-valid_usage = ['start', 'stop', 'restart', 'status']
+    signal.signal(signal.SIGINT, sig_handler)  #setup signal handling for SIGINT
+    daemon = SeaLion(exe_path + '/var/run/sealion.pid')  #SeaLion daemon instance
+    valid_usage = ['start', 'stop', 'restart', 'status']
 
-#perform the operation based on the commandline
-#do not call getattr directly without validating as it will allow any method inside the daemon to run
-if len(sys.argv) == 2 and sys.argv[1] in valid_usage:
-    getattr(daemon, sys.argv[1])()
-else:
-    len(sys.argv) > 1 and sys.stderr.write('Invalid usage: \'%s\'\n' % ' '.join(sys.argv[1:]))
-    sys.stdout.write('Usage: %s %s\n' % (daemon.daemon_name, '|'.join(valid_usage)))
-    
-sys.exit(exit_status.AGENT_ERR_SUCCESS)
+    #perform the operation based on the commandline
+    #do not call getattr directly without validating as it will allow any method inside the daemon to run
+    if len(sys.argv) == 2 and sys.argv[1] in valid_usage:
+        getattr(daemon, sys.argv[1])()
+    else:
+        len(sys.argv) > 1 and sys.stderr.write('Invalid usage: \'%s\'\n' % ' '.join(sys.argv[1:]))
+        sys.stdout.write('Usage: %s %s\n' % (daemon.daemon_name, '|'.join(valid_usage)))
+
+    sys.exit(exit_status.AGENT_ERR_SUCCESS)

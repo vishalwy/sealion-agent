@@ -37,7 +37,7 @@ class SealionConfig(helper.Config):
         'logging': {
             'type': {
                 'level': {'type': 'str,unicode', 'regex': '^\s*(info|error|debug|none)\s*$', 'optional': True},
-                'modules': {'type': ['str,unicode'], 'depends': ['level'], 'regex': '^.+$', 'optional': True}
+                'modules': {'type': ['str,unicode'], 'depends': ['level'], 'regex': '^.+$', 'optional': True, 'is_regex': True}
             },
             'optional': True
         },

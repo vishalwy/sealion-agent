@@ -8,14 +8,14 @@ All the keys in the configuration are optional.
     /*Enable logging for agent*/
     "logging": {
         
-        /*Set the logging level. Possible values are none/error/info/debug. Setting level to none will turn off logging.*/
+        /*Set the logging level. Possible values are none|error|info|debug. Setting level to none will turn off logging.*/
         "level": "info",
         
         /*
-        Set the modules you want to enable logging. You can specify the name of any *.py file under src/ and lib/ directories.
-        You can enable logging for all the modules by specifying ["all"] as the value for this key.
+        Set the modules you want to enable logging. You can specify the name of any *.py file under src/ and lib/ directories as regular expression.
+        Absence of this key or an empty array as the value implies logging for all the modules.
         */
-        "modules": ["__main__", "api", "connection", "daemon", "globals", "helper", "main", "rtc", "services", "storage", "controller", "constructs"]
+        "modules": ["/src/[^\\\\]+\\.py", "/lib/constructs\\.py", "/opt/linux_system\\.py"]
     },
 
     /*Specify the environment variables you want to export for the agent and the commands you schedule as an array of key value pairs.*/
