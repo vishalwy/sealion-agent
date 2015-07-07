@@ -132,7 +132,7 @@ export_env_vars() {
     local export_errors=()  #array to hold erroneous JSON objects for env vars
 
     for env_var in "${env_vars[@]}" ; do
-        local output=$("$python_binary" agent/bin/configure.py -a "add" -k "env" -v "$env_var" "${install_path}/etc/config.json" 2>&1)
+        local output=$("${install_path}/bin/configure.py" -a "add" -k "env" -v "$env_var" "${install_path}/etc/config.json" 2>&1)
 
         #add to error list if it failed
         [[ $? -ne 0 ]] && export_errors=("${export_errors[@]}"  "${padding}${env_var} - ${output#Error: }")
@@ -150,32 +150,33 @@ export_env_vars() {
 #   $1 - update api url and agent version only in agent.json
 setup_config() {
     local config temp_var args
+    temp_var=$(type -p "$python_binary")  #get the location of the python binary given
+
+    #compare the default python location with the python binary given
+    #if no match, then specify then update the shebang in python scripts to use the given interpreter
+    if [[ "$(type -p python)" != "$temp_var" ]] ; then
+        temp_var="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<<${python_binary})"
+        args="-i 's/\\(^#\\!.\\+\\s\\)\\(.*$\\)/\\1${temp_var}/'"
+
+        for file in $(find "${install_path}/bin/" -name '*.py') ; do
+            eval sed $args "$file"
+        done
+    fi
 
     if [[ "$1" == "1" ]] ; then
-        "$python_binary" agent/bin/configure.py -a "set" -k "agentVersion" -v "\"$version\"" -n "${install_path}/etc/agent.json"
-        "$python_binary" agent/bin/configure.py -a "set" -k "apiUrl" -v "\"$api_url\"" -n "${install_path}/etc/agent.json"
+        "${install_path}/bin/configure.py" -a "set" -k "agentVersion" -v "\"$version\"" -n "${install_path}/etc/agent.json"
+        "${install_path}/bin/configure.py" -a "set" -k "apiUrl" -v "\"$api_url\"" -n "${install_path}/etc/agent.json"
     else
         #agent.json config
         local config="\"orgToken\": \"${org_token}\", \"apiUrl\": \"${api_url}\", \"agentVersion\": \"${version}\", \"name\": \"${host_name}\", \"ref\": \"${install_source}\""
         [[ "$category" != "" ]] && config="${config}, \"category\": \"${category}\""
         [[ "$agent_id" != "" ]] && config="${config}, \"_id\": \"${agent_id}\""
         
-        "$python_binary" agent/bin/configure.py -a "set" -k "" -v "{$config}" -n "${install_path}/etc/agent.json"  #set the configuration
+        "${install_path}/bin/configure.py" -a "set" -k "" -v "{$config}" -n "${install_path}/etc/agent.json"  #set the configuration
         export_env_vars  #export the environment variables specified
 
         #if the user specified, set that in the config
-        [[ $create_user -eq 0 ]] && "$python_binary" agent/bin/configure.py -a "set" -k "user" -v "\"${user_name}\"" "${install_path}/etc/config.json" 2>&1
-    fi
-
-    temp_var=$(type -p "$python_binary")  #get the location of the python binary given
-
-    #compare the default python location with the python binary given
-    #if no match, then specify the python binary in the control script and uninstaller
-    if [[ "$(type -p python)" != "$temp_var" ]] ; then
-        temp_var="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<<${python_binary})"
-        args="-i 's/\\(^python_binary=\\)\\(\"[^\"]\\+\"\\)/\\1\"${temp_var}\"/'"
-        eval sed $args "$service_file"
-        eval sed $args "${install_path}/uninstall.sh"
+        [[ $create_user -eq 0 ]] && "${install_path}/bin/configure.py" -a "set" -k "user" -v "\"${user_name}\"" "${install_path}/etc/config.json" 2>&1
     fi
 }
 

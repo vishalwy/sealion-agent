@@ -25,7 +25,7 @@ def setup_requests():
     
 #setup and import requests
 setup_requests()
-from requests import *
+from request import *
 
 #disable urllib3 warnings. https://github.com/kennethreitz/requests/issues/2495
 packages.urllib3.disable_warnings() 
