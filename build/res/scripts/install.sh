@@ -94,7 +94,7 @@ check_dependency() {
 
     #various commands required for installer and the agent
     #we also need commands for user/group management if it is an agent installation and not update
-    which_commands=("sed" "find" "chmod" "bash")
+    which_commands=("sed" "find" "chmod" "bash" "/usr/bin/env")
     [[ $update_agent -eq 0 && $create_user -eq 1 ]] && which_commands=("${which_commands[@]}" "groupadd" "useradd" "userdel" "groupdel" "chown")
 
     missing_items=$(check_for_commands "${which_commands[@]}")
