@@ -195,7 +195,7 @@ echo "${padding}README generated"
 
 #if domain is not sealion.com, then set the logging level to debug
 if [[ "$orig_domain"  != "$default_domain" ]] ; then
-    "${build_target}/${output}/agent/bin/configure.py" -a "set" -k "logging:level" -v "\"debug\"" "${build_target}/${output}/agent/etc/config.json"
+    "${build_target}/${output}/agent/bin/jsonfig.py" -a "set" -k "logging:level" -v "\"debug\"" "${build_target}/${output}/agent/etc/config.json"
     echo "${padding}Agent logging level set to 'debug'"
 fi
 

@@ -1,4 +1,4 @@
 {
-    "logging": {"level": "info", "modules": ["/src/[^\\\\]+\\.py", "/lib/constructs\\.py", "/opt/linux_system\\.py"]},
+    "logging": {"level": "info", "modules": ["/(src|opt)/.+\\.py", "/lib/constructs\\.py"]},
     "env": []
 }

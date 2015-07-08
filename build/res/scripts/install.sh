@@ -132,7 +132,7 @@ export_env_vars() {
     local export_errors=()  #array to hold erroneous JSON objects for env vars
 
     for env_var in "${env_vars[@]}" ; do
-        local output=$("${install_path}/bin/configure.py" -a "add" -k "env" -v "$env_var" "${install_path}/etc/config.json" 2>&1)
+        local output=$("${install_path}/bin/jsonfig.py" -a "add" -k "env" -v "$env_var" "${install_path}/etc/config.json" 2>&1)
 
         #add to error list if it failed
         [[ $? -ne 0 ]] && export_errors=("${export_errors[@]}"  "${padding}${env_var} - ${output#Error: }")
@@ -164,19 +164,19 @@ setup_config() {
     fi
 
     if [[ "$1" == "1" ]] ; then
-        "${install_path}/bin/configure.py" -a "set" -k "agentVersion" -v "\"$version\"" -n "${install_path}/etc/agent.json"
-        "${install_path}/bin/configure.py" -a "set" -k "apiUrl" -v "\"$api_url\"" -n "${install_path}/etc/agent.json"
+        "${install_path}/bin/jsonfig.py" -a "set" -k "agentVersion" -v "\"$version\"" -n "${install_path}/etc/agent.json"
+        "${install_path}/bin/jsonfig.py" -a "set" -k "apiUrl" -v "\"$api_url\"" -n "${install_path}/etc/agent.json"
     else
         #agent.json config
         local config="\"orgToken\": \"${org_token}\", \"apiUrl\": \"${api_url}\", \"agentVersion\": \"${version}\", \"name\": \"${host_name}\", \"ref\": \"${install_source}\""
         [[ "$category" != "" ]] && config="${config}, \"category\": \"${category}\""
         [[ "$agent_id" != "" ]] && config="${config}, \"_id\": \"${agent_id}\""
         
-        "${install_path}/bin/configure.py" -a "set" -k "" -v "{$config}" -n "${install_path}/etc/agent.json"  #set the configuration
+        "${install_path}/bin/jsonfig.py" -a "set" -k "" -v "{$config}" -n "${install_path}/etc/agent.json"  #set the configuration
         export_env_vars  #export the environment variables specified
 
         #if the user specified, set that in the config
-        [[ $create_user -eq 0 ]] && "${install_path}/bin/configure.py" -a "set" -k "user" -v "\"${user_name}\"" "${install_path}/etc/config.json" 2>&1
+        [[ $create_user -eq 0 ]] && "${install_path}/bin/jsonfig.py" -a "set" -k "user" -v "\"${user_name}\"" "${install_path}/etc/config.json" 2>&1
     fi
 }
 
@@ -384,8 +384,8 @@ if [[ $update_agent -eq 0 ]] ; then  #if this is a fresh install
     fi
 else
     #try to find out whether a user is defined in the config
-    if [[ -f "agent/bin/configure.py" ]] ; then
-        temp_user_name=$("$python_binary" agent/bin/configure.py -k "user" "${install_path}/etc/config.json" 2>/dev/null)
+    if [[ -f "agent/bin/jsonfig.py" ]] ; then
+        temp_user_name=$("$python_binary" agent/bin/jsonfig.py -k "user" "${install_path}/etc/config.json" 2>/dev/null)
         temp_user_name="${temp_user_name#\"}"
         temp_user_name="${temp_user_name%\"}"
         [[ "$temp_user_name" != "" ]] && user_name=$temp_user_name

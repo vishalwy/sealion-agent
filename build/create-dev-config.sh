@@ -101,17 +101,17 @@ cp -r "${script_base_dir}/res/etc" "${script_base_dir}/../code/"
 config="\"orgToken\": \"${org_token}\", \"apiUrl\": \"${api_url}\", \"agentVersion\": \"${version}\", \"name\": \"${host_name}\""
 [[ "$category" != "" ]] && config="${config}, \"category\": \"${category}\""  #add category if specified
 
-"${script_base_dir}/../code/bin/configure.py" -a "set" -k "" -v "{$config}" -n "${script_base_dir}/../code/etc/agent.json"  #set the configuration
+"${script_base_dir}/../code/bin/jsonfig.py" -a "set" -k "" -v "{$config}" -n "${script_base_dir}/../code/etc/agent.json"  #set the configuration
 proxy_vars=()  #array to hold proxy vars
 [[ "$proxy" != "" ]] && proxy_vars=("${proxy_vars[@]}" "{\"https_proxy\": \"${proxy}\"}")  #export https_proxy
 [[ "$no_proxy" != "" ]] && proxy_vars=("${proxy_vars[@]}" "{\"no_proxy\": \"${no_proxy}\"}")  #export no_proxy
 
 #update config.json with proxy variables
 config=$(IFS=', '; echo "${proxy_vars[*]}")
-[[ "$config" != "" ]] && "${script_base_dir}/../code/bin/configure.py" -a "add" -k "env" -v "[$config]" "${script_base_dir}/../code/etc/config.json"
+[[ "$config" != "" ]] && "${script_base_dir}/../code/bin/jsonfig.py" -a "add" -k "env" -v "[$config]" "${script_base_dir}/../code/etc/config.json"
 
 #update config.json with logging level
-"${script_base_dir}/../code/bin/configure.py" -a "set" -k "logging:level" -v "\"debug\"" "${script_base_dir}/../code/etc/config.json"
+"${script_base_dir}/../code/bin/jsonfig.py" -a "set" -k "logging:level" -v "\"debug\"" "${script_base_dir}/../code/etc/config.json"
 
 echo "Generated config files at ${script_base_dir}/../code/etc"
 

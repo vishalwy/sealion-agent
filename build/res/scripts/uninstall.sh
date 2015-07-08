@@ -62,8 +62,8 @@ user_delete=1  #whether to delete the user identified by user_name
 cd "$script_base_dir"  #move to the script base dir so that all paths can be found
 
 #try to find out whether a user is defined in the config
-if [[ -f "bin/configure.py" ]] ; then
-    temp_user_name=$(bin/configure.py -k "user" etc/config.json 2>/dev/null)
+if [[ -f "bin/jsonfig.py" ]] ; then
+    temp_user_name=$(bin/jsonfig.py -k "user" etc/config.json 2>/dev/null)
     temp_user_name="${temp_user_name#\"}"
     temp_user_name="${temp_user_name%\"}"
     

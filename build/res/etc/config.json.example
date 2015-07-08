@@ -15,7 +15,7 @@ All the keys in the configuration are optional.
         Set the modules you want to enable logging. You can specify the name of any *.py file under src/ and lib/ directories as regular expression.
         Absence of this key or an empty array as the value implies logging for all the modules.
         */
-        "modules": ["/src/[^\\\\]+\\.py", "/lib/constructs\\.py", "/opt/linux_system\\.py"]
+        "modules": ["/(src|opt)/.+\\.py", "/lib/constructs\\.py"]
     },
 
     /*Specify the environment variables you want to export for the agent and the commands you schedule as an array of key value pairs.*/
