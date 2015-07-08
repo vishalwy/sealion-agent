@@ -166,9 +166,13 @@ setup_config() {
     if [[ "$1" == "1" ]] ; then
         "${install_path}/bin/jsonfig.py" -a "set" -k "agentVersion" -v "\"$version\"" -n "${install_path}/etc/agent.json"
         "${install_path}/bin/jsonfig.py" -a "set" -k "apiUrl" -v "\"$api_url\"" -n "${install_path}/etc/agent.json"
+
+        #as we keep adding modules, we need to include them for logging 
+        config=$("${install_path}/bin/jsonfig.py" -k "logging:modules" -n agent/etc/config.json 2>/dev/null)
+        [[ "$config" != "" ]] && "${install_path}/bin/jsonfig.py" -a "add" -k "logging:modules" -v "$config" "${install_path}/etc/config.json"
     else
         #agent.json config
-        local config="\"orgToken\": \"${org_token}\", \"apiUrl\": \"${api_url}\", \"agentVersion\": \"${version}\", \"name\": \"${host_name}\", \"ref\": \"${install_source}\""
+        config="\"orgToken\": \"${org_token}\", \"apiUrl\": \"${api_url}\", \"agentVersion\": \"${version}\", \"name\": \"${host_name}\", \"ref\": \"${install_source}\""
         [[ "$category" != "" ]] && config="${config}, \"category\": \"${category}\""
         [[ "$agent_id" != "" ]] && config="${config}, \"_id\": \"${agent_id}\""
         
