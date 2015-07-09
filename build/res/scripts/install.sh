@@ -468,7 +468,8 @@ else  #update
         #remove all files except var/ etc/ and tmp/ and copy files except etc/
         find "$install_path" -mindepth 1 -maxdepth 1 ! -name 'var' ! -name 'etc' ! -name 'tmp' -exec rm -rf "{}" \; >/dev/null 2>&1
         find agent/ -mindepth 1 -maxdepth 1 ! -name 'etc' -exec cp -r {} "$install_path" \;
-
+        
+        cp -r agent/etc/init.d "$install_path/etc"  #copy the new init.d script
         setup_config 1 #update the agent version and api url in agent.json
     fi
 
