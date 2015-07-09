@@ -169,7 +169,7 @@ setup_config() {
 
         #as we keep adding modules, we need to include them for logging 
         config=$("${install_path}/bin/jsonfig.py" -k "logging:modules" -n agent/etc/config.json 2>/dev/null)
-        [[ "$config" != "" ]] && "${install_path}/bin/jsonfig.py" -a "add" -k "logging:modules" -v "$config" "${install_path}/etc/config.json"
+        [[ "$config" != "" ]] && "${install_path}/bin/jsonfig.py" -a "set" -k "logging:modules" -v "$config" "${install_path}/etc/config.json"
     else
         #agent.json config
         config="\"orgToken\": \"${org_token}\", \"apiUrl\": \"${api_url}\", \"agentVersion\": \"${version}\", \"name\": \"${host_name}\", \"ref\": \"${install_source}\""
