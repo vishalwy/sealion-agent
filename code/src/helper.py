@@ -135,10 +135,8 @@ class Utils(Namespace):
             
             #a '.' as a key schema indicates that it can match with any key.
             #so to avoid the key getting deleted, we are replacing the schema with the a dict made of the key
-            if ('.' in schema) and len(schema.keys()) == 1 and len(keys) == 1:
-                temp = {}
-                temp[keys[0]] = schema['.']
-                schema = temp
+            if len(schema.keys()) == 1 and '.' in schema:
+                schema = dict(zip(keys, [schema['.']] * len(keys)))
 
             #delete extra keys
             for key in keys:

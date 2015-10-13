@@ -108,7 +108,8 @@ class AgentConfig(helper.Config):
         },
         'org': {'type': 'str,unicode', 'depends': ['orgToken', '_id', 'agentVersion'], 'regex': '^[a-zA-Z0-9]{24}$', 'optional': True},
         'ref': {'type': 'str,unicode', 'depends': ['orgToken', 'agentVersion'], 'regex': 'curl|tarball', 'optional': True},
-        'updateUrl': {'type': 'str,unicode', 'optional': True}
+        'updateUrl': {'type': 'str,unicode', 'optional': True},
+        'envVariables': {'type': {'.': {'type': 'str,unicode'}}, 'optional': True}
     }
     
     def __init__(self, file):
