@@ -50,7 +50,7 @@ except Exception as e:
 try:
     #set the home folder for the process; do it before parsing config files so that user can override it in config file
     os.environ['HOME'] = exe_path or '/' 
-    
+
     #initialize Universal and create api sessions
     #this can raise exception if universal is failed to find/create config files
     univ = Universal()
@@ -137,7 +137,7 @@ def run(is_update_only_mode = False):
     Args:
         is_update_only_mode: whether to run the agent in update only mode
     """
-    
+
     univ.is_update_only_mode = is_update_only_mode
     _log.info('Agent starting up')
     _log.info('Using python binary at %s' % sys.executable)

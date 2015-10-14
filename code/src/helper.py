@@ -133,10 +133,10 @@ class Utils(Namespace):
         if is_delete_extra == True:
             keys = list(d.keys())
             
-            #a '.' as a key schema indicates that it can match with any key.
+            #a empty schema key ('') indicates that it can match with anything.
             #so to avoid the key getting deleted, we are replacing the schema with the a dict made of the key
-            if len(schema.keys()) == 1 and '.' in schema:
-                schema = dict(zip(keys, [schema['.']] * len(keys)))
+            if len(schema.keys()) == 1 and '' in schema:
+                schema = dict(zip(keys, [schema['']] * len(keys)))
 
             #delete extra keys
             for key in keys:
@@ -270,12 +270,15 @@ class Config:
     #schema representing the rules for configuration. subclass should override this to provide custom rules
     schema = {} 
     
-    def __init__(self):
+    def __init__(self, file = ''):
         """
         Constructor
+        
+        Args:
+            file: file containing the settings in JSON format
         """
         
-        self.file = ''  #filename for this config
+        self.file = file 
         self.data = {}  #dict for config 
         self.lock = threading.RLock()  #thread lock
         

@@ -29,15 +29,29 @@ class SealionConfig(helper.Config):
     
     #schema defining possible keys and values for this class. check helper.Config for details
     schema = {
-        'whitelist': {'type': ['str,unicode'], 'optional': True, 'is_regex': True},
+        'whitelist': {
+            'type': ['str,unicode'], 
+            'optional': True, 
+            'is_regex': True
+        },
         'env': {
-            'type': [{'.': {'type': 'str,unicode'}}],
+            'type': {'': {'type': 'str,unicode'}},
             'optional': True
         },
         'logging': {
             'type': {
-                'level': {'type': 'str,unicode', 'regex': '^\s*(info|error|debug|none)\s*$', 'optional': True},
-                'modules': {'type': ['str,unicode'], 'depends': ['level'], 'regex': '^.+$', 'optional': True, 'is_regex': True}
+                'level': {
+                    'type': 'str,unicode', 
+                    'regex': '^\s*(info|error|debug|none)\s*$', 
+                    'optional': True
+                },
+                'modules': {
+                    'type': ['str,unicode'], 
+                    'depends': ['level'], 
+                    'regex': '^.+$', 
+                    'optional': True, 
+                    'is_regex': True
+                }
             },
             'optional': True
         },
@@ -46,19 +60,12 @@ class SealionConfig(helper.Config):
             'optional': True, 
             'regex': '^\+?((0?[5-9]{1}|(0?[1-9][0-9]+))|((0?[5-9]{1}|(0?[1-9][0-9]+))\.[0-9]*))$'
         },
-        'user': {'type': 'str,unicode', 'regex': '^.+$', 'optional': True}
+        'user': {
+            'type': 'str,unicode', 
+            'regex': '^.+$', 
+            'optional': True
+        }
     }
-    
-    def __init__(self, file):
-        """
-        Constructor.
-        
-        Args:
-            file: file containing the settings in JSON format
-        """
-        
-        helper.Config.__init__(self)  #initialize base class
-        self.file = file  #settings file
         
     def set(self, data = None):
         """
@@ -72,57 +79,93 @@ class SealionConfig(helper.Config):
         """
         
         ret = helper.Config.set(self, data)  #call the base class version
-        variables = self.data.get('env', [])  #get environment variable defined
         
-        #loop through the variables and export in the current environment
-        #this will help one to hide passwords and such information from the command
-        for i in range(0, len(variables)): 
-            for key in variables[i]:
-                os.environ[key] = variables[i][key]
-            
+        #trigger the event to update the event variables
+        #do not try to get ref to Universal directly as it can cause infinite recursion
+        helper.event_dispatcher.trigger('update_env_variables')  
         return ret        
         
-class AgentConfig(helper.Config):
+class AgentConfig(SealionConfig):
     """
     Implements private settings for the agent.
     """
     
     #schema defining possible keys and values for this class. check helper.Config for details
     schema = {
-        'orgToken': {'type': 'str,unicode', 'depends': ['name'], 'regex': '^[a-zA-Z0-9\-]{36}$'},
-        '_id': {'type': 'str,unicode', 'depends': ['agentVersion'], 'regex': '^[a-zA-Z0-9]{24}$', 'optional': True},
-        'apiUrl': {'type': 'str,unicode', 'regex': '^https://[^\s:]+(:[0-9]+)?$' },
-        'name': {'type': 'str,unicode',  'regex': '^.+$'},
-        'category': {'type': 'str,unicode', 'regex': '^.+$', 'optional': True},
-        'agentVersion': {'type': 'str,unicode', 'regex': '^(\d+\.){2}\d+(\.[a-z0-9]+)?$'},
+        'orgToken': {
+            'type': 'str,unicode', 
+            'depends': ['name'], 
+            'regex': '^[a-zA-Z0-9\-]{36}$'
+        },
+        '_id': {
+            'type': 'str,unicode', 
+            'depends': ['agentVersion'], 
+            'regex': '^[a-zA-Z0-9]{24}$', 
+            'optional': True
+        },
+        'apiUrl': {
+            'type': 'str,unicode', 
+            'regex': '^https://[^\s:]+(:[0-9]+)?$' 
+        },
+        'name': {
+            'type': 'str,unicode', 
+            'regex': '^.+$'
+        },
+        'category': {
+            'type': 'str,unicode', 
+            'regex': '^.+$', 
+            'optional': True
+        },
+        'agentVersion': {
+            'type': 'str,unicode', 
+            'regex': '^(\d+\.){2}\d+(\.[a-z0-9]+)?$'
+        },
         'activities': {
             'type': [{
-                '_id': {'type': 'str,unicode', 'regex': '^[a-zA-Z0-9]{24}$'}, 
-                'name': {'type': 'str,unicode', 'regex': '^.+$'},
-                'service': {'type': 'str,unicode', 'regex': '^.+$', 'optional': True},
-                'command': {'type': 'str,unicode', 'regex': '^.+$'},
+                '_id': {
+                    'type': 'str,unicode', 
+                    'regex': '^[a-zA-Z0-9]{24}$'
+                }, 
+                'name': {
+                    'type': 'str,unicode', 
+                    'regex': '^.+$'
+                },
+                'service': {
+                    'type': 'str,unicode', 
+                    'regex': '^.+$', 
+                    'optional': True
+                },
+                'command': {
+                    'type': 'str,unicode', 
+                    'regex': '^.+$'
+                },
                 'interval': {'type': 'int'}
             }],
             'depends': ['_id', 'agentVersion'],
             'optional': True
         },
-        'org': {'type': 'str,unicode', 'depends': ['orgToken', '_id', 'agentVersion'], 'regex': '^[a-zA-Z0-9]{24}$', 'optional': True},
-        'ref': {'type': 'str,unicode', 'depends': ['orgToken', 'agentVersion'], 'regex': 'curl|tarball', 'optional': True},
-        'updateUrl': {'type': 'str,unicode', 'optional': True},
-        'envVariables': {'type': {'.': {'type': 'str,unicode'}}, 'optional': True}
+        'org': {
+            'type': 'str,unicode', 
+            'depends': ['orgToken', '_id', 'agentVersion'], 
+            'regex': '^[a-zA-Z0-9]{24}$', 
+            'optional': True
+        },
+        'ref': {
+            'type': 'str,unicode', 
+            'regex': 'curl|tarball', 
+            'optional': True
+        },
+        'updateUrl': {
+            'type': 'str,unicode', 
+            'optional': True
+        },
+        'envVariables': {
+            'type': {'': {'type': 'str,unicode'}}, 
+            'depends': ['_id', 'agentVersion'],
+            'optional': True
+        }
     }
     
-    def __init__(self, file):
-        """
-        Constructor.
-        
-        Args:
-            file: file containing the settings in JSON format
-        """
-        
-        helper.Config.__init__(self)  #initialize base class
-        self.file = file  #settings file
-        
     def update(self, data):   
         """
         Public method to update the config.
@@ -134,7 +177,8 @@ class AgentConfig(helper.Config):
             True on success, an error string on failure
         """
         
-        if 'category' in data:  #delete the category key from data since category in the settings file is the name, and data['category'] is the id
+        #delete the category key from data since category in the settings file is the name, and data['category'] is the id
+        if 'category' in data:  
             del data['category']
             
         univ = Universal()
@@ -161,8 +205,10 @@ class Universal(singleton()):
         cur_time = time.time()
         self.metric = {'starting_time': cur_time, 'stopping_time': cur_time}  #save the timestamps
         self.exe_path = os.path.dirname(os.path.realpath(__file__)).rsplit('/', 1)[0]  #absolute path of the base dir, as it is one level up
-        self.main_script = helper.main_script  #main script
         self.is_update_only_mode = False  #no update only mode
+        self.main_script = helper.main_script  #main script
+        self.event_dispatcher = helper.event_dispatcher  #event dispatcher for communication across modules
+        self.event_dispatcher.bind('update_env_variables', self.update_env_variables)  #bind event to update env variables
         self.config = EmptyClass()
         self.config.sealion = SealionConfig(self.exe_path + '/etc/config.json')  #instance of configurable settings
         self.config.agent = AgentConfig(self.exe_path + '/etc/agent.json')  #instance of private settings
@@ -180,7 +226,6 @@ class Universal(singleton()):
         self.temp_path = helper.Utils.get_safe_path(self.exe_path + '/tmp/')  #absolute path to temporary dir
         self.stop_event = threading.Event()  #event that tells whether the agent should stop
         self.post_event = threading.Event()  #event that tell whether the api.session can request
-        self.event_dispatcher = helper.event_dispatcher  #event dispatcher for communication across modules
         self.proxy_url = requests.utils.get_environ_proxies(self.config.agent.apiUrl).get('https', '')  #proxy url for api
         uname = platform.uname()  #platform uname
         dist = platform.linux_distribution()  #platform distribution
@@ -273,4 +318,14 @@ class Universal(singleton()):
             path = path if path[0] == '/' else ('/' + path)
                   
         return self.config.agent.apiUrl + path
+    
+    def update_env_variables(self, *args, **kwargs):
+        """
+        Method to update the env variables
+        """
         
+        #env variables defined in sealion config takes precedence over the ones in agent config
+        env_variables = self.config.agent.get_dict(('envVariables', {}))['envVariables']
+        env_variables.update(self.config.sealion.get_dict(('env', {}))['env'])
+        os.environ.update(env_variables)
+
