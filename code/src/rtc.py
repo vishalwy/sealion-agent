@@ -167,6 +167,14 @@ class SocketIONamespace(BaseNamespace):
         self.rtc.update_heartbeat()
         api.session.stop(api.Status.SESSION_CONFLICT)  #stop api as there is a session conflict.
         
+    def on_env_variables_updated(self, *args):
+        """
+        Method gets called when socket-io receives 'env_variables_updated' event.
+        """
+        
+        _log.info('SocketIO received \'Environment variables updated\' event')
+        api.session.get_config()  #update the config in any case
+        
 class RTC(ThreadEx):    
     """
     Class implementing real time communication using socket-io.

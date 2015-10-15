@@ -66,26 +66,8 @@ class SealionConfig(helper.Config):
             'optional': True
         }
     }
-        
-    def set(self, data = None):
-        """
-        Public method to set the config.
-        
-        Args:
-            data: dict containing new config
-            
-        Returns:
-            True on success, an error string on failure
-        """
-        
-        ret = helper.Config.set(self, data)  #call the base class version
-        
-        #trigger the event to update the event variables
-        #do not try to get ref to Universal directly as it can cause infinite recursion
-        helper.event_dispatcher.trigger('update_env_variables')  
-        return ret        
-        
-class AgentConfig(SealionConfig):
+   
+class AgentConfig(helper.Config):
     """
     Implements private settings for the agent.
     """
@@ -189,7 +171,7 @@ class AgentConfig(SealionConfig):
             del data['agentVersion']  #delete the key as we want only the updater script to modify it
             
         ret = helper.Config.update(self, data)  #call the base class version
-        univ.event_dispatcher.trigger('set_activities')  #trigger an event so that the other modules can act on the new activities
+        univ.event_dispatcher.trigger('set_exec_details')  #trigger an event so that the other modules can act on the new activities/env
         return ret
 
 class Universal(singleton()):
@@ -208,7 +190,6 @@ class Universal(singleton()):
         self.is_update_only_mode = False  #no update only mode
         self.main_script = helper.main_script  #main script
         self.event_dispatcher = helper.event_dispatcher  #event dispatcher for communication across modules
-        self.event_dispatcher.bind('update_env_variables', self.update_env_variables)  #bind event to update env variables
         self.config = EmptyClass()
         self.config.sealion = SealionConfig(self.exe_path + '/etc/config.json')  #instance of configurable settings
         self.config.agent = AgentConfig(self.exe_path + '/etc/agent.json')  #instance of private settings
@@ -217,6 +198,7 @@ class Universal(singleton()):
         if ret != True:  #raise an exception on error
             raise RuntimeError(ret)
         
+        os.environ.update(self.config.sealion.get_dict(('env', {}))['env'])  #export the env vars defined in the config
         ret = self.config.agent.set()  #load private config from the file
         
         if ret != True:  #raise an exception on error
@@ -318,14 +300,3 @@ class Universal(singleton()):
             path = path if path[0] == '/' else ('/' + path)
                   
         return self.config.agent.apiUrl + path
-    
-    def update_env_variables(self, *args, **kwargs):
-        """
-        Method to update the env variables
-        """
-        
-        #env variables defined in sealion config takes precedence over the ones in agent config
-        env_variables = self.config.agent.get_dict(('envVariables', {}))['envVariables']
-        env_variables.update(self.config.sealion.get_dict(('env', {}))['env'])
-        os.environ.update(env_variables)
-

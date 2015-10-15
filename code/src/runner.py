@@ -504,6 +504,7 @@ class JobProducer(singleton(ThreadEx)):
         self.store = store  #storage instance
         self.consumer_count = 0  #total number of job consumers running
         self.executer = Executer()  #executer instance for running commandline activities
+        self.orig_env_variables = dict(os.environ)  #save the original environment variables for merging
         self.univ.event_dispatcher.bind('get_activity_funct', self.get_activity_funct)
 
     def is_in_whitelist(self, activity):
@@ -560,15 +561,53 @@ class JobProducer(singleton(ThreadEx)):
 
         self.activities_lock.release()
         
-    def set_activities(self, *args, **kwargs):
+    def set_exec_details(self, *args, **kwargs):
+        """
+        Method to that updates the execution details for activities.
+        This has to be performed in a thread safe manner as the activities depends on the environment variables.
+        It also starts Job consumers
+        """
+        
+        self.activities_lock.acquire()  #this has to be atomic as multiple threads reads/writes
+        self.set_env_variables()  #set the environment variables
+        ret = self.set_activities()  #set activities
+        self.activities_lock.release()
+        
+        #calculate the job consumer count and run the required number of job consumers
+        #it assumes that every plugin activity gets an individual thread and all commandline activities shares one thread
+        consumer_count = (1 if ret[0] - ret[1] > 0 else 0) + ret[1]
+        self.is_alive() and self.start_consumers(consumer_count)    
+        self.stop_consumers(consumer_count)
+        
+        if ret[2] + ret[3] > 0:  #immediately schedule any added/updated activities
+            self.schedule_activities()
+        
+        _log.info('%d started; %d updated; %d stopped' % ret[2:])
+    
+    def set_env_variables(self):
+        """
+        Method to set the env variables
+        """
+        
+        #env variables defined in sealion config takes precedence over the ones in agent config
+        env_variables = dict(self.orig_env_variables)
+        env_variables.update(self.univ.config.agent.get_dict(('envVariables', {}))['envVariables'])
+        env_variables.update(self.univ.config.sealion.get_dict(('env', {}))['env'])
+        
+        #clear and update the environment variables to avoid ending up with unwanted variables
+        os.environ.clear()
+        os.environ.update(env_variables)
+        
+    def set_activities(self):
         """
         Method updates the dict containing the activities.
-        It also starts Job consumers
+        
+        Returns:
+            Tuple containing (total_count, plugin_count, start_count, update_count, stop_count)
         """
         
         activities = self.univ.config.agent.activities
         start_count, update_count, stop_count, plugin_count, activity_ids = 0, 0, 0, 0, []
-        self.activities_lock.acquire()  #this has to be atomic as multiple threads reads/writes
         t = time.time()  #current time is the next execution time for any activity started or updated
         
         for activity in activities:
@@ -608,18 +647,7 @@ class JobProducer(singleton(ThreadEx)):
             stop_count += 1
             
         self.store.clear_offline_data(activity_ids)  #delete any activites from offline store if it is not in current activity list
-        self.activities_lock.release()
-        
-        #calculate the job consumer count and run the required number of job consumers
-        #it assumes that every plugin activity gets an individual thread and all commandline activities shares one thread
-        consumer_count = (1 if len(activity_ids) - plugin_count > 0 else 0) + plugin_count
-        self.is_alive() and self.start_consumers(consumer_count)    
-        self.stop_consumers(consumer_count)
-        
-        if start_count + update_count > 0:  #immediately schedule any added/updated activities
-            self.schedule_activities()
-        
-        _log.info('%d started; %d updated; %d stopped' % (start_count, update_count, stop_count))
+        return (len(activity_ids), plugin_count, start_count, update_count, stop_count)
         
     def exe(self):        
         """
@@ -628,8 +656,8 @@ class JobProducer(singleton(ThreadEx)):
         
         self.executer.write({'timestamp': 0, 'output': '/dev/stdout', 'command': 'rm -rf ./*'})  #init command to remove temp files
         self.executer.start()  #start the executer for bash suprocess
-        self.set_activities();  #set ativities dict
-        self.univ.event_dispatcher.bind('set_activities', self.set_activities)  #bind to 'set_activities' event so that we can update our activities dict
+        self.set_exec_details();  #set execution details such as env variables and commands to execute
+        self.univ.event_dispatcher.bind('set_exec_details', self.set_exec_details)  #bind to the event triggered whenever the config updates
         
         while 1:  #schedule the activities every sleep_interval seconds
             self.schedule_activities()
