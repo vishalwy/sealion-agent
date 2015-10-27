@@ -144,7 +144,8 @@ class AgentConfig(helper.Config):
         'envVariables': {
             'type': {'': {'type': 'str,unicode'}}, 
             'depends': ['_id', 'agentVersion'],
-            'optional': True
+            'optional': True,
+            'regex': '^[a-zA-Z_][a-zA-Z0-9_]*$'
         }
     }
     

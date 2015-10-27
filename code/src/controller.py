@@ -207,15 +207,12 @@ class Controller(singleton(ThreadEx)):
                     if Controller.is_rtc_heartbeating() == False:  #check socket-io heartbeat. if it is not beating we need to call the config
                         api.session.get_config()
                     
-                    finished_job_count = 0  #count of finished jobs in this iteration
-
                     #get the finished jobs and push the data
                     for job in job_producer.executer.finish_jobs():
                         store.push(job.exec_details['_id'], job.get_data())
-                        finished_job_count += 1
 
-                    finished_job_count and _log.debug('Finished execution of %d activities' % finished_job_count)
-                    self.univ.stop_event.wait(5)  #wait for the stop event for sometime before next iteration
+                    #wait for the stop event for sometime before next iteration
+                    self.univ.stop_event.wait(5)  
 
                     if self.univ.stop_event.is_set():
                         _log.debug('%s received stop event', self.name)

@@ -74,7 +74,7 @@ class Job:
         self.exec_details['timestamp'] = t  #set the exec timestamp
 
         if self.is_whitelisted == True:  #if the job is whitelisted
-            _log.info('Executing activity(%s @ %d)' % (self.exec_details['_id'], t))
+            _log.debug('Executing activity(%s @ %d)' % (self.exec_details['_id'], t))
             
             #if it is not a plugin job, then we create a temperory file to capture the output
             #a plugin job return the data directly
@@ -235,6 +235,7 @@ class Executer(ThreadEx):
         self.univ = universal.Universal()  #reference to Universal for optimized access
         self.daemon = True  #run this thread as daemon as it should not block agent from shutting down
         self.univ.event_dispatcher.bind('terminate', self.stop)  #bind to terminate event so that we can terminate bash process
+        self.orig_env_variables = dict(os.environ)  #save the original environment variables for merging
         
         #use the job timeout defined in the config if we have one
         try:
@@ -321,6 +322,7 @@ class Executer(ThreadEx):
                 
         not finished_jobs and not Executer.jobs and self.limit_process_usage()
         Executer.jobs_lock.release()
+        finished_jobs and _log.info('Finished execution of %d activities' % len(finished_jobs))
         return finished_jobs
     
     def limit_process_usage(self):
@@ -384,6 +386,20 @@ class Executer(ThreadEx):
         self.process_lock.release()
         return self.exec_process
     
+    @staticmethod
+    def format_job(job_details):
+        """
+        Method to get the formated string representing the commandline job
+        
+        Args:
+            job_details: dict representing the commandline job to be stringified
+            
+        Returns:
+            String representing the job
+        """
+        
+        return ('%d %s: %s\n' % (job_details['timestamp'], job_details['output'], job_details['command'])).encode('utf-8')
+    
     def write(self, job_details):
         """
         Public method to write the commandline job to the bash subprocess
@@ -397,7 +413,7 @@ class Executer(ThreadEx):
         
         try:
             #it is possible that the pipe is broken or the subprocess was terminated
-            self.process.stdin.write(('%d %s: %s\n' % (job_details['timestamp'], job_details['output'], job_details['command'])).encode('utf-8'))
+            self.process.stdin.write(Executer.format_job(job_details))
             self.exec_count += 1
         except Exception as e:
             _log.error('Failed to write to bash process; %s' % unicode(e))
@@ -482,6 +498,44 @@ class Executer(ThreadEx):
         
         Executer.jobs_lock.release()
         
+    def set_env_variables(self):
+        """
+        Method to set the env variables
+        """
+        
+        set_vars, unset_count, export_count = [], 0, 0
+        
+        #env variables defined in sealion config takes precedence over the ones in agent config
+        env_vars = dict(self.orig_env_variables)
+        env_vars.update(self.univ.config.agent.get_dict(('envVariables', {}))['envVariables'])
+        env_vars.update(self.univ.config.sealion.get_dict(('env', {}))['env'])
+        curr_env_vars = dict(os.environ)
+        job_details = {'timestamp': 0, 'output': '/dev/stdout', 'command': 'export %s=\'%s\''}
+        self.process_lock.acquire()
+        
+        for env_var in env_vars:
+            value = env_vars[env_var] 
+            
+            if value != curr_env_vars.get(env_var):
+                os.environ[env_var] = value
+                job_details['command'] = 'export %s=\'%s\'' % (env_var, value.replace('\'', '\'\\\'\''))
+                self.exec_process and self.exec_process.stdin.write(Executer.format_job(job_details))
+                export_count += 1
+                _log.info('Exported env variable %s' % env_var)
+            
+            set_vars.append(env_var)
+            
+        for env_var in env_vars:
+            if env_var not in set_vars:
+                del os.environ[env_var]
+                job_details['command'] = 'unset %s' % env_var
+                self.exec_process and self.exec_process.stdin.write(Executer.format_job(job_details))
+                unset_count += 1
+                _log.info('Unset env variable %s' % env_var)
+        
+        self.process_lock.release()
+        _log.info('Env variables - %d exported; %d unset' % (export_count, unset_count))
+        
 class JobProducer(singleton(ThreadEx)):
     """
     Produces job for an activity and schedules them using a queue.
@@ -504,7 +558,6 @@ class JobProducer(singleton(ThreadEx)):
         self.store = store  #storage instance
         self.consumer_count = 0  #total number of job consumers running
         self.executer = Executer()  #executer instance for running commandline activities
-        self.orig_env_variables = dict(os.environ)  #save the original environment variables for merging
         self.univ.event_dispatcher.bind('get_activity_funct', self.get_activity_funct)
 
     def is_in_whitelist(self, activity):
@@ -554,7 +607,7 @@ class JobProducer(singleton(ThreadEx)):
                 activity['next_exec_timestamp'] = activity['next_exec_timestamp'] + activity['details']['interval']  #update the next execution timestamp
 
         jobs.sort(key = lambda job: job.exec_timestamp)  #sort the jobs based on the execution timestamp
-        len(jobs) and _log.debug('Scheduling %d activities', len(jobs))
+        len(jobs) and _log.info('Scheduling %d activities', len(jobs))
 
         for job in jobs:  #scheudle the jobs
             self.queue.put(job)
@@ -563,40 +616,20 @@ class JobProducer(singleton(ThreadEx)):
         
     def set_exec_details(self, *args, **kwargs):
         """
-        Method to that updates the execution details for activities.
+        Method to updates the execution details for activities.
         This has to be performed in a thread safe manner as the activities depends on the environment variables.
         It also starts Job consumers
         """
         
-        self.activities_lock.acquire()  #this has to be atomic as multiple threads reads/writes
-        self.set_env_variables()  #set the environment variables
+        self.executer.set_env_variables()  #set the environment variables
         ret = self.set_activities()  #set activities
-        self.activities_lock.release()
         
         #calculate the job consumer count and run the required number of job consumers
         #it assumes that every plugin activity gets an individual thread and all commandline activities shares one thread
         consumer_count = (1 if ret[0] - ret[1] > 0 else 0) + ret[1]
         self.is_alive() and self.start_consumers(consumer_count)    
         self.stop_consumers(consumer_count)
-        
-        if ret[2] + ret[3] > 0:  #immediately schedule any added/updated activities
-            self.schedule_activities()
-        
-        _log.info('%d started; %d updated; %d stopped' % ret[2:])
-    
-    def set_env_variables(self):
-        """
-        Method to set the env variables
-        """
-        
-        #env variables defined in sealion config takes precedence over the ones in agent config
-        env_variables = dict(self.orig_env_variables)
-        env_variables.update(self.univ.config.agent.get_dict(('envVariables', {}))['envVariables'])
-        env_variables.update(self.univ.config.sealion.get_dict(('env', {}))['env'])
-        
-        #clear and update the environment variables to avoid ending up with unwanted variables
-        os.environ.clear()
-        os.environ.update(env_variables)
+        ret[2] and self.schedule_activities()  #immediately schedule any added/updated activities
         
     def set_activities(self):
         """
@@ -608,6 +641,8 @@ class JobProducer(singleton(ThreadEx)):
         
         activities = self.univ.config.agent.activities
         start_count, update_count, stop_count, plugin_count, activity_ids = 0, 0, 0, 0, []
+        
+        self.activities_lock.acquire()  #this has to be atomic as multiple threads reads/writes
         t = time.time()  #current time is the next execution time for any activity started or updated
         
         for activity in activities:
@@ -622,7 +657,7 @@ class JobProducer(singleton(ThreadEx)):
                     cur_activity['details'] = activity
                     cur_activity['is_whitelisted'] = self.is_in_whitelist(activity)  #check whether the activity is allowed to run
                     cur_activity['next_exec_timestamp'] = t  #execute the activity immediately
-                    _log.info('Updating activity %s' % activity_id)
+                    _log.info('Updatied activity %s' % activity_id)
                     update_count += 1
             else:
                 #add a new activity
@@ -631,23 +666,23 @@ class JobProducer(singleton(ThreadEx)):
                     'is_whitelisted': self.is_in_whitelist(activity),  #check whether the activity is allowed to run
                     'next_exec_timestamp': t  #execute the activity immediately
                 }
-                _log.info('Starting activity %s' % activity_id)
+                _log.info('Started activity %s' % activity_id)
                 start_count += 1
             
             plugin_count += 1 if activity.get('service') == 'Plugins' else 0  #count the number of plugins, it affect the number of job consumers
-            activity_ids.append(activity_id)  #keep track of available activity ids
-            
-        #find any activities in the dict that is not in the activity_ids list
-        deleted_activity_ids = [activity_id for activity_id in self.activities if activity_id not in activity_ids]
+            activity_ids.append(activity_id)  #keep track of available activity ids    
         
-        #delete the activities from the dict
-        for activity_id in deleted_activity_ids:
-            _log.info('Stopping activity %s' % activity_id)
-            del self.activities[activity_id]
-            stop_count += 1
+        #find any activities in the dict that is not in the activity_ids list and delete
+        for activity_id in self.activities:
+            if activity_id not in activity_ids:
+                del self.activities[activity_id]
+                _log.info('Stopped activity %s' % activity_id)
+                stop_count += 1
             
         self.store.clear_offline_data(activity_ids)  #delete any activites from offline store if it is not in current activity list
-        return (len(activity_ids), plugin_count, start_count, update_count, stop_count)
+        self.activities_lock.release()
+        _log.info('Activities - %d started; %d updated; %d stopped' % (start_count, update_count, stop_count))
+        return len(activity_ids), plugin_count, start_count + update_count
         
     def exe(self):        
         """
