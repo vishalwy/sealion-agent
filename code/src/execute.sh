@@ -21,9 +21,9 @@ terminate() {
     read pid <"${exe_dir}/var/run/sealion.pid"  #read pid from file
 
     #resurrect agent if the pid read from the file is matching to the original pid and is not running
-    #we do resurrection only if the agent is running as a daemon which is identified by looking at the main script name
+    #we do resurrection only if the agent is running as daemon
     #this is not an attempt to prevent SIGKILL from users; rather a way to resurrect when killed by OOM killer
-    if [[ "$pid" == "$PPID" && "$main_script" == "sealion.py" && ! -d "/proc/${pid}" ]] ; then
+    if [[ "$pid" == "$PPID" && "$is_daemon" == "1" && ! -d "/proc/${pid}" ]] ; then
         type date >/dev/null 2>&1
         [[ $? -eq 0 ]] && timestamp=$(date +"%F %T,%3N")
         echo "${timestamp} CRITICAL                - Abnormal termination detected for process ${PPID}; Resurrecting..." >>"${exe_dir}/var/log/sealion.log"
@@ -40,18 +40,12 @@ kill_children() {
     fi
 }
 
-usage="Usage: ${0} <agent main script>"
 main_script="${1##*/}"  #extract the main python script
+is_daemon=$2  #check whether agent is running without a controlling terminal
 
 #sealion agent dir
 exe_dir=${1%/*}
 exe_dir=${exe_dir%/*}
-
-#main script has to be one of them
-if [[ "$main_script" != "sealion.py" && "$main_script" != "main.py" ]] ; then
-    echo "Missing or invalid agent main script"
-    echo $usage ; exit 1
-fi
 
 #frame the executable command line by space separating the arguments
 cmdline="" ; while read -r -d $'\0' line ; do 
@@ -61,9 +55,9 @@ cmdline="" ; while read -r -d $'\0' line ; do
 done </proc/${PPID}/cmdline
 
 #check whether the script is same as the one present in the command line of the parent process
-if [[ "$exe_dir" == "" || "$cmdline" != *"$main_script"* ]] ; then
-    echo "This script is designed to run only with SeaLion agent!"
-    echo $usage ; exit 1
+if [[ "$main_script" != "sealion.py" || "$exe_dir" == "" || "$cmdline" != *"$main_script"* ]] ; then
+    echo "Missing or invalid agent main script" >&2
+    echo "Usage: ${0} <agent main script>" ; exit 1
 fi
 
 #initialize the indexes of each column in the line read from stdin

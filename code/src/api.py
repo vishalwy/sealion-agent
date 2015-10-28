@@ -303,11 +303,10 @@ class API(requests.Session):
         response = self.exec_method('get', self.univ.get_url('agents/1'), options = {'retry_count': 0})  #make the request
         
         if API.is_success(response):
-            _log.info('Config updation successful')
-            
             #update and save the config
             self.univ.config.agent.update(response.json())
             self.univ.config.agent.save()
+            _log.info('Config updation successful')
             
             self.set_events(post_event = True)  #set the post event so that data can posted
         else:
