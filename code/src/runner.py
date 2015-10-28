@@ -524,7 +524,7 @@ class Executer(ThreadEx):
                 _log.info('Exported env variable %s' % env_var)
             
             set_vars.append(env_var)
-            
+
         for env_var in env_vars:
             if env_var not in set_vars:
                 del os.environ[env_var]
@@ -673,11 +673,10 @@ class JobProducer(singleton(ThreadEx)):
             activity_ids.append(activity_id)  #keep track of available activity ids    
         
         #find any activities in the dict that is not in the activity_ids list and delete
-        for activity_id in self.activities:
-            if activity_id not in activity_ids:
-                del self.activities[activity_id]
-                _log.info('Stopped activity %s' % activity_id)
-                stop_count += 1
+        for activity_id in [activity_id for activity_id in self.activities if activity_id not in activity_ids]:
+            del self.activities[activity_id]
+            _log.info('Stopped activity %s' % activity_id)
+            stop_count += 1
             
         self.store.clear_offline_data(activity_ids)  #delete any activites from offline store if it is not in current activity list
         self.activities_lock.release()

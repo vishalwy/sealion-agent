@@ -26,15 +26,6 @@ def setup_requests():
 #setup and import requests
 setup_requests()
 from request import *
-
+    
 #disable urllib3 warnings. https://github.com/kennethreitz/requests/issues/2495
 packages.urllib3.disable_warnings() 
-
-SafeSession = Session
-
-class UnsafeSession(SafeSession):
-    def __init__(self):
-        SafeSession.__init__(self)
-        self.verify = False
-        
-Session = UnsafeSession
