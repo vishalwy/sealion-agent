@@ -18,8 +18,12 @@ All the keys in the configuration are optional.
         "modules": ["/(src|opt)/.+\\.py", "/lib/constructs\\.py"]
     },
 
-    /*Specify the environment variables you want to export for the agent and the commands you schedule as an array of key value pairs.*/
-    "env": [{"https_proxy": "https://abc.example.com:5555"}, {"no_proxy": "localhost, xyz.example.com"}, {"password": "my-awesome-password"}],
+    /*Specify the environment variables you want to export for the agent and the commands you schedule as key value pairs.*/
+    "env": {
+        "https_proxy": "https://abc.example.com:5555", 
+        "no_proxy": "localhost, xyz.example.com",
+        "password": "my-awesome-password"
+    },
 
     /*
     White list the commands you want to execute. Value of this key should be an array of regular expressions.
@@ -28,5 +32,8 @@ All the keys in the configuration are optional.
     "whitelist": ["^\\s*top.*", "script\\.sh"],
 
     /*Specify the user for the agent, default to sealion*/
-    "user": "sealion"
+    "user": "sealion",
+
+    /*Specify the maximum execution time allowed for a command in seconds; post which the command will be terminated*/
+    "commandTimeout": 30
 }
