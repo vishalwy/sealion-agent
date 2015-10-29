@@ -49,7 +49,12 @@ check_dependency() {
 
     if [[ $? -ne 0 ]] ; then
         echo "Error: Command dependency check failed" >&2
-        echo -e $missing_items | (while read line; do log_output "       ${line}" 2; done)  #print the missing commands with some padding
+        
+        #print the missing commands with some padding
+        while read line; do 
+            log_output "       ${line}" 2; 
+        done <<<"$missing_items"
+
         [[ "$agent_id" != "" ]] && report_failure 6
         exit 123
     fi

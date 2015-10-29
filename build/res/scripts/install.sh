@@ -101,7 +101,12 @@ check_dependency() {
 
     if [[ $? -ne 0 ]] ; then
         echo "Error: Command dependency check failed" >&2
-        echo -e $missing_items | (while read line; do echo "${padding}${line}" >&2; done)  #print the missing commands with some padding
+        
+        #print the missing commands with some padding
+        while read line; do 
+            echo "${padding}${line}" >&2; 
+        done <<<"$missing_items"  
+        
         exit $SCRIPT_ERR_COMMAND_NOT_FOUND
     fi
 
@@ -113,7 +118,11 @@ check_dependency() {
         exit $SCRIPT_ERR_INVALID_PYTHON
     elif [[ $ret_code -ne $SCRIPT_ERR_SUCCESS ]] ; then  #dependency check failed
         echo "Error: Python dependency check failed" >&2
-        echo -e $missing_items | (while read line; do echo "${padding}${line}" >&2; done)  #print the missing modules with some padding
+        
+        #print the missing modules with some padding
+        while read line; do 
+            echo "${padding}${line}" >&2; 
+        done <<<"$missing_items"  
 
         #cleanup the temp files generated while performing python dependency check
         rm -rf *.pyc
@@ -129,19 +138,19 @@ check_dependency() {
 
 #Function to export environment variables stored in $env_vars
 export_env_vars() {
-    local export_errors=()  #array to hold erroneous JSON objects for env vars
+    local export_errors output
 
     for env_var in "${env_vars[@]}" ; do
-        local output=$("${install_path}/bin/jsonfig.py" -a "add" -k "env" -v "$env_var" "${install_path}/etc/config.json" 2>&1)
+        output=$("${install_path}/bin/jsonfig.py" -a "merge" -k "env" -v "$env_var" "${install_path}/etc/config.json" 2>&1)
 
         #add to error list if it failed
-        [[ $? -ne 0 ]] && export_errors=("${export_errors[@]}"  "${padding}${env_var} - ${output#Error: }")
+        [[ $? -ne 0 ]] && export_errors="${export_errors}${padding}${env_var} - ${output#Error: }\n"
     done
 
     #print any errors as warnings
     if [[ "${#export_errors[@]}" != "0" ]] ; then
         echo "Warning: Failed to export the following environment variables" >&2
-        echo -e $(IFS=$'\n'; echo "${export_errors[*]}")
+        printf "$export_errors"
     fi
 }
 
