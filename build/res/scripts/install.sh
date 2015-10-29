@@ -140,9 +140,23 @@ export_env_vars() {
 
     #print any errors as warnings
     if [[ "${#export_errors[@]}" != "0" ]] ; then
-        echo "Warning: Failed to export the folloing environment variables" >&2
+        echo "Warning: Failed to export the following environment variables" >&2
         echo -e $(IFS=$'\n'; echo "${export_errors[*]}")
     fi
+}
+
+#Function to migrate env variable format in config.json
+migrate_env_vars() {
+    local code config config_file="${install_path}/etc/config.json"
+    
+    code="import json"
+    code="${code}\nwith open('$config_file') as f:\n\tl, d = json.loads(f)['env'], []"
+    code="${code}\nfor e in l:\n\td += [(k, e[k]) for k in e]"
+    code="${code}\nprint(json.dumps(dict(d)))"
+    code=$(printf "$code")
+    
+    config=$("$python_binary" -c "$code" 2>/dev/null)
+    [[ "$config" != "" ]] && "${install_path}/bin/jsonfig.py" -a "set" -k "logging:env" -v "$config" "$config_file"
 }
 
 #Function to setup the configuration for the agent
@@ -170,6 +184,8 @@ setup_config() {
         #as we keep adding modules, we need to include them for logging 
         config=$("${install_path}/bin/jsonfig.py" -k "logging:modules" -n agent/etc/config.json 2>/dev/null)
         [[ "$config" != "" ]] && "${install_path}/bin/jsonfig.py" -a "set" -k "logging:modules" -v "$config" "${install_path}/etc/config.json"
+
+        migrate_env_vars  #migrate env variable format
     else
         #agent.json config
         config="\"orgToken\": \"${org_token}\", \"apiUrl\": \"${api_url}\", \"agentVersion\": \"${version}\", \"name\": \"${host_name}\", \"ref\": \"${install_source}\""
@@ -312,10 +328,9 @@ if [[ "$install_path" == "" ]] ; then
     fi
 fi
 
-#set the absolute path for installation
-install_path=$(eval echo "$install_path")
-[[ ${install_path:0:1} != "/" ]] && install_path="$(pwd)/${install_path}" 
-[[ "${#install_path}" != "0" ]] && install_path=${install_path%/}  #remove / from the end
+#set the absolute path for installation and remove / from end
+install_path=$(readlink -f "$install_path")
+install_path=${install_path%/}
 
 cd "$script_base_dir"  #move to the script base dir so that all paths can be found
 check_dependency  #perform dependency check

@@ -82,8 +82,8 @@ def set_value(obj, key, value):
     else:
         obj[key] = value;
 
-array_actions = ['get', 'add', 'rem']  #possible operatiions on a JSON array
-actions = ['set', 'del'] + array_actions  #possible operations on the JSON file
+array_actions = ['get', 'add', 'remove']  #possible operatiions on a JSON array
+actions = ['set', 'delete', 'merge'] + array_actions  #possible operations on the JSON file
 keys, value, action, pretty_print, file = None, None, 'get', True, None
 
 try:
@@ -119,7 +119,7 @@ if keys == None:  #no keys specified for the operation
     sys.stderr.write('Please specify a key\n')
     usage() and sys.exit(1)
     
-if value == None and action != 'get' and action != 'del':  #any action other than get and del requires a value to be set
+if value == None and action not in ['get', 'delete']:  #any action other than get and del requires a value to be set
     sys.stderr.write('Please specify a value to %s\n' % action)
     usage() and sys.exit(1)
     
@@ -168,7 +168,7 @@ try:
                 raise ValueError('list.append(x): x is already in the list')
             
             temp_data_value.append(temp_value)
-    elif action == 'rem':  #remove a value from the array
+    elif action == 'remove':  #remove a value from the array
         temp_value = json.loads(value)
         temp_data_value = get_value(temp_data, keys[-1])
         
@@ -177,11 +177,19 @@ try:
                 temp_value[i] in temp_data_value and temp_data_value.remove(temp_value[i])
         else:
             temp_data_value.remove(temp_value)
-    else:
+    elif action == 'delete':  #delete the key
         if type(temp_data) is list:
             raise Exception('possible actions on an array are %s' % '|'.join(array_actions))
         
         del temp_data[keys[-1]]  #delete the key
+    else:  #merge the values
+        temp_data_value = get_value(temp_data, keys[-1])
+        
+        #for merging there key should have a dict as the value
+        if type(temp_data_value) is not dict:
+            raise Exception('merge action can be done only on associative array')
+        
+        temp_data_value.update(json.loads(value))  #merge values
     
     #write JSON to file
     f = open(file, 'w')

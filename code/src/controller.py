@@ -154,8 +154,7 @@ class Controller(singleton(ThreadEx)):
             f.close()
             
             #export 'URL_CALLER' environment variable for curl-install.sh to use
-            environ = {}
-            environ.update(os.environ)
+            environ = dict(os.environ)
             environ['URL_CALLER'] = url_caller
             
             subprocess.call(['bash', '-c', format % format_spec], preexec_fn = os.setpgrp, env = environ)  #execute the commandline
