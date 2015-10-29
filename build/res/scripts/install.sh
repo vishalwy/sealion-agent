@@ -149,14 +149,16 @@ export_env_vars() {
 migrate_env_vars() {
     local code config config_file="${install_path}/etc/config.json"
     
+    #frame the python code used to migrate the format
     code="import json"
-    code="${code}\nwith open('$config_file') as f:\n\tl, d = json.loads(f)['env'], []"
+    code="${code}\nwith open('$config_file') as f:\n\tl, d = json.load(f)['env'], []"
     code="${code}\nfor e in l:\n\td += [(k, e[k]) for k in e]"
     code="${code}\nprint(json.dumps(dict(d)))"
     code=$(printf "$code")
     
+    #execute the migration script and update only if it is successful
     config=$("$python_binary" -c "$code" 2>/dev/null)
-    [[ "$config" != "" ]] && "${install_path}/bin/jsonfig.py" -a "set" -k "logging:env" -v "$config" "$config_file"
+    [[ "$config" != "" ]] && "${install_path}/bin/jsonfig.py" -a "set" -k "env" -v "$config" "$config_file"
 }
 
 #Function to setup the configuration for the agent
