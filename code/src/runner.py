@@ -376,21 +376,24 @@ class Executer(ThreadEx):
         
         #self.wait returns True if the bash suprocess is terminated, in that case we will create a new bash process instance
         if self.wait() and not self.is_stop:
-            #refer execute.sh to read more about arguments to be passed in 
-            exec_args = ['bash', '%s/src/execute.sh' % self.univ.exe_path, self.univ.main_script]
-            os.isatty(sys.stdin.fileno()) or exec_args.append('1')
-            
-            #collect env variables for command line execution.
-            #env variables defined in sealion config takes precedence over the ones in agent config
-            env_vars = dict(os.environ)
-            env_vars.update(self.env_variables)
-            env_vars.update(self.univ.config.sealion.get_dict(('env', {}))['env'])
-            
-            self.exec_count = 0  #reset the number of commands executed
-            
-            self.exec_process = subprocess.Popen(exec_args, preexec_fn = self.init_process, bufsize = 0, env = env_vars,
-                stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
-            _log.info('Bash process %d has been created to execute command line activities' % self.exec_process.pid)
+            try:
+                #refer execute.sh to read more about arguments to be passed in 
+                exec_args = ['bash', '%s/src/execute.sh' % self.univ.exe_path, self.univ.main_script]
+                os.isatty(sys.stdin.fileno()) or exec_args.append('1')
+
+                #collect env variables for command line execution.
+                #env variables defined in sealion config takes precedence over the ones in agent config
+                env_vars = dict(os.environ)
+                env_vars.update(self.env_variables)
+                env_vars.update(self.univ.config.sealion.get_dict(('env', {}))['env'])
+
+                self.exec_count = 0  #reset the number of commands executed
+
+                self.exec_process = subprocess.Popen(exec_args, preexec_fn = self.init_process, bufsize = 0, env = env_vars,
+                    stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+                _log.info('Bash process %d has been created to execute command line activities' % self.exec_process.pid)
+            except Exception as e:
+                _log.error('Failed to create bash process; %s' % unicode(e))
                 
         self.process_lock.release()
         return self.exec_process
@@ -513,29 +516,40 @@ class Executer(ThreadEx):
         """
         
         set_vars, unset_count, export_count = [], 0, 0
-        job_details = {'timestamp': 0, 'output': '/dev/stdout', 'command': 'export %s=\'%s\''}
         env_vars = self.univ.config.agent.get_dict(('envVariables', {}))['envVariables']
-        self.process_lock.acquire()
+        job_details = {'timestamp': 0, 'output': '/dev/stdout', 'command': 'export %s=\'%s\''}  #maintainance job
+        
+        #this has to be atomic as we want to update the env variables before executing the next job
+        self.process_lock.acquire()  
         
         for env_var in env_vars:
             value = env_vars[env_var] 
+            set_vars.append(env_var)
             
-            if value != self.env_variables.get(env_var):
+            if value == self.env_variables.get(env_var):
+                continue
+            
+            try:
+                #update the env variable and export it to the curent bash process
                 self.env_variables[env_var] = value
                 job_details['command'] = 'export %s=\'%s\'' % (env_var, value.replace('\'', '\'\\\'\''))
                 self.exec_process and self.exec_process.stdin.write(Executer.format_job(job_details))
                 export_count += 1
                 _log.info('Exported env variable %s' % env_var)
-                
-            set_vars.append(env_var)
+            except Exception as e:
+                _log.error('Failed to export env variable %s; %s' % (env_var, unicode(e)))
             
         #find any env vars in the dict that is not in the set variables list and delete
         for env_var in [env_var for env_var in self.env_variables if env_var not in set_vars]:
-            del self.env_variables[env_var]
-            job_details['command'] = 'unset %s' % env_var
-            self.exec_process and self.exec_process.stdin.write(Executer.format_job(job_details))
-            unset_count += 1
-            _log.info('Unset env variable %s' % env_var)
+            try:
+                #delete the env variable and unset it from the curent bash process
+                del self.env_variables[env_var]
+                job_details['command'] = 'unset %s' % env_var
+                self.exec_process and self.exec_process.stdin.write(Executer.format_job(job_details))
+                unset_count += 1
+                _log.info('Unset env variable %s' % env_var)
+            except Exception as e:
+                _log.error('Failed to unset env variable %s; %s' % (env_var, unicode(e)))
             
         self.process_lock.release()
         _log.info('Env variables - %d exported; %d unset' % (export_count, unset_count))
