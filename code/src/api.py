@@ -232,7 +232,7 @@ class API(requests.Session):
             _log.info('Registration successful')
             
             #update and save the config
-            self.univ.config.agent.update(response.json())
+            self.univ.config.agent.set(response.json())
             self.univ.config.agent.save()
         else:
             ret = self.error('Failed to register agent', response)
@@ -281,7 +281,7 @@ class API(requests.Session):
             _log.info('Authentication successful')
             
             #update and save the config
-            self.univ.config.agent.update(response.json())
+            self.univ.config.agent.set(response.json())
             self.univ.config.agent.save()
             
             self.auth_status(AuthStatus.AUTHENTICATED)  #set auth sataus
@@ -304,7 +304,7 @@ class API(requests.Session):
         
         if API.is_success(response):
             #update and save the config
-            self.univ.config.agent.update(response.json())
+            self.univ.config.agent.set(response.json())
             self.univ.config.agent.save()
             _log.info('Config updation successful')
             

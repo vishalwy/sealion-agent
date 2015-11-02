@@ -149,9 +149,9 @@ class AgentConfig(helper.Config):
         }
     }
     
-    def update(self, data):   
+    def set(self, data = None):
         """
-        Public method to update the config.
+        Public method to set the config.
         
         Args:
             data: dict containing new config
@@ -160,19 +160,26 @@ class AgentConfig(helper.Config):
             True on success, an error string on failure
         """
         
-        #delete the category key from data since category in the settings file is the name, and data['category'] is the id
-        if 'category' in data:  
-            del data['category']
+        ret = None  #return value
+        
+        #if data is given, then we need to modify it
+        if data:
+            #delete the category key from data since category in the settings file is the name, and data['category'] is the id
+            if 'category' in data:  
+                del data['category']
+
+            univ = Universal()
+            version = data.get('agentVersion')
+
+            if version and version != self.data['agentVersion']:  #if the agent version mismatch we need to update the agent
+                hasattr(self, '_id') and univ.event_dispatcher.trigger('update_agent')  #trigger an event so that the other module can install the update
+                del data['agentVersion']  #delete the key as we want only the updater script to modify it
             
-        univ = Universal()
-        version = data.get('agentVersion')
-             
-        if version and version != self.data['agentVersion']:  #if the agent version mismatch we need to update the agent
-            hasattr(self, '_id') and univ.event_dispatcher.trigger('update_agent')  #trigger an event so that the other module can install the update
-            del data['agentVersion']  #delete the key as we want only the updater script to modify it
+            ret = helper.Config.set(self, data)  #set the config by calling base class version
+            univ.event_dispatcher.trigger('set_exec_details')  #trigger an event so that the other modules can act on the new activities/env
+        else:
+            ret = helper.Config.set(self, data)  #set the config by calling base class version
             
-        ret = helper.Config.update(self, data)  #call the base class version
-        univ.event_dispatcher.trigger('set_exec_details')  #trigger an event so that the other modules can act on the new activities/env
         return ret
 
 class Universal(singleton()):

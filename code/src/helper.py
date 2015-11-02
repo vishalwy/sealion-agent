@@ -407,28 +407,12 @@ class Config:
         elif config[1] == True and is_data == False:
             self.file and _log.warn('Ignoring \'%s\' as it is either missing or corrupted' % self.file)
             
+        #clear the config and reassign the values
         self.lock.acquire()
-        self.data.update(config[0])  #update the config
+        self.data.clear()
+        self.data.update(config[0])  
         self.lock.release()
         return True
-        
-    def update(self, data):
-        """
-        Public method to update the config.
-        
-        Args:
-            data: dict containing new config
-            
-        Returns:
-            True on success, an error string on failure
-        """
-        
-        config = {}
-        self.lock.acquire()
-        config.update(self.data)
-        self.lock.release()
-        config.update(Config.parse(data, True)[0])
-        return self.set(config)
 
 class ThreadMonitor(singleton()):
     """
