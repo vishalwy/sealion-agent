@@ -57,131 +57,6 @@ class Utils(Namespace):
     """
     
     @staticmethod
-    def sanitize_type(d, schema, is_delete_extra = True, regex = None, is_regex = False, file = None):
-        """
-        Public static function to cleanup a dict, list or string against a schema given.
-        This function works in conjunction with sanitize_dict.
-        Together it validates and does cleanup a dict
-        
-        Args:
-            d: item to be sanitized
-            schema: the schema defining the rules for the item
-            is_delete_extra: delete any extra items found inside the item
-            regex: regex to match
-            is_regex: is item a regex
-            file: filename where the item read from
-            
-        Returns:
-            True on success else False
-        """
-        
-        #get the type name of the item to sanitized and the schema
-        d_type_name = type(d).__name__
-        schema_type_name = type(schema).__name__
-
-        if d_type_name == 'dict' and schema_type_name == 'dict':  #a dict is delegated to sanitize_dict
-            return Utils.sanitize_dict(d, schema, is_delete_extra, file)
-        elif d_type_name == 'list' and schema_type_name == 'list':  #if it is a list
-            for i in range(0, len(d)):  #sanitize each item in the list
-                if Utils.sanitize_type(d[i], schema[0], is_delete_extra, regex, is_regex, file) == False:
-                    return False  #failure
-                
-            return True  #sanitized the list
-        elif schema_type_name == 'str':  #if it is a string
-            types = schema.split(',')  #a string can be unicode or str, thus we get the types
-            flag = False  #flag indicates whether it match with any type given
-            
-            #match against the types given
-            for i in range(0, len(types)):
-                if d_type_name == types[i]:
-                    flag = True
-                    break
-                    
-            if flag == True:  #matched
-                if regex != None and re.match(regex, unicode(d)) == None:  #if regex is given, match the regex
-                    return False
-                elif (d_type_name == 'str' or d_type_name == 'unicode') and is_regex == True:  #if it is to be considered as a regex, then compile and check
-                    try:
-                        re.compile(d)
-                    except:
-                        return False  #failure
-                
-            return flag
-        
-        return False
-
-    @staticmethod
-    def sanitize_dict(d, schema, is_delete_extra = True, file = None):
-        """
-        Public static function to cleanup a dict against the schema given.
-        This function works in conjunction with sanitize_type.
-        Together it validates and does cleanup of a dict
-        
-        Args:
-            d: dict to be sanitized
-            schema: the schema defining the rules for the dict
-            is_delete_extra: delete any extra items found inside the dict
-            file: filename where the dict read from
-            
-        Returns:
-            True on success else False
-        """
-        
-        ret = True  #return value
-
-        #delete any extra keys
-        if is_delete_extra == True:
-            keys = list(d.keys())
-            schema_keys = list(schema.keys())
-            
-            #a regex as schema key indicates that it can match with any key that satisfy the regex
-            #so to avoid the key getting deleted, we are replacing the schema with the a dict made of the key
-            if len(schema_keys) == 1 and hasattr(schema_keys[0], 'match'):
-                schema = dict(zip([key for key in keys if schema_keys[0].match(key)], [schema[schema_keys[0]]] * len(keys)))
-
-            #delete extra keys
-            for key in keys:
-                if key not in schema:
-                    file and _log.warn('Ignoring config key \'%s\' in \'%s\' as it is unknown' % (key, file))
-                    del d[key]
-
-        depends_check_keys = []  #keys for which the dependency check to be performed
-
-        for key in schema:  #we have to find a match for every key in schema in the dict
-            is_optional = schema[key].get('optional', False)  #is this key optional
-            
-            if key not in d:  #if the key is not found in dict
-                ret = False if is_optional == False else ret  #if it is optional return value remains as it is, else zero
-            else:
-                if 'depends' in schema[key]:  #collect dependency check keys
-                    depends_check_keys.append(key)
-
-                #sanitize the value
-                if Utils.sanitize_type(d[key], schema[key]['type'], is_delete_extra, 
-                    schema[key].get('regex'), schema[key].get('is_regex', False), file) == False:
-                    if file:
-                        _log.warn('Ignoring config key \'%s\' in \'%s\' as the value is in improper format' % (key, file))
-                    else:
-                        _log.warn('Ignoring config key \'%s\' as the value is in improper format' % key)
-                        
-                    del d[key]
-                    ret = False if is_optional == False else ret  #if it is optional return value remains as it is, else zero
-                    
-        #perform dependency check
-        for key in depends_check_keys:
-            depends = schema[key]['depends']
-            
-            for depend in depends:
-                if depend not in d:
-                    if key in d:
-                        file and _log.warn('Ignoring config key \'%s\' in \'%s\' as it failed dependency' % (key, file))
-                        del d[key]
-                        
-                    break
-
-        return ret
-
-    @staticmethod
     def get_safe_path(path):
         """
         Public static function to create path if path does not exists
@@ -258,14 +133,14 @@ class Config:
     """
     
     #schema is a dict containing 'key: key_config' pairs
-    #   'key'           - name of the key allowed; a dot('.') can represent any possible key name
+    #   'key'           - name of the key allowed; compiled regex can represent any possible key name
     #   'key_config'    - dict containing the properties of the 'key'
     #       'type'      - data type of the value for the key
     #                     can be a string containing 'comma,seperated,datatypes'  
     #                     or a dict or list of dict containing 'key: key_config' pairs
     #
     #       'depends'   - the list of keys in the same level that this particular key has a dependency
-    #       'regex'     - regular expression to validate the value for the key
+    #       'regex'     - True if the value is regex else a regular expression to validate the value for the key
     #       'optional'  - whether the key is optional True/False
     #
     #schema representing the rules for configuration. subclass should override this to provide custom rules
@@ -400,7 +275,7 @@ class Config:
         config = Config.parse(data, is_data)  #parse the config
         
         #sanitize the config
-        if Utils.sanitize_dict(config[0], self.schema, True, self.file if is_data == False else None) == False:
+        if Config.sanitize_dict(config[0], self.schema, True, self.file if is_data == False else None) == False:
             if is_data == False:
                 return '\'%s\' is either missing or corrupted' % self.file
             else:
@@ -431,6 +306,127 @@ class Config:
         self.lock.release()
         config.update(data)
         return self.set(config)
+    
+    @staticmethod
+    def sanitize_type(d, schema, is_delete_extra = True, regex = None, file = None):
+        """
+        Static function to cleanup a dict, list or string against a schema given.
+        This function works in conjunction with sanitize_dict.
+        Together it validates and does cleanup a dict
+        
+        Args:
+            d: item to be sanitized
+            schema: the schema defining the rules for the item
+            is_delete_extra: delete any extra items found inside the item
+            regex: regex to match; True if value itself is a regex
+            file: filename where the item read from
+            
+        Returns:
+            True on success else False
+        """
+        
+        #get the type name of the item to sanitized and the schema
+        d_type_name = type(d).__name__
+        schema_type_name = type(schema).__name__
+
+        if d_type_name == 'dict' and schema_type_name == 'dict':  #a dict is delegated to sanitize_dict
+            return Config.sanitize_dict(d, schema, is_delete_extra, file)
+        elif d_type_name == 'list' and schema_type_name == 'list':  #if it is a list
+            for i in range(0, len(d)):  #sanitize each item in the list
+                if Config.sanitize_type(d[i], schema[0], is_delete_extra, regex, file) == False:
+                    return False  #failure
+                
+            return True  #sanitized the list
+        elif schema_type_name == 'str':  #if it is a string
+            #check whether the type is mentioned in the data types
+            if d_type_name not in schema.split(','):
+                return False
+            
+            if type(regex) is str and re.match(regex, unicode(d)) == None:  #if regex is given, match the regex
+                return False
+            elif regex == True:  #if it is to be considered as a regex, then compile and check
+                try:
+                    #a regex should be a string with some charecters in it
+                    if d_type_name not in ['str', 'unicode'] or not d:
+                        raise
+
+                    re.compile(d)
+                except:
+                    return False  #failure
+                
+            return True
+        
+        return False
+
+    @staticmethod
+    def sanitize_dict(d, schema, is_delete_extra = True, file = None):
+        """
+        Static function to cleanup a dict against the schema given.
+        This function works in conjunction with sanitize_type.
+        Together it validates and does cleanup of a dict
+        
+        Args:
+            d: dict to be sanitized
+            schema: the schema defining the rules for the dict
+            is_delete_extra: delete any extra items found inside the dict
+            file: filename where the dict read from
+            
+        Returns:
+            True on success else False
+        """
+        
+        ret = True  #return value
+
+        #delete any extra keys
+        if is_delete_extra == True:
+            keys = list(d.keys())
+            schema_keys = list(schema.keys())
+            
+            #a regex as schema key indicates that it can match with any key that satisfy the regex
+            #so to avoid the key getting deleted, we are replacing the schema with the a dict made of the key
+            if len(schema_keys) == 1 and hasattr(schema_keys[0], 'match'):
+                schema = dict(zip([key for key in keys if schema_keys[0].match(key)], [schema[schema_keys[0]]] * len(keys)))
+
+            #delete extra keys
+            for key in keys:
+                if key not in schema:
+                    file and _log.warn('Ignoring config key \'%s\' in \'%s\' as it is unknown' % (key, file))
+                    del d[key]
+
+        depends_check_keys = []  #keys for which the dependency check to be performed
+
+        for key in schema:  #we have to find a match for every key in schema in the dict
+            is_optional = schema[key].get('optional', False)  #is this key optional
+            
+            if key not in d:  #if the key is not found in dict
+                ret = False if is_optional == False else ret  #if it is optional return value remains as it is, else zero
+            else:
+                if 'depends' in schema[key]:  #collect dependency check keys
+                    depends_check_keys.append(key)
+
+                #sanitize the value
+                if Config.sanitize_type(d[key], schema[key]['type'], is_delete_extra, schema[key].get('regex'), file) == False:
+                    if file:
+                        _log.warn('Ignoring config key \'%s\' in \'%s\' as the value is in improper format' % (key, file))
+                    else:
+                        _log.warn('Ignoring config key \'%s\' as the value is in improper format' % key)
+                        
+                    del d[key]
+                    ret = False if is_optional == False else ret  #if it is optional return value remains as it is, else zero
+                    
+        #perform dependency check
+        for key in depends_check_keys:
+            depends = schema[key]['depends']
+            
+            for depend in depends:
+                if depend not in d:
+                    if key in d:
+                        file and _log.warn('Ignoring config key \'%s\' in \'%s\' as it failed dependency' % (key, file))
+                        del d[key]
+                        
+                    break
+
+        return ret
 
 class ThreadMonitor(singleton()):
     """

@@ -32,11 +32,15 @@ class SealionConfig(helper.Config):
     schema = {
         'whitelist': {
             'type': ['str,unicode'], 
-            'optional': True, 
-            'is_regex': True
+            'regex': True,
+            'optional': True
         },
         'env': {
-            'type': {re.compile('^.+$'): {'type': 'str,unicode'}},
+            'type': {
+                re.compile('^.+$'): {
+                    'type': 'str,unicode'
+                }
+            },
             'optional': True
         },
         'logging': {
@@ -49,9 +53,8 @@ class SealionConfig(helper.Config):
                 'modules': {
                     'type': ['str,unicode'], 
                     'depends': ['level'], 
-                    'regex': '^.+$', 
+                    'regex': True, 
                     'optional': True, 
-                    'is_regex': True
                 }
             },
             'optional': True
@@ -145,8 +148,7 @@ class AgentConfig(helper.Config):
         'envVariables': {
             'type': {
                 re.compile('^[a-zA-Z_][a-zA-Z0-9_]*$'): {
-                    'type': 'str,unicode',
-                    'key': '^[a-zA-Z_][a-zA-Z0-9_]*$'
+                    'type': 'str,unicode'
                 }
             }, 
             'depends': ['_id', 'agentVersion'],
