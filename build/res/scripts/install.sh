@@ -33,6 +33,7 @@ usage() {
     usage_info="${usage_info} -p,  --python <arg>      Path to Python binary used for executing agent code\n"
     usage_info="${usage_info} -e,  --env <arg>, ...    JSON document representing the environment variables to be exported\n"
     usage_info="${usage_info}      --no-create-user    Do not create 'sealion' user; instead use current user to run agent\n"
+    usage_info="${usage_info}      --no-start          Do not start the agent, just install it\n"
     usage_info="${usage_info} -h,  --help              Display this information"
     echo -e "$usage_info"
     return 0
@@ -199,7 +200,8 @@ setup_config() {
         migrate_env_vars  #migrate env variable format
     else
         #agent.json config
-        config="\"orgToken\": \"${org_token}\", \"apiUrl\": \"${api_url}\", \"agentVersion\": \"${version}\", \"name\": \"${host_name}\", \"ref\": \"${install_source}\""
+        config="\"orgToken\": \"${org_token}\", \"apiUrl\": \"${api_url}\", \"agentVersion\": \"${version}\", \"ref\": \"${install_source}\""
+        [[ "$host_name" != "" ]] && config="${config}, \"name\": \"${host_name}\""
         [[ "$category" != "" ]] && config="${config}, \"category\": \"${category}\""
         [[ "$agent_id" != "" ]] && config="${config}, \"_id\": \"${agent_id}\""
         
@@ -233,10 +235,11 @@ python_binary="python"  #default python binary
 default_install_path="/usr/local/sealion-agent"  #default install directory
 sealion_node_found=0  #evil twin
 update_agent=0  #install or update
+start_agent=1  #whether to start the agent after installation
 
 #setup variables
 org_token= category= agent_id= install_path=
-host_name=$(hostname) proxy=$https_proxy no_proxy=$no_proxy
+host_name= proxy=$https_proxy no_proxy=$no_proxy
 install_source="tarball"  #the method used to install agent. curl or tarball
 env_vars=()  #any other environment variables to export
 padding="       "  #padding for messages
@@ -260,7 +263,7 @@ if [[ $kernel_major_version -lt 2 || ($kernel_major_version -eq 2 && $kernel_min
 fi
 
 #parse command line
-opt_parse i:o:c:H:x:p:a:r:v:e:h "category= host-name= proxy= python= env= no-create-user help" options args "$@"
+opt_parse i:o:c:H:x:p:a:r:v:e:h "category= host-name= proxy= python= env= no-create-user no-start help" options args "$@"
 
 #if parsing failed print the usage and exit
 if [[ $? -ne 0 ]] ; then
@@ -311,6 +314,9 @@ for option_index in "${!options[@]}" ; do
         no-create-user)
             user_name=$(id -u -n)  #run as the current user
             create_user=0  #do not create the user
+            ;;
+        no-start)
+            start_agent=0  #do not start the agent, only install
             ;;
         h|help)
             usage 1 ; exit $SCRIPT_ERR_SUCCESS
@@ -502,13 +508,19 @@ else  #update
     echo "SeaLion agent updated successfully"
 fi
 
+echo "Refer '${install_path}/README' for more information"
+
+#exit if we don't want to start the agent
+if [[ $start_agent -eq 0 ]] ; then
+    exit 0
+fi
+
 echo "Starting agent..."
 "$service_file" start
 ret_status=$?
 
 #finishing quote
 if [[ $update_agent -eq 0 && $ret_status -eq 0 ]] ; then
-    echo "Find more info at '${install_path}/README'"
     echo "Please continue on $(sed 's/api\(\.\|-\)//' <<<${api_url})"
 fi
 

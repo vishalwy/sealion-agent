@@ -132,16 +132,17 @@ class Utils(Namespace):
         #delete any extra keys
         if is_delete_extra == True:
             keys = list(d.keys())
+            schema_keys = list(schema.keys())
             
-            #a empty schema key ('') indicates that it can match with anything.
+            #a regex as schema key indicates that it can match with any key that satisfy the regex
             #so to avoid the key getting deleted, we are replacing the schema with the a dict made of the key
-            if len(schema.keys()) == 1 and '' in schema:
-                schema = dict(zip(keys, [schema['']] * len(keys)))
+            if len(schema_keys) == 1 and hasattr(schema_keys[0], 'match'):
+                schema = dict(zip([key for key in keys if schema_keys[0].match(key)], [schema[schema_keys[0]]] * len(keys)))
 
             #delete extra keys
             for key in keys:
                 if key not in schema:
-                    file and _log.warn('Ignoring config key \'%s\' in \'%s\' as it is unknown.' % (key, file))
+                    file and _log.warn('Ignoring config key \'%s\' in \'%s\' as it is unknown' % (key, file))
                     del d[key]
 
         depends_check_keys = []  #keys for which the dependency check to be performed
@@ -413,6 +414,23 @@ class Config:
         self.data.update(config[0])  
         self.lock.release()
         return True
+    
+    def update(self, data):
+        """
+        Public method to update the config.
+        
+        Args:
+            data: dict containing config changes
+            
+        Returns:
+            True on success, an error string on failure
+        """
+        
+        self.lock.acquire()
+        config = dict(self.data)
+        self.lock.release()
+        config.update(data)
+        return self.set(config)
 
 class ThreadMonitor(singleton()):
     """

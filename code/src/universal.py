@@ -15,6 +15,7 @@ import platform
 import sys
 import time
 import multiprocessing
+import re
 import requests
 import helper
 from datetime import datetime
@@ -35,7 +36,7 @@ class SealionConfig(helper.Config):
             'is_regex': True
         },
         'env': {
-            'type': {'': {'type': 'str,unicode'}},
+            'type': {re.compile('^.+$'): {'type': 'str,unicode'}},
             'optional': True
         },
         'logging': {
@@ -76,7 +77,6 @@ class AgentConfig(helper.Config):
     schema = {
         'orgToken': {
             'type': 'str,unicode', 
-            'depends': ['name'], 
             'regex': '^[a-zA-Z0-9\-]{36}$'
         },
         '_id': {
@@ -91,7 +91,8 @@ class AgentConfig(helper.Config):
         },
         'name': {
             'type': 'str,unicode', 
-            'regex': '^.+$'
+            'regex': '^.+$',
+            'optional': True
         },
         'category': {
             'type': 'str,unicode', 
@@ -142,44 +143,41 @@ class AgentConfig(helper.Config):
             'optional': True
         },
         'envVariables': {
-            'type': {'': {'type': 'str,unicode'}}, 
+            'type': {
+                re.compile('^[a-zA-Z_][a-zA-Z0-9_]*$'): {
+                    'type': 'str,unicode',
+                    'key': '^[a-zA-Z_][a-zA-Z0-9_]*$'
+                }
+            }, 
             'depends': ['_id', 'agentVersion'],
-            'optional': True,
-            'regex': '^[a-zA-Z_][a-zA-Z0-9_]*$'
+            'optional': True
         }
     }
     
-    def set(self, data = None):
+    def update(self, data):   
         """
-        Public method to set the config.
+        Public method to update the config.
         
         Args:
-            data: dict containing new config
+            data: dict containing modified config
             
         Returns:
             True on success, an error string on failure
         """
         
-        ret = None  #return value
-        
-        #if data is given, then we need to modify it
-        if data:
-            #delete the category key from data since category in the settings file is the name, and data['category'] is the id
-            if 'category' in data:  
-                del data['category']
-
-            univ = Universal()
-            version = data.get('agentVersion')
-
-            if version and version != self.data['agentVersion']:  #if the agent version mismatch we need to update the agent
-                hasattr(self, '_id') and univ.event_dispatcher.trigger('update_agent')  #trigger an event so that the other module can install the update
-                del data['agentVersion']  #delete the key as we want only the updater script to modify it
+        #delete the category key from data since category in the settings file is the name, and data['category'] is the id
+        if 'category' in data:  
+            del data['category']
             
-            ret = helper.Config.set(self, data)  #set the config by calling base class version
-            univ.event_dispatcher.trigger('set_exec_details')  #trigger an event so that the other modules can act on the new activities/env
-        else:
-            ret = helper.Config.set(self, data)  #set the config by calling base class version
+        univ = Universal()
+        version = data.get('agentVersion')
+             
+        if version and version != self.data['agentVersion']:  #if the agent version mismatch we need to update the agent
+            hasattr(self, '_id') and univ.event_dispatcher.trigger('update_agent')  #trigger an event so that the other module can install the update
+            del data['agentVersion']  #delete the key as we want only the updater script to modify it
             
+        ret = helper.Config.update(self, data)  #call the base class version
+        univ.event_dispatcher.trigger('set_exec_details')  #trigger an event so that the other modules can act on the new activities/env
         return ret
 
 class Universal(singleton()):

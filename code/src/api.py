@@ -12,6 +12,7 @@ import requests
 import time
 import json
 import re
+import socket
 import connection
 import universal
 from constructs import *
@@ -225,14 +226,14 @@ class API(requests.Session):
         ret = Status.SUCCESS
         
         #get data and make the request
-        data = self.univ.config.agent.get_dict('orgToken', 'name', 'category', 'agentVersion', ('ref', 'tarball'))
+        data = self.univ.config.agent.get_dict('orgToken', ('name', socket.gethostname()), 'category', 'agentVersion', ('ref', 'tarball'))
         response = self.exec_method('post', self.univ.get_url('agents'), data = data, options = kwargs)    
         
         if API.is_success(response):
             _log.info('Registration successful')
             
             #update and save the config
-            self.univ.config.agent.set(response.json())
+            self.univ.config.agent.update(response.json())
             self.univ.config.agent.save()
         else:
             ret = self.error('Failed to register agent', response)
@@ -279,9 +280,9 @@ class API(requests.Session):
         
         if API.is_success(response):
             _log.info('Authentication successful')
-            
+
             #update and save the config
-            self.univ.config.agent.set(response.json())
+            self.univ.config.agent.update(response.json())
             self.univ.config.agent.save()
             
             self.auth_status(AuthStatus.AUTHENTICATED)  #set auth sataus
@@ -304,7 +305,7 @@ class API(requests.Session):
         
         if API.is_success(response):
             #update and save the config
-            self.univ.config.agent.set(response.json())
+            self.univ.config.agent.update(response.json())
             self.univ.config.agent.save()
             _log.info('Config updation successful')
             

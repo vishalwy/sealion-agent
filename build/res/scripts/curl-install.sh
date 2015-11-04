@@ -34,6 +34,7 @@ usage() {
     usage_info="${usage_info} -p,  --python <arg>      Path to Python binary used for executing agent code\n"
     usage_info="${usage_info} -e,  --env <arg>, ...    JSON document representing the environment variables to be exported\n"
     usage_info="${usage_info}      --no-create-user    Do not create 'sealion' user; use current user instead to run agent\n"
+    usage_info="${usage_info}      --no-start          Do not start the agent, just install it\n"
     usage_info="${usage_info} -h,  --help              Display this information"
     echo -e "$usage_info"
     return 0
@@ -142,7 +143,7 @@ tmp_data_file="/tmp/sealion-agent.response.XXXX"  #temp file for api url respons
 proxy= agent_id= org_token=
 
 #parse command line
-opt_parse i:o:c:H:x:p:a:r:v:e:h "category= host-name= proxy= python= env= no-create-user help" options args "$@"
+opt_parse i:o:c:H:x:p:a:r:v:e:h "category= host-name= proxy= python= env= no-create-user no-start help" options args "$@"
 
 #if parsing failed print the usage and exit
 if [[ $? -ne 0 ]] ; then
