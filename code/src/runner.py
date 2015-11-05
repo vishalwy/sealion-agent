@@ -546,7 +546,7 @@ class Executer(ThreadEx):
                 del self.env_variables[env_var]  #delete it from the env variables dict
                 value = os.environ.get(env_var)  #we need to check whether this variable is available in os environ
                 
-                if os_env_var != None:  #if os environ has this value, then export that value rather than unsetting it
+                if value != None:  #if os environ has this value, then export that value rather than unsetting it
                     job_details['command'] = 'export %s=\'%s\'' % (env_var, value.replace('\'', '\'\\\'\''))
                     self.exec_process and self.exec_process.stdin.write(Executer.format_job(job_details))
                     export_count += 1
