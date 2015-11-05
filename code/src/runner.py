@@ -517,6 +517,7 @@ class Executer(ThreadEx):
         
         set_vars, unset_count, export_count = [], 0, 0
         env_vars = self.univ.config.agent.get_dict(('envVariables', {}))['envVariables']
+        config_env_vars = self.univ.config.sealion.get_dict(('env', {}))['env']
         job_details = {'timestamp': 0, 'output': '/dev/stdout', 'command': 'export %s=\'%s\''}  #maintainance job
         
         #this has to be atomic as we want to update the env variables before executing the next job
@@ -526,7 +527,7 @@ class Executer(ThreadEx):
             value = env_vars[env_var] 
             set_vars.append(env_var)
             
-            if value == self.env_variables.get(env_var):
+            if value == self.env_variables.get(env_var) or config_env_vars.get(env_var) != None:
                 continue
             
             try:
@@ -539,17 +540,28 @@ class Executer(ThreadEx):
             except Exception as e:
                 _log.error('Failed to export env variable %s; %s' % (env_var, unicode(e)))
             
-        #find any env vars in the dict that is not in the set variables list and delete
+        #find any env vars in the dict that is not in the set variables list and reset/delete
         for env_var in [env_var for env_var in self.env_variables if env_var not in set_vars]:
             try:
-                #delete the env variable and unset it from the curent bash process
-                del self.env_variables[env_var]
-                job_details['command'] = 'unset %s' % env_var
-                self.exec_process and self.exec_process.stdin.write(Executer.format_job(job_details))
-                unset_count += 1
-                _log.info('Unset env variable %s' % env_var)
+                del self.env_variables[env_var]  #delete it from the env variables dict
+                value = os.environ.get(env_var)  #we need to check whether this variable is available in os environ
+                
+                if os_env_var != None:  #if os environ has this value, then export that value rather than unsetting it
+                    job_details['command'] = 'export %s=\'%s\'' % (env_var, value.replace('\'', '\'\\\'\''))
+                    self.exec_process and self.exec_process.stdin.write(Executer.format_job(job_details))
+                    export_count += 1
+                    _log.info('Exported env variable %s' % env_var)
+                else:  #unset it from the curent bash process
+                    job_details['command'] = 'unset %s' % env_var
+                    self.exec_process and self.exec_process.stdin.write(Executer.format_job(job_details))
+                    unset_count += 1
+                    _log.info('Unset env variable %s' % env_var)
             except Exception as e:
                 _log.error('Failed to unset env variable %s; %s' % (env_var, unicode(e)))
+                
+        env_vars = dict(os.environ)
+        env_vars.update(self.env_variables)
+        env_vars.update(self.univ.config.sealion.get_dict(('env', {}))['env'])
             
         self.process_lock.release()
         _log.info('Env variables - %d exported; %d unset' % (export_count, unset_count))

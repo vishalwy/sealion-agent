@@ -39,7 +39,7 @@ usage() {
 
 #script variables
 org_token= version= category= 
-host_name=$(hostname) proxy=$https_proxy no_proxy=$no_proxy
+host_name= proxy=$https_proxy no_proxy=$no_proxy
 api_url="https://api-test.sealion.com"  #default to test
 
 #parse command line
@@ -98,7 +98,8 @@ fi
 cp -r "${script_base_dir}/res/etc" "${script_base_dir}/../code/"
 
 #agent.json config
-config="\"orgToken\": \"${org_token}\", \"apiUrl\": \"${api_url}\", \"agentVersion\": \"${version}\", \"name\": \"${host_name}\""
+config="\"orgToken\": \"${org_token}\", \"apiUrl\": \"${api_url}\", \"agentVersion\": \"${version}\""
+[[ "$host_name" != "" ]] && config="${config}, \"name\": \"${host_name}\""  #add host name if specified
 [[ "$category" != "" ]] && config="${config}, \"category\": \"${category}\""  #add category if specified
 
 "${script_base_dir}/../code/bin/jsonfig.py" -a "set" -k "" -v "{$config}" -n "${script_base_dir}/../code/etc/agent.json"  #set the configuration
