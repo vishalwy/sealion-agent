@@ -149,7 +149,7 @@ export_env_vars() {
     done
 
     #print any errors as warnings
-    if [[ "${#export_errors[@]}" != "0" ]] ; then
+    if [[ "$export_errors" != "" ]] ; then
         echo "Warning: Failed to export the following environment variables" >&2
         printf "$export_errors"
     fi
