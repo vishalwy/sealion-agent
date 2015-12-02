@@ -111,7 +111,7 @@ check_dependency() {
         exit $SCRIPT_ERR_COMMAND_NOT_FOUND
     fi
 
-    missing_items=$("$python_binary" agent/bin/check_dependency.py 2>&1)  #execute the script to find out any missing modules
+    missing_items=$("$python_binary" agent/bin/check_dependency 2>&1)  #execute the script to find out any missing modules
     ret_code=$?
 
     if [[ $ret_code -eq $SCRIPT_ERR_SUCCESS && "$missing_items" != "Success" ]] ; then  #is python really a python binary. check the output to validate it
@@ -142,7 +142,7 @@ export_env_vars() {
     local export_errors output
 
     for env_var in "${env_vars[@]}" ; do
-        output=$("${install_path}/bin/jsonfig.py" -a "merge" -k "env" -v "$env_var" "${install_path}/etc/config.json" 2>&1)
+        output=$("${install_path}/bin/jsonfig" -a "merge" -k "env" -v "$env_var" "${install_path}/etc/config.json" 2>&1)
 
         #add to error list if it failed
         [[ $? -ne 0 ]] && export_errors="${export_errors}${padding}${env_var} - ${output#Error: }\n"
@@ -168,7 +168,7 @@ migrate_env_vars() {
     
     #execute the migration script and update only if it is successful
     config=$("$python_binary" -c "$code" 2>/dev/null)
-    [[ "$config" != "" ]] && "${install_path}/bin/jsonfig.py" -a "set" -k "env" -v "$config" "$config_file"
+    [[ "$config" != "" ]] && "${install_path}/bin/jsonfig" -a "set" -k "env" -v "$config" "$config_file"
 }
 
 #Function to setup the configuration for the agent
@@ -190,12 +190,12 @@ setup_config() {
     fi
 
     if [[ "$1" == "1" ]] ; then
-        "${install_path}/bin/jsonfig.py" -a "set" -k "agentVersion" -v "\"$version\"" -n "${install_path}/etc/agent.json"
-        "${install_path}/bin/jsonfig.py" -a "set" -k "apiUrl" -v "\"$api_url\"" -n "${install_path}/etc/agent.json"
+        "${install_path}/bin/jsonfig" -a "set" -k "agentVersion" -v "\"$version\"" -n "${install_path}/etc/agent.json"
+        "${install_path}/bin/jsonfig" -a "set" -k "apiUrl" -v "\"$api_url\"" -n "${install_path}/etc/agent.json"
 
         #as we keep adding modules, we need to include them for logging 
-        config=$("${install_path}/bin/jsonfig.py" -k "logging:modules" -n agent/etc/config.json 2>/dev/null)
-        [[ "$config" != "" ]] && "${install_path}/bin/jsonfig.py" -a "set" -k "logging:modules" -v "$config" "${install_path}/etc/config.json"
+        config=$("${install_path}/bin/jsonfig" -k "logging:modules" -n agent/etc/config.json 2>/dev/null)
+        [[ "$config" != "" ]] && "${install_path}/bin/jsonfig" -a "set" -k "logging:modules" -v "$config" "${install_path}/etc/config.json"
 
         migrate_env_vars  #migrate env variable format
     else
@@ -205,11 +205,11 @@ setup_config() {
         [[ "$category" != "" ]] && config="${config}, \"category\": \"${category}\""
         [[ "$agent_id" != "" ]] && config="${config}, \"_id\": \"${agent_id}\""
         
-        "${install_path}/bin/jsonfig.py" -a "set" -k "" -v "{$config}" -n "${install_path}/etc/agent.json"  #set the configuration
+        "${install_path}/bin/jsonfig" -a "set" -k "" -v "{$config}" -n "${install_path}/etc/agent.json"  #set the configuration
         export_env_vars  #export the environment variables specified
 
         #if the user specified, set that in the config
-        [[ $create_user -eq 0 ]] && "${install_path}/bin/jsonfig.py" -a "set" -k "user" -v "\"${user_name}\"" "${install_path}/etc/config.json" 2>&1
+        [[ $create_user -eq 0 ]] && "${install_path}/bin/jsonfig" -a "set" -k "user" -v "\"${user_name}\"" "${install_path}/etc/config.json" 2>&1
     fi
 }
 
@@ -420,8 +420,8 @@ if [[ $update_agent -eq 0 ]] ; then  #if this is a fresh install
     fi
 else
     #try to find out whether a user is defined in the config
-    if [[ -f "agent/bin/jsonfig.py" ]] ; then
-        temp_user_name=$("$python_binary" agent/bin/jsonfig.py -k "user" "${install_path}/etc/config.json" 2>/dev/null)
+    if [[ -f "agent/bin/jsonfig" ]] ; then
+        temp_user_name=$("$python_binary" agent/bin/jsonfig -k "user" "${install_path}/etc/config.json" 2>/dev/null)
         temp_user_name="${temp_user_name#\"}"
         temp_user_name="${temp_user_name%\"}"
         [[ "$temp_user_name" != "" ]] && user_name=$temp_user_name

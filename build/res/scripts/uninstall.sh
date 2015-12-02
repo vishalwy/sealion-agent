@@ -62,8 +62,8 @@ user_delete=1  #whether to delete the user identified by user_name
 cd "$script_base_dir"  #move to the script base dir so that all paths can be found
 
 #try to find out whether a user is defined in the config
-if [[ -f "bin/jsonfig.py" ]] ; then
-    temp_user_name=$(bin/jsonfig.py -k "user" etc/config.json 2>/dev/null)
+if [[ -f "bin/jsonfig" ]] ; then
+    temp_user_name=$(bin/jsonfig -k "user" etc/config.json 2>/dev/null)
     temp_user_name="${temp_user_name#\"}"
     temp_user_name="${temp_user_name%\"}"
     
@@ -95,9 +95,9 @@ fi
 
 #use unregister script to unregister the agent.
 #the script may not be available if the user already removed the agent from the web interface
-if [[ -f "bin/unregister.py" ]] ; then
+if [[ -f "bin/unregister" ]] ; then
     echo "Unregistering agent..."
-    bin/unregister.py >/dev/null 2>&1
+    bin/unregister >/dev/null 2>&1
 
     if [[ $? -ne 0 ]] ; then  #exit if unregistering the agent failed
         echo "Error: Failed to unregister agent" >&2

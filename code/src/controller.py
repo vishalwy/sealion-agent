@@ -133,8 +133,8 @@ class Controller(singleton(ThreadEx)):
         """
         
         _log.info('Update found; Installing update version %s' % version_details['agentVersion'])
-        curllike = self.univ.exe_path + '/bin/curlike.py'  #curl like functionality
-        url_caller = '"%s" "%s"' % (sys.executable, curllike)  #commandline for curlike.py
+        curllike = self.univ.exe_path + '/bin/curlike'  #curl like functionality
+        url_caller = '"%s" "%s"' % (sys.executable, curllike)  #commandline for curlike
         
         #frame the full commandline to download and execute the curl-install.sh
         format = '%(url_caller)s -s %(proxy)s %(download_url)s | bash /dev/stdin -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" -v %(version)s %(proxy)s'
