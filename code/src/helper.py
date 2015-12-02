@@ -242,18 +242,29 @@ class Config:
         """
         
         self.lock.acquire()  #this has to be atomic as multiple threads reads/writes
-        f = None
+        f, file = None, None
         
+        #first we try to write it to a temperory file
         try:
-            #write the config to file in JSON format
-            f = open(self.file, 'w')
+            file = os.tempnam(Utils.get_safe_path(self.file))
+            f = open(file, 'w')
             json.dump(self.data, f)
-            return True
+            f.close()
         except:
-            return False
-        finally:
-            f and f.close()
-            self.lock.release()
+            if f:
+                f.close()
+                os.remove(file)
+                
+            file = None
+        
+        #if writing to temp file was successful, then we can rename it to the original file
+        try:
+            file and os.rename(file, self.file)
+        except:
+            file = None
+            
+        self.lock.release()
+        return True if file else False
             
     def set(self, data = None):
         """
