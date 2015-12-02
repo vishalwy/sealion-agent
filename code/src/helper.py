@@ -15,6 +15,7 @@ import logging
 import sys
 import time
 import traceback
+import tempfile
 import exit_status
 from constructs import *
 
@@ -242,29 +243,29 @@ class Config:
         """
         
         self.lock.acquire()  #this has to be atomic as multiple threads reads/writes
-        f, file = None, None
+        f = None
         
         #first we try to write it to a temperory file
         try:
-            file = os.tempnam(Utils.get_safe_path(self.file))
-            f = open(file, 'w')
+            f = tempfile.NamedTemporaryFile(mode = 'w', dir = os.path.dirname(self.file), delete = False)
             json.dump(self.data, f)
             f.close()
         except:
             if f:
                 f.close()
-                os.remove(file)
+                os.remove(f.name)
                 
-            file = None
+            f = None
         
         #if writing to temp file was successful, then we can rename it to the original file
         try:
-            file and os.rename(file, self.file)
+            os.rename(f.name, self.file)
+            return True
         except:
-            file = None
-            
-        self.lock.release()
-        return True if file else False
+            _log.error('Failed to save config to \'%s\'' % self.file)
+            return False
+        finally:
+            self.lock.release()
             
     def set(self, data = None):
         """
