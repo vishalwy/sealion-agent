@@ -55,7 +55,7 @@ cmdline="" ; while read -r -d $'\0' line ; do
 done </proc/${PPID}/cmdline
 
 #check whether the script is same as the one present in the command line of the parent process
-if [[ "$main_script" != "sealion" || "$exe_dir" == "" || "$cmdline" != *"$main_script"* ]] ; then
+if [[ "$main_script" == "" || "$exe_dir" == "" || "$cmdline" != *"$main_script"* ]] ; then
     echo "Missing or invalid agent main script" >&2
     echo "Usage: ${0} <agent main script>" ; exit 1
 fi

@@ -80,7 +80,6 @@ set_script_details() {
     eval sed $args "$1"
 
     import_script res/scripts/helper.sh $1  #import the script
-    chmod +x $1  #add exe flag
 }
 
 #script variables
@@ -159,17 +158,21 @@ echo "Generating '${build_target}/${output}'..."
 #copy the directories to output
 find ../code/ -mindepth 1 -maxdepth 1 -type d -regextype sed -regex '.*/\(\(lib\)\|\(opt\)\|\(src\)\|\(bin\)\)' -exec cp -r {} "${build_target}/${output}/agent" \;
 cp -r res/etc "${build_target}/${output}/agent"  #copy etc folder from res
+
+#rename py files under bin
+for file in "${build_target}/${output}/agent/bin/"*.py ; do
+    mv "$file" "${file%.*}"
+done
+
 mkdir -p "${build_target}/${output}/agent/etc/init.d"  #make init.d folder
 echo "${padding}Copied files from '${script_base_dir}/../code'"
 
 #copy service script
-cp res/scripts/sealion "${build_target}/${output}/agent/etc/init.d/sealion"
-chmod +x "${build_target}/${output}/agent/etc/init.d/sealion"
+cp res/scripts/sealion.sh "${build_target}/${output}/agent/etc/init.d/sealion"
 echo "${padding}Service script generated"
 
 #copy uninstall script
 cp res/scripts/uninstall.sh "${build_target}/${output}/agent/uninstall.sh"
-chmod +x "${build_target}/${output}/agent/uninstall.sh"
 echo "${padding}Uninstaller generated"
 
 #copy and update install script
@@ -218,6 +221,6 @@ fi
 #generate tar in the output directory and cleanup temp directory created
 tarfile="${build_target}/${output}-${version}-noarch.tar.gz"
 echo "Generating '${tarfile}'..."
-tar -zcvf "$tarfile" --exclude="*.pyc" --exclude="__pycache__" --exclude="*~" --exclude-vcs --exclude-backups --directory=$build_target "${output}/"  | (while read line; do echo "${padding}${line}"; done)
+tar -zcvf "$tarfile" --exclude="*.pyc" --exclude="__pycache__" --exclude="*~" --exclude=".*" --exclude-vcs --exclude-backups --directory=$build_target "${output}/"  | (while read line; do echo "${padding}${line}"; done)
 rm -rf "${build_target}/${output}"
 
