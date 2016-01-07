@@ -184,7 +184,7 @@ setup_config() {
         temp_var="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<<${python_binary})"
         args="-i 's/\\(^#\\!.\\+\\s\\)\\(.*$\\)/\\1${temp_var}/'"
 
-        for file in $(find "${install_path}/bin/" -name '*.py') ; do
+        for file in $(find "${install_path}/bin/" -maxdepth 1 -type f) ; do
             eval sed $args "$file"
         done
     fi
