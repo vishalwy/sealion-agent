@@ -516,7 +516,7 @@ class Executer(ThreadEx):
         """
         
         set_vars, unset_count, export_count = [], 0, 0
-        env_vars = self.univ.config.agent.get_dict(('envVariables', {}))['envVariables']
+        env_vars = self.univ.config.agent.get_dict((['config', 'envVariables'], {}))['envVariables']
         config_env_vars = self.univ.config.sealion.get_dict(('env', {}))['env']
         job_details = {'timestamp': 0, 'output': '/dev/stdout', 'command': 'export %s=\'%s\''}  #maintainance job
         
@@ -669,7 +669,7 @@ class JobProducer(singleton(ThreadEx)):
             Tuple containing (total_count, plugin_count, start_count, update_count, stop_count)
         """
         
-        activities = self.univ.config.agent.activities
+        activities = self.univ.config.agent.get(['config', 'activities'])
         start_count, update_count, stop_count, plugin_count, activity_ids = 0, 0, 0, 0, []
         
         self.activities_lock.acquire()  #this has to be atomic as multiple threads reads/writes

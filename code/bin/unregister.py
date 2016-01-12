@@ -18,9 +18,13 @@ sys.path.insert(0, exe_path + '/src')
 sys.path.insert(0, exe_path + '/lib')
 
 import exit_status
-import api
 
-api.create_session()
+try:  #it is possible that the agent was removed from the UI, in that case it already had removed config files. so import api can raise an exception
+    import api
+    api.create_session()
+except:
+    sys.exit(exit_status.AGENT_ERR_SUCCESS)  #any exception should be considered as success
+
 api.session.ping()  #required to set the post event, as the post event is set only after auth
 status = api.session.unregister()  #unregister the agent
 sys.exit(exit_status.AGENT_ERR_SUCCESS if api.is_not_connected(status) == False else exit_status.AGENT_ERR_FAILED_CONNECT)

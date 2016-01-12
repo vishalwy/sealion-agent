@@ -111,7 +111,7 @@ if logging_filters or logging_filters == None:
         handler.addFilter(LoggingList(*logging_filters))
         
 #if the agent is already registerd, thare will be _id attribute
-if hasattr(univ.config.agent, '_id') == False:  
+if not univ.config.agent.get(['config', '_id']):  
     if api.session.register(retry_count = 2, retry_interval = 10) != api.Status.SUCCESS:
         sys.exit(exit_status.AGENT_ERR_FAILED_REGISTER)
         

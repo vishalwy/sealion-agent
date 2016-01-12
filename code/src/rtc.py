@@ -99,7 +99,7 @@ class SocketIONamespace(BaseNamespace):
         try:
             #stop the agent if it is not found in the list of servers            
             if args[0].get('servers'):
-                self.univ.config.agent._id in args[0]['servers'] and api.session.stop(api.Status.NOT_FOUND)
+                self.univ.config.agent.get(['config', '_id']) in args[0]['servers'] and api.session.stop(api.Status.NOT_FOUND)
             else:
                 api.session.stop(api.Status.NOT_FOUND)
         except:
@@ -124,7 +124,7 @@ class SocketIONamespace(BaseNamespace):
         try:
             #get agent config if this is the agent changed category
             if args[0].get('servers'):
-                self.univ.config.agent._id in args[0]['servers'] and api.session.get_config()
+                self.univ.config.agent.get(['config', '_id']) in args[0]['servers'] and api.session.get_config()
             else:
                 api.session.get_config()  #get the config as activities are updated
         except:
@@ -140,7 +140,7 @@ class SocketIONamespace(BaseNamespace):
         
         try:
              #get agent config if this agent runs the activity that was deleted.
-            args[0]['activity'] in self.univ.config.agent.activities and api.session.get_config()
+            args[0]['activity'] in self.univ.config.agent.get(['config', 'activities']) and api.session.get_config()
         except:
             pass
         

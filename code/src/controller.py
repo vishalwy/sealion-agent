@@ -143,7 +143,7 @@ class Controller(singleton(ThreadEx)):
             'exe_path': self.univ.exe_path, 
             'executable': sys.executable, 
             'org_token': self.univ.config.agent.orgToken, 
-            'agent_id': self.univ.config.agent._id,
+            'agent_id': self.univ.config.agent.get(['config', '_id']),
             'version': version_details['agentVersion'], 
             'download_url': self.univ.get_url().replace('://api', '://agent'),
             'proxy': ('-x "%s"' % self.univ.proxy_url) if self.univ.details['isProxy'] else ''

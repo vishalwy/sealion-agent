@@ -18,6 +18,7 @@ import multiprocessing
 import re
 import requests
 import helper
+import version
 from datetime import datetime
 from constructs import *
 
@@ -108,7 +109,6 @@ class AgentConfig(helper.Config):
             'type': {
                 '_id': {
                     'type': 'str,unicode', 
-                    'depends': ['agentVersion'], 
                     'regex': '^[a-zA-Z0-9]{24}$', 
                     'optional': True
                 },
@@ -176,17 +176,14 @@ class AgentConfig(helper.Config):
         Returns:
             True on success, an error string on failure
         """
-        
-        #delete the category key from data since category in the settings file is the name, and data['category'] is the id
-        if 'category' in data:  
-            del data['category']
             
-        univ = Universal()
-        version = data.get('agentVersion')
+        univ, version = Universal(), None
+        
+        if data.get('config'):
+            version = data.get('config').get('agentVersion')
              
-        if version and version != self.data['agentVersion']:  #if the agent version mismatch we need to update the agent
-            hasattr(self, '_id') and univ.event_dispatcher.trigger('update_agent')  #trigger an event so that the other module can install the update
-            del data['agentVersion']  #delete the key as we want only the updater script to modify it
+        if version and version != self.private_data['agentVersion']:  #if the agent version mismatch we need to update the agent
+            self.get(['config', '_id']) and univ.event_dispatcher.trigger('update_agent')  #trigger an event so that the other module can install the update
             
         ret = helper.Config.update(self, data)  #call the base class version
         univ.event_dispatcher.trigger('set_exec_details')  #trigger an event so that the other modules can act on the new activities/env
@@ -210,7 +207,7 @@ class Universal(singleton()):
         self.event_dispatcher = helper.event_dispatcher  #event dispatcher for communication across modules
         self.config = EmptyClass()
         self.config.sealion = SealionConfig(self.exe_path + '/etc/config.json')  #instance of configurable settings
-        self.config.agent = AgentConfig(self.exe_path + '/etc/agent.json')  #instance of private settings
+        self.config.agent = AgentConfig(file = self.exe_path + '/etc/agent.json', private_data = {'agentVersion': version.__version__})  #instance of private settings
         ret = self.config.sealion.set()  #load the config from the file
         
         if ret != True:  #raise an exception on error

@@ -258,12 +258,15 @@ class NavigationDict(dict):
         
         return data
     
-    def get(self, key, default = None):
-        try:
-            data = self.get_value(key.split(':'))
-        except KeyError:
-            data = default
-            
+    def get(self, keys, default = None):
+        if type(keys) is list:
+            try:
+                data = self.get_value(keys)
+            except KeyError:
+                data = default
+        else:
+            data = dict.get(self, keys, default)
+        
         return data
     
     def get_dict(self, *keys, **kwargs):
@@ -281,21 +284,23 @@ class NavigationDict(dict):
         
         def update_dict(data, keys, value):
             if return_leaf_key:
+                data[keys[-1]] = value
+            else:
                 for key in keys[:-1]:
                     data[key] = data.get(key, {})
                     data = data[key]
                     
-            data[keys[-1]] = value
+                data[keys[-1]] = value
         
         for key in keys:
             key = key if type(key) is tuple else (key,)  #get the key
-            curr_key = key[0].split(':')
+            curr_keys = key[0] if type(key[0]) is list else [key[0]]
             
             try:
-                update_dict(ret, curr_key, self.get_value(curr_key))
+                update_dict(ret, curr_keys, self.get_value(curr_keys))
             except:
                 if len(key) > 1:  #use the default value for the key
-                    update_dict(ret, curr_key, key[1])
+                    update_dict(ret, curr_keys, key[1])
 
         return ret
         

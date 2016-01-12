@@ -8,9 +8,9 @@ __email__ = 'hello@sealion.com'
 
 import sys
 
-MAJOR_VERSION = 4  #a major change is introduced
-MINOR_VERSION = 0  #a minor change is introduced
-UPDATE_VERSION = 0  #a bug fix for the last minor version
+MAJOR_VERSION = 3  #a major change is introduced
+MINOR_VERSION = 4  #a minor change is introduced
+UPDATE_VERSION = 3  #a bug fix for the last minor version
 RELEASE_VERSION = 'n1'  #update this whenever a change need to be tested or released
 
 #version string; do not update this directly!

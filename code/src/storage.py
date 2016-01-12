@@ -49,7 +49,7 @@ class OfflineStore(ThreadEx):
             True on success else False
         """
         
-        self.db_file = helper.Utils.get_safe_path(self.db_file + ('/%s.db' % self.univ.config.agent.org)) #form absolute path to db filename
+        self.db_file = helper.Utils.get_safe_path(self.db_file + ('/%s.db' % self.univ.config.agent.get(['config', 'org']))) #form absolute path to db filename
         ThreadEx.start(self) #start the thread
         self.conn_event.wait() #synchronize connection           
         return True if self.conn else False

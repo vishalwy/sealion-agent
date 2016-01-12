@@ -74,7 +74,7 @@ class Connection(ThreadEx):
         status = self.attempt(retry_count = 2)  #attempt to auth
         
         #if api sesssion cannot connect to server and we have the activities available, we can run them offline
-        if api.is_not_connected(status) and hasattr(self.univ.config.agent, 'activities') and hasattr(self.univ.config.agent, 'org'):
+        if api.is_not_connected(status) and self.univ.config.agent.get(['config', 'activities']) and  self.univ.config.agent.get(['config', 'org']):
             self.start()
             status = api.Status.SUCCESS  #modify the status so that caller can continue
             

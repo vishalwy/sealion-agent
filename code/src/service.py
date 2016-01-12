@@ -44,6 +44,8 @@ class SeaLion(Daemon):
         self.crash_loop_timeout = 30  #timeout between each crash and resurrect
         self.crash_loop_count = 5  #count of crash dumps to determine crash loop
         self.crash_dump_path = '%s/var/crash/' % exe_path  #crash dump path
+        self.crash_dump_pattern = '^sealion-%s-[0-9]+\.dmp$'
+        self.agent_version_regex = '(\d+\.){2}\d+(\.[a-z0-9]+)?'
     
     def save_dump(self, stack_trace):
         """
@@ -69,7 +71,7 @@ class SeaLion(Daemon):
                 'timestamp': timestamp,
                 'stack': stack_trace,
                 'orgToken': univ.config.agent.orgToken,
-                '_id': univ.config.agent._id,
+                '_id': univ.config.agent.get(['config', '_id']),
                 'os': {'pythonVersion': univ.details['pythonVersion']},
                 'process': {
                     'uid': os.getuid(),
@@ -131,10 +133,6 @@ class SeaLion(Daemon):
         #this is required not to affect crash loop detection, since crash loop detection is done by checking number crash dumps generated in a span of time
         crash_dump_timeout = (self.crash_loop_count * self.crash_loop_timeout) + 10 
         
-        #get the agent version regex to differentiate dumps from any other file
-        agent_version_regex = univ.config.agent.schema['agentVersion'].get('regex', '.*')
-        agent_version_regex = re.sub('^\^?([^\$]+)\$?$', '\g<1>', agent_version_regex)
-        
         _log.debug('CrashDumpSender waiting for stop event for %d seconds' % crash_dump_timeout)
         univ.stop_event.wait(crash_dump_timeout)
         
@@ -143,7 +141,7 @@ class SeaLion(Daemon):
                 file_name = self.crash_dump_path + file
 
                 #is this a valid crash dump filename
-                if os.path.isfile(file_name) and re.match('^sealion-%s-[0-9]+\.dmp$' % agent_version_regex, file) != None:
+                if os.path.isfile(file_name) and re.match(self.crash_dump_pattern % self.agent_version_regex, file) != None:
                     report = None
 
                     while 1:
@@ -250,16 +248,12 @@ class SeaLion(Daemon):
         file_count, loop_file_count = 0, 0
         
         #crash loop is detected only for the current agent version running
-        loop_regex = '^sealion-%s-[0-9]+\.dmp$' % univ.config.agent.agentVersion.replace('.', '\.')
-        
-        #agent version regex for finding valid crash dump files
-        agent_version_regex = univ.config.agent.schema['agentVersion'].get('regex', '.*')
-        agent_version_regex = re.sub('^\^?([^\$]+)\$?$', '\g<1>', agent_version_regex)
+        loop_regex = self.crash_dump_pattern % univ.config.agent.agentVersion.replace('.', '\.')
         
         try:
             for f in os.listdir(self.crash_dump_path):  #loop though files in the crash dump directory
                 #if it is a valid crash dump file name
-                if os.path.isfile(self.crash_dump_path + f) and re.match('^sealion-%s-[0-9]+\.dmp$' % agent_version_regex, f) != None:
+                if os.path.isfile(self.crash_dump_path + f) and re.match(self.crash_dump_pattern % self.agent_version_regex, f) != None:
                     file_count += 1
                     
                     #is this file contribute to crash loop

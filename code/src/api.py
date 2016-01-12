@@ -233,7 +233,7 @@ class API(requests.Session):
             _log.info('Registration successful')
             
             #update and save the config
-            self.univ.config.agent.update(response.json())
+            self.univ.config.agent.update({'config': response.json()})
             self.univ.config.agent.save()
         else:
             ret = self.error('Failed to register agent', response)
@@ -249,13 +249,14 @@ class API(requests.Session):
         """
         
         ret = Status.SUCCESS
+        agent_details = self.univ.config.agent.get_dict((['config', '_id'], None), ('orgToken', None))
         
-        if not self.univ.config.agent.config.get('_id'):  #if this agent was not registered
+        if not agent_details['_id']:  #if this agent was not registered
             return ret
         
         #make the request
         response = self.exec_method('delete', 
-            self.univ.get_url('orgs/%s/servers/%s' % (self.univ.config.agent.orgToken, self.univ.config.agent._id)), options = {'retry_count': 2})
+            self.univ.get_url('orgs/%s/servers/%s' % (agent_details['orgToken'], agent_details['_id'])), options = {'retry_count': 2})
         
         if API.is_success(response) == False:
             ret = self.error('Failed to unregister agent', response)
@@ -276,16 +277,13 @@ class API(requests.Session):
         data = self.univ.config.agent.get_dict('orgToken', 'agentVersion')
         data['timestamp'] = int(time.time() * 1000)
         data['platform'] = self.univ.details
-        response = self.exec_method('post', self.univ.get_url('agents/' + self.univ.config.agent._id + '/sessions'), data = data, options = kwargs)    
+        response = self.exec_method('post', self.univ.get_url('agents/' + self.univ.config.agent.get(['config', '_id']) + '/sessions'), data = data, options = kwargs)    
         
         if API.is_success(response):
             _log.info('Authentication successful')
-            
-            import json
-            print json.dumps(response.json(), indent = 4)
 
             #update and save the config
-            self.univ.config.agent.update(response.json())
+            self.univ.config.agent.update({'config': response.json()})
             self.univ.config.agent.save()
             
             self.auth_status(AuthStatus.AUTHENTICATED)  #set auth sataus
@@ -308,7 +306,7 @@ class API(requests.Session):
         
         if API.is_success(response):
             #update and save the config
-            self.univ.config.agent.update(response.json())
+            self.univ.config.agent.update({'config': response.json()})
             self.univ.config.agent.save()
             _log.info('Config updation successful')
             
@@ -373,7 +371,7 @@ class API(requests.Session):
         """
         
         #get the data, url and make the request
-        data = self.univ.config.agent.get_dict(('orgToken', ''), ('config:_id', ''), ('agentVersion', ''))
+        data = self.univ.config.agent.get_dict('orgToken', ['config', '_id'], 'agentVersion')
         url = self.univ.get_url('orgs/%s/agents/%s/agentVersion' % (data['orgToken'], data['_id']))
         response = self.exec_method('get', url, params = {'agentVersion': data['agentVersion']}, options = {'retry_count': 0})
         

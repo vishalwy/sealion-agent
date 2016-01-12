@@ -147,16 +147,18 @@ class Config:
     #schema representing the rules for configuration. subclass should override this to provide custom rules
     schema = {} 
     
-    def __init__(self, file = ''):
+    def __init__(self, file = '', private_data = {}):
         """
         Constructor
         
         Args:
             file: file containing the settings in JSON format
+            private_data: private data for the config
         """
         
         self.file = file 
         self.data = NavigationDict()  #dict for config 
+        self.private_data = NavigationDict(private_data)  #dict for private config
         self.lock = threading.RLock()  #thread lock
         
     def __getattr__(self, attr):
@@ -168,11 +170,30 @@ class Config:
         self.lock.acquire()  #this has to be atomic as multiple threads reads/writes
         
         try:
-            return self.data[attr]
-        except KeyError as e:
-            raise AttributeError(unicode(e))
+            if attr in self.private_data:
+                return self.private_data[attr]
+            elif attr in self.data:
+                return self.data[attr]
+            else:
+                raise AttributeError('Instance has no attribute \'%s\'' % attr)
         finally:
             self.lock.release()
+            
+    def get(self, key, default = None):
+        """
+        Public method to return the value by navigating the dict.
+        
+        Args:
+            keys: key to return
+            default: the default value to be returned if key is no found
+            
+        Returns:
+            value for the key provided
+        """
+        
+        ret = self.private_data.get(key, default)
+        ret = self.data.get(key, default) if ret == default else ret
+        return ret
             
     def get_dict(self, *keys, **kwargs):
         """
@@ -187,6 +208,7 @@ class Config:
         
         self.lock.acquire()  #this has to be atomic as multiple threads reads/writes
         ret = self.data.get_dict(*keys, **kwargs)
+        ret.update(self.private_data.get_dict(*keys, **kwargs))
         self.lock.release()
         return ret
 
