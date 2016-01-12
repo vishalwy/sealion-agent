@@ -156,7 +156,7 @@ class Config:
         """
         
         self.file = file 
-        self.data = {}  #dict for config 
+        self.data = NavigationDict()  #dict for config 
         self.lock = threading.RLock()  #thread lock
         
     def __getattr__(self, attr):
@@ -174,7 +174,7 @@ class Config:
         finally:
             self.lock.release()
             
-    def get_dict(self, *keys):
+    def get_dict(self, *keys, **kwargs):
         """
         Public method to return filtered dict.
         
@@ -186,17 +186,7 @@ class Config:
         """
         
         self.lock.acquire()  #this has to be atomic as multiple threads reads/writes
-        keys, ret = keys or list(self.data.keys()), {}
-        
-        for key in keys:
-            key = key if type(key) is tuple else (key,)  #get the key
-
-            try:
-                ret[key[0]] = self.data[key[0]]  #if key is avaliable
-            except:
-                if len(key) > 1:  #use the default value for the key
-                    ret[key[0]] = key[1]
-                    
+        ret = self.data.get_dict(*keys, **kwargs)
         self.lock.release()
         return ret
 

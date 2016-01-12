@@ -250,7 +250,7 @@ class API(requests.Session):
         
         ret = Status.SUCCESS
         
-        if hasattr(self.univ.config.agent, '_id') == False:  #if this agent was not registered
+        if not self.univ.config.agent.config.get('_id'):  #if this agent was not registered
             return ret
         
         #make the request
@@ -280,6 +280,9 @@ class API(requests.Session):
         
         if API.is_success(response):
             _log.info('Authentication successful')
+            
+            import json
+            print json.dumps(response.json(), indent = 4)
 
             #update and save the config
             self.univ.config.agent.update(response.json())
@@ -370,7 +373,7 @@ class API(requests.Session):
         """
         
         #get the data, url and make the request
-        data = self.univ.config.agent.get_dict(('orgToken', ''), ('_id', ''), ('agentVersion', ''))
+        data = self.univ.config.agent.get_dict(('orgToken', ''), ('config:_id', ''), ('agentVersion', ''))
         url = self.univ.get_url('orgs/%s/agents/%s/agentVersion' % (data['orgToken'], data['_id']))
         response = self.exec_method('get', url, params = {'agentVersion': data['agentVersion']}, options = {'retry_count': 0})
         

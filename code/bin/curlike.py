@@ -18,9 +18,11 @@ import getopt
 #add module lookup paths to sys.path so that import can find them
 #we are inserting at the begining of sys.path so that we can be sure that we are importing the right module
 exe_path = os.path.dirname(os.path.realpath(__file__)).rsplit('/', 1)[0]
+sys.path.insert(0, exe_path + '/src')
 sys.path.insert(0, exe_path + '/lib')
 
 import requests
+import version
 from constructs import unicode
 
 def usage(is_help = False):
@@ -48,6 +50,7 @@ def usage(is_help = False):
     usage_info += ' -L,  --location          Follow redirects; OFF by default\n'
     usage_info += ' -k,  --insecure          Allow connections to SSL sites without certificates\n'
     usage_info += ' -s,  --silent            Does nothing; kept only for compatability with curl command\n'
+    usage_info += '      --version           Display version information\n'
     usage_info += ' -h,  --help              Display this information\n'
     sys.stdout.write(usage_info)
     return True
@@ -114,7 +117,7 @@ def exception_hook(*args, **kwargs):
 sys.excepthook = exception_hook  #set the exception hook
 
 try:
-    long_options = ['proxy=', 'request=', 'header=', 'data=', 'write-out=', 'output=', 'location', 'insecure', 'silent', 'help']
+    long_options = ['proxy=', 'request=', 'header=', 'data=', 'write-out=', 'output=', 'location', 'insecure', 'silent', 'version', 'help']
     options, args = getopt.getopt(sys.argv[1:], 'x:H:X:d:w:o:Lksh', long_options)
     
     for option, arg in options:
@@ -141,6 +144,8 @@ try:
             kwargs['allow_redirects'] = True
         elif option in ['-k', '--insecure']:  #allow url redirection
             kwargs['verify'] = False
+        elif option == '--version':
+            version.print_version() and sys.exit(0)
         elif option in ['-h', '--help']:
             usage(True) and sys.exit(0)
             

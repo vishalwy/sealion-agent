@@ -16,8 +16,10 @@ import getopt
 #add module lookup paths to sys.path so that import can find them
 #we are inserting at the begining of sys.path so that we can be sure that we are importing the right module
 exe_path = os.path.dirname(os.path.realpath(__file__)).rsplit('/', 1)[0]
+sys.path.insert(0, exe_path + '/src')
 sys.path.insert(0, exe_path + '/lib')
 
+import version
 from constructs import unicode
 
 def usage(is_help = False):
@@ -41,6 +43,7 @@ def usage(is_help = False):
     usage_info += '                          Supply empty key \'\' to read the whole JSON\n'
     usage_info += ' -v,  --value <arg>       JSON document representing the value to be used for write operations\n'
     usage_info += ' -n,  --no-pretty-print   Do not pretty print the output; pretty print is ON by default\n'
+    usage_info += '      --version           Display version information\n'
     usage_info += ' -h,  --help              Display this information\n'
     sys.stdout.write(usage_info)
     return True
@@ -87,7 +90,7 @@ actions = ['set', 'delete', 'merge'] + array_actions  #possible operations on th
 keys, value, action, pretty_print, file = None, None, 'get', True, None
 
 try:
-    options, args = getopt.getopt(sys.argv[1:], 'k:v:a:nh', ['key=', 'value=', 'action=', 'no-pretty-print', 'help'])
+    options, args = getopt.getopt(sys.argv[1:], 'k:v:a:nh', ['key=', 'value=', 'action=', 'no-pretty-print', 'version', 'help'])
     
     for option, arg in options:        
         if option in ['-k', '--key']:  #key
@@ -102,6 +105,8 @@ try:
             else:
                 sys.stderr.write('Uknown argument \'%s\' for %s\n' % (arg, option))  #unknown action
                 usage() and sys.exit(1)
+        elif option == '--version':
+            version.print_version() and sys.exit(0)
         elif option in ['-h', '--help']:
             usage(True) and sys.exit(0)
         else:  #anything else is considered as the file to read

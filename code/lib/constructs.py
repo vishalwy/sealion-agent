@@ -240,3 +240,63 @@ class EventDispatcher():
             
         return callback_count
 
+class NavigationDict(dict):
+    def get_value(self, keys):
+        data = self
+        
+        for key in keys:
+            if type(data) is list:
+                items = [item[key] for item in data if type(item) is dict and item.get(key) is not None]
+                length = len(items)
+
+                if not length:
+                    raise KeyError(key)
+
+                data = items[0] if length == 1 else items
+            else:
+                data = data[key]
+        
+        return data
+    
+    def get(self, key, default = None):
+        try:
+            data = self.get_value(key.split(':'))
+        except KeyError:
+            data = default
+            
+        return data
+    
+    def get_dict(self, *keys, **kwargs):
+        """
+        Public method to return filtered dict.
+        
+        Args:
+            keys: keys to return, specify no keys to select all keys. a key can also be tuple (key, default_value)
+            
+        Returns:
+            dict continaing the filtered keys
+        """
+        
+        keys, ret, return_leaf_key = keys or list(self.keys()), {}, kwargs.get('return_leaf_key', True)
+        
+        def update_dict(data, keys, value):
+            if return_leaf_key:
+                for key in keys[:-1]:
+                    data[key] = data.get(key, {})
+                    data = data[key]
+                    
+            data[keys[-1]] = value
+        
+        for key in keys:
+            key = key if type(key) is tuple else (key,)  #get the key
+            curr_key = key[0].split(':')
+            
+            try:
+                update_dict(ret, curr_key, self.get_value(curr_key))
+            except:
+                if len(key) > 1:  #use the default value for the key
+                    update_dict(ret, curr_key, key[1])
+
+        return ret
+        
+        

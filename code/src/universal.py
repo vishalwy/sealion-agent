@@ -68,6 +68,10 @@ class SealionConfig(helper.Config):
             'type': 'str,unicode', 
             'regex': '^.+$', 
             'optional': True
+        },
+        'builtinParser': {
+            'type': 'bool',
+            'optional': True
         }
     }
    
@@ -82,77 +86,83 @@ class AgentConfig(helper.Config):
             'type': 'str,unicode', 
             'regex': '^[a-zA-Z0-9\-]{36}$'
         },
-        '_id': {
-            'type': 'str,unicode', 
-            'depends': ['agentVersion'], 
-            'regex': '^[a-zA-Z0-9]{24}$', 
-            'optional': True
-        },
+        
         'apiUrl': {
             'type': 'str,unicode', 
             'regex': '^https://[^\s:]+(:[0-9]+)?$' 
         },
-        'name': {
-            'type': 'str,unicode', 
-            'regex': '^.+$',
-            'optional': True
-        },
+        
         'category': {
             'type': 'str,unicode', 
             'regex': '^.+$', 
             'optional': True
         },
-        'agentVersion': {
-            'type': 'str,unicode', 
-            'regex': '^(\d+\.){2}\d+(\.[a-z0-9]+)?$'
-        },
-        'activities': {
-            'type': [{
-                '_id': {
-                    'type': 'str,unicode', 
-                    'regex': '^[a-zA-Z0-9]{24}$'
-                }, 
-                'name': {
-                    'type': 'str,unicode', 
-                    'regex': '^.+$'
-                },
-                'service': {
-                    'type': 'str,unicode', 
-                    'regex': '^.+$', 
-                    'optional': True
-                },
-                'command': {
-                    'type': 'str,unicode', 
-                    'regex': '^.+$'
-                },
-                'interval': {'type': 'int'}
-            }],
-            'depends': ['_id', 'agentVersion'],
-            'optional': True
-        },
-        'org': {
-            'type': 'str,unicode', 
-            'depends': ['orgToken', '_id', 'agentVersion'], 
-            'regex': '^[a-zA-Z0-9]{24}$', 
-            'optional': True
-        },
+        
         'ref': {
             'type': 'str,unicode', 
             'regex': 'curl|tarball', 
             'optional': True
         },
-        'updateUrl': {
-            'type': 'str,unicode', 
-            'optional': True
-        },
-        'envVariables': {
+        
+        'config': {
             'type': {
-                re.compile('^[a-zA-Z_][a-zA-Z0-9_]*$'): {
-                    'type': 'str,unicode'
+                '_id': {
+                    'type': 'str,unicode', 
+                    'depends': ['agentVersion'], 
+                    'regex': '^[a-zA-Z0-9]{24}$', 
+                    'optional': True
+                },
+                
+                'name': {
+                    'type': 'str,unicode', 
+                    'regex': '^.+$',
+                    'optional': True
+                },
+                
+                'activities': {
+                    'type': [{
+                        '_id': {
+                            'type': 'str,unicode', 
+                            'regex': '^[a-zA-Z0-9]{24}$'
+                        }, 
+                        'name': {
+                            'type': 'str,unicode', 
+                            'regex': '^.+$'
+                        },
+                        'service': {
+                            'type': 'str,unicode', 
+                            'regex': '^.+$', 
+                            'optional': True
+                        },
+                        'command': {
+                            'type': 'str,unicode', 
+                            'regex': '^.+$'
+                        },
+                        'interval': {'type': 'int'}
+                    }],
+                    'depends': ['_id'],
+                    'optional': True
+                },
+                
+                'org': {
+                    'type': 'str,unicode', 
+                    'depends': ['_id'], 
+                    'regex': '^[a-zA-Z0-9]{24}$', 
+                    'optional': True
+                },
+                
+                'envVariables': {
+                    'type': {
+                        re.compile('^[a-zA-Z_][a-zA-Z0-9_]*$'): {
+                            'type': 'str,unicode'
+                        }
+                    }, 
+                    'depends': ['_id'],
+                    'optional': True
                 }
-            }, 
-            'depends': ['_id', 'agentVersion'],
-            'optional': True
+            },
+            
+            'depends': ['orgToken']
         }
     }
     
