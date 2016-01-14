@@ -27,7 +27,6 @@ from constructs import *
 
 _log = logging.getLogger(__name__)  #module level logging
 gc.set_threshold(50, 5, 5)  #set gc threshold
-logging_filters = []  #modules to log for
 logging_level = logging.INFO  #default logging level
 
 #setup logging for StreamHandler
@@ -84,31 +83,22 @@ class LoggingList(logging.Filter):
         """
         
         return any(log_filter.match(record.pathname) for log_filter in self.log_filters)
-    
-try:
-    logging_filters = univ.config.sealion.logging['modules']  #read any logging list defined in the config
-except:
-    pass
 
-try:    
-    temp = univ.config.sealion.logging['level'].strip()  #read logging level from config
-    
-    #set the level based on the string
-    if temp == 'error':
-        logging_level = logging.ERROR
-    elif temp == 'debug':
-        logging_level = logging.DEBUG
-    elif temp == 'none':
-        logging_filters = None
-except:
+logging_filters = univ.config.sealion.get(['logging', 'modules'], ['/(src|opt)/.+\\.py'])  #read any logging list defined in the config
+temp = univ.config.sealion.get(['logging', 'level'])  #read logging level from config
+
+#set the level based on the string
+if temp == 'error':
+    logging_level = logging.ERROR
+elif temp == 'debug':
+    logging_level = logging.DEBUG
+elif temp == 'none':  #if logging need to be done set the level to the highest and filterout all the logs
+    logging_level = logging.CRITICAL
     logging_filters = []
     
-#setup log filtering   
-if logging_filters or logging_filters == None:
-    logging_filters = logging_filters or []
-    
-    for handler in logger.handlers:  
-        handler.addFilter(LoggingList(*logging_filters))
+#setup log filtering       
+for handler in logger.handlers:  
+    handler.addFilter(LoggingList(*logging_filters))
         
 #if the agent is already registerd, thare will be _id attribute
 if not univ.config.agent.get(['config', '_id']):  

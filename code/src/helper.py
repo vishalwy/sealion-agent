@@ -208,7 +208,7 @@ class Config:
         
         self.lock.acquire()  #this has to be atomic as multiple threads reads/writes
         ret = self.data.get_dict(*keys, **kwargs)
-        ret.update(self.private_data.get_dict(*keys, **kwargs))
+        self.private_data and ret.update(self.private_data.get_dict(*tuple([key[0] if type(key) is tuple else key for key in keys]), **kwargs))
         self.lock.release()
         return ret
 

@@ -159,6 +159,26 @@ class AgentConfig(helper.Config):
                     }, 
                     'depends': ['_id'],
                     'optional': True
+                },
+                
+                'metrics': {
+                    'type': [{
+                        '_id': {
+                            'type': 'str,unicode', 
+                            'regex': '^[a-zA-Z0-9]{24}$'
+                        }, 
+                        'activity': {
+                            'type': 'str,unicode', 
+                            'regex': '^[a-zA-Z0-9]{24}$'
+                        },
+                        'parser': {
+                            'type': 'str,unicode', 
+                            'regex': '^.+$', 
+                        },
+                        'cumulative': {'type': 'bool'}
+                    }], 
+                    'depends': ['_id'],
+                    'optional': True
                 }
             },
             
@@ -212,7 +232,7 @@ class Universal(singleton()):
         
         if ret != True:  #raise an exception on error
             raise RuntimeError(ret)
-        
+
         os.environ.update(self.config.sealion.get_dict(('env', {}))['env'])  #export the env vars defined in the config
         ret = self.config.agent.set()  #load private config from the file
         

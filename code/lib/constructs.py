@@ -291,11 +291,11 @@ class NavigationDict(dict):
                     data = data[key]
                     
                 data[keys[-1]] = value
-        
+
         for key in keys:
             key = key if type(key) is tuple else (key,)  #get the key
             curr_keys = key[0] if type(key[0]) is list else [key[0]]
-            
+
             try:
                 update_dict(ret, curr_keys, self.get_value(curr_keys))
             except:
