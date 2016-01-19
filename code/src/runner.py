@@ -45,7 +45,6 @@ class Job:
             activity: dict representing the activity to be executed
         """
         
-        self.is_whitelisted = activity['is_whitelisted']  #is this job allowed to execute
         self.exec_timestamp = activity['next_exec_timestamp']  #timestamp at which the job should execute
         self.status = JobStatus.INITIALIZED  #current job state
         self.is_plugin = True if activity['details'].get('service') == 'Plugins' else False  #is this job a plugin or a commandline
@@ -56,8 +55,7 @@ class Job:
             'output': None,  #output of the job, file handle for commandline job, dict for successful pugin execution, str for failed pugin execution. 
             'pid': -1,  #process id if it is a commandline job
             'return_code': 0,  #return code of the job
-            '_id': activity['details']['_id'],  #activity id
-            'command': activity['details']['command']  #command to be executed for commandline job, else the python module name for plugin job
+            'activity': activity['details'],  #activity the job represents
         }
         
         self.univ = universal.Universal()  #reference to Universal for optimized access
@@ -74,8 +72,8 @@ class Job:
         t = int(time.time() * 1000)
         self.exec_details['timestamp'] = t  #set the exec timestamp
 
-        if self.is_whitelisted == True:  #if the job is whitelisted
-            _log.debug('Executing activity(%s @ %d)' % (self.exec_details['_id'], t))
+        if self.exec_details['activity']['is_whitelisted'] == True:  #if the job is whitelisted
+            _log.debug('Executing activity(%s @ %d)' % (self.exec_details['activity']['_id'], t))
             
             #if it is not a plugin job, then we create a temperory file to capture the output
             #a plugin job return the data directly
@@ -84,7 +82,7 @@ class Job:
                 
             self.status = JobStatus.RUNNING  #change the state to running
         else:
-            _log.info('Activity %s is blocked by whitelist' % self.exec_details['_id'])
+            _log.info('Activity %s is blocked by whitelist' % self.exec_details['activity']['_id'])
             self.status = JobStatus.BLOCKED  #change the state to blocked
 
         return t
@@ -162,7 +160,7 @@ class Job:
         else:
             format = 'No data for activity (%(activity)s @ %(timestamp)d); satus: %(status)d; pid: %(pid)d; output: %(output)s'
             format_spec = {
-                'activity': self.exec_details['_id'],
+                'activity': self.exec_details['activity']['_id'],
                 'timestamp': self.exec_details['timestamp'],
                 'status': self.status,
                 'pid': self.exec_details['pid'],
@@ -189,12 +187,12 @@ class Job:
 
             if not data:  #if the file is empty
                 data = 'No output produced'
-                _log.debug('No output/error found for activity (%s @ %d)' % (self.exec_details['_id'], self.exec_details['timestamp']))
+                _log.debug('No output/error found for activity (%s @ %d)' % (self.exec_details['activity']['_id'], self.exec_details['timestamp']))
                 
-            _log.debug('Read output from activity (%s @ %d)' % (self.exec_details['_id'], self.exec_details['timestamp']))
+            _log.debug('Read output from activity (%s @ %d)' % (self.exec_details['activity']['_id'], self.exec_details['timestamp']))
         except Exception as e:
             data = ''
-            _log.error('Could not read output from activity (%s @ %d); %s' % (self.exec_details['_id'], self.exec_details['timestamp'], unicode(e)))
+            _log.error('Could not read output from activity (%s @ %d); %s' % (self.exec_details['activity']['_id'], self.exec_details['timestamp'], unicode(e)))
             
         self.remove_file()  #remove the output file
         return data
@@ -207,7 +205,7 @@ class Job:
         try:
             #it is possible that output is not a file, in that case it will raise an exception which is ignored
             os.remove('%s/%s' % (self.univ.temp_path, self.exec_details['output']))
-            _log.debug('Removed the output file for activity (%s @ %d)' % (self.exec_details['_id'], self.exec_details['timestamp']))
+            _log.debug('Removed the output file for activity (%s @ %d)' % (self.exec_details['activity']['_id'], self.exec_details['timestamp']))
         except:
             pass
         
@@ -270,12 +268,18 @@ class Executer(ThreadEx):
             try:
                 #we load the plugin and calls the get_data function and updates the job with the data
                 #this can raise exception
-                plugin = __import__(job.exec_details['command'])
-                job.update({'return_code': 0, 'output': plugin.get_data()})
+                activity = job.exec_details['activity']
+                plugin = __import__(activity['command'])
+                output = plugin.get_data(activity['metrics'])
+                
+                if type(output) is int:
+                    JobProducer().queue.put(job)
+                else:
+                    job.update({'return_code': 0, 'output': output})
             except Exception as e:
                 #on failure we set the status code as ignored, so that output is not processed
                 job.status = JobStatus.IGNORED
-                _log.error('Failed to get data for plugin activity (%s @ %d); %s' % (job.exec_details['_id'], job.exec_details['timestamp'], unicode(e)))
+                _log.error('Failed to get data for plugin activity (%s @ %d); %s' % (job.exec_details['activity']['_id'], job.exec_details['timestamp'], unicode(e)))
         
     def update_job(self, timestamp, details):
         """
@@ -313,7 +317,7 @@ class Executer(ThreadEx):
             
             #if the job exceeds the timeout
             if job.status == JobStatus.RUNNING and t - job.exec_details['timestamp'] > self.timeout:
-                job.kill() and _log.info('Killed activity (%s @ %d) as it exceeded timeout' % (job.exec_details['_id'], job.exec_details['timestamp']))
+                job.kill() and _log.info('Killed activity (%s @ %d) as it exceeded timeout' % (job.exec_details['activity']['_id'], job.exec_details['timestamp']))
 
             if job.status == JobStatus.IGNORED:  #remove the job if it is to be ignored
                 del Executer.jobs[job_timestamp]
@@ -410,7 +414,9 @@ class Executer(ThreadEx):
             String representing the job
         """
         
-        return ('%d %s: %s\n' % (job_details['timestamp'], job_details['output'], job_details['command'])).encode('utf-8')
+        activity = job_details.get('activity')
+        command = activity['command'] if activity else job_details['command']
+        return ('%d %s: %s\n' % (job_details['timestamp'], job_details['output'], command)).encode('utf-8')
     
     def write(self, job_details):
         """
@@ -601,14 +607,10 @@ class JobProducer(singleton(ThreadEx)):
             True if the activity is whitelsited else False
         """
         
-        whitelist, command = [], activity['command']
-        
         if activity.get('service') == 'Plugins':  #always execute plugin activities
             return True
-
-        if hasattr(self.univ.config.sealion, 'whitelist'):  #read the whitelist from config
-            whitelist = self.univ.config.sealion.whitelist
-            
+        
+        whitelist, command = self.univ.config.sealion.get('whitelist', []) , activity['command']
         is_whitelisted = False if len(whitelist) else True  #an empty whitelist implies that all activities are allowed to run
 
         #find out whether the activity is whitelisted
@@ -683,7 +685,7 @@ class JobProducer(singleton(ThreadEx)):
                 details = cur_activity['details']
                 
                 #if interval or command modified
-                if details['interval'] != activity['interval'] or details['command'] != activity['command']:
+                if details['interval'] != activity['interval'] or details['activity']['command'] != activity['command']:
                     cur_activity['details'] = activity
                     cur_activity['is_whitelisted'] = self.is_in_whitelist(activity)  #check whether the activity is allowed to run
                     cur_activity['next_exec_timestamp'] = t  #execute the activity immediately

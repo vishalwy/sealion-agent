@@ -138,7 +138,26 @@ class AgentConfig(helper.Config):
                             'type': 'str,unicode', 
                             'regex': '^.+$'
                         },
-                        'interval': {'type': 'int'}
+                        'interval': {'type': 'int'},
+                        'metrics': {
+                            'type': [{
+                                '_id': {
+                                    'type': 'str,unicode', 
+                                    'regex': '^[a-zA-Z0-9]{24}$'
+                                }, 
+                                'name': {
+                                    'type': 'str,unicode', 
+                                    'regex': '^.+$'
+                                },
+                                'parser': {
+                                    'type': 'str,unicode', 
+                                    'regex': '^.+$', 
+                                },
+                                'cumulative': {'type': 'bool'}
+                            }], 
+                            'depends': ['_id'],
+                            'optional': True
+                        } 
                     }],
                     'depends': ['_id'],
                     'optional': True
@@ -159,26 +178,6 @@ class AgentConfig(helper.Config):
                     }, 
                     'depends': ['_id'],
                     'optional': True
-                },
-                
-                'metrics': {
-                    'type': [{
-                        '_id': {
-                            'type': 'str,unicode', 
-                            'regex': '^[a-zA-Z0-9]{24}$'
-                        }, 
-                        'activity': {
-                            'type': 'str,unicode', 
-                            'regex': '^[a-zA-Z0-9]{24}$'
-                        },
-                        'parser': {
-                            'type': 'str,unicode', 
-                            'regex': '^.+$', 
-                        },
-                        'cumulative': {'type': 'bool'}
-                    }], 
-                    'depends': ['_id'],
-                    'optional': True
                 }
             },
             
@@ -197,10 +196,22 @@ class AgentConfig(helper.Config):
             True on success, an error string on failure
         """
             
-        univ, version = Universal(), None
+        univ, config = Universal(), data.get('config')
+        version = config.get('agentVersion')
+        activities = config.get('activities')
+        metrics = config.get('metrics')
         
-        if data.get('config'):
-            version = data.get('config').get('agentVersion')
+        if activities and metrics:
+            for metric in metrics:
+                for activity in activities:
+                    if metric['activity'] == activity['_id']:
+                        activity['metrics'] = activity.get('metrics', []);
+                        activity['metrics'].append(metric)
+                        
+            del config['metrics']
+        
+        import pdb
+        pdb.set_trace()
              
         if version and version != self.private_data['agentVersion']:  #if the agent version mismatch we need to update the agent
             self.get(['config', '_id']) and univ.event_dispatcher.trigger('update_agent')  #trigger an event so that the other module can install the update

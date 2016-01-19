@@ -21,7 +21,7 @@ except:
     
 _log = logging.getLogger(__name__)  #module level logging
 
-def get_data():
+def get_data(metrics):
     """
     Function to get the data this module provides.
     
@@ -79,7 +79,9 @@ def get_data():
             _log.error('Failed to sample disk R/W; %s' % unicode(e))
             
         sampling_count -= 1
-        sampling_count and time.sleep(sampling_duration)  #sleep before sampling again
+        
+        if sampling_count:
+            yield sampling_duration  #yield the sampling duration so that caller can sleep and resume
     
     #append cpu usage for each cpu core
     for cpu, usage in cpu_usage.items():
@@ -95,7 +97,45 @@ def get_data():
         data['diskReads'].append({'name': device, 'value': rw['reads']})
         data['diskWrites'].append({'name': device, 'value': rw['writes']})
     
-    return data
+    return {
+        'data': data,
+        'metrics': extract_metrics(data, metrics)
+    }
+    
+def extract_metrics(data, metrics):
+    ret = {}
+    
+    for metric in metrics:
+        try:
+            id, parser = metric['_id'], metric['parser']
+
+            if parser == 'get_loadAvg1Min':
+                ret[id] = data['loadAvg1Min']
+            elif parser == 'get_loadAvg5Min':
+                ret[id] = data['loadAvg5Min']
+            elif parser == 'get_loadAvg15Min':
+                ret[id] = data['loadAvg15Min']
+            elif parser == 'get_cpuUsage':
+                values = [sum([temp['value'][key] for key in ['us', 'ni', 'sy', 'hi', 'si']]) for temp in data['cpuUsage']]
+                ret[id] = float('%.2f' % (float(sum(values)) / len(values))) 
+            elif parser == 'get_memUsage':
+                ret[id] = float('%.2f' % ((float(data['memUsage']['res'] - data['memUsage']['cached']) / data['memUsage']['total']) * 100))
+            elif parser == 'get_networkReads':
+                values = [temp['value'] for temp in data['newtwork_reads']]
+                ret[id] = float('%.2f' % (float(max(values)) / len(values))) 
+            elif parser == 'get_networkWrites':
+                values = [temp['value'] for temp in data['networkWrites']]
+                ret[id] = float('%.2f' % (float(max(values)) / len(values))) 
+            elif parser == 'get_diskReads':
+                values = [temp['value'] for temp in data['diskReads']]
+                ret[id] = float('%.2f' % (float(max(values)) / len(values))) 
+            elif parser == 'get_diskWrites':
+                values = [temp['value'] for temp in data['diskWrites']]
+                ret[id] = float('%.2f' % (float(max(values)) / len(values))) 
+        except Exception as e:
+            _log.error('Failed to extract metric %s; %s' % (id, unicode(e)))
+            
+    return ret
 
 def get_load_avg():
     """
