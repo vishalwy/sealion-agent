@@ -16,7 +16,7 @@ import os
 exe_path = os.path.dirname(os.path.realpath(__file__)).rsplit('/', 1)[0]
 sys.path.insert(0, exe_path + '/lib/socketio_client') 
 sys.path.insert(0, exe_path + '/lib/websocket_client')
-sys.path.insert(0, exe_path + '/opt')
+sys.path.insert(0, exe_path + '/opt/default/python/')
 sys.path.insert(0, exe_path + '/lib')
 sys.path.insert(0, exe_path + '/src')
 
