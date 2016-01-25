@@ -45,6 +45,7 @@ class Job:
             activity: dict representing the activity to be executed
         """
         
+        self.is_whitelisted = activity['is_whitelisted']  #is this job allowed to execute
         self.exec_timestamp = activity['next_exec_timestamp']  #timestamp at which the job should execute
         self.status = JobStatus.INITIALIZED  #current job state
         self.plugin = True if activity['details'].get('service') == 'Plugins' else False  #is this job a plugin or a commandline
@@ -69,10 +70,13 @@ class Job:
             Execution start timestamp of the job
         """
         
+        if self.exec_details['timestamp']:
+            return self.exec_details['timestamp']
+        
         t = int(time.time() * 1000)
         self.exec_details['timestamp'] = t  #set the exec timestamp
 
-        if self.exec_details['activity']['is_whitelisted'] == True:  #if the job is whitelisted
+        if self.is_whitelisted == True:  #if the job is whitelisted
             _log.debug('Executing activity(%s @ %d)' % (self.exec_details['activity']['_id'], t))
             
             #if it is not a plugin job, then we create a temperory file to capture the output
@@ -208,7 +212,7 @@ class Job:
             try:
                 context['command_output'] = output
                 context['metric_value'] = None
-                exec metric['parser'] in context
+                exec(metric['parser'], context)
                 value = context.get('metric_value')
                 
                 if type(value).__name__ in ['int', 'float']:
@@ -712,7 +716,7 @@ class JobProducer(singleton(ThreadEx)):
                 details = cur_activity['details']
                 
                 #if interval or command modified
-                if details['interval'] != activity['interval'] or details['activity']['command'] != activity['command']:
+                if details['interval'] != activity['interval'] or details['command'] != activity['command']:
                     cur_activity['details'] = activity
                     cur_activity['is_whitelisted'] = self.is_in_whitelist(activity)  #check whether the activity is allowed to run
                     cur_activity['next_exec_timestamp'] = t  #execute the activity immediately

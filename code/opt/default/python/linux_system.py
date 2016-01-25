@@ -120,7 +120,7 @@ def extract_metrics(data, metrics):
             elif parser == 'get_memUsage':
                 ret[id] = float('%.2f' % ((float(data['memUsage']['res'] - data['memUsage']['cached']) / data['memUsage']['total']) * 100))
             elif parser == 'get_networkReads':
-                values = [temp['value'] for temp in data['newtwork_reads']]
+                values = [temp['value'] for temp in data['networkReads']]
                 ret[id] = float('%.2f' % (float(max(values)) / len(values))) 
             elif parser == 'get_networkWrites':
                 values = [temp['value'] for temp in data['networkWrites']]

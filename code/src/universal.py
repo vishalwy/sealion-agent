@@ -209,9 +209,6 @@ class AgentConfig(helper.Config):
                         activity['metrics'].append(metric)
                         
             del config['metrics']
-        
-        import pdb
-        pdb.set_trace()
              
         if version and version != self.private_data['agentVersion']:  #if the agent version mismatch we need to update the agent
             self.get(['config', '_id']) and univ.event_dispatcher.trigger('update_agent')  #trigger an event so that the other module can install the update
