@@ -10,7 +10,6 @@ __email__ = 'hello@sealion.com'
 import logging
 import re
 import multiprocessing
-import time
 
 #Python 2.x vs 3.x
 try:
@@ -48,10 +47,10 @@ def get_data(metrics):
     #metrics that needs sampling
     #they are written as a generator so that we can sleep before collection again
     #we sample twice
-    sampling_duration, sampling_count = 1, 2
-    cpu_usage_gen = get_cpu_usage(sampling_duration)  #generator for cpu usage
-    net_rw_gen = get_net_rw(sampling_duration)  #generator for network read write
-    disk_rw_gen = get_disk_rw(sampling_duration)  #generator for disk read write
+    sampling_count = 2
+    cpu_usage_gen = get_cpu_usage()  #generator for cpu usage
+    net_rw_gen = get_net_rw()  #generator for network read write
+    disk_rw_gen = get_disk_rw()  #generator for disk read write
     
     while sampling_count > 0:
         try:
@@ -81,7 +80,7 @@ def get_data(metrics):
         sampling_count -= 1
         
         if sampling_count:
-            yield sampling_duration  #yield the sampling duration so that caller can sleep and resume
+            yield 1  #yield the sampling duration so that caller can sleep and resume
     
     #append cpu usage for each cpu core
     for cpu, usage in cpu_usage.items():
@@ -97,8 +96,8 @@ def get_data(metrics):
         data['diskReads'].append({'name': device, 'value': rw['reads']})
         data['diskWrites'].append({'name': device, 'value': rw['writes']})
     
-    return {
-        'data': data,
+    yield {
+        'output': data,
         'metrics': extract_metrics(data, metrics)
     }
     
@@ -178,7 +177,7 @@ def get_mem_usage():
         'cached': mem_cached
     }
 
-def get_cpu_usage(*args):
+def get_cpu_usage():
     """
     Generator to get the cpu usage in percentage for the sampling duration given.
         
@@ -215,12 +214,9 @@ def get_cpu_usage(*args):
     
     yield data
 
-def get_net_rw(sampling_duration):
+def get_net_rw():
     """
     Generator to get network reads and writes for the duration given.
-    
-    Args:
-        sampling_duration: time in seconds between the two collection.
     
     Yields:
         dict containing network read and writes for each interface.
@@ -248,18 +244,15 @@ def get_net_rw(sampling_duration):
     for line in content2.splitlines():  #read through second collection
         for interface in [interface_x for interface_x in interfaces if '%s:' % interface_x in line]:
             fields = line.split('%s:' % interface)[1].split()
-            data[interface]['reads'] = (int(fields[0]) - data[interface]['reads']) / float(sampling_duration)
-            data[interface]['writes'] = (int(fields[8]) - data[interface]['writes']) / float(sampling_duration)
+            data[interface]['reads'] = int(fields[0]) - data[interface]['reads']
+            data[interface]['writes'] = int(fields[8]) - data[interface]['writes']
             break
     
     yield data
 
-def get_disk_rw(sampling_duration):
+def get_disk_rw():
     """
     Generator to get disk reads and writes for the duration given.
-    
-    Args:
-        sampling_duration: time in seconds between the two collection.
     
     Yields:
         dict containing disk reads and writes for each device.
@@ -288,8 +281,8 @@ def get_disk_rw(sampling_duration):
     for line in content2.splitlines():  #read through second collection
         for device in [device_x for device_x in devices if '%s ' % device_x in line]:
             fields = line.strip().split('%s ' % device)[1].split()
-            data[device]['reads'] = (int(fields[0]) - data[device]['reads']) / float(sampling_duration)
-            data[device]['writes'] = (int(fields[4]) - data[device]['writes']) / float(sampling_duration)
+            data[device]['reads'] = int(fields[0]) - data[device]['reads']
+            data[device]['writes'] = int(fields[4]) - data[device]['writes']
             break            
             
     yield data

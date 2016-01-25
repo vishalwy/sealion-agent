@@ -47,7 +47,7 @@ class Job:
         
         self.exec_timestamp = activity['next_exec_timestamp']  #timestamp at which the job should execute
         self.status = JobStatus.INITIALIZED  #current job state
-        self.is_plugin = True if activity['details'].get('service') == 'Plugins' else False  #is this job a plugin or a commandline
+        self.plugin = True if activity['details'].get('service') == 'Plugins' else False  #is this job a plugin or a commandline
         
         #dict containing job execution details
         self.exec_details = {
@@ -77,7 +77,7 @@ class Job:
             
             #if it is not a plugin job, then we create a temperory file to capture the output
             #a plugin job return the data directly
-            if not self.is_plugin:
+            if self.plugin == False:
                 self.exec_details['output'] = '%d' % t
                 
             self.status = JobStatus.RUNNING  #change the state to running
@@ -138,7 +138,7 @@ class Job:
         
         data = None
 
-        if self.status == JobStatus.RUNNING and not self.is_plugin and self.exec_details['pid'] == -1:  #commandline job who's pid is unknown
+        if self.status == JobStatus.RUNNING and self.plugin == False and self.exec_details['pid'] == -1:  #commandline job who's pid is unknown
             data = {'timestamp': self.exec_details['timestamp'], 'returnCode': 0, 'data': 'Failed to retreive execution status.'}
         elif self.status == JobStatus.BLOCKED:  #commandline job that is blocked by whitelist
             data = {'timestamp': self.exec_details['timestamp'], 'returnCode': 0, 'data': 'Command blocked by whitelist.'}
@@ -150,13 +150,14 @@ class Job:
                 'returnCode': self.exec_details['return_code']
             }
             
-            if self.is_plugin:  #for a plugin job, output is the data
-                data['data'] = self.exec_details['output']
-            else:
+            if self.plugin == False:
                 #for a commandline job, output is the file containing data
                 #we supply the instance method to read the output on demand
                 #this reduces the memory used unneceserily reading the output and putting it in the queue
                 data['data'] = self.read_output
+            else:  #for a plugin job, output is the data
+                data['data'] = self.exec_details['output']
+                data['metrics'] = self.exec_details.get('metrics')
         else:
             format = 'No data for activity (%(activity)s @ %(timestamp)d); satus: %(status)d; pid: %(pid)d; output: %(output)s'
             format_spec = {
@@ -180,22 +181,42 @@ class Job:
         """
         
         try:
+            metrics = None  #metrics extracted from the output
+            
             #for a commandline job, output is the file containing data
             output_file = open('%s/%s' % (self.univ.temp_path, self.exec_details['output']), 'rb')
-            data = output_file.read(256 * 1024).decode('utf-8', 'replace')
+            output = output_file.read(256 * 1024).decode('utf-8', 'replace')
             output_file.close()
 
-            if not data:  #if the file is empty
-                data = 'No output produced'
+            if not output:  #if the file is empty
+                output = 'No output/error produced'
                 _log.debug('No output/error found for activity (%s @ %d)' % (self.exec_details['activity']['_id'], self.exec_details['timestamp']))
-                
-            _log.debug('Read output from activity (%s @ %d)' % (self.exec_details['activity']['_id'], self.exec_details['timestamp']))
+            else:
+                metrics = self.extract_metrics(output)
+                _log.debug('Read output from activity (%s @ %d)' % (self.exec_details['activity']['_id'], self.exec_details['timestamp']))
         except Exception as e:
-            data = ''
-            _log.error('Could not read output from activity (%s @ %d); %s' % (self.exec_details['activity']['_id'], self.exec_details['timestamp'], unicode(e)))
+            output = 'Could not read output'
+            _log.error('Failed read output from activity (%s @ %d); %s' % (self.exec_details['activity']['_id'], self.exec_details['timestamp'], unicode(e)))
             
         self.remove_file()  #remove the output file
-        return data
+        return output, metrics
+    
+    def extract_metrics(self, output):
+        context, ret = {'__builtins__': globals()['__builtins__']}, {}
+        
+        for metric in self.exec_details['activity'].get('metrics', []):
+            try:
+                context['command_output'] = output
+                context['metric_value'] = None
+                exec metric['parser'] in context
+                value = context.get('metric_value')
+                
+                if type(value).__name__ in ['int', 'float']:
+                    ret[metric['_id']] = value
+            except:
+                pass
+            
+        return ret if ret else None
 
     def remove_file(self):
         """
@@ -262,20 +283,26 @@ class Executer(ThreadEx):
         
         Executer.jobs_lock.release()  #we can safely release the lock as the rest the code in the function need not be atomic
         
-        if job.is_plugin == False:  #write commandline job to bash
+        if job.plugin == False:  #write commandline job to bash
             self.write(job.exec_details)
         else:            
             try:
-                #we load the plugin and calls the get_data function and updates the job with the data
+                #we load the plugin and calls the get_data generator
                 #this can raise exception
-                activity = job.exec_details['activity']
-                plugin = __import__(activity['command'])
-                output = plugin.get_data(activity['metrics'])
-                
-                if type(output) is int:
+                if job.plugin == True:
+                    activity = job.exec_details['activity']
+                    job.plugin = __import__(activity['command']).get_data(activity.get('metrics', []))
+                    
+                try:
+                    data = next(job.plugin)
+                except (StopIteration, GeneratorExit):
+                    pass
+                    
+                if type(data) is int:
+                    job.exec_timestamp += data
                     JobProducer().queue.put(job)
                 else:
-                    job.update({'return_code': 0, 'output': output})
+                    job.update({'return_code': 0, 'output': data['output'], 'metrics': data.get('metrics')})
             except Exception as e:
                 #on failure we set the status code as ignored, so that output is not processed
                 job.status = JobStatus.IGNORED

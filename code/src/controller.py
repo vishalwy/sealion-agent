@@ -208,7 +208,7 @@ class Controller(singleton(ThreadEx)):
                     
                     #get the finished jobs and push the data
                     for job in job_producer.executer.finish_jobs():
-                        store.push(job.exec_details['_id'], job.get_data())
+                        store.push(job.exec_details['activity']['_id'], job.get_data())
 
                     #wait for the stop event for sometime before next iteration
                     self.univ.stop_event.wait(5)  

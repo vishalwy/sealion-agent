@@ -169,7 +169,7 @@ class OfflineStore(ThreadEx):
         self.cursor = self.conn.cursor()  #save connection cursor for optimize the access
         
         if self.setup_schema() == False:  #try to setup the schema
-            _log.error('Schema mismatch in %s at \'%s\'' % (self.name, self.db_file))
+            _log.error('Failed to create schema in %s at \'%s\'' % (self.name, self.db_file))
             self.close_db()  #close the db file and any resources opened
             self.conn_event.set()  #set the event so that self.start can continue
             return
@@ -224,38 +224,47 @@ class OfflineStore(ThreadEx):
             (0, 'activity', 'VARCHAR(50)', 1, None, 1),
             (1, 'timestamp', 'INT', 1, None, 1), 
             (2, 'return_code', 'INT', 1, None, 0), 
-            (3, 'output', 'BLOB', 1, None, 0)
+            (3, 'output', 'BLOB', 1, None, 0),
+            (4, 'metrics', 'BLOB', 0, None, 0)
         ]
-        is_existing_table = True  #assume we have an existing table
-                
-        try:
-            columns, pk = '', ''
-            
-            for col in schema:  #frame the columns and pk for create table statement
-                not_null = 'NOT NULL' if col[3] == 1 else 'NULL'
-                default = '' if col[4] == None else col[4]
-                columns += '%s%s %s %s %s' % (', ' if len(columns) else '', col[1], col[2], not_null, default)
-                pk += (', ' if len(pk) else '') + col[1] if col[5] == 1 else ''
-            
-            pk = (', PRIMARY KEY(%s)' % pk) if len(pk) else ''  #pk clause
-            query = 'CREATE TABLE data(%s%s)' % (columns, pk)  #actual create table statement
-            self.cursor.execute(query)
-            is_existing_table = False  #control reach here only if there is no existing table
-        except:
-            pass
         
-        if is_existing_table == True:  #we need to validate the schema for existing table
-            try:
-                self.cursor.execute('PRAGMA TABLE_INFO(data)')
-                schema = set([col[:3] + (1 if col[-1] else 0,) for col in schema])
-                cur_schema = set([col[:3] + (1 if col[-1] else 0,) for col in self.cursor.fetchall()])
+        try:
+            self.cursor.execute('PRAGMA TABLE_INFO(data)')
+            orig_schema = set([col[:3] + (1 if col[-1] else 0,) for col in schema])
+            curr_schema = set([col[:3] + (1 if col[-1] else 0,) for col in self.cursor.fetchall()])
 
-                if len(schema - cur_schema) > 0 or len(cur_schema - schema) > 0:  #check if existing schema and proposed schema are same
-                    return False
+            if len(orig_schema - curr_schema) > 0 or len(curr_schema - orig_schema) > 0:  
+                self.cursor.execute('DROP TABLE data')
+                raise Exception()
+        except:    
+            try:
+                columns, pk = '', ''
+
+                for col in schema:  #frame the columns and pk for create table statement
+                    not_null = 'NOT NULL' if col[3] == 1 else 'NULL'
+                    default = '' if col[4] == None else col[4]
+                    columns += '%s%s %s %s %s' % (', ' if columns else '', col[1], col[2], not_null, default)
+                    pk += (', ' if pk else '') + col[1] if col[5] == 1 else ''
+
+                pk = (', PRIMARY KEY(%s)' % pk) if pk else ''  #pk clause
+                query = 'CREATE TABLE data(%s%s)' % (columns, pk)  #actual create table statement
+                self.cursor.execute(query)
             except:
                 return False
             
         return True
+    
+    def perform_insert(self, activity, data):
+        Storage.get_data(data)  #get the data. read the get_data doc to know why this is required
+        metrics = data.get('metrics')
+        values = '?, ?, ?, ?'
+        args = (activity, data['timestamp'], data['returnCode'], json.dumps(data['data']))  #we have to convert output to string, as it can be a dict
+        
+        if metrics:
+            values += ', ?'
+            args += (json.dumps(metrics), )  #we have to convert metric to string, as it is a dict
+        
+        self.cursor.execute('INSERT INTO data VALUES(%s)' % values, args)
     
     def insert(self, activity, data, callback = None):
         """
@@ -271,9 +280,7 @@ class OfflineStore(ThreadEx):
         """
         
         try:
-            Storage.get_data(data)  #get the data. read the get_data doc to know why this is required
-            self.cursor.execute('INSERT INTO data VALUES(?, ?, ?, ?)', 
-                (activity, data['timestamp'], data['returnCode'], json.dumps(data['data'])))  #we have to convert output to string, as it can be a dict
+            self.perform_insert(activity, data)
             self.conn.commit()  #commit the changes
             _log.debug('Inserted activity (%s @ %d) to %s' % (activity, data['timestamp'], self.name))
             callback and callback()  #callback for successful insertion
@@ -296,11 +303,7 @@ class OfflineStore(ThreadEx):
         
         try:
             for row in rows:
-                activity = row['activity']
-                data = row['data']
-                Storage.get_data(data)  #get the data. read get_data doc to know why this is required
-                self.cursor.execute('INSERT OR IGNORE INTO data VALUES(?, ?, ?, ?)', 
-                    (activity, data['timestamp'], data['returnCode'], json.dumps(data['data'])))  #we have to convert output to string, as it can be a dict
+                self.perform_insert(row['activity'], row['data'])
                 self.pending_insert_row_count += self.cursor.rowcount  #increment the count of pending rows to be committed
                 
             if is_commit == False:
@@ -337,10 +340,17 @@ class OfflineStore(ThreadEx):
                     
                 try:
                     #we have to convert row[4] from string, as it can be a dict representation
-                    rows.append((row[0], row[1], row[2], row[3], json.loads(row[4])))
+                    row = (row[0], row[1], row[2], row[3], json.loads(row[4]))
                 except:
                     #backward compatiblity for agent version < 3.1.0 as the string was written without escaping
-                    rows.append((row[0], row[1], row[2], row[3], row[4]))
+                    row = (row[0], row[1], row[2], row[3], row[4])
+                    
+                try:
+                    row += (json.loads(row[5]),)
+                except:
+                    pass
+                    
+                rows.append(row)
                 
             self.cursor.execute('SELECT COUNT(*) FROM data')
             total_rows = self.cursor.fetchone()[0]  #get the total number of rows
@@ -684,6 +694,9 @@ class HistoricSender(Sender):
                 'data': rows[i][4]
             }
             
+            if rows[i][5]:
+                data['metrics'] = rows[i][5]
+            
             if self.push({'row_id': rows[i][0], 'activity': rows[i][1], 'data': data}) == False:  #push rows to the sending queue until it fails
                 break
                 
@@ -751,7 +764,11 @@ class Storage:
             The dict passed to the function whose 'data' key is converted.
         """       
 
-        data['data'] = data['data']() if hasattr(data['data'], '__call__') else data['data']
+        data['data'], metrics = data['data']() if hasattr(data['data'], '__call__') else (data['data'], None)
+        
+        if metrics:
+            data['metrics'] = metrics
+        
         return data
         
     def start(self):        
