@@ -281,7 +281,7 @@ class API(requests.Session):
         
         if API.is_success(response):
             _log.info('Authentication successful')
-
+            
             #update and save the config
             self.univ.config.agent.update({'config': response.json()})
             self.univ.config.agent.save()

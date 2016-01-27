@@ -140,21 +140,21 @@ class AgentConfig(helper.Config):
                         },
                         'interval': {'type': 'int'},
                         'metrics': {
-                            'type': [{
-                                '_id': {
-                                    'type': 'str,unicode', 
-                                    'regex': '^[a-zA-Z0-9]{24}$'
-                                }, 
-                                'name': {
-                                    'type': 'str,unicode', 
-                                    'regex': '^.+$'
-                                },
-                                'parser': {
-                                    'type': 'str,unicode', 
-                                    'regex': '^.+$', 
-                                },
-                                'cumulative': {'type': 'bool'}
-                            }], 
+                            'type': {
+                                re.compile('^[a-zA-Z0-9]{24}$'): {
+                                    'type': {
+                                        'name': {
+                                            'type': 'str,unicode', 
+                                            'regex': '^.+$'
+                                        },
+                                        'parser': {
+                                            'type': 'str,unicode', 
+                                            'regex': '.*', 
+                                        },
+                                        'cumulative': {'type': 'bool'}
+                                    }
+                                }
+                            },
                             'depends': ['_id'],
                             'optional': True
                         } 
@@ -205,10 +205,8 @@ class AgentConfig(helper.Config):
             for metric in metrics:
                 for activity in activities:
                     if metric['activity'] == activity['_id']:
-                        activity['metrics'] = activity.get('metrics', []);
-                        activity['metrics'].append(metric)
-                        
-            del config['metrics']
+                        activity['metrics'] = activity.get('metrics', {});
+                        activity['metrics'][metric['_id']] = metric
              
         if version and version != self.private_data['agentVersion']:  #if the agent version mismatch we need to update the agent
             self.get(['config', '_id']) and univ.event_dispatcher.trigger('update_agent')  #trigger an event so that the other module can install the update

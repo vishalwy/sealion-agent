@@ -106,7 +106,7 @@ def extract_metrics(data, metrics):
     
     for metric in metrics:
         try:
-            id, parser = metric['_id'], metric['parser']
+            id, parser = metric, metrics[metric]['parser']
 
             if parser == 'get_loadAvg1Min':
                 ret[id] = data['loadAvg1Min']

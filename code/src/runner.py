@@ -37,6 +37,8 @@ class Job:
     Represents a job, that can be executed
     """
     
+    metrics = {}
+    
     def __init__(self, activity):
         """
         Constructor
@@ -200,24 +202,34 @@ class Job:
                 _log.debug('Read output from activity (%s @ %d)' % (self.exec_details['activity']['_id'], self.exec_details['timestamp']))
         except Exception as e:
             output = 'Could not read output'
-            _log.error('Failed read output from activity (%s @ %d); %s' % (self.exec_details['activity']['_id'], self.exec_details['timestamp'], unicode(e)))
+            _log.error('Failed to read output from activity (%s @ %d); %s' % (self.exec_details['activity']['_id'], self.exec_details['timestamp'], unicode(e)))
             
         self.remove_file()  #remove the output file
         return output, metrics
     
     def extract_metrics(self, output):
         context, ret = {'__builtins__': globals()['__builtins__']}, {}
+        metrics = self.exec_details['activity'].get('metrics', {})
         
-        for metric in self.exec_details['activity'].get('metrics', []):
+        for metric in metrics:
             try:
                 context['command_output'] = output
                 context['metric_value'] = None
+                metric_id = metric
+                metric = metrics[metric_id]
                 exec(metric['parser'], context)
                 value = context.get('metric_value')
                 
                 if type(value).__name__ in ['int', 'float']:
-                    ret[metric['_id']] = value
-            except:
+                    if metric['cumulative']:
+                        ret[metric_id] = value - Job.metrics.get(metric_id, value)
+                        Job.metrics[metric_id] = value
+                    else:
+                        ret[metric_id] = value
+                        
+                    _log.debug('Extracted value %s for metric %s from activity (%s @ %d)' % (value, metric_id, self.exec_details['activity']['_id'], self.exec_details['timestamp']))
+            except Exception as e:
+                _log.error('Failed to extract metric %s from activity (%s @ %d); %s' % (metric_id, self.exec_details['activity']['_id'], self.exec_details['timestamp'], unicode(e)))
                 pass
             
         return ret if ret else None
@@ -295,7 +307,7 @@ class Executer(ThreadEx):
                 #this can raise exception
                 if job.plugin == True:
                     activity = job.exec_details['activity']
-                    job.plugin = __import__(activity['command']).get_data(activity.get('metrics', []))
+                    job.plugin = __import__(activity['command']).get_data(activity.get('metrics', {}))
                     
                 try:
                     data = next(job.plugin)
@@ -694,6 +706,32 @@ class JobProducer(singleton(ThreadEx)):
         self.stop_consumers(consumer_count)
         ret[2] and self.schedule_activities()  #immediately schedule any added/updated activities
         
+    @staticmethod
+    def update_metrics(cur_activity, new_activity):
+        cur_metrics, new_metrics = cur_activity.get('metrics', {}), new_activity.get('metrics', {})
+        add_count, update_count, remove_count, activity_id, metric_ids = 0, 0, 0, new_activity['_id'], []
+        
+        for new_metric in new_metrics:
+            metric_id = new_metric
+            new_metric = new_metrics[metric_id]
+            cur_metric = cur_metrics.get(metric_id)
+            
+            if cur_metric:
+                if cur_metric['parser'] != new_metric['parser'] or cur_metric['cumulative'] != new_metric['cumulative']:
+                    update_count += 1
+                    _log.info('Updated metric %s for activity %s' % (metric_id, activity_id))
+            else:
+                add_count += 1
+                _log.info('Added metric %s for activity %s' % (metric_id, activity_id))
+                
+            metric_ids.append(metric_id)
+            
+        for metric_id in [metric_id for metric_id in cur_metrics if metric_id not in metric_ids]:
+            _log.info('Removed metric %s from activity %s' % (metric_id, activity_id))
+            remove_count += 1
+            
+        return True if add_count or update_count or remove_count else False
+        
     def set_activities(self):
         """
         Method updates the dict containing the activities.
@@ -717,11 +755,14 @@ class JobProducer(singleton(ThreadEx)):
                 
                 #if interval or command modified
                 if details['interval'] != activity['interval'] or details['command'] != activity['command']:
+                    JobProducer.update_metrics(details, activity)
                     cur_activity['details'] = activity
                     cur_activity['is_whitelisted'] = self.is_in_whitelist(activity)  #check whether the activity is allowed to run
                     cur_activity['next_exec_timestamp'] = t  #execute the activity immediately
                     _log.info('Updatied activity %s' % activity_id)
                     update_count += 1
+                elif JobProducer.update_metrics(details, activity):
+                    cur_activity['details'] = activity
             else:
                 #add a new activity
                 self.activities[activity_id] = {
@@ -729,6 +770,7 @@ class JobProducer(singleton(ThreadEx)):
                     'is_whitelisted': self.is_in_whitelist(activity),  #check whether the activity is allowed to run
                     'next_exec_timestamp': t  #execute the activity immediately
                 }
+                JobProducer.update_metrics({}, activity)
                 _log.info('Started activity %s' % activity_id)
                 start_count += 1
             
