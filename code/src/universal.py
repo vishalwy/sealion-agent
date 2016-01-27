@@ -69,10 +69,6 @@ class SealionConfig(helper.Config):
             'type': 'str,unicode', 
             'regex': '^.+$', 
             'optional': True
-        },
-        'builtinParser': {
-            'type': 'bool',
-            'optional': True
         }
     }
    

@@ -155,27 +155,50 @@ export_env_vars() {
     fi
 }
 
-#Function to migrate env variable format in config.json
-migrate_env_vars() {
+#Function to migrate format of config.json
+migrate_config_json() {
     local code config config_file="${install_path}/etc/config.json"
     
     #frame the python code used to migrate the format
     code="import json"
-    code="${code}\nwith open('$config_file') as f:\n\tl, d = json.load(f)['env'], []"
-    code="${code}\nfor e in l:\n\td += [(k, e[k]) for k in e]"
-    code="${code}\nprint(json.dumps(dict(d)))"
+    code="${code}\nwith open('$config_file') as f:"
+    code="${code}\n\tl, d = json.load(f), []"
+    code="${code}\nfor e in l['env']:"
+    code="${code}\n\td += [(k, e[k]) for k in e]"
+    code="${code}\nl['env'] = dict(d)"
+    code="${code}\nwith open('$config_file', 'w') as f:"
+    code="${code}\n\tjson.dump(d, f, indent = 4)"
     code=$(printf "$code")
-    
-    #execute the migration script and update only if it is successful
-    config=$("$python_binary" -c "$code" 2>/dev/null)
-    [[ "$config" != "" ]] && "${install_path}/bin/jsonfig" -a "set" -k "env" -v "$config" "$config_file"
+
+    #execute the migration script; dont care about errors
+    "$python_binary" -c "$code" >/dev/null 2>&1
+}
+
+#Function to migrate format of agent.json
+migrate_agent_json() {
+    local code config config_file="${install_path}/etc/agent.json"
+
+    #frame the python code used to migrate the format
+    code="import json"
+    code="${code}\nwith open('$config_file') as f:"
+    code="${code}\n\td = json.load(f)"
+    code="${code}\nd['config'] = {}"
+    code="${code}\nfor k in [k for k in ['_id', 'name', 'activities', 'org', 'envVariables'] if k in d]"
+    code="${code}\n\td['config'][k] = d[k]"
+    code="${code}\n\tdel d[k]"
+    code="${code}\nwith open('$config_file', 'w') as f:"
+    code="${code}\n\tjson.dump(d, f)"
+    code=$(printf "$code")
+
+    #execute the migration script; dont care about errors
+    "$python_binary" -c "$code" >/dev/null 2>&1
 }
 
 #Function to setup the configuration for the agent
 #Arguments
-#   $1 - update api url and agent version only in agent.json
+#   $1 - called from update op
 setup_config() {
-    local config temp_var args
+    local config sub_config temp_var args
     temp_var=$(type -p "$python_binary")  #get the location of the python binary given
 
     #compare the default python location with the python binary given
@@ -190,20 +213,29 @@ setup_config() {
     fi
 
     if [[ "$1" == "1" ]] ; then
-        "${install_path}/bin/jsonfig" -a "set" -k "agentVersion" -v "\"$version\"" -n "${install_path}/etc/agent.json"
         "${install_path}/bin/jsonfig" -a "set" -k "apiUrl" -v "\"$api_url\"" -n "${install_path}/etc/agent.json"
 
         #as we keep adding modules, we need to include them for logging 
         config=$("${install_path}/bin/jsonfig" -k "logging:modules" -n agent/etc/config.json 2>/dev/null)
         [[ "$config" != "" ]] && "${install_path}/bin/jsonfig" -a "set" -k "logging:modules" -v "$config" "${install_path}/etc/config.json"
 
-        migrate_env_vars  #migrate env variable format
+        #migrate configuration file formats
+        migrate_config_json
+        migrate_agent_json
     else
         #agent.json config
-        config="\"orgToken\": \"${org_token}\", \"apiUrl\": \"${api_url}\", \"agentVersion\": \"${version}\", \"ref\": \"${install_source}\""
-        [[ "$host_name" != "" ]] && config="${config}, \"name\": \"${host_name}\""
+        [[ "$host_name" != "" ]] && sub_config="\"name\": \"${host_name}\""
+
+        if [[ "$agent_id" != "" ]] ; then
+            if [[ "$sub_config" != "" ]] ; then
+                sub_config="${sub_config}, \"_id\": \"${agent_id}\""
+            else
+                sub_config="\"_id\": \"${agent_id}\""
+            fi
+        fi
+        
+        config="\"orgToken\": \"${org_token}\", \"apiUrl\": \"${api_url}\", \"ref\": \"${install_source}\", \"config\": {${sub_config}}"
         [[ "$category" != "" ]] && config="${config}, \"category\": \"${category}\""
-        [[ "$agent_id" != "" ]] && config="${config}, \"_id\": \"${agent_id}\""
         
         "${install_path}/bin/jsonfig" -a "set" -k "" -v "{$config}" -n "${install_path}/etc/agent.json"  #set the configuration
         export_env_vars  #export the environment variables specified
@@ -227,7 +259,6 @@ SCRIPT_ERR_FAILED_USER_CREATE=10
 
 #config variables, they should be updated while building the tarball
 api_url="<api-url>"
-version="<version>"
 
 user_name="sealion"  #username for the agent
 create_user=1  #whether to create the user identified by user_name
@@ -502,7 +533,7 @@ else  #update
         find agent/ -mindepth 1 -maxdepth 1 ! -name 'etc' -exec cp -r {} "$install_path" \;
 
         find agent/etc/ -mindepth 1 -maxdepth 1 ! -name '*.json' -exec cp -r {} "$install_path/etc" \;  #copy config files except .json
-        setup_config 1 #update the agent version and api url in agent.json
+        setup_config 1 #update api url in agent.json
     fi
 
     echo "SeaLion agent updated successfully"

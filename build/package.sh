@@ -25,7 +25,7 @@ usage() {
         return 0
     fi
 
-    local usage_info="Usage: ${0} [options] <version>\nOptions:\n"
+    local usage_info="Usage: ${0} [options]\nOptions:\n"
     usage_info="${usage_info} -d,  --domain <arg>    Domain for which the tarball to be generated; Default to 'sealion.com'\n"
     usage_info="${usage_info}      --gen-curl-node   Generate curl installer for node agent\n"
     usage_info="${usage_info} -h,  --help            Display this information"
@@ -64,11 +64,6 @@ set_script_details() {
     args="-i 's/\\(^API\\_URL=\\)\\(\"[^\"]\\+\"\\)/\\1\"${temp_var}\"/i'"
     eval sed $args "$1"
     
-    #set version
-    temp_var="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<<${version})"
-    args="-i 's/\\(^VERSION=\\)\\(\"[^\"]\\+\"\\)/\\1\"${temp_var}\"/i'"
-    eval sed $args "$1"
-
     #set agent download url
     temp_var="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<<${agent_url})"
     args="-i 's/\\(^DOWNLOAD\\_URL=\\)\\(\"[^\"]\\+\"\\)/\\1\"${temp_var}\"/i'"
@@ -84,7 +79,7 @@ set_script_details() {
 
 #script variables
 default_domain="sealion.com"
-domain=$default_domain version=
+domain=$default_domain version_regex="(\d+\.){2}\d+(\.[a-z0-9]+)?"
 gen_curl_node=0 padding="    "
 
 #parse command line
@@ -115,21 +110,15 @@ for option_index in "${!options[@]}" ; do
     esac
 done
 
-#set the version
-for arg in "${args[@]}" ; do
-    version=$arg
-done
-
-#trim whitespace from both ends
-version="$(sed -e 's/^\s*//' -e 's/\s*$//' <<<${version})"
-domain="$(sed -e 's/^\s*//' -e 's/\s*$//' <<<${domain})"
-
+cd "$script_base_dir"  #move to current dir so that all the paths are available
+domain="$(sed -e 's/^\s*//' -e 's/\s*$//' <<<${domain})"  #trim whitespace from both ends
 build_target=$domain  #build target is the domain for which packaging is done
+version=$(../code/bin/sealion.py --version)  #read the version for the package
 
-#you need to specify the version
-if [[ "$version" == "" ]] ; then
-    echo "Please specify a valid version for the build"
-    usage ; exit 1
+#you need to have a valid version
+if [[ "$version" == "" || "$(grep -Po "${version_regex}" <<<"${version}")" != "$version" ]] ; then
+    echo "Could not read a valid version from the source; version should match the regex '$version_regex'"
+    exit 1
 fi
 
 #if domain is sealion.com then api url is api.sealion.com
@@ -144,9 +133,6 @@ fi
 api_url="https://api${domain}" agent_url="https://agent${domain}"  #set the urls
 output="sealion-agent" orig_domain="$build_target"
 build_target="bin/${build_target}"  #update build target
-
-#move to current dir so that all the paths are available
-cd "$script_base_dir"
 
 #cleanup and recreate the output directories
 rm -rf $build_target >/dev/null 2>&1

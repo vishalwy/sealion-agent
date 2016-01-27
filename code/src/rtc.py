@@ -175,6 +175,30 @@ class SocketIONamespace(BaseNamespace):
         _log.info('SocketIO received \'Environment variables updated\' event')
         api.session.get_config()  #update the config in any case
         
+    def on_metric_created(self, *args):
+        """
+        Method gets called when socket-io receives 'metric_created' event.
+        """
+        
+        _log.info('SocketIO received \'Metric created\' event')
+        api.session.get_config()  #update the config in any case
+        
+    def on_metric_updated(self, *args):
+        """
+        Method gets called when socket-io receives 'metric_updated' event.
+        """
+        
+        _log.info('SocketIO received \'Metric updated\' event')
+        api.session.get_config()  #update the config in any case
+        
+    def on_metric_deleted(self, *args):
+        """
+        Method gets called when socket-io receives 'metric_deleted' event.
+        """
+        
+        _log.info('SocketIO received \'Metric deleted\' event')
+        api.session.get_config()  #update the config in any case
+        
 class RTC(ThreadEx):    
     """
     Class implementing real time communication using socket-io.
