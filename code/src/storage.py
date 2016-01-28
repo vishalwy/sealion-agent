@@ -338,6 +338,12 @@ class OfflineStore(ThreadEx):
                 if not row:
                     break
                     
+                #try to extract the metrics
+                try:
+                    metrics = json.loads(row[5])
+                except:
+                    metrics += None
+                    
                 try:
                     #we have to convert row[4] from string, as it can be a dict representation
                     row = (row[0], row[1], row[2], row[3], json.loads(row[4]))
@@ -345,12 +351,7 @@ class OfflineStore(ThreadEx):
                     #backward compatiblity for agent version < 3.1.0 as the string was written without escaping
                     row = (row[0], row[1], row[2], row[3], row[4])
                     
-                try:
-                    row += (json.loads(row[5]),)
-                except:
-                    pass
-                    
-                rows.append(row)
+                rows.append(row + (metrics,))
                 
             self.cursor.execute('SELECT COUNT(*) FROM data')
             total_rows = self.cursor.fetchone()[0]  #get the total number of rows
