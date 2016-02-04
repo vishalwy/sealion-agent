@@ -167,7 +167,7 @@ migrate_config_json() {
     code="${code}\n\td += [(k, e[k]) for k in e]"
     code="${code}\nl['env'] = dict(d)"
     code="${code}\nwith open('$config_file', 'w') as f:"
-    code="${code}\n\tjson.dump(d, f, indent = 4)"
+    code="${code}\n\tjson.dump(l, f, indent = 4)"
     code=$(printf "$code")
 
     #execute the migration script; dont care about errors

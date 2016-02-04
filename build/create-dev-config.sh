@@ -25,8 +25,7 @@ usage() {
         return 0
     fi
 
-    local usage_info="Usage: ${0} [options]\nOptions:\n"
-    usage_info="${usage_info} -o,  --org-token <arg>   Organization token to be used\n"
+    local usage_info="Usage: ${0} [options] <organization token>\nOptions:\n"
     usage_info="${usage_info} -c,  --category <arg>    Category name under which the server to be registered\n"
     usage_info="${usage_info} -H,  --host-name <arg>   Server name to be used\n"
     usage_info="${usage_info} -x,  --proxy <arg>       Proxy server details\n"
@@ -37,18 +36,22 @@ usage() {
 }
 
 #script variables
-org_token= category= 
-host_name= proxy=$https_proxy no_proxy=$no_proxy
+org_token= category= host_name= proxy=
 api_url="https://api-test.sealion.com"  #default to test
 
 #parse command line
-opt_parse o:c:H:x:a:h "org-token= category= host-name= proxy= api-url= help" options args "$@"
+opt_parse c:H:x:a:h "category= host-name= proxy= api-url= help" options args "$@"
 
 #if parsing failed print the usage and exit
 if [[ $? -ne 0 ]] ; then
     echo "$options" >&2
     usage ; exit 1
 fi
+
+#set organization token if any
+for arg in "${args[@]}" ; do
+    org_token=$arg
+done
 
 #loop through the options
 for option_index in "${!options[@]}" ; do
@@ -57,9 +60,6 @@ for option_index in "${!options[@]}" ; do
 
     #find the proper option and perform the action
     case "${options[${option_index}]}" in
-        o|org-token)
-            org_token=$option_arg
-            ;;
         c|category)
             category=$option_arg
             ;;
@@ -94,14 +94,8 @@ config="\"orgToken\": \"${org_token}\", \"apiUrl\": \"${api_url}\", \"config\": 
 "${script_base_dir}/../code/bin/jsonfig.py" -a "set" -k "" -v "{$config}" -n "${script_base_dir}/../code/etc/agent.json"  #set the configuration
 
 #export https_proxy
-if [[ "$proxy" != "" ]] ; then
-    "${script_base_dir}/../code/bin/jsonfig.py" -a "merge" -k "env" -v "{\"https_proxy\": \"${proxy}\"}" "${script_base_dir}/../code/etc/config.json"
-fi
-
-#export no_proxy
-if [[ "$no_proxy" != "" ]] ; then
-    "${script_base_dir}/../code/bin/jsonfig.py" -a "merge" -k "env" -v "{\"no_proxy\": \"${no_proxy}\"}" "${script_base_dir}/../code/etc/config.json"
-fi
+"${script_base_dir}/../code/bin/jsonfig.py" -a "merge" -k "env" -v "{\"https_proxy\": \"${proxy}\"}" "${script_base_dir}/../code/etc/config.json"
+"${script_base_dir}/../code/bin/jsonfig.py" -a "merge" -k "env" -v "{\"HTTPS_PROXY\": \"${proxy}\"}" "${script_base_dir}/../code/etc/config.json"
 
 #update config.json with logging level
 "${script_base_dir}/../code/bin/jsonfig.py" -a "set" -k "logging:level" -v "\"debug\"" "${script_base_dir}/../code/etc/config.json"

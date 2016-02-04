@@ -9,6 +9,7 @@ __email__ = 'hello@sealion.com'
 
 import threading
 import sys
+import subprocess
 import logging
 
 #Python 2.x vs 3.x
@@ -304,4 +305,143 @@ class NavigationDict(dict):
 
         return ret
         
+class WorkerProcess():
+    def __init__(self, *args):
+        self.exec_process = None  #process instance
+        self.process_lock = threading.RLock()  #thread lock for process instance
+        self.write_count = 0  #total number of lines written to the process
+        self.is_stop = False  #stop flag for the process
+        self.args = list(args)  #arguments for the process
+        
+    @property
+    def process(self):
+        """
+        Property to get the process instance
+        
+        Returns:
+            Process instance
+        """
+        
+        self.process_lock.acquire()  #this has to be atomic as multiple threads reads/writes
+        
+        #self.wait returns True if the suprocess is terminated, in that case we will create a new process instance
+        if self.wait() and not self.is_stop:
+            try:
+                self.write_count = 0  #reset the number of writes performed
+
+                #create the process with stream handles redirected. make sure the bufsize is set to 0 to have the pipe unbuffered
+                self.exec_process = subprocess.Popen(self.args, preexec_fn = self.init_process, bufsize = 0,
+                    stdin = subprocess.PIPE, stdout = subprocess.PIPE)
+                _log.info('Worker process %s(%d) has been created' % (self.args[0], self.exec_process.pid))
+            except Exception as e:
+                _log.error('Failed to create %s worker process; %s' % (self.args[0], unicode(e)))
+                
+        self.process_lock.release()
+        return self.exec_process
+    
+    def init_process(self):
+        """
+        Method to initialize the subprocess
+        """
+        
+        pass
+        
+    def write(self, input):
+        """
+        Public method to write input to the subprocess
+        
+        Args:
+            input: input for the process.
+            
+        Returns:
+            True on success else False
+        """
+        
+        try:
+            #it is possible that the pipe is broken or the subprocess was terminated
+            self.process.stdin.write((input + '\n').encode('utf-8'))
+            self.write_count += 1
+        except Exception as e:
+            _log.error('Failed to write to worker process %s; %s' % (self.args[0], unicode(e)))
+            return False
+        
+        return True
+        
+    def read(self):
+        """
+        Method to read from subprocess and update the job details
+        
+        Returns:
+            The line read or None on error
+        """
+        
+        try:
+            #it is possible that the pipe is broken or the subprocess was terminated
+            line = self.process.stdout.readline().decode('utf-8', 'replace').rstrip()
+        except Exception as e:
+            _log.error('Failed to read from worker process %s; %s' % (self.args[0], unicode(e)))
+            return None
+        
+        return line
+        
+    def wait(self, is_force = False): 
+        """
+        Method to wait for the subprocess if it was terminated, to avoid zombies
+        This method is not thread safe.
+        
+        Args:
+            is_force: if it is True, it terminates the process and then waits
+            
+        Returns:
+            True if the process is terminated else False
+        """
+        
+        is_terminated = True  #is subprocess terminated
+        
+        try:
+            if self.exec_process.poll() == None:  #if the process is running
+                if is_force:  #kill the process
+                    os.kill(self.exec_process.pid, signal.SIGTERM)
+                else:
+                    is_terminated = False  #process still running
+                
+            #wait for the process if it is terminated
+            if is_terminated == True:
+                is_force == False and _log.error('Worker process %s(%d) was terminated' % (self.args[0], self.exec_process.pid))
+                os.waitpid(self.exec_process.pid, os.WUNTRACED)
+                self.exec_process = None
+        except:
+            pass
+                
+        return is_terminated
+        
+    def stop(self):
+        """
+        Public method to stop the process.
+        """
+        
+        self.process_lock.acquire()  #this has to be atomic as multiple threads reads/writes
+        self.is_stop = True
+        self.wait(True)  #terminate the subprocess and wait
+        self.process_lock.release()
+        
+    def limit_process_usage(self, max_write_count):
+        """
+        Method to terminate the subprocess if it had more than N lines written to it.
+        This is done to avoid memory usage in subprocess growing.
+        
+        Args:
+            max_write_count: maximum number of lines allowed to process
+        """
+        
+        self.process_lock.acquire()  #this has to be atomic as multiple threads reads/writes
+
+        try:
+            if self.exec_process and self.write_count > max_write_count:  #if number of commands written execeeded the maximum allowed count
+                self.wait(True)
+                _log.debug('Worker process %s(%d) was terminated as it processed more than %d lines' % (self.args[0], self.exec_process.pid, max_write_count))
+        except:
+            pass
+  
+        self.process_lock.release()
         

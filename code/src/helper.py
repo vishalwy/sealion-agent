@@ -299,7 +299,7 @@ class Config:
         config = Config.parse(data, is_data)  #parse the config
         
         #sanitize the config
-        if Config.sanitize_dict(config[0], self.schema, True, self.file if is_data == False else None) == False:
+        if Config.sanitize_type(config[0], self.schema, file = self.file if is_data == False else None) == False:
             if is_data == False:
                 return '\'%s\' is either missing or corrupted' % self.file
             else:

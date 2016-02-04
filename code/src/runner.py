@@ -10,12 +10,13 @@ __email__ = 'hello@sealion.com'
 import logging
 import threading
 import time
-import subprocess
 import re
 import signal
 import os
 import sys
+import json
 import universal
+import extract
 from constructs import *
 
 _log = logging.getLogger(__name__)  #module level logging
@@ -32,12 +33,51 @@ class JobStatus(Namespace):
     FINISHED = 4  #job finished
     IGNORED = 5  #job should be considered as ignored and should not process the output
     
+class Extractor(WorkerProcess):
+    def __init__(self):
+        self.univ = universal.Universal()
+        self.extract_lock = threading.RLock()
+        
+        #use the metric timeout defined in the config if we have one
+        try:
+            self.timeout = self.univ.config.sealion.metricTimeout
+        except:
+            self.timeout = 5
+        
+        WorkerProcess.__init__(self, sys.executable, '%s/src/extract.py' % self.univ.exe_path, '%s' % self.timeout)
+        
+    def extract(self, output, metrics):
+        if not output or not metrics:
+            return None
+        
+        if self.timeout > 0:
+            self.extract_lock.acquire()
+            
+            if self.write(json.dumps({'output': output, 'metrics': metrics})):
+                data = self.read()
+                
+                try:
+                    data = json.loads(data) if data else None
+                except Exception as e:
+                    _log.error('Failed to extract metrics; %s' % unicode(e))
+                    data = None
+            else:
+                data = None
+                
+            self.extract_lock.release()
+        else:
+            data = extract.extract_metrics(output, metrics)
+            
+        self.limit_process_usage(2222)
+        return data if data else None
+    
 class Job:    
     """
     Represents a job, that can be executed
     """
     
     metrics = {}
+    extractor = Extractor()
     
     def __init__(self, activity):
         """
@@ -198,8 +238,8 @@ class Job:
                 output = 'No output/error produced'
                 _log.debug('No output/error found for activity (%s @ %d)' % (self.exec_details['activity']['_id'], self.exec_details['timestamp']))
             else:
-                metrics = self.extract_metrics(output)
                 _log.debug('Read output from activity (%s @ %d)' % (self.exec_details['activity']['_id'], self.exec_details['timestamp']))
+                metrics = Job.extractor.extract(output, self.exec_details['activity'].get('metrics', {}))
         except Exception as e:
             output = 'Could not read output'
             _log.error('Failed to read output from activity (%s @ %d); %s' % (self.exec_details['activity']['_id'], self.exec_details['timestamp'], unicode(e)))
@@ -207,33 +247,6 @@ class Job:
         self.remove_file()  #remove the output file
         return output, metrics
     
-    def extract_metrics(self, output):
-        context, ret = {'__builtins__': globals()['__builtins__']}, {}
-        metrics = self.exec_details['activity'].get('metrics', {})
-        
-        for metric in metrics:
-            try:
-                context['command_output'] = output
-                context['metric_value'] = None
-                metric_id = metric
-                metric = metrics[metric_id]
-                exec(metric['parser'], context)
-                value = context.get('metric_value')
-                
-                if type(value).__name__ in ['int', 'float']:
-                    if metric['cumulative']:
-                        ret[metric_id] = value - Job.metrics.get(metric_id, value)
-                        Job.metrics[metric_id] = value
-                    else:
-                        ret[metric_id] = value
-                        
-                    _log.debug('Extracted value %s for metric %s from activity (%s @ %d)' % (value, metric_id, self.exec_details['activity']['_id'], self.exec_details['timestamp']))
-            except Exception as e:
-                _log.error('Failed to extract metric %s from activity (%s @ %d); %s' % (metric_id, self.exec_details['activity']['_id'], self.exec_details['timestamp'], unicode(e)))
-                pass
-            
-        return ret if ret else None
-
     def remove_file(self):
         """
         Public method to delete output file if any
@@ -247,8 +260,8 @@ class Job:
             pass
         
         self.exec_details['output'] = None
-    
-class Executer(ThreadEx):
+            
+class Executer(WorkerProcess, ThreadEx):
     """
     A wrapper class that creates a bash subprocess for commandline job execution
     It executes the commandline by writing to the bash script and gets the status in a blocking read.
@@ -263,15 +276,17 @@ class Executer(ThreadEx):
         Constructor
         """
         
-        ThreadEx.__init__(self)  #inititalize the base class
-        self.exec_process = None  #bash process instance
-        self.process_lock = threading.RLock()  #thread lock for bash process instance
-        self.exec_count = 0  #total number of commands executed in the bash process
-        self.is_stop = False  #stop flag for the thread
         self.univ = universal.Universal()  #reference to Universal for optimized access
+        self.env_variables = {}  #env variables received from the server to execute commands
+        ThreadEx.__init__(self)  #inititalize thread base class
+        
+        #inititalize process base class; refer execute.sh to read more about arguments to be passed in 
+        exec_args = ['bash', '%s/src/execute.sh' % self.univ.exe_path, self.univ.main_script]
+        os.isatty(sys.stdin.fileno()) or exec_args.append('1')
+        WorkerProcess.__init__(self, *exec_args)
+        
         self.daemon = True  #run this thread as daemon as it should not block agent from shutting down
         self.univ.event_dispatcher.bind('terminate', self.stop)  #bind to terminate event so that we can terminate bash process
-        self.env_variables = {}  #env variables received from the server to execute commands
         
         #use the job timeout defined in the config if we have one
         try:
@@ -368,27 +383,10 @@ class Executer(ThreadEx):
                 finished_jobs.append(job)
                 del Executer.jobs[job_timestamp]
                 
-        not finished_jobs and not Executer.jobs and self.limit_process_usage()
+        not finished_jobs and not Executer.jobs and self.limit_process_usage(2222)
         Executer.jobs_lock.release()
         finished_jobs and _log.info('Finished execution of %d activities' % len(finished_jobs))
         return finished_jobs
-    
-    def limit_process_usage(self):
-        """
-        Method to terminate the bash subprocess if it has executed more than a N commands.
-        This is done to avoid memory usage in bash subprocess growing.
-        """
-        
-        self.process_lock.acquire()  #this has to be atomic as multiple threads reads/writes
-
-        try:
-            max_exec_count = 2222;  #maximum count of commands allowed in the bash process
-
-            if self.exec_process and self.exec_count > max_exec_count:  #if number of commands executed execeeded the maximum allowed count
-                _log.debug('Terminatng bash process %d as it executed more than %d commands' % (self.exec_process.pid, max_exec_count))
-                self.wait(True)
-        finally:    
-            self.process_lock.release()
         
     def exe(self):
         """
@@ -409,41 +407,10 @@ class Executer(ThreadEx):
         
         os.setpgrp()  #set process group
         os.chdir(self.univ.temp_path)  #change the working directory
-                
-    @property
-    def process(self):
-        """
-        Property to get the bash process instance
         
-        Returns:
-            Bash process instance
-        """
-        
-        self.process_lock.acquire()  #this has to be atomic as multiple threads reads/writes
-        
-        #self.wait returns True if the bash suprocess is terminated, in that case we will create a new bash process instance
-        if self.wait() and not self.is_stop:
-            try:
-                #refer execute.sh to read more about arguments to be passed in 
-                exec_args = ['bash', '%s/src/execute.sh' % self.univ.exe_path, self.univ.main_script]
-                os.isatty(sys.stdin.fileno()) or exec_args.append('1')
-
-                #collect env variables for command line execution.
-                #env variables defined in sealion config takes precedence over the ones in agent config
-                env_vars = dict(os.environ)
-                env_vars.update(self.env_variables)
-                env_vars.update(self.univ.config.sealion.get_dict(('env', {}))['env'])
-
-                self.exec_count = 0  #reset the number of commands executed
-
-                self.exec_process = subprocess.Popen(exec_args, preexec_fn = self.init_process, bufsize = 0, env = env_vars,
-                    stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
-                _log.info('Bash process %d has been created to execute command line activities' % self.exec_process.pid)
-            except Exception as e:
-                _log.error('Failed to create bash process; %s' % unicode(e))
-                
-        self.process_lock.release()
-        return self.exec_process
+        #env variables defined in sealion config takes precedence over the ones in agent config
+        os.environ.update(self.env_variables)
+        os.environ.update(self.univ.config.sealion.get_dict(('env', {}))['env'])
     
     @staticmethod
     def format_job(job_details):
@@ -459,7 +426,7 @@ class Executer(ThreadEx):
         
         activity = job_details.get('activity')
         command = activity['command'] if activity else job_details['command']
-        return ('%d %s: %s\n' % (job_details['timestamp'], job_details['output'], command)).encode('utf-8')
+        return ('%d %s: %s' % (job_details['timestamp'], job_details['output'], command)).encode('utf-8')
     
     def write(self, job_details):
         """
@@ -472,15 +439,7 @@ class Executer(ThreadEx):
             True on success else False
         """
         
-        try:
-            #it is possible that the pipe is broken or the subprocess was terminated
-            self.process.stdin.write(Executer.format_job(job_details))
-            self.exec_count += 1
-        except Exception as e:
-            _log.error('Failed to write to bash process; %s' % unicode(e))
-            return False
-        
-        return True
+        return WorkerProcess.write(self, Executer.format_job(job_details))  #call the baseclass version
         
     def read(self):
         """
@@ -491,64 +450,27 @@ class Executer(ThreadEx):
         """
         
         try:
-            #it is possible that the pipe is broken or the subprocess was terminated
-            line = self.process.stdout.readline().decode('utf-8', 'replace').rstrip()
+            line = WorkerProcess.read(self)
             data = line.split()
             
-            if not data:  #bash wrote an empty line; ignore it
-                return False
-            elif data[0] == 'warning:':  #bash has given some warning
+            if data[0] == 'warning:':  #bash has given some warning
                 _log.warn(line[line.find(' ') + 1:])
             elif data[0] == 'data:':  #data
                 self.update_job(int(data[1]), {data[2]: data[3]})
             else:  #everything else
-                _log.info('Bash process returned \'%s\'' % line)
-        except Exception as e:
-            _log.error('Failed to read from bash process; %s' % unicode(e))
+                raise Exception()
+        except Exception:
+            line and _log.info('Bash process returned \'%s\'' % line)
             return False
         
         return True
-        
-    def wait(self, is_force = False): 
-        """
-        Method to wait for the bash subprocess if it was terminated, to avoid zombies
-        This method is not thread safe.
-        
-        Args:
-            is_force: if it is True, it terminates the process and then waits
-            
-        Returns:
-            True if the process is terminated else False
-        """
-        
-        is_terminated = True  #is the bash subprocess terminated
-        
-        try:
-            if self.exec_process.poll() == None:  #if the process is running
-                if is_force:  #kill the process
-                    os.kill(self.exec_process.pid, signal.SIGTERM)
-                else:
-                    is_terminated = False  #process still running
-                
-            #wait for the process if it is terminated
-            if is_terminated == True:
-                is_force == False and _log.error('Bash process %d was terminated', self.exec_process.pid)
-                os.waitpid(self.exec_process.pid, os.WUNTRACED)
-                self.exec_process = None
-        except:
-            pass
-                
-        return is_terminated
         
     def stop(self, *args, **kwargs):
         """
         Public method to stop the thread.
         """
         
-        self.process_lock.acquire()  #this has to be atomic as multiple threads reads/writes
-        self.is_stop = True
-        self.wait(True)  #terminate the bash subprocess and wait
-        self.process_lock.release()
+        WorkerProcess.stop(self)  #terminate the bash subprocess
         
         Executer.jobs_lock.acquire()  #this has to be atomic as multiple threads reads/writes
         
@@ -607,10 +529,6 @@ class Executer(ThreadEx):
                     _log.info('Unset env variable %s' % env_var)
             except Exception as e:
                 _log.error('Failed to unset env variable %s; %s' % (env_var, unicode(e)))
-                
-        env_vars = dict(os.environ)
-        env_vars.update(self.env_variables)
-        env_vars.update(self.univ.config.sealion.get_dict(('env', {}))['env'])
             
         self.process_lock.release()
         _log.info('Env variables - %d exported; %d unset' % (export_count, unset_count))

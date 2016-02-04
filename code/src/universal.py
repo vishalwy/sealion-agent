@@ -65,6 +65,11 @@ class SealionConfig(helper.Config):
             'optional': True, 
             'regex': '^\+?((0?[5-9]{1}|(0?[1-9][0-9]+))|((0?[5-9]{1}|(0?[1-9][0-9]+))\.[0-9]*))$'
         },
+        'metricTimeout': {
+            'type': 'int', 
+            'optional': True, 
+            'regex': '^\+?(\d+)'
+        },
         'user': {
             'type': 'str,unicode', 
             'regex': '^.+$', 
