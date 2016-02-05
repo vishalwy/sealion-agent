@@ -42,7 +42,7 @@ class Extractor(WorkerProcess):
         try:
             self.timeout = self.univ.config.sealion.metricTimeout
         except:
-            self.timeout = 5
+            self.timeout = 2
         
         WorkerProcess.__init__(self, sys.executable, '%s/src/extract.py' % self.univ.exe_path, '%s' % self.timeout)
         
@@ -60,11 +60,11 @@ class Extractor(WorkerProcess):
                 line = self.read()
 
                 if line:
-                    data = line.split(':', 1)
+                    data = line.split(' ', 1)
 
-                    if data[0] == 'debug':
+                    if data[0] == 'debug:':
                         _log.debug(data[1])
-                    elif data[0] == 'data':
+                    elif data[0] == 'data:':
                         try:
                             data = json.loads(data[1])
                         except Exception as e:

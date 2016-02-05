@@ -36,13 +36,13 @@ All the keys in the configuration are optional.
 
     /*
     Specify the maximum execution time allowed for a command in seconds; post which the command will be terminated.
-    Minimum timeout allowed is 5 seconds and it is the default value.
+    The default value is 30 seconds and minimum allowed is 5 seconds.
     */
     "commandTimeout": 30
 
     /*
     Specify the maximum execution time allowed for a metric in seconds; post which the evaluation will be terminated.
-    Zero means no timeout, any other value means the metric evaluation will be timedout after that many seconds.
+    Zero means no timeout, and the default is set to 2 seconds.
     */
-    "metricTimeout": 5
+    "metricTimeout": 2
 }
