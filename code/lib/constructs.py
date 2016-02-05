@@ -307,11 +307,33 @@ class NavigationDict(dict):
         
 class WorkerProcess():
     def __init__(self, *args):
+        """
+        Constructor
+        
+        Args:
+            Command line arguments for the process
+        """
+        
         self.exec_process = None  #process instance
         self.process_lock = threading.RLock()  #thread lock for process instance
         self.write_count = 0  #total number of lines written to the process
         self.is_stop = False  #stop flag for the process
         self.args = list(args)  #arguments for the process
+        
+    def __str__(self):
+        """
+        String representation for the object
+        
+        Returns:
+            A readable string representation
+        """
+        
+        try:
+            name = '%s(%d)' % (self.args[0], self.exec_process.pid)
+        except:
+            name = self.args[0]
+        
+        return name
         
     @property
     def process(self):
@@ -331,10 +353,10 @@ class WorkerProcess():
 
                 #create the process with stream handles redirected. make sure the bufsize is set to 0 to have the pipe unbuffered
                 self.exec_process = subprocess.Popen(self.args, preexec_fn = self.init_process, bufsize = 0,
-                    stdin = subprocess.PIPE, stdout = subprocess.PIPE)
-                _log.info('Worker process %s(%d) has been created' % (self.args[0], self.exec_process.pid))
+                    stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+                _log.info('Worker process %s has been created' % self)
             except Exception as e:
-                _log.error('Failed to create %s worker process; %s' % (self.args[0], unicode(e)))
+                _log.error('Failed to create %s worker process; %s' % (self, unicode(e)))
                 
         self.process_lock.release()
         return self.exec_process
@@ -362,7 +384,7 @@ class WorkerProcess():
             self.process.stdin.write((input + '\n').encode('utf-8'))
             self.write_count += 1
         except Exception as e:
-            _log.error('Failed to write to worker process %s; %s' % (self.args[0], unicode(e)))
+            _log.error('Failed to write to worker process %s; %s' % (self, unicode(e)))
             return False
         
         return True
@@ -379,7 +401,7 @@ class WorkerProcess():
             #it is possible that the pipe is broken or the subprocess was terminated
             line = self.process.stdout.readline().decode('utf-8', 'replace').rstrip()
         except Exception as e:
-            _log.error('Failed to read from worker process %s; %s' % (self.args[0], unicode(e)))
+            _log.error('Failed to read from worker process %s; %s' % (self, unicode(e)))
             return None
         
         return line
@@ -407,7 +429,7 @@ class WorkerProcess():
                 
             #wait for the process if it is terminated
             if is_terminated == True:
-                is_force == False and _log.error('Worker process %s(%d) was terminated' % (self.args[0], self.exec_process.pid))
+                is_force == False and _log.error('Worker process %s was terminated' % self)
                 os.waitpid(self.exec_process.pid, os.WUNTRACED)
                 self.exec_process = None
         except:
@@ -439,7 +461,7 @@ class WorkerProcess():
         try:
             if self.exec_process and self.write_count > max_write_count:  #if number of commands written execeeded the maximum allowed count
                 self.wait(True)
-                _log.debug('Worker process %s(%d) was terminated as it processed more than %d lines' % (self.args[0], self.exec_process.pid, max_write_count))
+                _log.debug('Worker process %s was terminated as it processed more than %d lines' % (self, max_write_count))
         except:
             pass
   

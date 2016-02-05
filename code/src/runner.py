@@ -49,25 +49,38 @@ class Extractor(WorkerProcess):
     def extract(self, output, metrics):
         if not output or not metrics:
             return None
-        
-        if self.timeout > 0:
-            self.extract_lock.acquire()
-            
-            if self.write(json.dumps({'output': output, 'metrics': metrics})):
-                data = self.read()
-                
-                try:
-                    data = json.loads(data) if data else None
-                except Exception as e:
-                    _log.error('Failed to extract metrics; %s' % unicode(e))
-                    data = None
-            else:
-                data = None
-                
-            self.extract_lock.release()
-        else:
+        elif not self.timeout:
             data = extract.extract_metrics(output, metrics)
-            
+            return data if data else None
+        
+        self.extract_lock.acquire()
+
+        if self.write(json.dumps({'output': output, 'metrics': metrics})):
+            while 1:
+                line = self.read()
+
+                if line:
+                    data = line.split(':', 1)
+
+                    if data[0] == 'debug':
+                        _log.debug(data[1])
+                    elif data[0] == 'data':
+                        try:
+                            data = json.loads(data[1])
+                        except Exception as e:
+                            _log.error('Failed to extract metrics; %s' % unicode(e))
+                            data = None  
+                            
+                        break
+                    else:
+                        _log.error(line)
+                else:
+                    data = None
+                    break
+        else:
+            data = None
+
+        self.extract_lock.release()    
         self.limit_process_usage(2222)
         return data if data else None
     
@@ -296,6 +309,16 @@ class Executer(WorkerProcess, ThreadEx):
 
         self.timeout = int(self.timeout * 1000)  #convert to millisec
         
+    def __str__(self):
+        """
+        String representation for the object
+        
+        Returns:
+            A readable string representation
+        """
+        
+        return WorkerProcess.__str__(self)
+        
     def add_job(self, job):
         """
         Public method to execute the job.
@@ -426,7 +449,7 @@ class Executer(WorkerProcess, ThreadEx):
         
         activity = job_details.get('activity')
         command = activity['command'] if activity else job_details['command']
-        return ('%d %s: %s' % (job_details['timestamp'], job_details['output'], command)).encode('utf-8')
+        return '%d %s: %s' % (job_details['timestamp'], job_details['output'], command)
     
     def write(self, job_details):
         """
@@ -451,6 +474,10 @@ class Executer(WorkerProcess, ThreadEx):
         
         try:
             line = WorkerProcess.read(self)
+            
+            if not line:
+                return False
+            
             data = line.split()
             
             if data[0] == 'warning:':  #bash has given some warning
@@ -458,9 +485,9 @@ class Executer(WorkerProcess, ThreadEx):
             elif data[0] == 'data:':  #data
                 self.update_job(int(data[1]), {data[2]: data[3]})
             else:  #everything else
-                raise Exception()
-        except Exception:
-            line and _log.info('Bash process returned \'%s\'' % line)
+                _log.error(line)
+        except Exception as e:
+            _log.error('Failed to read from %s; %s' % (self, unicode(e)))
             return False
         
         return True
