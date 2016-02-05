@@ -13,6 +13,7 @@ import time
 import json
 import re
 import socket
+import helper
 import connection
 import universal
 from constructs import *
@@ -334,10 +335,10 @@ class API(requests.Session):
         response = self.exec_method('post', self.univ.get_url('agents/1/data/activities/' + activity_id), data = data, options = {'retry_count': 0})
         
         if API.is_success(response):
-            _log.debug('Sent activity (%s @ %d)' % (activity_id, data['timestamp']))
+            _log.debug('Sent %s' % helper.format_job(activity_id, data['timestamp']))
             self.set_events(post_event = True)  #set the post event so that data can posted
         else:
-            ret = self.error('Failed to send activity (%s @ %d)' % (activity_id, data['timestamp']), response)
+            ret = self.error('Failed to send %s' % helper.format_job(activity_id, data['timestamp']), response)
             
         return ret
     

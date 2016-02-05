@@ -11,7 +11,7 @@ def write_output(line, stream = sys.stdout):
     stream.write(line + '\n')
     stream.flush()
 
-def extract_metrics(output, metrics, timeout = 0):
+def extract_metrics(output, metrics, job, timeout = 0):
     context, ret = {'__builtins__': globals()['__builtins__']}, {}
     valid_types = ['int', 'float']
 
@@ -33,9 +33,9 @@ def extract_metrics(output, metrics, timeout = 0):
             else:
                 ret[metric_id] = value
                 
-            write_output('debug: Extracted value %s for metric %s' % (value, metric_id))
+            write_output('debug: Extracted value %s for metric %s from %s' % (value, metric_id, job))
         except:
-            write_output('Failed to extract metric %s; %s' % (metric_id, unicode(sys.exc_info()[1])))
+            write_output('Failed to extract metric %s from %s; %s' % (metric_id, job, unicode(sys.exc_info()[1])))
         
         timeout > 0 and signal.alarm(0)
         
@@ -61,7 +61,7 @@ if __name__ == '__main__':
     try:
         while 1:
             data = json.loads(sys.stdin.readline())
-            data = extract_metrics(data.get('output', ''), data.get('metrics', {}), timeout)
+            data = extract_metrics(data['output'], data['metrics'], data['job'], timeout)
             write_output('data: %s' % json.dumps(data))
     except:
         pass

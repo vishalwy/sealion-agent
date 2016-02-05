@@ -15,6 +15,7 @@ import signal
 import os
 import sys
 import json
+import helper
 import universal
 import extract
 from constructs import *
@@ -46,16 +47,18 @@ class Extractor(WorkerProcess):
         
         WorkerProcess.__init__(self, sys.executable, '%s/src/extract.py' % self.univ.exe_path, '%s' % self.timeout)
         
-    def extract(self, output, metrics):
+    def extract(self, job, output):
+        metrics, job_str = job.exec_details['activity'].get('metrics', {}), unicode(job)
+        
         if not output or not metrics:
             return None
         elif not self.timeout:
-            data = extract.extract_metrics(output, metrics)
+            data = extract.extract_metrics(output, metrics, job_str)
             return data if data else None
         
         self.extract_lock.acquire()
 
-        if self.write(json.dumps({'output': output, 'metrics': metrics})):
+        if self.write(json.dumps({'output': output, 'metrics': metrics, 'job': job_str})):
             while 1:
                 line = self.read()
 
@@ -68,7 +71,7 @@ class Extractor(WorkerProcess):
                         try:
                             data = json.loads(data[1])
                         except Exception as e:
-                            _log.error('Failed to extract metrics; %s' % unicode(e))
+                            _log.error('Failed to extract metrics from %s; %s' % (job_str, unicode(e)))
                             data = None  
                             
                         break
@@ -115,6 +118,16 @@ class Job:
         }
         
         self.univ = universal.Universal()  #reference to Universal for optimized access
+        
+    def __str__(self):
+        """
+        String representation for the object
+        
+        Returns:
+            A readable string representation
+        """
+        
+        return helper.format_job(self.exec_details['activity']['_id'], self.exec_details['timestamp'])
 
     def prepare(self):
         """
@@ -132,7 +145,7 @@ class Job:
         self.exec_details['timestamp'] = t  #set the exec timestamp
 
         if self.is_whitelisted == True:  #if the job is whitelisted
-            _log.debug('Executing activity(%s @ %d)' % (self.exec_details['activity']['_id'], t))
+            _log.debug('Executing %s' % self)
             
             #if it is not a plugin job, then we create a temperory file to capture the output
             #a plugin job return the data directly
@@ -218,10 +231,9 @@ class Job:
                 data['data'] = self.exec_details['output']
                 data['metrics'] = self.exec_details.get('metrics')
         else:
-            format = 'No data for activity (%(activity)s @ %(timestamp)d); satus: %(status)d; pid: %(pid)d; output: %(output)s'
+            format = 'No data for %(activity)s; satus: %(status)d; pid: %(pid)d; output: %(output)s'
             format_spec = {
-                'activity': self.exec_details['activity']['_id'],
-                'timestamp': self.exec_details['timestamp'],
+                'activity': self,
                 'status': self.status,
                 'pid': self.exec_details['pid'],
                 'output': True if self.exec_details['output'] else False
@@ -249,13 +261,13 @@ class Job:
 
             if not output:  #if the file is empty
                 output = 'No output/error produced'
-                _log.debug('No output/error found for activity (%s @ %d)' % (self.exec_details['activity']['_id'], self.exec_details['timestamp']))
+                _log.debug('No output/error found for %s' % self)
             else:
-                _log.debug('Read output from activity (%s @ %d)' % (self.exec_details['activity']['_id'], self.exec_details['timestamp']))
-                metrics = Job.extractor.extract(output, self.exec_details['activity'].get('metrics', {}))
+                _log.debug('Read output from %s' % self)
+                metrics = Job.extractor.extract(self, output)
         except Exception as e:
             output = 'Could not read output'
-            _log.error('Failed to read output from activity (%s @ %d); %s' % (self.exec_details['activity']['_id'], self.exec_details['timestamp'], unicode(e)))
+            _log.error('Failed to read output from %s; %s' % (self, unicode(e)))
             
         self.remove_file()  #remove the output file
         return output, metrics
@@ -268,7 +280,7 @@ class Job:
         try:
             #it is possible that output is not a file, in that case it will raise an exception which is ignored
             os.remove('%s/%s' % (self.univ.temp_path, self.exec_details['output']))
-            _log.debug('Removed the output file for activity (%s @ %d)' % (self.exec_details['activity']['_id'], self.exec_details['timestamp']))
+            _log.debug('Removed the output file for %s' % self)
         except:
             pass
         
@@ -360,7 +372,7 @@ class Executer(WorkerProcess, ThreadEx):
             except Exception as e:
                 #on failure we set the status code as ignored, so that output is not processed
                 job.status = JobStatus.IGNORED
-                _log.error('Failed to get data for plugin activity (%s @ %d); %s' % (job.exec_details['activity']['_id'], job.exec_details['timestamp'], unicode(e)))
+                _log.error('Failed to get data for plugin %s; %s' % (job, unicode(e)))
         
     def update_job(self, timestamp, details):
         """
@@ -398,7 +410,7 @@ class Executer(WorkerProcess, ThreadEx):
             
             #if the job exceeds the timeout
             if job.status == JobStatus.RUNNING and t - job.exec_details['timestamp'] > self.timeout:
-                job.kill() and _log.info('Killed activity (%s @ %d) as it exceeded timeout' % (job.exec_details['activity']['_id'], job.exec_details['timestamp']))
+                job.kill() and _log.info('Killed %s as it exceeded timeout' % job)
 
             if job.status == JobStatus.IGNORED:  #remove the job if it is to be ignored
                 del Executer.jobs[job_timestamp]
@@ -752,7 +764,8 @@ class JobProducer(singleton(ThreadEx)):
                 break
 
         self.stop_consumers()  #stop the consumers
-        self.executer.stop()  #stop executer for suprocess
+        Job.extractor.stop()  #stop extractor for metrics evaluation
+        self.executer.stop()  #stop executer for subprocess
         
     def start_consumers(self, count):
         """

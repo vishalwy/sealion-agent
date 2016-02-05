@@ -282,7 +282,7 @@ class OfflineStore(ThreadEx):
         try:
             self.perform_insert(activity, data)
             self.conn.commit()  #commit the changes
-            _log.debug('Inserted activity (%s @ %d) to %s' % (activity, data['timestamp'], self.name))
+            _log.debug('Inserted %s to %s' % (helper.format_job(activity, data['timestamp']), self.name))
             callback and callback()  #callback for successful insertion
         except Exception as e:
             _log.error('Failed to insert row to %s; %s' % (self.name, unicode(e)))

@@ -46,6 +46,9 @@ def notify_terminate(is_gracefull = True, message = '', stack_trace = ''):
     
     event_dispatcher.trigger('terminate')  #trigger the event so that modules can cleanup
     is_gracefull == False and terminatehook(message, stack_trace)
+    
+def format_job(activity, timestamp):
+    return 'activity(%s @ %d)' % (activity, timestamp)
 
 terminatehook = default_termination_hook  #terminate hook called for disgraceful shutdown
 
