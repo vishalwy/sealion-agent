@@ -1,6 +1,6 @@
 """
 Some useful constructs
-Implements EmptyClass, SingletonType, Namespace, enum, with_static_vars, ThreadEx and EventDispatcher 
+Implements EmptyClass, SingletonType, Namespace, enum, with_static_vars, ThreadEx, EventDispatcher, NavigationDict and WorkerProcess
 """
 
 __copyright__ = '(c) Webyog, Inc'
@@ -242,17 +242,36 @@ class EventDispatcher():
         return callback_count
 
 class NavigationDict(dict):
+    """
+    An extended dict class that supports navigating the dict using keys.
+    It is a drop in replacement for the builtin dict type
+    """
+    
     def get_value(self, keys):
-        data = self
+        """
+        Helper ethod to get the value from a key sequence.
+        This can raise exception if key is not found
         
+        Args:
+            keys: list containing keys to be navigated
+            
+        Returns:
+            Value for the key
+        """
+        
+        data = self  #navigation starts from the root
+        
+        #loop through the keys supplied
         for key in keys:
-            if type(data) is list:
+            if type(data) is list:  #if the value is a list, search through that also
+                #find the dict items matching the key from the list 
                 items = [item[key] for item in data if type(item) is dict and item.get(key) is not None]
                 length = len(items)
 
-                if not length:
+                if not length:  #not found
                     raise KeyError(key)
 
+                #update the item
                 data = items[0] if length == 1 else items
             else:
                 data = data[key]
@@ -260,12 +279,21 @@ class NavigationDict(dict):
         return data
     
     def get(self, keys, default = None):
-        if type(keys) is list:
+        """
+        Method to get the value for a key sequence, overrides the get method of the dict
+        
+        Args:
+            keys: a list containing the key sequence. 
+                For example if dict is {'a': 'b': 'c': [{'d': 1}, {'e': 2}]}, to extract 1, the key seq should be ['a', 'b', 'c', 'd']
+            default: default value to be used if the key is not found
+        """
+        
+        if type(keys) is list:  #if the key is a list
             try:
                 data = self.get_value(keys)
-            except KeyError:
+            except KeyError:  #catch the key error to provide the default value
                 data = default
-        else:
+        else:  #else use the original method
             data = dict.get(self, keys, default)
         
         return data
@@ -276,6 +304,11 @@ class NavigationDict(dict):
         
         Args:
             keys: keys to return, specify no keys to select all keys. a key can also be tuple (key, default_value)
+                A key can also be a string or a list of strings indicating the key sequence
+                i.e 'key' or ('key', default) or ['key1', 'key2'] or (['key1', 'key2'], default)
+            return_leaf_key: use this kw argument to alter the format of the dict returned.
+                for a key sequence ['a', 'b', 'c'], True means the returned data would be {'c': value}
+                False means, the data would be {'a': {'b': {'c': value}}}
             
         Returns:
             dict continaing the filtered keys
@@ -284,9 +317,13 @@ class NavigationDict(dict):
         keys, ret, return_leaf_key = keys or list(self.keys()), {}, kwargs.get('return_leaf_key', True)
         
         def update_dict(data, keys, value):
-            if return_leaf_key:
+            """
+            Helper function to update the dict to be returned
+            """
+            
+            if return_leaf_key:  #use the last key in the sequence
                 data[keys[-1]] = value
-            else:
+            else:  #construct the whole dict
                 for key in keys[:-1]:
                     data[key] = data.get(key, {})
                     data = data[key]
@@ -294,11 +331,15 @@ class NavigationDict(dict):
                 data[keys[-1]] = value
 
         for key in keys:
-            key = key if type(key) is tuple else (key,)  #get the key
-            curr_keys = key[0] if type(key[0]) is list else [key[0]]
+            #change the format of the key to tuple to consider the default vaues
+            key = key if type(key) is tuple else (key,) 
+            
+            #current key can be a string or a list of string indicating the key sequence,
+            #in any canse we should convert it to a list 
+            curr_keys = key[0] if type(key[0]) is list else [key[0]]  
 
             try:
-                update_dict(ret, curr_keys, self.get_value(curr_keys))
+                update_dict(ret, curr_keys, self.get_value(curr_keys))  #update the result with the value
             except:
                 if len(key) > 1:  #use the default value for the key
                     update_dict(ret, curr_keys, key[1])
@@ -306,6 +347,12 @@ class NavigationDict(dict):
         return ret
         
 class WorkerProcess():
+    """
+    The class abstracts the (re)creation and communication with a subprocess through pipes.
+    The class simply writes/reads the input/ouput to the subprocess. 
+    The calling module should have an agreement with the program used to create the subprocess about the data format.
+    """
+    
     def __init__(self, *args):
         """
         Constructor
@@ -329,7 +376,7 @@ class WorkerProcess():
         """
         
         try:
-            name = '%s(%d)' % (self.args[0], self.exec_process.pid)
+            name = '%s(%d)' % (self.args[0], self.exec_process.pid)  #with pid
         except:
             name = self.args[0]
         
@@ -363,7 +410,7 @@ class WorkerProcess():
     
     def init_process(self):
         """
-        Method to initialize the subprocess
+        Method to initialize the subprocess. This is called from the forked process before replacing the image
         """
         
         pass
@@ -391,7 +438,7 @@ class WorkerProcess():
         
     def read(self):
         """
-        Method to read from subprocess and update the job details
+        Method to read from subprocess
         
         Returns:
             The line read or None on error

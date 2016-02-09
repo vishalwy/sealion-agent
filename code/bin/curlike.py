@@ -22,7 +22,7 @@ sys.path.insert(0, exe_path + '/lib')
 sys.path.insert(0, exe_path + '/src')
 
 import requests
-import version
+import version_info
 from constructs import unicode
 
 def usage(is_help = False):
@@ -145,7 +145,7 @@ try:
         elif option in ['-k', '--insecure']:  #allow url redirection
             kwargs['verify'] = False
         elif option == '--version':
-            version.print_version() and sys.exit(0)
+            version_info.print_version() and sys.exit(0)
         elif option in ['-h', '--help']:
             usage(True) and sys.exit(0)
             

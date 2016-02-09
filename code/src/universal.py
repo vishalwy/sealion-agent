@@ -18,7 +18,7 @@ import multiprocessing
 import re
 import requests
 import helper
-import version
+import version_info
 from datetime import datetime
 from constructs import *
 
@@ -234,7 +234,7 @@ class Universal(singleton()):
         self.event_dispatcher = helper.event_dispatcher  #event dispatcher for communication across modules
         self.config = EmptyClass()
         self.config.sealion = SealionConfig(self.exe_path + '/etc/config.json')  #instance of configurable settings
-        self.config.agent = AgentConfig(file = self.exe_path + '/etc/agent.json', private_data = {'agentVersion': version.__version__})  #instance of private settings
+        self.config.agent = AgentConfig(file = self.exe_path + '/etc/agent.json', private_data = {'agentVersion': version_info.__version__})  #instance of private settings
         ret = self.config.sealion.set()  #load the config from the file
         
         if ret != True:  #raise an exception on error

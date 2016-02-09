@@ -19,7 +19,7 @@ exe_path = os.path.dirname(os.path.realpath(__file__)).rsplit('/', 1)[0]
 sys.path.insert(0, exe_path + '/lib')
 sys.path.insert(0, exe_path + '/src')
 
-import version
+import version_info
 from constructs import unicode
 
 def usage(is_help = False):
@@ -106,7 +106,7 @@ try:
                 sys.stderr.write('Uknown argument \'%s\' for %s\n' % (arg, option))  #unknown action
                 usage() and sys.exit(1)
         elif option == '--version':
-            version.print_version() and sys.exit(0)
+            version_info.print_version() and sys.exit(0)
         elif option in ['-h', '--help']:
             usage(True) and sys.exit(0)
         else:  #anything else is considered as the file to read

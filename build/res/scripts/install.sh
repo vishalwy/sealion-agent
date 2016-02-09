@@ -504,8 +504,9 @@ fi
 echo "Copying files..."
 
 if [[ $update_agent -eq 0 ]] ; then  #if it is not an update
-    #remove everything except var directory and copy the new files
-    find "$install_path" -mindepth 1 -maxdepth 1 ! -name 'var' -exec rm -rf "{}" \; >/dev/null 2>&1
+    #remove everything except var and opt/custom and copy the new files
+    find "$install_path" -mindepth 1 -maxdepth 1 ! -name 'var' ! -name 'opt' -exec rm -rf "{}" \; >/dev/null 2>&1
+    find "${install_path}/opt" -mindepth 1 -maxdepth 1 ! -name 'custom' -exec rm -rf "{}" \; >/dev/null 2>&1
     cp -r agent/* "$install_path"
 
     setup_config  #create the configuration
@@ -528,8 +529,9 @@ else  #update
         #in effect it becomes /etc/sealion -> install_path/etc/sealion -> install_path/etc/init.d/sealion
         ln -sf "$service_file" "${install_path}/etc/sealion"
     else
-        #remove all files except var/ etc/ and tmp/ and copy files except etc/
-        find "$install_path" -mindepth 1 -maxdepth 1 ! -name 'var' ! -name 'etc' ! -name 'tmp' -exec rm -rf "{}" \; >/dev/null 2>&1
+        #remove all files except var/ etc/ opt/custom and tmp/ and copy files except etc/
+        find "$install_path" -mindepth 1 -maxdepth 1 ! -name 'var' ! -name 'etc' ! -name 'tmp' ! -name 'opt' -exec rm -rf "{}" \; >/dev/null 2>&1
+        find "${install_path}/opt" -mindepth 1 -maxdepth 1 ! -name 'custom' -exec rm -rf "{}" \; >/dev/null 2>&1
         find agent/ -mindepth 1 -maxdepth 1 ! -name 'etc' -exec cp -r {} "$install_path" \;
 
         find agent/etc/ -mindepth 1 -maxdepth 1 ! -name '*.json' -exec cp -r {} "$install_path/etc" \;  #copy config files except .json

@@ -48,6 +48,10 @@ def notify_terminate(is_gracefull = True, message = '', stack_trace = ''):
     is_gracefull == False and terminatehook(message, stack_trace)
     
 def format_job(activity, timestamp):
+    """
+    Helper function to format a job object 
+    """
+    
     return 'activity(%s @ %d)' % (activity, timestamp)
 
 terminatehook = default_termination_hook  #terminate hook called for disgraceful shutdown
@@ -194,8 +198,10 @@ class Config:
             value for the key provided
         """
         
-        ret = self.private_data.get(key, default)
-        ret = self.data.get(key, default) if ret == default else ret
+        self.lock.acquire()  #this has to be atomic as multiple threads reads/writes
+        ret = self.data.get(key, default)  #get the actual value
+        ret = self.private_data.get(key, ret) if self.private_data else ret  #private data gets priority
+        self.lock.release()
         return ret
             
     def get_dict(self, *keys, **kwargs):
@@ -210,8 +216,12 @@ class Config:
         """
         
         self.lock.acquire()  #this has to be atomic as multiple threads reads/writes
-        ret = self.data.get_dict(*keys, **kwargs)
+        ret = self.data.get_dict(*keys, **kwargs)  #get the dict 
+        
+        #private data gets priority
+        #get the dict but without providing the default values so that the default values wont mask the actual value
         self.private_data and ret.update(self.private_data.get_dict(*tuple([key[0] if type(key) is tuple else key for key in keys]), **kwargs))
+        
         self.lock.release()
         return ret
 

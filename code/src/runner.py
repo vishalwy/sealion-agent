@@ -35,9 +35,19 @@ class JobStatus(Namespace):
     IGNORED = 5  #job should be considered as ignored and should not process the output
     
 class Extractor(WorkerProcess):
+    """
+    A wrapper class that creates a python subprocess for extracting the metrics from the output
+    It executes the commandline by writing to the bash script and gets the status in a blocking read.
+    For more details checkout extract.py
+    """
+    
     def __init__(self):
+        """
+        Constructor
+        """
+        
         self.univ = universal.Universal()
-        self.extract_lock = threading.RLock()
+        self.extract_lock = threading.RLock()  #for limiting access to extractor process
         
         #use the metric timeout defined in the config if we have one
         try:
@@ -45,45 +55,48 @@ class Extractor(WorkerProcess):
         except:
             self.timeout = 2
         
+        #initialize the worker process with the python executable and arguments, this doesn't start the process
         WorkerProcess.__init__(self, sys.executable, '%s/src/extract.py' % self.univ.exe_path, '%s' % self.timeout)
         
     def extract(self, job, output):
         metrics, job_str = job.exec_details['activity'].get('metrics', {}), unicode(job)
         
-        if not output or not metrics:
+        if not metrics:  #if no metrics
             return None
-        elif not self.timeout:
+        elif not self.timeout:  #if no timeout defined, means the extraction should be performed within
             data = extract.extract_metrics(output, metrics, job_str)
             return data if data else None
         
-        self.extract_lock.acquire()
+        #acquire the lock otherwise the order of the output read can mix up with another activity's metric
+        self.extract_lock.acquire()  
 
+        #write to the subprocess and on successful write, start processing the output
         if self.write(json.dumps({'output': output, 'metrics': metrics, 'job': job_str})):
             while 1:
-                line = self.read()
+                line = self.read()  #blocking read
 
-                if line:
-                    data = line.split(' ', 1)
+                if line:  #if a line is read, then process it
+                    data = line.split(' ', 1)  #split the line into two to find out the header format
 
-                    if data[0] == 'debug:':
+                    if data[0] == 'debug:':  #a debug statement
                         _log.debug(data[1])
-                    elif data[0] == 'data:':
+                    elif data[0] == 'data:':  #data
                         try:
-                            data = json.loads(data[1])
+                            data = json.loads(data[1])  #try to parse the json
                         except Exception as e:
                             _log.error('Failed to extract metrics from %s; %s' % (job_str, unicode(e)))
                             data = None  
                             
-                        break
+                        break  #in any case, break as there is nothing more to read
                     else:
                         _log.error(line)
-                else:
+                elif line != None:  #unsuccesful read due to various reasons, and hence no metrics
                     data = None
                     break
         else:
-            data = None
+            data = None  #could not write due to various reasons and hence no metric
 
-        self.extract_lock.release()    
+        self.extract_lock.release()  #release the lock
         self.limit_process_usage(2222)
         return data if data else None
     
@@ -92,8 +105,7 @@ class Job:
     Represents a job, that can be executed
     """
     
-    metrics = {}
-    extractor = Extractor()
+    extractor = Extractor()  #to extract the metrics
     
     def __init__(self, activity):
         """
@@ -106,7 +118,10 @@ class Job:
         self.is_whitelisted = activity['is_whitelisted']  #is this job allowed to execute
         self.exec_timestamp = activity['next_exec_timestamp']  #timestamp at which the job should execute
         self.status = JobStatus.INITIALIZED  #current job state
-        self.plugin = True if activity['details'].get('service') == 'Plugins' else False  #is this job a plugin or a commandline
+        
+        #is this job a plugin or a commandline; this can also point to a generator instance which indicates a job that has been started already 
+        #so, False means its a commandline job, anything else means it is a plugin job
+        self.plugin = True if activity['details'].get('service') == 'Plugins' else False  
         
         #dict containing job execution details
         self.exec_details = {
@@ -128,7 +143,7 @@ class Job:
         """
         
         return helper.format_job(self.exec_details['activity']['_id'], self.exec_details['timestamp'])
-
+    
     def prepare(self):
         """
         Public method to prepare the job for execution.
@@ -138,6 +153,7 @@ class Job:
             Execution start timestamp of the job
         """
         
+        #if the timestamp is already there; do not prepare again
         if self.exec_details['timestamp']:
             return self.exec_details['timestamp']
         
@@ -248,7 +264,7 @@ class Job:
         A side effect of this method is that it removes any ouput file, so that next attempt will return empty string.
         
         Returns:
-            Output read.
+            Output read, metrics if any
         """
         
         try:
@@ -264,7 +280,7 @@ class Job:
                 _log.debug('No output/error found for %s' % self)
             else:
                 _log.debug('Read output from %s' % self)
-                metrics = Job.extractor.extract(self, output)
+                metrics = Job.extractor.extract(self, output)  #extract the metric from the valid output
         except Exception as e:
             output = 'Could not read output'
             _log.error('Failed to read output from %s; %s' % (self, unicode(e)))
@@ -357,13 +373,16 @@ class Executer(WorkerProcess, ThreadEx):
                 #this can raise exception
                 if job.plugin == True:
                     activity = job.exec_details['activity']
+                    
+                    #get_data which should be written as a plugin
                     job.plugin = __import__(activity['command']).get_data(activity.get('metrics', {}))
                     
                 try:
-                    data = next(job.plugin)
+                    data = next(job.plugin)  #get next value from the generator
                 except (StopIteration, GeneratorExit):
                     pass
                     
+                #if the data returned is int, schedule it after that many seconds
                 if type(data) is int:
                     job.exec_timestamp += data
                     JobProducer().queue.put(job)
@@ -443,6 +462,7 @@ class Executer(WorkerProcess, ThreadEx):
         os.setpgrp()  #set process group
         os.chdir(self.univ.temp_path)  #change the working directory
         
+        #export env variables
         #env variables defined in sealion config takes precedence over the ones in agent config
         os.environ.update(self.env_variables)
         os.environ.update(self.univ.config.sealion.get_dict(('env', {}))['env'])
@@ -456,7 +476,7 @@ class Executer(WorkerProcess, ThreadEx):
             job_details: dict representing the commandline job to be stringified
             
         Returns:
-            String representing the job
+            String representing the job to write to command line
         """
         
         activity = job_details.get('activity')
@@ -485,7 +505,7 @@ class Executer(WorkerProcess, ThreadEx):
         """
         
         try:
-            line = WorkerProcess.read(self)
+            line = WorkerProcess.read(self)  #read from the base class
             
             if not line:
                 return False
@@ -510,7 +530,6 @@ class Executer(WorkerProcess, ThreadEx):
         """
         
         WorkerProcess.stop(self)  #terminate the bash subprocess
-        
         Executer.jobs_lock.acquire()  #this has to be atomic as multiple threads reads/writes
         
         #loop throgh the jobs and remove temperory files
@@ -665,9 +684,21 @@ class JobProducer(singleton(ThreadEx)):
         
     @staticmethod
     def update_metrics(cur_activity, new_activity):
+        """
+        Static method to sanitize the parser code and log the details of added/updated/removed metrics
+        
+        Args:
+            cur_activity: dict representing the activity
+            new_activity: modified dict for the activity
+            
+        Returns:
+            True if metric was added/removed/updated else False
+        """
+        
         cur_metrics, new_metrics = cur_activity.get('metrics', {}), new_activity.get('metrics', {})
         add_count, update_count, remove_count, activity_id, metric_ids = 0, 0, 0, new_activity['_id'], []
         
+        #loop through new metrics updating the counts
         for new_metric in new_metrics:
             metric_id = new_metric
             new_metric = new_metrics[metric_id]
@@ -675,14 +706,17 @@ class JobProducer(singleton(ThreadEx)):
             
             if cur_metric:
                 if cur_metric['parser'] != new_metric['parser'] or cur_metric['cumulative'] != new_metric['cumulative']:
+                    new_metric['parser'] = extract.sanitize_parser(new_metric['parser'])  #sanitize upfront to optimize performance
                     update_count += 1
                     _log.info('Updated metric %s for activity %s' % (metric_id, activity_id))
             else:
+                new_metric['parser'] = extract.sanitize_parser(new_metric['parser'])  #sanitize upfront to optimize performance
                 add_count += 1
                 _log.info('Added metric %s for activity %s' % (metric_id, activity_id))
                 
             metric_ids.append(metric_id)
             
+        #udate the remove count by looping through removed metrics
         for metric_id in [metric_id for metric_id in cur_metrics if metric_id not in metric_ids]:
             _log.info('Removed metric %s from activity %s' % (metric_id, activity_id))
             remove_count += 1
@@ -716,7 +750,7 @@ class JobProducer(singleton(ThreadEx)):
                     cur_activity['details'] = activity
                     cur_activity['is_whitelisted'] = self.is_in_whitelist(activity)  #check whether the activity is allowed to run
                     cur_activity['next_exec_timestamp'] = t  #execute the activity immediately
-                    _log.info('Updatied activity %s' % activity_id)
+                    _log.info('Updated activity %s' % activity_id)
                     update_count += 1
                 elif JobProducer.update_metrics(details, activity):
                     cur_activity['details'] = activity

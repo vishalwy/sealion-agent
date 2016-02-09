@@ -20,12 +20,12 @@ sys.path.insert(0, exe_path + '/opt/default/python/')
 sys.path.insert(0, exe_path + '/lib')
 sys.path.insert(0, exe_path + '/src')
 
-import version
+import version_info
 
 #start in debug mode only if --debug flag is specified; 
 #the flag is added only to prevent unintentional debugging while manipulating the service
 if len(sys.argv) == 2 and sys.argv[1] == '--version':
-    version.print_version() and sys.exit()
+    version_info.print_version() and sys.exit()
 if len(sys.argv) == 3 and sys.argv[1] == '--debug' and sys.argv[2] == 'start':
     import main as main_module
 else:

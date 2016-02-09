@@ -24,6 +24,9 @@ def get_data(metrics):
     """
     Function to get the data this module provides.
     
+    Args:
+        metrics: dict containing the metrics to extract
+    
     Returns:
         dict containing data.
     """
@@ -102,8 +105,20 @@ def get_data(metrics):
     }
     
 def extract_metrics(data, metrics):
+    """
+    Function to extract the metrics from the data collected
+    
+    Args:
+        data: the data from which the metrics to be extracted
+        metrics: dict representing the metrics
+        
+    Returns:
+        dict containing the metrics 
+    """
+    
     ret = {}
     
+    #loop through the metrics and extract metrics
     for metric in metrics:
         try:
             id, parser = metric, metrics[metric]['parser']

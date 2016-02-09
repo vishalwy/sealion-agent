@@ -233,6 +233,7 @@ class OfflineStore(ThreadEx):
             orig_schema = set([col[:3] + (1 if col[-1] else 0,) for col in schema])
             curr_schema = set([col[:3] + (1 if col[-1] else 0,) for col in self.cursor.fetchall()])
 
+            #if there is a schema mismatch, drop the table and raise an exception so that we recreate it
             if len(orig_schema - curr_schema) > 0 or len(curr_schema - orig_schema) > 0:  
                 self.cursor.execute('DROP TABLE data')
                 raise Exception()
@@ -255,6 +256,14 @@ class OfflineStore(ThreadEx):
         return True
     
     def perform_insert(self, activity, data):
+        """
+        Helper method to perform insert.
+        
+        Args:
+            activity: activity id for the data
+            data: dict containing the data
+        """
+        
         Storage.get_data(data)  #get the data. read the get_data doc to know why this is required
         metrics = data.get('metrics')
         values = '?, ?, ?, ?'
