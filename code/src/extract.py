@@ -15,7 +15,14 @@ import json
 import signal
 import re
 import imp
+import os.path
 
+#when script is run as main script, path to custom modules will be missing
+#in this case we need to import constructs which is located in lib directory
+if __name__ == '__main__':
+    sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)).rsplit('/', 1)[0] + '/lib')
+    
+from constructs import unicode  
 timeout, cumulative_metrics = 0, {}
 
 class TimeoutException(BaseException):
