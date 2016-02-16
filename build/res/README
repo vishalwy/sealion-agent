@@ -43,6 +43,12 @@ Logging
 #   'var/log/update.log' contains update logs.
 
 
+Misc
+====
+If you have custom scripts to run via SeaLion, you can keep them under opt/custom. 
+The content of this directory remains intact during agent update.
+
+
 Uninstall
 =========
 To uninstall agent, execute uninstall.sh

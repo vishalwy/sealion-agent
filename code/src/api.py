@@ -95,13 +95,36 @@ class API(requests.Session):
         if response != None:
             try:
                 #try to get response error code and message
-                response_json = response.json()
+                response_json = API.get_json(response)
                 temp = 'Error %d; %s' % (response_json['code'], response_json['message'])
             except:
                 temp = 'Error %d' % response.status_code  #if content is not available, log status code
         
         temp = '%s; %s' % (message, temp) if len(message) else temp
         _log.error(temp)
+        
+    @staticmethod
+    def get_json(response):
+        """
+        Static method to get the json from the response
+        The function optimizes it in a way that repeated calls won't end up parsing the content all over
+        
+        Args:
+            reponse: Response object from which the json to be extracted
+            
+        Returns:
+            Response json if it is available, else None
+        """
+        
+        if response:
+            try:
+                return response._response_json  #try to get the attribute
+            except:
+                response._response_json = response.json()
+                
+            return response._response_json
+        
+        return None
     
     def set_events(self, stop_event = None, post_event = None):
         """
@@ -151,7 +174,8 @@ class API(requests.Session):
         retry_count = options.get('retry_count', -1)  #retry count, -1 indicates infinite retry
         retry_interval = options.get('retry_interval', 5)  #retry interval
         is_ignore_stop_event = options.get('is_ignore_stop_event', False)  #whether to consider stop event
-        is_return_exception = options.get('is_return_exception', False) #whether to return any exception raised 
+        is_return_exception = options.get('is_return_exception', False)  #whether to return any exception raised 
+        is_validate_json = options.get('is_validate_json', False)  #whether to validate json in the response
         response, i, exception = None, 0, None
         
         #convert data to string if it is not
@@ -172,7 +196,9 @@ class API(requests.Session):
                 if is_check_auth and not self.is_authenticated():
                     raise Exception('session not authenticated')
                 
-                response = method(url, timeout = 10, **kwargs)  #actuall request
+                temp_response = method(url, timeout = 10, **kwargs)  #actuall request
+                is_validate_json and API.get_json(temp_response)
+                response = temp_response
             except Exception as e:
                 _log.error('Failed URL request; %s' % unicode(e))
                 exception = e
@@ -201,12 +227,12 @@ class API(requests.Session):
             response object if is_ping_server, else None
         """
         
-        response = None
+        response, options = None, {'retry_count': 0, 'is_return_exception': True}
         
         if is_ping_server == False:  #only unblock post event
             self.set_events(post_event = True)
         else:
-            response = self.exec_method('get', self.univ.get_url(), options = {'retry_count': 0, 'is_return_exception': True})  #ping the server
+            response = self.exec_method('get', self.univ.get_url(), options = options)  #ping the server
             
             if response[0] != None and response[0].status_code < 500:  #we are able to reach the server
                 _log.debug('Ping server successful')
@@ -224,7 +250,7 @@ class API(requests.Session):
             Status code for the request.
         """
         
-        ret = Status.SUCCESS
+        ret, kwargs['is_validate_json'] = Status.SUCCESS, True
         
         #get data and make the request
         data = self.univ.config.agent.get_dict('orgToken', ('name', socket.gethostname()), 'category', 'agentVersion', ('ref', 'tarball'))
@@ -234,7 +260,7 @@ class API(requests.Session):
             _log.info('Registration successful')
             
             #update and save the config
-            self.univ.config.agent.update({'config': response.json()})
+            self.univ.config.agent.update({'config': API.get_json(response)})
             self.univ.config.agent.save()
         else:
             ret = self.error('Failed to register agent', response)
@@ -272,19 +298,20 @@ class API(requests.Session):
             Status code for the request.
         """
         
-        ret = Status.SUCCESS
+        ret, kwargs['is_validate_json'] = Status.SUCCESS, True
         
         #get data and make the request
         data = self.univ.config.agent.get_dict('orgToken', 'agentVersion')
         data['timestamp'] = int(time.time() * 1000)
         data['platform'] = self.univ.details
-        response = self.exec_method('post', self.univ.get_url('agents/' + self.univ.config.agent.get(['config', '_id']) + '/sessions'), data = data, options = kwargs)    
+        response = self.exec_method('post', self.univ.get_url('agents/' + self.univ.config.agent.get(['config', '_id']) + '/sessions'), 
+            data = data, options = kwargs)    
         
         if API.is_success(response):
             _log.info('Authentication successful')
             
             #update and save the config
-            self.univ.config.agent.update({'config': response.json()})
+            self.univ.config.agent.update({'config': API.get_json(response)})
             self.univ.config.agent.save()
             
             self.auth_status(AuthStatus.AUTHENTICATED)  #set auth sataus
@@ -302,12 +329,12 @@ class API(requests.Session):
             Status code for the request.
         """
         
-        ret = Status.SUCCESS
-        response = self.exec_method('get', self.univ.get_url('agents/1'), options = {'retry_count': 0})  #make the request
+        ret, options = Status.SUCCESS, {'retry_count': 0, 'is_validate_json': True}
+        response = self.exec_method('get', self.univ.get_url('agents/1'), options = options)  #make the request
         
         if API.is_success(response):
             #update and save the config
-            self.univ.config.agent.update({'config': response.json()})
+            self.univ.config.agent.update({'config': API.get_json(response)})
             self.univ.config.agent.save()
             _log.info('Config updation successful')
             
@@ -350,10 +377,10 @@ class API(requests.Session):
             Status code for the request.
         """
         
-        ret = Status.SUCCESS
+        ret, options = Status.SUCCESS, {'retry_count': 0, 'is_ignore_stop_event': True}
         
         #make request
-        response = self.exec_method('delete', self.univ.get_url('agents/1/sessions/1'), options = {'retry_count': 0, 'is_ignore_stop_event': True})
+        response = self.exec_method('delete', self.univ.get_url('agents/1/sessions/1'), options = options)
         
         if API.is_success(response):
             _log.info('Logout successful')
@@ -368,16 +395,17 @@ class API(requests.Session):
         Public method to get agent version, after this call api session will be invalid.
         
         Returns:
-            Status code for the request.
+            dict representing the JSON object on success, else the status code for the request.
         """
         
         #get the data, url and make the request
         data = self.univ.config.agent.get_dict('orgToken', ['config', '_id'], 'agentVersion')
         url = self.univ.get_url('orgs/%s/agents/%s/agentVersion' % (data['orgToken'], data['_id']))
-        response = self.exec_method('get', url, params = {'agentVersion': data['agentVersion']}, options = {'retry_count': 0})
+        options = {'retry_count': 0, 'is_validate_json': True}
+        response = self.exec_method('get', url, params = {'agentVersion': data['agentVersion']}, options = options)
         
         if API.is_success(response):
-            ret = response.json()
+            ret = API.get_json(response)
             _log.debug('Available agent version %s' % ret['agentVersion'])
         else:
             ret = self.error('Failed to get agent version', response, True)
@@ -397,12 +425,9 @@ class API(requests.Session):
         """
         
         ret = Status.SUCCESS
-        data = data.copy()  #make a deep copy of the report so that we can remove extra attribute from it
-        orgToken, agentId = data['orgToken'], data['_id']
-        del data['orgToken'], data['_id']
         
         #make request
-        response = self.exec_method('post', self.univ.get_url('orgs/%s/agents/%s/crashreport' % (orgToken, agentId)), 
+        response = self.exec_method('post', self.univ.get_url('orgs/%s/agents/%s/crashreport' % (data['orgToken'], data['_id'])), 
             data = data, options = {'retry_count': 0})
         
         if API.is_success(response):
@@ -449,7 +474,7 @@ class API(requests.Session):
         exec_func, args = None, ()
         
         try:
-            code = response.json()['code']  #try to extract the error code
+            code = API.get_json(response)['code']  #try to extract the error code
         except:
             code = 0
             
