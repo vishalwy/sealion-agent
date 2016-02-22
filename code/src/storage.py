@@ -265,14 +265,10 @@ class OfflineStore(ThreadEx):
         """
         
         Storage.get_data(data)  #get the data. read the get_data doc to know why this is required
-        metrics = data.get('metrics')
-        values = '?, ?, ?, ?'
-        args = (activity, data['timestamp'], data['returnCode'], json.dumps(data['data']))  #we have to convert output to string, as it can be a dict
+        metrics, values = data.get('metrics'), '?, ?, ?, ?, ?'
         
-        if metrics:
-            values += ', ?'
-            args += (json.dumps(metrics), )  #we have to convert metric to string, as it is a dict
-        
+        #we have to convert output and metrics to string, as it can be a dict
+        args = (activity, data['timestamp'], data['returnCode'], json.dumps(data['data']), json.dumps(metrics) if metrics else None)
         self.cursor.execute('INSERT INTO data VALUES(%s)' % values, args)
     
     def insert(self, activity, data, callback = None):
@@ -351,16 +347,16 @@ class OfflineStore(ThreadEx):
                 try:
                     metrics = json.loads(row[5])
                 except:
-                    metrics += None
+                    metrics = None
                     
                 try:
                     #we have to convert row[4] from string, as it can be a dict representation
-                    row = (row[0], row[1], row[2], row[3], json.loads(row[4]))
+                    row = (row[0], row[1], row[2], row[3], json.loads(row[4]), metrics)
                 except:
                     #backward compatiblity for agent version < 3.1.0 as the string was written without escaping
-                    row = (row[0], row[1], row[2], row[3], row[4])
+                    row = (row[0], row[1], row[2], row[3], row[4], metrics)
                     
-                rows.append(row + (metrics,))
+                rows.append(row)
                 
             self.cursor.execute('SELECT COUNT(*) FROM data')
             total_rows = self.cursor.fetchone()[0]  #get the total number of rows

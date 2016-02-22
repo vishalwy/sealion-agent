@@ -10,6 +10,8 @@ __email__ = 'hello@sealion.com'
 import threading
 import sys
 import subprocess
+import os
+import signal
 import logging
 
 #Python 2.x vs 3.x

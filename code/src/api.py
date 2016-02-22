@@ -77,7 +77,7 @@ class API(requests.Session):
             True if successfull else false
         """
         
-        status_code = response.status_code if response else 500
+        status_code = response.status_code if response != None else 500
         return True if (status_code == 304 or (status_code >= 200 and status_code < 300)) else False
     
     @staticmethod
@@ -116,7 +116,7 @@ class API(requests.Session):
             Response json if it is available, else None
         """
         
-        if response:
+        if response != None:
             try:
                 return response._response_json  #try to get the attribute
             except:
