@@ -563,7 +563,7 @@ class Executer(WorkerProcess, ThreadEx):
                 #update the env variable and export it to the curent bash process
                 self.env_variables[env_var] = value
                 job_details['command'] = 'export %s=\'%s\'' % (env_var, value.replace('\'', '\'\\\'\''))
-                self.exec_process and self.exec_process.stdin.write(Executer.format_job(job_details))
+                self.exec_process and self.write(job_details)
                 export_count += 1
                 _log.info('Exported env variable %s' % env_var)
             except Exception as e:
@@ -577,12 +577,12 @@ class Executer(WorkerProcess, ThreadEx):
                 
                 if value != None:  #if os environ has this value, then export that value rather than unsetting it
                     job_details['command'] = 'export %s=\'%s\'' % (env_var, value.replace('\'', '\'\\\'\''))
-                    self.exec_process and self.exec_process.stdin.write(Executer.format_job(job_details))
+                    self.exec_process and self.write(job_details)
                     export_count += 1
                     _log.info('Exported env variable %s' % env_var)
                 else:  #unset it from the curent bash process
                     job_details['command'] = 'unset %s' % env_var
-                    self.exec_process and self.exec_process.stdin.write(Executer.format_job(job_details))
+                    self.exec_process and self.write(job_details)
                     unset_count += 1
                     _log.info('Unset env variable %s' % env_var)
             except Exception as e:
