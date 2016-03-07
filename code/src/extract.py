@@ -16,6 +16,7 @@ import signal
 import re
 import imp
 import os.path
+import logging
 
 #when script is run as main script, path to custom modules will be missing
 #in this case we need to import constructs which is located in lib directory
@@ -23,7 +24,7 @@ if __name__ == '__main__':
     sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)).rsplit('/', 1)[0] + '/lib')
     
 from constructs import unicode  
-timeout, cumulative_metrics = 0, {}
+_timeout, _log = 0, None
 
 class TimeoutException(BaseException):
     """
@@ -42,6 +43,28 @@ def write_output(line, stream = sys.stdout):
     
     stream.write(line + '\n')
     stream.flush()
+    
+def log_error(message):
+    """
+    Helper function to output error messages.
+    The function routes logs via log handle or the stderr
+    """
+    
+    if _log:
+        _log.error(message)
+    else:
+        write_output(message, sys.stderr)
+        
+def log_debug(message):
+    """
+    Helper function to output debug messages.
+    The function routes logs via log handle or the stdout
+    """
+    
+    if _log:
+        _log.debug(message)
+    else:
+        write_output('debug: %s' % message)
     
 def sanitize_parser(code):
     """
@@ -95,14 +118,14 @@ def extract_metrics(output, metrics, job):
     valid_types = ['int', 'float']  #valid types for the value extracted
     
     for metric_id in metrics:
+        #set the context 
+        context['command_output'] = output
+        context['metric_value'] = None
+        
         #set the alarm to signal after the mentioned timeout which in turn raises an exception
-        timeout > 0 and signal.alarm(timeout)  
+        _timeout > 0 and signal.alarm(_timeout)  
         
         try:
-            #set the context 
-            context['command_output'] = output
-            context['metric_value'] = None
-            
             #execute the code in the context created
             exec(metrics[metric_id]['parser'], context)
             
@@ -112,19 +135,13 @@ def extract_metrics(output, metrics, job):
             #raise the exception if it is not a valid type
             if type(value).__name__ not in valid_types:
                 raise Exception('value should be %s' % ' or '.join(valid_types))
-
-            #set the value based on the cumulative nature of the metric
-            if metrics[metric_id]['cumulative']:
-                ret[metric_id] = value - cumulative_metrics.get(metric_id, value)
-                cumulative_metrics[metric_id] = value
-            else:
-                ret[metric_id] = value
                 
-            write_output('debug: Extracted value %s for metric %s from %s' % (value, metric_id, job))
+            ret[metric_id] = value 
+            log_debug('Extracted value %s for metric %s from %s' % (value, metric_id, job))
         except:
-            write_output('Failed to extract metric %s from %s; %s' % (metric_id, job, unicode(sys.exc_info()[1])))
+            log_error('Failed to extract metric %s from %s; %s' % (metric_id, job, unicode(sys.exc_info()[1])))
         
-        timeout > 0 and signal.alarm(0)  #reset the alarm
+        _timeout > 0 and signal.alarm(0)  #reset the alarm
         
     return ret
 
@@ -134,13 +151,13 @@ def signal_handler(*args):
     """
     
     #raise the exception so that parser code evaluation can be interrupted
-    raise TimeoutException('execution timedout')
+    raise TimeoutException('execution timed out')
     
 if __name__ == '__main__':  #if this is the main module
     try:
-        timeout = int(sys.argv[1])
+        _timeout = int(sys.argv[1])
         
-        if timeout <= 0:  #there should be a integer timeout > 0
+        if _timeout <= 0:  #there should be a integer _timeout > 0
             raise Exception
     except:
         write_output('Missing or invalid timeout', sys.stderr)
@@ -160,3 +177,6 @@ if __name__ == '__main__':  #if this is the main module
             write_output('data: %s' % json.dumps(data))
     except:
         pass
+else:
+    _log = logging.getLogger(__name__)  #setup module level logging
+

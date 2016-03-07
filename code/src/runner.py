@@ -41,6 +41,9 @@ class Extractor(WorkerProcess):
     For more details checkout extract.py
     """
     
+    metrics = {}  #previous value for cumulative metrics calculation; being a class variable gives the possiblity of scaling it to multiple processes
+    metrics_lock = threading.RLock()  #thread lock to manipulate cumulative metrics
+    
     def __init__(self):
         """
         Constructor
@@ -59,23 +62,25 @@ class Extractor(WorkerProcess):
         WorkerProcess.__init__(self, sys.executable, '%s/src/extract.py' % self.univ.exe_path, '%s' % self.timeout)
         
     def extract(self, job, output):
-        metrics, job_str = job.exec_details['activity'].get('metrics', {}), unicode(job)
+        metrics, job_str, data = job.exec_details['activity'].get('metrics', {}), unicode(job), None
         
         if not metrics:  #if no metrics
             return None
         elif not self.timeout:  #if no timeout defined, means the extraction should be performed within
             data = extract.extract_metrics(output, metrics, job_str)
-            return data if data else None
-        
-        #acquire the lock otherwise the order of the output read can mix up with another activity's metric
-        self.extract_lock.acquire()  
+        else:
+            #acquire the lock otherwise the order of the output read can mix up with another activity's metric
+            self.extract_lock.acquire()  
 
-        #write to the subprocess and on successful write, start processing the output
-        if self.write(json.dumps({'output': output, 'metrics': metrics, 'job': job_str})):
-            while 1:
-                line = self.read()  #blocking read
+            #write to the subprocess and on successful write, start processing the output
+            if self.write(json.dumps({'output': output, 'metrics': metrics, 'job': job_str})):
+                while 1:
+                    line = self.read()  #blocking read
+                    
+                    #unsuccesful read due to various reasons, and hence no metrics
+                    if line == None:
+                        break;
 
-                if line:  #if a line is read, then process it
                     data = line.split(' ', 1)  #split the line into two to find out the header format
 
                     if data[0] == 'debug:':  #a debug statement
@@ -86,19 +91,29 @@ class Extractor(WorkerProcess):
                         except Exception as e:
                             _log.error('Failed to extract metrics from %s; %s' % (job_str, unicode(e)))
                             data = None  
-                            
-                        break  #in any case, break as there is nothing more to read
-                    else:
-                        _log.error(line)
-                elif line != None:  #unsuccesful read due to various reasons, and hence no metrics
-                    data = None
-                    break
-        else:
-            data = None  #could not write due to various reasons and hence no metric
 
-        self.extract_lock.release()  #release the lock
-        self.limit_process_usage(2222)
-        return data if data else None
+                        break  #in any case, break as there is nothing more to read
+                    elif line:
+                        _log.error(line)
+
+            self.extract_lock.release()  #release the lock
+            self.limit_process_usage(2222)
+            
+        try:  #it could be possible the values are not in proper format
+            Extractor.metrics_lock.acquire()
+        
+            for metric_id in data:
+                #set the value based on the cumulative nature of the metric
+                if metrics[metric_id]['cumulative']:
+                    value = data[metric_id]
+                    data[metric_id] = value - Extractor.metrics.get(metric_id, value)
+                    Extractor.metrics[metric_id] = value  #save the current value for next evaluation
+                    
+            return data
+        except:
+            return None
+        finally:
+            Extractor.metrics_lock.release()
     
 class Job:    
     """
@@ -309,7 +324,7 @@ class Executer(WorkerProcess, ThreadEx):
     For more details checkout execute.sh
     """
     
-    jobs = {}  #dict to keep track of active jobs
+    jobs = {}  #dict to keep track of active jobs; being a class variable gives the possiblity of scaling it to multiple processes
     jobs_lock = threading.RLock()  #thread lock to manipulate jobs
     
     def __init__(self):
@@ -426,9 +441,12 @@ class Executer(WorkerProcess, ThreadEx):
 
         for job_timestamp in list(Executer.jobs.keys()):  #loop throgh the jobs
             job = Executer.jobs[job_timestamp]
+
+            #calculate the timeout in way that similar activities wont overlap
+            timeout = min(job.exec_details['activity']['interval'] * 1000, self.timeout)  
             
             #if the job exceeds the timeout
-            if job.status == JobStatus.RUNNING and t - job.exec_details['timestamp'] > self.timeout:
+            if job.status == JobStatus.RUNNING and t - job.exec_details['timestamp'] > timeout:
                 job.kill() and _log.info('Killed %s as it exceeded timeout' % job)
 
             if job.status == JobStatus.IGNORED:  #remove the job if it is to be ignored
@@ -480,8 +498,14 @@ class Executer(WorkerProcess, ThreadEx):
         """
         
         activity = job_details.get('activity')
-        command = activity['command'] if activity else job_details['command']
-        return '%d %s: %s' % (job_details['timestamp'], job_details['output'], command)
+        format_args = (job_details['timestamp'], job_details['output'])
+        
+        if activity:
+            format_args += (activity['_id'], activity['interval'], activity['command'])
+        else:
+            format_args += ('0', 0, job_details['command'])
+        
+        return '%d %s %s %s: %s' % format_args
     
     def write(self, job_details):
         """

@@ -34,9 +34,9 @@ terminate() {
 #Function to kill children
 kill_children() {
     if [[ "$session" != "" ]] ; then  #kill process group if we have setsid
-        kill -SIGKILL -- -$SESSION_PID  >/dev/null 2>&1
+        kill -SIGKILL -- -$session_pid  >/dev/null 2>&1
     else 
-        kill -SIGKILL $SESSION_PID >/dev/null 2>&1  #bad luck; the grand children are still alive
+        kill -SIGKILL $session_pid >/dev/null 2>&1  #bad luck; the grand children are still alive
     fi
 }
 
@@ -63,7 +63,9 @@ fi
 #initialize the indexes of each column in the line read from stdin
 timestamp_index=0  #unique timestamp of the activity
 output_index=1  #filename of output
-command_index=2  #command to be executed, this has to be the last index as a command can have spaces in it
+command_id_index=2  #unique id for the command
+command_interval_index=3  #execution interval for the command
+command_index=4  #command to be executed, this has to be the last index as a command can have spaces in it
 
 #check whether we have setsid available
 type setsid >/dev/null 2>&1
@@ -74,7 +76,7 @@ type setsid >/dev/null 2>&1
 [[ "$session" == "" ]] && echo "warning: Cannot run commands as process group; 'setsid' not available"
 
 #continuously read line from stdin, blocking read.
-#format of a line is 'TIMESTAMP OUTPUT_FILE: COMMAND_WITH_SPACES'
+#format of a line is 'TIMESTAMP OUTPUT_FILE COMMAND_ID COMMAND_INTERVAL: COMMAND_WITH_SPACES'
 while read -r line ; do
     old_ifs=$IFS ; IFS=" " ; read -a activity <<<"${line%%:*}" ; IFS=$old_ifs  #make activity array from string upto ':' character
     activity=("${activity[@]}" "${line#*:}")  #add string after ':' character to activity array
@@ -98,9 +100,15 @@ while read -r line ; do
             BASHPID=${BASHPID[4]}  #pid is at the 4th index
         fi
 
+        #export the unique id of the command; useful while creating temp files based on the id
+        export COMMAND_ID="${activity[${command_id_index}]}"  
+
+        #export the interval for the command; useful to perform any time based calculation
+        export COMMAND_INTERVAL="${activity[${command_interval_index}]}"
+
         echo "data: ${activity[${timestamp_index}]} pid ${BASHPID}"  #write out the process id for tracking purpose
         $session bash -c "${activity[${command_index}]}" >"${activity[${output_index}]}" 2>&1 &
-        SESSION_PID=$!  #pid of the bash process
+        session_pid=$!  #pid of the bash process
         wait  #wait for the background job to finish
         echo "data: ${activity[${timestamp_index}]} return_code ${?}"  #write out the return code which indicates that the process has finished
     ) &
