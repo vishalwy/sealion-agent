@@ -64,7 +64,7 @@ for option_index in "${!options[@]}" ; do
             category=$option_arg
             ;;
         H|host-name)
-            host_name=$Ooption_arg
+            host_name=$option_arg
             ;;
         x|proxy)
             proxy=$option_arg

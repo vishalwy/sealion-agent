@@ -305,8 +305,8 @@ class NavigationDict(dict):
         Public method to return filtered dict.
         
         Args:
-            keys: keys to return, specify no keys to select all keys. a key can also be tuple (key, default_value)
-                A key can also be a string or a list of strings indicating the key sequence
+            keys: keys to return, specify no keys to select all keys
+                A key can be a string or a list of strings indicating the key sequence or a tuple in the form (key, default_value)
                 i.e 'key' or ('key', default) or ['key1', 'key2'] or (['key1', 'key2'], default)
             return_leaf_key: use this kw argument to alter the format of the dict returned.
                 for a key sequence ['a', 'b', 'c'], True means the returned data would be {'c': value}

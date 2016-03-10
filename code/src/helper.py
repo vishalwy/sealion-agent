@@ -209,7 +209,9 @@ class Config:
         Public method to return filtered dict.
         
         Args:
-            keys: keys to return, specify no keys to select all keys. a key can also be tuple (key, default_value)
+            keys: keys to return, specify no keys to select all keys
+                A key can be a string or a list of strings indicating the key sequence or a tuple in the form (key, default_value)
+                i.e 'key' or ('key', default) or ['key1', 'key2'] or (['key1', 'key2'], default)
             
         Returns:
             dict continaing the filtered keys

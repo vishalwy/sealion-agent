@@ -195,9 +195,9 @@ class API(requests.Session):
             try:     
                 if is_check_auth and not self.is_authenticated():
                     raise Exception('session not authenticated')
-                
+
                 temp_response = method(url, timeout = 10, **kwargs)  #actuall request
-                is_validate_json and API.get_json(temp_response)
+                is_validate_json and API.is_success(temp_response) and API.get_json(temp_response)
                 response = temp_response
             except Exception as e:
                 _log.error('Failed URL request; %s' % unicode(e))
@@ -253,7 +253,7 @@ class API(requests.Session):
         ret, kwargs['is_validate_json'] = Status.SUCCESS, True
         
         #get data and make the request
-        data = self.univ.config.agent.get_dict('orgToken', ('name', socket.gethostname()), 'category', 'agentVersion', ('ref', 'tarball'))
+        data = self.univ.config.agent.get_dict('orgToken', (['config', 'name'], socket.gethostname()), 'category', 'agentVersion', ('ref', 'tarball'))
         response = self.exec_method('post', self.univ.get_url('agents'), data = data, options = kwargs)    
         
         if API.is_success(response):
