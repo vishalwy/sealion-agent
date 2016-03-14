@@ -24,7 +24,15 @@ if __name__ == '__main__':
     sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)).rsplit('/', 1)[0] + '/lib')
     
 from constructs import unicode  
-_timeout, _log = 0, None
+_timeout, _log, text_modules = 0, None, {'re': re}
+
+#export the text processing modules listed at https://docs.python.org/2/library/strings.html
+#so that the parsing code need not import them again and again
+for module in ['string', 'struct', 'difflib', 'textwrap', 'stringprep', 'codecs']:
+    try:
+        text_modules[module] = __import__(module)
+    except:
+        pass
 
 class TimeoutException(BaseException):
     """
@@ -114,8 +122,13 @@ def extract_metrics(output, metrics, job):
         dict representing the metrics extracted
     """
     
-    context, ret = {'__builtins__': globals()['__builtins__']}, {}
-    valid_types = ['int', 'float']  #valid types for the value extracted
+    #create the context for executing the parser code
+    #also inject the text processing modules 
+    context = {'__builtins__': globals()['__builtins__']}
+    context.update(text_modules)
+    
+    #valid types for the value extracted and a variable holding the final metrics
+    valid_types, ret = ['int', 'float'], {}
     
     for metric_id in metrics:
         #set the context 
