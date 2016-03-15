@@ -62,18 +62,30 @@ class Extractor(WorkerProcess):
         WorkerProcess.__init__(self, sys.executable, '%s/src/extract.py' % self.univ.exe_path, '%s' % self.timeout)
         
     def extract(self, job, output):
-        metrics, job_str, data = job.exec_details['activity'].get('metrics', {}), unicode(job), None
+        """
+        Public method to extract the metrics from the output given
+
+        Args:
+            job: Job object for the command executed
+            output: command output to be parsed
+
+        Returns:
+            dict representing the metrics extracted, None if no metrics
+        """
+        
+        metrics, job_str = job.exec_details['activity'].get('metrics', {}), unicode(job)
+        return_code, data = job.exec_details['return_code'], None
         
         if not metrics:  #if no metrics
             return None
         elif not self.timeout:  #if no timeout defined, means the extraction should be performed within
-            data = extract.extract_metrics(output, metrics, job_str)
+            data = extract.extract_metrics(output, return_code, metrics, job_str)
         else:
             #acquire the lock otherwise the order of the output read can mix up with another activity's metric
             self.extract_lock.acquire()  
 
             #write to the subprocess and on successful write, start processing the output
-            if self.write(json.dumps({'output': output, 'metrics': metrics, 'job': job_str})):
+            if self.write(json.dumps({'output': output, 'return_code': return_code, 'metrics': metrics, 'job': job_str})):
                 while 1:
                     line = self.read()  #blocking read
                     

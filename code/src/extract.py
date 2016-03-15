@@ -109,12 +109,13 @@ def sanitize_parser(code):
     
     return re.sub(exception_pattern, replace_exception, code)
 
-def extract_metrics(output, metrics, job):
+def extract_metrics(output, return_code, metrics, job):
     """
     Function to extract the metrics from the output given
     
     Args:
         output: command output to be parsed
+        return_code: return code of the command
         metrics: the metrics to be extracted
         job: name of the job for which the output is produced, for logging purpose
         
@@ -133,6 +134,7 @@ def extract_metrics(output, metrics, job):
     for metric_id in metrics:
         #set the context 
         context['command_output'] = output
+        context['command_return_code'] = return_code
         context['metric_value'] = None
         
         #set the alarm to signal after the mentioned timeout which in turn raises an exception
@@ -186,7 +188,7 @@ if __name__ == '__main__':  #if this is the main module
     try:
         while 1:  #continuous read
             data = json.loads(sys.stdin.readline())  #data should be in json format
-            data = extract_metrics(data['output'], data['metrics'], data['job'])  #sxtract metrics
+            data = extract_metrics(data['output'], data['return_code'], data['metrics'], data['job'])  #extract metrics
             write_output('data: %s' % json.dumps(data))
     except:
         pass
