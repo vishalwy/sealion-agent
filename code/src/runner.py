@@ -739,14 +739,13 @@ class JobProducer(singleton(ThreadEx)):
             metric_id = new_metric
             new_metric = new_metrics[metric_id]
             cur_metric = cur_metrics.get(metric_id)
+            new_metric['parser'] = extract.sanitize_parser(new_metric['parser'])  #sanitize upfront to optimize performance
             
             if cur_metric:
-                if cur_metric['parser'] != new_metric['parser'] or cur_metric['cumulative'] != new_metric['cumulative']:
-                    new_metric['parser'] = extract.sanitize_parser(new_metric['parser'])  #sanitize upfront to optimize performance
+                if cur_metric['parser'] != new_metric['parser']:
                     update_count += 1
                     _log.info('Updated metric %s for activity %s' % (metric_id, activity_id))
             else:
-                new_metric['parser'] = extract.sanitize_parser(new_metric['parser'])  #sanitize upfront to optimize performance
                 add_count += 1
                 _log.info('Added metric %s for activity %s' % (metric_id, activity_id))
                 
@@ -767,7 +766,7 @@ class JobProducer(singleton(ThreadEx)):
             Tuple containing (total_count, plugin_count, start_count, update_count, stop_count)
         """
         
-        activities = self.univ.config.agent.get(['config', 'activities'])
+        activities = self.univ.config.agent.get('config', {}).get('activities', [])
         start_count, update_count, stop_count, plugin_count, activity_ids = 0, 0, 0, 0, []
         
         self.activities_lock.acquire()  #this has to be atomic as multiple threads reads/writes
@@ -776,6 +775,7 @@ class JobProducer(singleton(ThreadEx)):
         for activity in activities:
             activity_id = activity['_id']
             cur_activity = self.activities.get(activity_id)
+            activity['command'] = activity['command'].replace('\n', '\r')  #sanitize upfront to optimize performance
             
             if cur_activity:  #if we already have the activity in the dict
                 details = cur_activity['details']

@@ -137,7 +137,7 @@ class AgentConfig(helper.Config):
                         },
                         'command': {
                             'type': 'str,unicode', 
-                            'regex': '^.+$'
+                            'regex': '.+'
                         },
                         'interval': {'type': 'int'},
                         'metrics': {
