@@ -510,14 +510,15 @@ class Executer(WorkerProcess, ThreadEx):
         """
         
         activity = job_details.get('activity')
-        format_args = (job_details['timestamp'], job_details['output'])
         
         if activity:
-            format_args += (activity['_id'], activity['interval'], activity['command'])
+            interval = activity['interval']
+            command = activity['command']
         else:
-            format_args += ('0', 0, job_details['command'])
-        
-        return '%d %s %s %s: %s' % format_args
+            interval = 0
+            command = job_details['command']
+            
+        return '%d %d %s: %s' % (job_details['timestamp'], interval, job_details['output'], command)
     
     def write(self, job_details):
         """

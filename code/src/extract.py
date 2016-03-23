@@ -28,7 +28,7 @@ _timeout, _log, text_modules = 0, None, {'re': re}
 
 #export the text processing modules listed at https://docs.python.org/2/library/strings.html
 #so that the parsing code need not import them again and again
-for module in ['string', 'struct', 'difflib', 'textwrap', 'stringprep', 'codecs']:
+for module in ['string', 'struct', 'difflib', 'textwrap', 'stringprep', 'codecs', 'unicodedata']:
     try:
         text_modules[module] = __import__(module)
     except:
@@ -149,10 +149,10 @@ def extract_metrics(output, return_code, metrics, job):
 
             #raise the exception if it is not a valid type
             if type(value).__name__ not in valid_types:
-                raise Exception('value should be %s' % ' or '.join(valid_types))
+                raise TypeError('metric_value should be %s' % ' or '.join(valid_types))
                 
             ret[metric_id] = value 
-            log_debug('Extracted value %s for metric %s from %s' % (value, metric_id, job))
+            log_debug('Extracted metric_value %s for metric %s from %s' % (value, metric_id, job))
         except:
             log_error('Failed to extract metric %s from %s; %s' % (metric_id, job, unicode(sys.exc_info()[1])))
         

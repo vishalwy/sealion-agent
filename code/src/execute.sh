@@ -69,10 +69,10 @@ type setsid >/dev/null 2>&1
 [[ "$session" == "" ]] && echo "warning: Cannot run commands as process group; 'setsid' not available"
 
 #continuously read line from stdin, blocking read.
-#format of a line is 'TIMESTAMP OUTPUT_FILE COMMAND_ID COMMAND_INTERVAL: COMMAND_LINE'
+#format of a line is 'TIMESTAMP COMMAND_INTERVAL OUTPUT_FILE: COMMAND_LINE'
 while IFS= read -r line ; do
     #read activity details from input upto ':' character
-    old_ifs=$IFS ; IFS=" " ; read timestamp output_file command_id command_interval <<<"${line%%:*}" ; IFS=$old_ifs
+    old_ifs=$IFS ; IFS=" " ; read timestamp command_interval output_file <<<"${line%%:*}" ; IFS=$old_ifs
 
     #now read the actual command to be executed which is the string after ':'
     #also replace any \r character with newline character
@@ -97,9 +97,6 @@ while IFS= read -r line ; do
             old_ifs=$IFS ; IFS=" " ; read -a BASHPID <<<"$BASHPID" ; IFS=$old_ifs
             BASHPID=${BASHPID[4]}  #pid is at the 4th index
         fi
-
-        #export the unique id of the command; useful while creating temp files based on the id
-        export COMMAND_ID="$command_id"  
 
         #export the interval for the command; useful to perform any time based calculation
         export COMMAND_INTERVAL="$command_interval"
