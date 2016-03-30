@@ -111,7 +111,7 @@ check_dependency() {
         exit $SCRIPT_ERR_COMMAND_NOT_FOUND
     fi
 
-    missing_items=$("$python_binary" agent/bin/check_dependency 2>&1)  #execute the script to find out any missing modules
+    missing_items=$("$python_binary" agent/bin/check-dependency 2>&1)  #execute the script to find out any missing modules
     ret_code=$?
 
     if [[ $ret_code -eq $SCRIPT_ERR_SUCCESS && "$missing_items" != "Success" ]] ; then  #is python really a python binary. check the output to validate it

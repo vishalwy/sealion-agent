@@ -29,6 +29,52 @@ from constructs import unicode, ThreadEx
 
 _log = logging.getLogger(__name__)  #module level logging
 
+def set_user(default_user_name = 'sealion'):
+    """
+    Function to set the user and group for the process
+    
+    Args:
+        default_user_name: the default user name to be used in case no users found in the config
+        
+    Returns:
+        The user name for the process
+    """
+    
+    try:
+        user_regex = universal.SealionConfig.schema['user'].get('regex')  #get the regex used for validation
+
+        #read the user name from the config
+        f = open(exe_path + '/etc/config.json', 'r')
+        user_name = json.load(f)['user'];
+        f.close()
+
+        #update the user name if it is valid
+        if not user_regex or re.match(user_regex, user_name):
+            default_user_name = user_name
+    except:
+        pass
+
+    try:
+        user = pwd.getpwnam(default_user_name)  #get the pwd db entry for the user name
+
+        #if it is not sealion user, then we need to change user and group
+        #if current user is not super user, trying to change the user/group id will raise exception
+        if user.pw_uid != os.getuid():
+            #find all the groups where the user a member
+            groups = [group.gr_gid for group in grp.getgrall() if user.pw_name in group.gr_mem and user.pw_gid != group.gr_gid]
+            
+            os.setgroups(groups)  #set the suplimentary groups
+            os.setgid(user.pw_gid)  #set group id
+            os.setuid(user.pw_uid)  #set user id
+    except KeyError as e:
+        sys.stderr.write('Failed to find user %s; %s\n' % (default_user_name, unicode(e)))
+        sys.exit(exit_status.AGENT_ERR_FAILED_FIND_USER)
+    except Exception as e:
+        sys.stderr.write('Failed to change the group or user to %s; %s\n' % (default_user_name, unicode(e)))
+        sys.exit(exit_status.AGENT_ERR_FAILED_CHANGE_GROUP_OR_USER)
+        
+    return default_user_name
+
 class SeaLion(Daemon):
     """
     Subclass implementing agent as a daemon.
@@ -40,7 +86,6 @@ class SeaLion(Daemon):
         """
         
         Daemon.__init__(self, *args, **kwargs)  #initialize the base class
-        self.user_name = 'sealion'  #user name for daemon
         self.crash_loop_timeout = 30  #timeout between each crash and resurrect
         self.crash_loop_count = 5  #count of crash dumps to determine crash loop
         self.crash_dump_path = '%s/var/crash/' % exe_path  #crash dump path
@@ -191,36 +236,7 @@ class SeaLion(Daemon):
         Method to perform some tasks before daemonizing. The idea is to throw any error before daemonizing.
         """
         
-        try:
-            user_regex = universal.SealionConfig.schema['user'].get('regex')  #get the regex used for validation
-
-            #read the user name from the config
-            f = open(exe_path + '/etc/config.json', 'r')
-            user_name = json.load(f)['user'];
-            f.close()
-
-            #update the user name if it is valid
-            if not user_regex or re.match(user_regex, user_name):
-                self.user_name = user_name
-        except:
-            pass
-        
-        try:
-            user = pwd.getpwnam(self.user_name)  #get the pwd db entry for the user name
-
-            #if it is not sealion user, then we need to change user and group
-            #if current user is not super user, trying to change the user/group id will raise exception
-            if user.pw_uid != os.getuid():
-                groups = [group.gr_gid for group in grp.getgrall() if user.pw_name in group.gr_mem and user.pw_gid != group.gr_gid]  #find all the groups where the user a member
-                os.setgroups(groups)  #set the suplimentary groups
-                os.setgid(user.pw_gid)  #set group id
-                os.setuid(user.pw_uid)  #set user id
-        except KeyError as e:
-            sys.stderr.write('Failed to find user %s; %s\n' % (self.user_name, unicode(e)))
-            sys.exit(exit_status.AGENT_ERR_FAILED_FIND_USER)
-        except Exception as e:
-            sys.stderr.write('Failed to change the group or user to %s; %s\n' % (self.user_name, unicode(e)))
-            sys.exit(exit_status.AGENT_ERR_FAILED_CHANGE_GROUP_OR_USER)
+        set_user()  #set the user and group for the current process
                 
         try:
             #try to create pid file
@@ -317,20 +333,19 @@ class SeaLion(Daemon):
             else:
                 _log.info('Failed to save dump file')
             
-def sig_handler(signum, frame):    
+def sigint_handler(*args):    
     """
     Callback function to handle SIGINT signal.
     """
     
-    if signum == signal.SIGINT:
-        sys.exit(exit_status.AGENT_ERR_INTERRUPTED)
+    sys.exit(exit_status.AGENT_ERR_INTERRUPTED)
         
 def run():
     """
     Function to run the module.
     """
     
-    signal.signal(signal.SIGINT, sig_handler)  #setup signal handling for SIGINT
+    signal.signal(signal.SIGINT, sigint_handler)  #setup signal handling for SIGINT
     daemon = SeaLion(exe_path + '/var/run/sealion.pid')  #SeaLion daemon instance
     valid_usage = ['start', 'stop', 'restart', 'status']
 
