@@ -247,8 +247,8 @@ class SeaLion(Daemon):
             sys.stderr.write(unicode(e) + '\n')
             sys.exit(exit_status.AGENT_ERR_FAILED_PID_FILE)
         
-        sys.excepthook = self.exception_hook  #set the exception hook so that we can generate crash dumps
         import main  #import main module so that we get any error before daemonizing
+        sys.excepthook = self.exception_hook  #set the exception hook so that we can generate crash dumps
         
     def get_crash_dump_details(self):
         """

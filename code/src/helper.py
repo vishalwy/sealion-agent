@@ -76,7 +76,7 @@ class Utils(Namespace):
             path with no trailing /
         """
         
-        path.strip()
+        path = path.strip()
         
         if path != '/' and path[-1] == '/':
             dir = os.path.dirname(path)
@@ -237,10 +237,10 @@ class Config:
             is_data: True indicates that 'file' should be treated as dict or string, else filename
             
         Returns:
-            Returns (dict, True) on success else (dict, False)
+            Returns (dict, None) on success else (dict, Exception)
         """
         
-        value, f, is_parse_failed = {}, None, False
+        value, f, exception = {}, None, None
 
         if is_data == True or os.path.isfile(file) == True:
             try:
@@ -255,11 +255,11 @@ class Config:
                 else:
                     value = json.loads(data)  #read json from string
             except:
-                is_parse_failed = True
+                exception = sys.exc_info()[1]
             finally:
                 f and f.close()
 
-        return (value, is_parse_failed)
+        return (value, exception)
         
     def save(self):
         """
@@ -299,7 +299,7 @@ class Config:
         Public method to set the config.
         
         Args:
-            data: dict containing new config
+            data: dict containing new config; None to load it from the file
             
         Returns:
             True on success, an error string on failure
@@ -315,12 +315,14 @@ class Config:
         
         #sanitize the config
         if Config.sanitize_type(config[0], self.schema, file = self.file if is_data == False else None) == False:
-            if is_data == False:
+            if config[1] != None:
+                return unicode(config[1])
+            elif is_data == False:
                 return '\'%s\' is either missing or corrupted' % self.file
             else:
                 return 'Invalid config'
-        elif config[1] == True and is_data == False:
-            self.file and _log.warn('Ignoring \'%s\' as it is either missing or corrupted' % self.file)
+        elif config[1] != None and is_data == False:
+            self.file and _log.warn('Ignoring \'%s\'; %s' % (self.file, unicode(config[1])))
             
         #clear the config and reassign the values
         self.lock.acquire()
