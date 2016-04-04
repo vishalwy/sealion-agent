@@ -107,7 +107,7 @@ def sanitize_parser(code):
         
         return match.group(0) if not group_2 else '%s%s%s' % (match.group(1), group_2, match.group(10))
     
-    return re.sub(exception_pattern, replace_exception, code)
+    return re.sub(exception_pattern, replace_exception, code).rstrip()
 
 def extract_metrics(output, return_code, metrics, job):
     """
