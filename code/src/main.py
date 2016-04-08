@@ -120,16 +120,12 @@ def stop_stream_logging():
     for stream_handler in [handler for handler in logger.handlers if type(handler) is logging.StreamHandler]:
         logger.removeHandler(stream_handler)
                
-def run(is_update_only_mode = False):
+def run(*args):
     """
     Function that starts the agent execution.
-    
-    Args:
-        is_update_only_mode: whether to run the agent in update only mode
     """
 
-    univ.is_update_only_mode = is_update_only_mode
-    _log.info('Agent starting up')
+    _log.info('Agent starting up%s' % (' in update only mode' if univ.is_update_only_mode else ''))
     _log.info('Using python binary at %s' % sys.executable)
     _log.info('Python version : %s' % univ.details['pythonVersion'])
     _log.info('Agent user     : %s' % univ.details['user'])  

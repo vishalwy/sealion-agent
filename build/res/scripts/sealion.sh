@@ -18,6 +18,11 @@ PATH="${PATH}:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"  #co
 script_base_dir=$(readlink -f "$0")
 script_base_dir=${script_base_dir%/*}
 
-"${script_base_dir}/../../bin/sealion" $1
+#generate command line
+cmdline_options="<options>"
+cmdline="${cmdline_options} ${1}"
+cmdline="${cmdline# }"
+
+"${script_base_dir}/../../bin/sealion" $cmdline
 exit $?
 

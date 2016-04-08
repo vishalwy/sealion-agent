@@ -132,7 +132,7 @@ class Job:
     Represents a job, that can be executed
     """
     
-    extractor = Extractor()  #to extract the metrics
+    extractor = None  #to extract the metrics
     
     def __init__(self, activity):
         """
@@ -170,6 +170,22 @@ class Job:
         """
         
         return helper.format_job(self.exec_details['activity']['_id'], self.exec_details['timestamp'])
+    
+    @staticmethod
+    def create_extractor():
+        """
+        Public method to create the extractor process
+        """
+        
+        Job.extractor = Job.extractor or Extractor();
+        
+    @staticmethod
+    def destroy_extractor():
+        """
+        Public method to destroy the extractor process
+        """
+        
+        Job.extractor and Job.extractor.stop();
     
     def prepare(self):
         """
@@ -349,7 +365,7 @@ class Executer(WorkerProcess, ThreadEx):
         ThreadEx.__init__(self)  #inititalize thread base class
         
         #inititalize process base class; refer execute.sh to read more about arguments to be passed in 
-        exec_args = ['bash', '%s/src/execute.sh' % self.univ.exe_path, self.univ.main_script]
+        exec_args = ['bash', '%s/src/execute.sh' % self.univ.exe_path, os.path.realpath(sys.modules['__main__'].__file__)]
         os.isatty(sys.stdin.fileno()) or exec_args.append('1')
         WorkerProcess.__init__(self, *exec_args)
         
@@ -823,6 +839,7 @@ class JobProducer(singleton(ThreadEx)):
         
         self.executer.write({'timestamp': 0, 'output': '/dev/stdout', 'command': 'rm -rf ./*'})  #init command to remove temp files
         self.executer.start()  #start the executer for bash suprocess
+        Job.create_extractor()  #start the process for extracting the metrics
         self.set_exec_details();  #set execution details such as env variables and commands to execute
         self.univ.event_dispatcher.bind('set_exec_details', self.set_exec_details)  #bind to the event triggered whenever the config updates
         
@@ -835,7 +852,7 @@ class JobProducer(singleton(ThreadEx)):
                 break
 
         self.stop_consumers()  #stop the consumers
-        Job.extractor.stop()  #stop extractor for metrics evaluation
+        Job.destroy_extractor()  #stop extractor for metrics evaluation
         self.executer.stop()  #stop executer for subprocess
         
     def start_consumers(self, count):

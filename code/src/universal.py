@@ -48,7 +48,7 @@ class SealionConfig(helper.Config):
             'type': {
                 'level': {
                     'type': 'str,unicode', 
-                    'regex': '^\s*(info|error|debug|none)\s*$', 
+                    'regex': '^\\s*(info|error|debug|none)\\s*$', 
                     'optional': True
                 },
                 'modules': {
@@ -63,12 +63,12 @@ class SealionConfig(helper.Config):
         'commandTimeout': {
             'type': 'int,float', 
             'optional': True, 
-            'regex': '^\+?((0?[5-9]{1}|(0?[1-9][0-9]+))|((0?[5-9]{1}|(0?[1-9][0-9]+))\.[0-9]*))$'
+            'regex': '^\\+?((0?[5-9]{1}|(0?[1-9][0-9]+))|((0?[5-9]{1}|(0?[1-9][0-9]+))\\.[0-9]*))$'
         },
         'metricTimeout': {
             'type': 'int', 
             'optional': True, 
-            'regex': '^\+?(\d+)'
+            'regex': '^\\+?(\\d+)'
         },
         'user': {
             'type': 'str,unicode', 
@@ -86,12 +86,12 @@ class AgentConfig(helper.Config):
     schema = {
         'orgToken': {
             'type': 'str,unicode', 
-            'regex': '^[a-zA-Z0-9\-]{36}$'
+            'regex': '^[a-zA-Z0-9\\-]{36}$'
         },
         
         'apiUrl': {
             'type': 'str,unicode', 
-            'regex': '^https://[^\s:]+(:[0-9]+)?$' 
+            'regex': '^https://[^\\s:]+(:[0-9]+)?$' 
         },
         
         'category': {
@@ -230,7 +230,6 @@ class Universal(singleton()):
         self.metric = {'starting_time': cur_time, 'stopping_time': cur_time}  #save the timestamps
         self.exe_path = os.path.dirname(os.path.realpath(__file__)).rsplit('/', 1)[0]  #absolute path of the base dir, as it is one level up
         self.is_update_only_mode = False  #no update only mode
-        self.main_script = helper.main_script  #main script
         self.event_dispatcher = helper.event_dispatcher  #event dispatcher for communication across modules
         self.config = EmptyClass()
         self.config.sealion = SealionConfig(self.exe_path + '/etc/config.json')  #instance of configurable settings

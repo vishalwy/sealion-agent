@@ -55,9 +55,6 @@ def format_job(activity, timestamp):
     return 'activity(%s @ %d)' % (activity, timestamp)
 
 terminatehook = default_termination_hook  #terminate hook called for disgraceful shutdown
-
-#save executable path to main script
-main_script = os.path.realpath(sys.modules['__main__'].__file__)
    
 class Utils(Namespace):
     """
@@ -102,7 +99,7 @@ class Utils(Namespace):
         
         notify_terminate(False, message, stack_trace)
         _log.info('Restarting agent')
-        os.execl(sys.executable, sys.executable, main_script, *sys.argv[1:])
+        os.execl(sys.executable, sys.executable, os.path.realpath(sys.modules['__main__'].__file__), *sys.argv[1:])
         
     @staticmethod
     def get_stack_trace(curr_thread_trace = ''):

@@ -36,7 +36,11 @@ class Daemon(object):
         self.stdout = stdout  #output handle
         self.stderr = stderr  #error handle
         self.pidfile = pidfile  #pid file
-        self.main_script = os.path.realpath(sys.modules['__main__'].__file__)
+        
+        #update main file path to use the absolute path.
+        #this is required as the daemon runs from the root dir. 
+        #so, any attempt to fetch the absolute path later will result in a wrong path
+        sys.modules['__main__'].__file__ = os.path.realpath(sys.modules['__main__'].__file__)
     
     def daemonize(self):
         """
@@ -171,7 +175,7 @@ class Daemon(object):
         except:
             cmdline = ''
         
-        return True if os.path.basename(self.main_script) in cmdline else False
+        return True if os.path.basename(sys.modules['__main__'].__file__) in cmdline else False
     
     def get_pid(self):
         """

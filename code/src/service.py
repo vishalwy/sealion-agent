@@ -297,7 +297,6 @@ class SeaLion(Daemon):
         """
         
         self.set_procname(self.daemon_name + ('d' if self.daemon_name[-1] != 'd' else ''))  #set process name for display purpose
-        is_update_only_mode = False
         crash_dump_details = self.get_crash_dump_details()  #get crash dump details
         helper.terminatehook = self.termination_hook  #set the termination hook called whenever agent shutdown disgracefully
         
@@ -307,11 +306,11 @@ class SeaLion(Daemon):
         
         if crash_dump_details[0] == True:  #crash loop detected. start agent in update only mode
             _log.info('Crash loop detected; Starting agent in update-only mode')
-            is_update_only_mode = True
+            universal.Universal().is_update_only_mode = True
         
         import main
         main.stop_stream_logging()  #stop logging on stdout/stderr
-        main.run(is_update_only_mode)  #start executing agent
+        main.run()  #start executing agent
         
     def termination_hook(self, message, stack_trace):
         """
@@ -340,7 +339,7 @@ def sigint_handler(*args):
     
     sys.exit(exit_status.AGENT_ERR_INTERRUPTED)
         
-def run():
+def run(*args):
     """
     Function to run the module.
     """
@@ -351,10 +350,10 @@ def run():
 
     #perform the operation based on the commandline
     #do not call getattr directly without validating as it will allow any method inside the daemon to run
-    if len(sys.argv) == 2 and sys.argv[1] in valid_usage:
-        getattr(daemon, sys.argv[1])()
+    if len(args) == 1 and args[0] in valid_usage:
+        getattr(daemon, args[0])()
     else:
-        len(sys.argv) > 1 and sys.stderr.write('Invalid usage: \'%s\'\n' % ' '.join(sys.argv[1:]))
+        len(args) and sys.stderr.write('Invalid usage: \'%s\'\n' % ' '.join(sys.argv[1:]))
         sys.stdout.write('Usage: %s %s\n' % (daemon.daemon_name, '|'.join(valid_usage)))
 
     sys.exit(exit_status.AGENT_ERR_SUCCESS)

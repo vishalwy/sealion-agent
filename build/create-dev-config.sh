@@ -29,7 +29,7 @@ usage() {
     usage_info="${usage_info} -c,  --category <arg>    Category name under which the server to be registered\n"
     usage_info="${usage_info} -H,  --host-name <arg>   Server name to be used\n"
     usage_info="${usage_info} -x,  --proxy <arg>       Proxy server details\n"
-    usage_info="${usage_info} -a,  --api-url <arg>     API URL for the agent; default to 'https://api-test.sealion.com'\n"
+    usage_info="${usage_info} -a,  --api-url <arg>     API URL for the agent; default to 'api-test.sealion.com'\n"
     usage_info="${usage_info} -h,  --help              Display this information"
     echo -e "$usage_info"
     return 0
@@ -37,7 +37,7 @@ usage() {
 
 #script variables
 org_token= category= host_name= proxy=
-api_url="https://api-test.sealion.com"  #default to test
+api_url="api-test.sealion.com"  #default to test
 
 #parse command line
 opt_parse c:H:x:a:h "category= host-name= proxy= api-url= help" options args "$@"
@@ -89,7 +89,7 @@ cp -r "${script_base_dir}/res/etc" "${script_base_dir}/../code/"
 
 #agent.json config
 [[ "$host_name" != "" ]] && sub_config="\"name\": \"${host_name}\""  #add host name if specified
-config="\"orgToken\": \"${org_token}\", \"apiUrl\": \"${api_url}\", \"config\": {${sub_config}}"
+config="\"orgToken\": \"${org_token}\", \"apiUrl\": \"https://${api_url}\", \"config\": {${sub_config}}"
 [[ "$category" != "" ]] && config="${config}, \"category\": \"${category}\""  #add category if specified
 "${script_base_dir}/../code/bin/jsonfig.py" -a "set" -k "" -v "{$config}" -n "${script_base_dir}/../code/etc/agent.json"  #set the configuration
 

@@ -27,6 +27,7 @@ usage() {
 
     local usage_info="Usage: ${0} [options]\nOptions:\n"
     usage_info="${usage_info} -d,  --domain <arg>    Domain for which the tarball to be generated; Default to 'sealion.com'\n"
+    usage_info="${usage_info} -k   --insecure        Disable SSL verification for the https requests\n"
     usage_info="${usage_info}      --gen-curl-node   Generate curl installer for node agent\n"
     usage_info="${usage_info} -h,  --help            Display this information"
     echo -e "$usage_info"
@@ -53,37 +54,39 @@ import_script() {
     eval sed "$args" $2
 }
 
+#Function to set the variables inside a script given
+#Arguments
+#   $1 - script to update
+#   $2 - variable to set
+#   $3 - value of the variable
+set_variable() {
+    local temp_var args
+    temp_var="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<<${3})"
+    args="${2//_/\\_}"
+    args="-i 's/\\(^${args}=\\)\\(\"[^\"]\\+\"\\)/\\1\"${temp_var}\"/i'"
+    eval sed $args "$1"
+}
+
 #Function to update various details inside a script
 #Arguments
 #   $1 - script to update
 set_script_details() {
-    local temp_var args
-    
-    #set api url
-    temp_var="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<<${api_url})"
-    args="-i 's/\\(^API\\_URL=\\)\\(\"[^\"]\\+\"\\)/\\1\"${temp_var}\"/i'"
-    eval sed $args "$1"
-    
-    #set agent download url
-    temp_var="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<<${agent_url})"
-    args="-i 's/\\(^DOWNLOAD\\_URL=\\)\\(\"[^\"]\\+\"\\)/\\1\"${temp_var}\"/i'"
-    eval sed $args "$1"
+    set_variable "$1" "API_URL" "$api_url"  #set api url
+    set_variable "$1" "DOWNLOAD_URL" "$agent_url"  #set agent download url
 
     #set registration url; applicable only for curl installer for node
-    temp_var="$(sed 's/[^-A-Za-z0-9_]/\\&/g' <<<${api_url}/agents)"
-    args="-i 's/\\(^REGISTRATION\\_URL=\\)\\(\"[^\"]\\+\"\\)/\\1\"${temp_var}\"/i'"
-    eval sed $args "$1"
-
+    set_variable "$1" "REGISTRATION_URL" "${api_url}/agents"
+    
     import_script res/scripts/helper.sh $1  #import the script
 }
 
 #script variables
 default_domain="sealion.com"
 domain=$default_domain version_regex="(\d+\.){2}\d+(\.[a-z0-9]+)?"
-gen_curl_node=0 padding="    "
+gen_curl_node=0 padding="    " insecure=0
 
 #parse command line
-opt_parse d:h "domain= gen-curl-node help" options args "$@"
+opt_parse d:kh "domain= insecure gen-curl-node help" options args "$@"
 
 #if parsing failed print the usage and exit
 if [[ $? -ne 0 ]] ; then
@@ -100,6 +103,9 @@ for option_index in "${!options[@]}" ; do
     case "${options[${option_index}]}" in
         d|domain)
             domain=$option_arg
+            ;;
+        k|insecure)
+            insecure=1
             ;;
         gen-curl-node)
             gen_curl_node=1
@@ -155,6 +161,15 @@ echo "${padding}Copied files from '${script_base_dir}/../code'"
 
 #copy service script
 cp res/scripts/sealion.sh "${build_target}/${output}/agent/etc/init.d/sealion"
+
+#set command line options inside the service script
+if [[ $insecure -eq 1 ]] ; then
+    set_variable "${build_target}/${output}/agent/etc/init.d/sealion" "CMDLINE_OPTIONS" "--insecure"
+    echo "${padding}Disabled SSL verification for https requests"
+else
+    set_variable "${build_target}/${output}/agent/etc/init.d/sealion" "CMDLINE_OPTIONS" ""
+fi
+
 echo "${padding}Service script generated"
 
 #copy uninstall script
