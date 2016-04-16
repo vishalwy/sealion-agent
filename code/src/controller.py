@@ -136,6 +136,10 @@ class Controller(singleton(ThreadEx)):
         curllike = self.univ.exe_path + '/bin/curlike'  #curl like functionality
         url_caller = '"%s" "%s"' % (sys.executable, curllike)  #commandline for curlike
         
+        #whether to disable SSL verification? read it from main module
+        if hasattr(sys.modules['__main__'], '__insecure_ssl__') and sys.modules['__main__'].__insecure_ssl__ == True:
+            url_caller += ' -k'
+        
         #frame the full commandline to download and execute the curl-install.sh
         format = '%(url_caller)s -s %(proxy)s %(download_url)s | bash /dev/stdin -a %(agent_id)s -o %(org_token)s -i "%(exe_path)s" -p "%(executable)s" -v %(version)s %(proxy)s'
         format_spec = {

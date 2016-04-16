@@ -102,7 +102,7 @@ for option_index in "${!options[@]}" ; do
     #find the proper option and perform the action
     case "${options[${option_index}]}" in
         d|domain)
-            domain=$option_arg
+            domain="${option_arg#*://}"
             ;;
         k|insecure)
             insecure=1
@@ -120,6 +120,11 @@ cd "$script_base_dir"  #move to current dir so that all the paths are available
 domain="$(sed -e 's/^\s*//' -e 's/\s*$//' <<<${domain})"  #trim whitespace from both ends
 build_target=$domain  #build target is the domain for which packaging is done
 version=$(../code/bin/sealion.py --version)  #read the version for the package
+
+if [[ "$domain" == "" ]] ; then
+    echo "Please specify a valid domain" >&2
+    usage ; exit 1
+fi
 
 #you need to have a valid version
 if [[ "$version" == "" || "$(grep -Po "${version_regex}" <<<"${version}")" != "$version" ]] ; then
