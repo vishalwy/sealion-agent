@@ -15,9 +15,9 @@ PATH="${PATH}:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"  #co
 #It also resurrects sealion agent if terminated abnormally
 terminate() {
     local pid= timestamp="                       "
-    exec 1>&- 1>/dev/null #close and redirect stdout
-    exec 2>&- 2>/dev/null #close and redirect stderr
-    kill -SIGTERM $(jobs -p) >/dev/null 2>&1
+    exec 1>&- 1>/dev/null  #close and redirect stdout
+    exec 2>&- 2>/dev/null  #close and redirect stderr
+    kill -SIGTERM $(jobs -p)  #kill all the children
     read pid <"${exe_dir}/var/run/sealion.pid"  #read pid from file
 
     #resurrect agent if the pid read from the file is matching to the original pid and is not running
@@ -33,11 +33,7 @@ terminate() {
 
 #Function to kill children
 kill_children() {
-    if [[ "$session" != "" ]] ; then  #kill process group if we have setsid
-        kill -SIGKILL -- -$session_pid  >/dev/null 2>&1
-    else 
-        kill -SIGKILL $session_pid >/dev/null 2>&1  #bad luck; the grand children are still alive
-    fi
+    kill -SIGKILL -- -${pgid} >/dev/null 2>&1
 }
 
 main_script="${1##*/}"  #extract the main python script
@@ -60,25 +56,9 @@ if [[ "$main_script" == "" || "$exe_dir" == "" || "$cmdline" != *"$main_script"*
     echo "Usage: ${0} <agent main script>" ; exit 1
 fi
 
-#check whether we have setsid available
-type setsid >/dev/null 2>&1
-[[ $? -eq 0 ]] && session=setsid || session=
-
-#if setsid is not available we wont be able to run the activities in a new session
-#which means, we wont be able to kill the process tree if the command timeout
-[[ "$session" == "" ]] && echo "warning: Cannot run commands as process group; 'setsid' not available"
-
 #continuously read line from stdin, blocking read.
-#format of a line is 'TIMESTAMP COMMAND_INTERVAL OUTPUT_FILE: COMMAND_LINE'
-while IFS= read -r line ; do
-    #read activity details from input upto ':' character
-    old_ifs=$IFS ; IFS=" " ; read timestamp command_interval output_file <<<"${line%%:*}" ; IFS=$old_ifs
-
-    #now read the actual command to be executed which is the string after ':'
-    #also replace any \r character with newline character
-    command_line="${line#*:}" 
-    command_line=${command_line//$'\r'/$'\n'}
-
+#format of a line is 'TIMESTAMP COMMAND_INTERVAL OUTPUT_FILE COMMAND_LINE' ending with \r
+while IFS=" " read -r -d $'\r' timestamp command_interval output_file command_line ; do
     #execute maintenance commands; they are identified by looking at timestamp which is zero
     if [[ "$timestamp" == "0" ]] ; then
         eval $command_line >"$output_file" 2>&1
@@ -88,23 +68,20 @@ while IFS= read -r line ; do
     (
         #this is a sub-shell, which is forked from parent process. 
         #we run this as a background job to enable parallel execution.
-        #format of output is 'data: TIMESTAMP pid|return_code VALUE'
+        #format of output is 'data: TIMESTAMP (pid|return_code) VALUE'
+        #you can also log in the format '(debug|info|warning): message'
 
-        trap "kill_children" SIGTERM  #kill children on SIGTERM
-
-        if [[ "$BASHPID" == "" ]] ; then  #for bash versions where BASHPID does not exist
-            read BASHPID </proc/self/stat
-            old_ifs=$IFS ; IFS=" " ; read -a BASHPID <<<"$BASHPID" ; IFS=$old_ifs
-            BASHPID=${BASHPID[4]}  #pid is at the 4th index
-        fi
+        trap "kill_children" EXIT  #trap exit, and kill the process group
+        trap "exit" SIGTERM  #exit on SIGTERM 
+        set -m  #enable job control so that the first level of background jobs runs in a new process group
 
         #export the interval for the command; useful to perform any time based calculation
         export COMMAND_INTERVAL="$command_interval"
 
-        echo "data: ${timestamp} pid ${BASHPID}"  #write out the process id for tracking purpose
-        $session bash -c "$command_line" >"$output_file" 2>&1 &
-        session_pid=$!  #pid of the bash process
-        wait  #wait for the background job to finish
+        bash -c "$command_line" >"$output_file" 2>&1 &  #execute the command
+        pgid=$!  #process group id of the last background job
+        echo "data: ${timestamp} pid ${pgid}"  #write out the process id for tracking purpose
+        wait >/dev/null 2>&1  #wait for the background job to finish
         echo "data: ${timestamp} return_code ${?}"  #write out the return code which indicates that the process has finished
     ) &
 done

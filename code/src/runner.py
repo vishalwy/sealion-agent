@@ -232,7 +232,7 @@ class Job:
             
             #kill the job and change the state to timed out
             #it is possible that the pid does not exist by the time we execute this statement
-            os.kill(self.exec_details['pid'], signal.SIGTERM) 
+            os.killpg(self.exec_details['pid'], signal.SIGKILL) 
             self.status = JobStatus.TIMED_OUT
         except:
             return False
@@ -368,6 +368,7 @@ class Executer(WorkerProcess, ThreadEx):
         exec_args = ['bash', '%s/src/execute.sh' % self.univ.exe_path, os.path.realpath(sys.modules['__main__'].__file__)]
         os.isatty(sys.stdin.fileno()) or exec_args.append('1')
         WorkerProcess.__init__(self, *exec_args)
+        self.line_ending = '\r';
         
         self.daemon = True  #run this thread as daemon as it should not block agent from shutting down
         self.univ.event_dispatcher.bind('terminate', self.stop)  #bind to terminate event so that we can terminate bash process
@@ -534,7 +535,7 @@ class Executer(WorkerProcess, ThreadEx):
             interval = 0
             command = job_details['command']
             
-        return '%d %d %s: %s' % (job_details['timestamp'], interval, job_details['output'], command)
+        return '%d %d %s %s' % (job_details['timestamp'], interval, job_details['output'], command)
     
     def write(self, job_details):
         """
@@ -563,12 +564,13 @@ class Executer(WorkerProcess, ThreadEx):
             if not line:
                 return False
             
-            data = line.split()
+            data = line.split(None, 1)
             
-            if data[0] == 'warning:':  #bash has given some warning
-                _log.warn(line[line.find(' ') + 1:])
-            elif data[0] == 'data:':  #data
-                self.update_job(int(data[1]), {data[2]: data[3]})
+            if data[0] in ['warning:', 'debug:', 'info:']:  #bash has given something to log
+                getattr(_log, data[0][:-1])(data[1])
+            elif data[0] == 'data:':  #we got the data
+                data = data[1].split()
+                self.update_job(int(data[0]), {data[1]: data[2]})
             else:  #everything else
                 _log.error(line)
         except Exception as e:
@@ -792,7 +794,6 @@ class JobProducer(singleton(ThreadEx)):
         for activity in activities:
             activity_id = activity['_id']
             cur_activity = self.activities.get(activity_id)
-            activity['command'] = activity['command'].replace('\n', '\r')  #sanitize upfront to optimize performance
             
             if cur_activity:  #if we already have the activity in the dict
                 details = cur_activity['details']

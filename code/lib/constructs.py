@@ -368,6 +368,7 @@ class WorkerProcess():
         self.write_count = 0  #total number of lines written to the process
         self.is_stop = False  #stop flag for the process
         self.args = list(args)  #arguments for the process
+        self.line_ending = '\n';
         
     def __str__(self):
         """
@@ -430,7 +431,7 @@ class WorkerProcess():
         
         try:
             #it is possible that the pipe is broken or the subprocess was terminated
-            self.process.stdin.write((input + '\n').encode('utf-8'))
+            self.process.stdin.write((input + self.line_ending).encode('utf-8'))
             self.write_count += 1
         except Exception as e:
             _log.error('Failed to write to worker process %s; %s' % (self, unicode(e)))

@@ -136,6 +136,7 @@ def extract_metrics(output, return_code, metrics, job):
         context['command_output'] = output
         context['command_return_code'] = return_code
         context['metric_value'] = None
+        log_debug('Extracting metric %s from %s' % (metric_id, job))
         
         #set the alarm to signal after the mentioned timeout which in turn raises an exception
         _timeout > 0 and signal.alarm(_timeout)  
