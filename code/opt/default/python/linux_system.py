@@ -10,6 +10,7 @@ __email__ = 'hello@sealion.com'
 import logging
 import re
 import multiprocessing
+import time
 
 #Python 2.x vs 3.x
 try:
@@ -49,55 +50,62 @@ def get_data(metrics):
     
     #metrics that needs sampling
     #they are written as a generator so that we can sleep before collection again
-    #we sample twice
-    sampling_count = 2
-    cpu_usage_gen = get_cpu_usage()  #generator for cpu usage
-    net_rw_gen = get_net_rw()  #generator for network read write
-    disk_rw_gen = get_disk_rw()  #generator for disk read write
+    generators = {
+        'CPU usage': {
+            'source': get_cpu_usage(),  #generator for cpu usage
+            'data': {}
+        },
+        'network R/W': {
+            'source': get_net_rw(),  #generator for network read write
+            'data': {}
+        },
+        'disk R/W': {
+            'source': get_disk_rw(),  #generator for disk read write
+            'data': {}
+        }
+    }
     
-    while sampling_count > 0:
-        try:
-            cpu_usage = next(cpu_usage_gen)
-        except (StopIteration, GeneratorExit):
-            cpu_usage = {}
-        except Exception as e:
-            cpu_usage = {}
-            _log.error('Failed to sample CPU usage; %s' % unicode(e))
+    while 1:
+        temp_data, active_gen_count = True, 0
+    
+        for key in generators:        
+            try:
+                generators[key]['data'] = next(generators[key]['source'])  #get the next value
+                
+                #this variable is to identify the presence of a generator that is yet to produce the valid data
+                if temp_data:
+                    temp_data = generators[key]['data']
+                    
+                active_gen_count += 1
+            except (StopIteration, GeneratorExit):
+                pass
+            except Exception as e:
+                _log.error('Failed to sample %s; %s' % (key, unicode(e)))
+                
+        #if all the generators are exhausted
+        if active_gen_count == 0:
+            break
             
-        try:
-            net_rw = next(net_rw_gen)
-        except (StopIteration, GeneratorExit):
-            net_rw = {}
-        except Exception as e:
-            net_rw = {}
-            _log.error('Failed to sample network R/W; %s' % unicode(e))
-            
-        try:
-            disk_rw = next(disk_rw_gen)
-        except (StopIteration, GeneratorExit):
-            disk_rw = {}
-        except Exception as e:
-            disk_rw = {}
-            _log.error('Failed to sample disk R/W; %s' % unicode(e))
-            
-        sampling_count -= 1
-        
-        if sampling_count:
-            yield 1  #yield the sampling duration so that caller can sleep and resume
+        #yield the sampling duration so that caller can sleep and resume
+        #we should yield only if there is atleast one generator which has not produced any data
+        if not temp_data:
+            yield 10  
     
     #append cpu usage for each cpu core
-    for cpu, usage in cpu_usage.items():
+    for cpu, usage in generators['CPU usage']['data'].items():
         data['cpuUsage'].append({'name': cpu, 'value': usage})
         
     #append network read and write for each interface
-    for interface, rw in net_rw.items():
+    for interface, rw in generators['network R/W']['data'].items():
         data['networkReads'].append({'name': interface, 'value': rw['reads']})
         data['networkWrites'].append({'name': interface, 'value': rw['writes']})        
         
     #append disk read and write for each logical disk
-    for device, rw in disk_rw.items():
+    for device, rw in generators['disk R/W']['data'].items():
         data['diskReads'].append({'name': device, 'value': rw['reads']})
         data['diskWrites'].append({'name': device, 'value': rw['writes']})
+        
+    generators = None  #remove the reference to generators so that it can GCed
     
     yield {
         'output': data,
@@ -240,8 +248,10 @@ def get_net_rw():
     with open('/proc/net/dev') as f1:
         with open('/proc/net/dev') as f2:
             content1 = f1.read()  #first collection
+            sample_time = time.time()
             yield {}  #yield so that caller can put delay before sampling again
             content2 = f2.read()  #second collection
+            sample_time = time.time() - sample_time  #calculate the sampling time took
             
     #network interfaces
     interfaces = [interface[:-1].strip() for interface in re.findall('^\s*.+:', content1, flags = re.MULTILINE)]
@@ -259,8 +269,8 @@ def get_net_rw():
     for line in content2.splitlines():  #read through second collection
         for interface in [interface_x for interface_x in interfaces if '%s:' % interface_x in line]:
             fields = line.split('%s:' % interface)[1].split()
-            data[interface]['reads'] = int(fields[0]) - data[interface]['reads']
-            data[interface]['writes'] = int(fields[8]) - data[interface]['writes']
+            data[interface]['reads'] = int((int(fields[0]) - data[interface]['reads']) / sample_time)
+            data[interface]['writes'] = int((int(fields[8]) - data[interface]['writes']) / sample_time)
             break
     
     yield data
@@ -280,8 +290,10 @@ def get_disk_rw():
     with open('/proc/diskstats') as f1:
         with open('/proc/diskstats') as f2:
             content1 = f1.read()  #first collection
+            sample_time = time.time()
             yield {}  #yield so that caller can put delay before sampling again
             content2 = f2.read()  #second collection
+            sample_time = time.time() - sample_time  #calculate the sampling time took
             
     #initialize the dict with interfaces and values
     data = dict(zip(devices, [dict(zip(['reads', 'writes'], [0, 0])) for device in devices]))
@@ -296,8 +308,8 @@ def get_disk_rw():
     for line in content2.splitlines():  #read through second collection
         for device in [device_x for device_x in devices if '%s ' % device_x in line]:
             fields = line.strip().split('%s ' % device)[1].split()
-            data[device]['reads'] = int(fields[0]) - data[device]['reads']
-            data[device]['writes'] = int(fields[4]) - data[device]['writes']
+            data[device]['reads'] = int((int(fields[0]) - data[device]['reads']) / sample_time)
+            data[device]['writes'] = int((int(fields[4]) - data[device]['writes']) / sample_time)
             break            
             
     yield data

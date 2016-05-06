@@ -267,9 +267,13 @@ class Job:
             The data key holds either the method to read ouput or a dict if it is a plugin activity or a string
         """
         
+        #if it is plugin, read it differently
+        if self.plugin != False:
+            return self.get_plugin_data()
+        
         data = None
 
-        if self.status == JobStatus.RUNNING and self.plugin == False and self.exec_details['pid'] == -1:  #commandline job who's pid is unknown
+        if self.status == JobStatus.RUNNING and self.exec_details['pid'] == -1:  #commandline job who's pid is unknown
             data = {'timestamp': self.exec_details['timestamp'], 'returnCode': 0, 'data': 'Failed to retreive execution status.'}
         elif self.status == JobStatus.BLOCKED:  #commandline job that is blocked by whitelist
             data = {'timestamp': self.exec_details['timestamp'], 'returnCode': 0, 'data': 'Command blocked by whitelist.'}
@@ -281,14 +285,10 @@ class Job:
                 'returnCode': self.exec_details['return_code']
             }
             
-            if self.plugin == False:
-                #for a commandline job, output is the file containing data
-                #we supply the instance method to read the output on demand
-                #this reduces the memory used unneceserily reading the output and putting it in the queue
-                data['data'] = self.read_output
-            else:  #for a plugin job, output is the data
-                data['data'] = self.exec_details['output']
-                data['metrics'] = self.exec_details.get('metrics')
+            #for a commandline job, output is the file containing data
+            #we supply the instance method to read the output on demand
+            #this reduces the memory used unneceserily reading the output and putting it in the queue
+            data['data'] = self.read_output
         else:
             format = 'No data for %(activity)s; satus: %(status)d; pid: %(pid)d; output: %(output)s'
             format_spec = {
@@ -300,6 +300,48 @@ class Job:
             _log.error(format % format_spec)
                 
         return data
+    
+    def get_plugin_data(self):
+        """
+        Method to get the data for a plugin job
+        
+        Returns:
+            The dict containing the data; 
+            If the plugin is not completed yet, then the 'data' key holds the instance method to read the data again
+        """
+        
+        #the return value
+        plugin_data = {
+            'timestamp': self.exec_details['timestamp'], 
+            'returnCode': self.exec_details['return_code']
+        }
+        
+        #we load the plugin and calls the get_data generator
+        #this can raise exception
+        if self.plugin == True:
+            activity = self.exec_details['activity']
+
+            #get_data which should be written as a generator
+            self.plugin = __import__(activity['command']).get_data(activity.get('metrics', {}))
+
+        try:
+            data = next(self.plugin)  #get next value from the generator
+            
+            #if the data returned is int, schedule it after that many seconds
+            if type(data) is int:
+                JobProducer().reschedule(self, data)
+            else:
+                self.update({'return_code': 0, 'output': data['output'], 'metrics': data.get('metrics')})
+                
+            #return the instance method as we dont have the data ready yet
+            #only when the generator exits, we have the data
+            plugin_data['data'] = self.get_plugin_data  
+        except (StopIteration, GeneratorExit):
+            #on generator exit, fill the actual data 
+            plugin_data['data'] = self.exec_details['output']
+            plugin_data['metrics'] = self.exec_details.get('metrics')
+
+        return plugin_data
 
     def read_output(self):
         """
@@ -413,25 +455,7 @@ class Executer(WorkerProcess, ThreadEx):
             self.write(job.exec_details)
         else:            
             try:
-                #we load the plugin and calls the get_data generator
-                #this can raise exception
-                if job.plugin == True:
-                    activity = job.exec_details['activity']
-                    
-                    #get_data which should be written as a plugin
-                    job.plugin = __import__(activity['command']).get_data(activity.get('metrics', {}))
-                    
-                try:
-                    data = next(job.plugin)  #get next value from the generator
-                except (StopIteration, GeneratorExit):
-                    pass
-                    
-                #if the data returned is int, schedule it after that many seconds
-                if type(data) is int:
-                    job.exec_timestamp += data
-                    JobProducer().queue.put(job)
-                else:
-                    job.update({'return_code': 0, 'output': data['output'], 'metrics': data.get('metrics')})
+                job.get_plugin_data()  #get the plugin data
             except Exception as e:
                 #on failure we set the status code as ignored, so that output is not processed
                 job.status = JobStatus.IGNORED
@@ -663,6 +687,7 @@ class JobProducer(singleton(ThreadEx)):
         self.univ = universal.Universal()  #store reference to Universal for optmized access
         self.activities_lock = threading.RLock()  #threading lock for updating activities
         self.activities = {}  #dict of activities 
+        self.rescheduled_jobs = []  #array to hold the jobs that requires rescheduling
         self.queue = queue.Queue()  #job queue
         self.sleep_interval = 5  #how much time should the thread sleep before scheduling
         self.store = store  #storage instance
@@ -694,14 +719,34 @@ class JobProducer(singleton(ThreadEx)):
                 break
 
         return is_whitelisted
+    
+    def reschedule(self, job, delay):
+        """
+        Public method to reschedule a running job after the delay
+        
+        Args:
+            job: the job to be rescheduled
+            delay: delay in seconds after which the job should execute
+        """
+        
+        job.exec_timestamp += delay  #add delay for execution
+        
+        #if delay is too less, that it comes before the next scheduling interval, then put it directly in the queue
+        if delay <= self.sleep_interval:
+            self.queue.put(job)
+            return
+        
+        self.activities_lock.acquire()  #this has to be atomic as multiple threads reads/writes
+        self.rescheduled_jobs.append(job);
+        self.activities_lock.release()
 
-    def schedule_activities(self):
+    def schedule(self):
         """
         Method to schedule the activity based on their interval
         """
         
         self.activities_lock.acquire()  #this has to be atomic as multiple threads reads/writes
-        t, jobs = time.time(), []
+        t, jobs, j = time.time(), [], len(self.rescheduled_jobs) - 1
 
         for activity_id in self.activities:
             activity = self.activities[activity_id]
@@ -711,9 +756,19 @@ class JobProducer(singleton(ThreadEx)):
             if activity['next_exec_timestamp'] <= t + self.sleep_interval:
                 jobs.append(Job(activity))  #add a job for the activity
                 activity['next_exec_timestamp'] = activity['next_exec_timestamp'] + activity['details']['interval']  #update the next execution timestamp
+                
+        schedule_count = len(jobs)  #new schedule count
 
+        while j >= 0:
+            if self.rescheduled_jobs[j].exec_timestamp <= t + self.sleep_interval:
+                jobs.append(self.rescheduled_jobs.pop(j))
+        
+            j -= 1
+        
+        reschedule_count = len(jobs) - schedule_count  #reschedule count
         jobs.sort(key = lambda job: job.exec_timestamp)  #sort the jobs based on the execution timestamp
-        len(jobs) and _log.info('Scheduling %d activities', len(jobs))
+        schedule_count and _log.info('Scheduling %d activities', schedule_count)
+        reschedule_count and _log.debug('Rescheduling %d activities', reschedule_count)
 
         for job in jobs:  #scheudle the jobs
             self.queue.put(job)
@@ -735,7 +790,7 @@ class JobProducer(singleton(ThreadEx)):
         consumer_count = (1 if ret[0] - ret[1] > 0 else 0) + ret[1]
         self.is_alive() and self.start_consumers(consumer_count)    
         self.stop_consumers(consumer_count)
-        ret[2] and self.schedule_activities()  #immediately schedule any added/updated activities
+        ret[2] and self.schedule()  #immediately schedule any added/updated activities
         
     @staticmethod
     def update_metrics(cur_activity, new_activity):
@@ -845,7 +900,7 @@ class JobProducer(singleton(ThreadEx)):
         self.univ.event_dispatcher.bind('set_exec_details', self.set_exec_details)  #bind to the event triggered whenever the config updates
         
         while 1:  #schedule the activities every sleep_interval seconds
-            self.schedule_activities()
+            self.schedule()
             self.univ.stop_event.wait(self.sleep_interval)
 
             if self.univ.stop_event.is_set():  #do we need to stop
