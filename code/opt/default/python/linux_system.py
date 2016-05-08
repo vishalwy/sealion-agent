@@ -89,7 +89,7 @@ def get_data(metrics):
         #yield the sampling duration so that caller can sleep and resume
         #we should yield only if there is atleast one generator which has not produced any data
         if not temp_data:
-            yield 10  
+            yield 3  
     
     #append cpu usage for each cpu core
     for cpu, usage in generators['CPU usage']['data'].items():

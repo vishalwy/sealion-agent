@@ -689,7 +689,7 @@ class JobProducer(singleton(ThreadEx)):
         self.activities = {}  #dict of activities 
         self.rescheduled_jobs = []  #array to hold the jobs that requires rescheduling
         self.queue = queue.Queue()  #job queue
-        self.sleep_interval = 5  #how much time should the thread sleep before scheduling
+        self.schedule_interval = 5  #how much time should the thread sleep before scheduling
         self.store = store  #storage instance
         self.consumer_count = 0  #total number of job consumers running
         self.executer = Executer()  #executer instance for running commandline activities
@@ -732,7 +732,7 @@ class JobProducer(singleton(ThreadEx)):
         job.exec_timestamp += delay  #add delay for execution
         
         #if delay is too less, that it comes before the next scheduling interval, then put it directly in the queue
-        if delay <= self.sleep_interval:
+        if delay <= self.schedule_interval:
             self.queue.put(job)
             return
         
@@ -753,14 +753,14 @@ class JobProducer(singleton(ThreadEx)):
 
             #whether the activity interval expired
             #we have to put the job in the queue if the execution timestamp comes before the scheduler runs again
-            if activity['next_exec_timestamp'] <= t + self.sleep_interval:
+            if activity['next_exec_timestamp'] <= t + self.schedule_interval:
                 jobs.append(Job(activity))  #add a job for the activity
                 activity['next_exec_timestamp'] = activity['next_exec_timestamp'] + activity['details']['interval']  #update the next execution timestamp
                 
         schedule_count = len(jobs)  #new schedule count
 
         while j >= 0:
-            if self.rescheduled_jobs[j].exec_timestamp <= t + self.sleep_interval:
+            if self.rescheduled_jobs[j].exec_timestamp <= t + self.schedule_interval:
                 jobs.append(self.rescheduled_jobs.pop(j))
         
             j -= 1
@@ -785,11 +785,14 @@ class JobProducer(singleton(ThreadEx)):
         self.executer.set_env_variables()  #set the environment variables
         ret = self.set_activities()  #set activities
         
-        #calculate the job consumer count and run the required number of job consumers
-        #it assumes that every plugin activity gets an individual thread and all commandline activities shares one thread
-        consumer_count = (1 if ret[0] - ret[1] > 0 else 0) + ret[1]
-        self.is_alive() and self.start_consumers(consumer_count)    
-        self.stop_consumers(consumer_count)
+        ###calculate the job consumer count and run the required number of job consumers
+        ###it assumes that every plugin activity gets an individual thread and all commandline activities shares one thread
+        ##consumer_count = (1 if ret[0] - ret[1] > 0 else 0) + ret[1]
+        ###########################################################################################
+        #the above comment/code has been deprecated since version 4.0.0 as the plugins are written as generators.
+        #now regardless of the number of plugins, the total number of consumers remains at 1.
+        #but there is always a provision to start as many consumers as we want
+        self.is_alive() and self.set_consumers(1)    
         ret[2] and self.schedule()  #immediately schedule any added/updated activities
         
     @staticmethod
@@ -899,18 +902,39 @@ class JobProducer(singleton(ThreadEx)):
         self.set_exec_details();  #set execution details such as env variables and commands to execute
         self.univ.event_dispatcher.bind('set_exec_details', self.set_exec_details)  #bind to the event triggered whenever the config updates
         
-        while 1:  #schedule the activities every sleep_interval seconds
+        while 1:  #schedule the activities every schedule_interval seconds
             self.schedule()
-            self.univ.stop_event.wait(self.sleep_interval)
+            self.univ.stop_event.wait(self.schedule_interval)
 
             if self.univ.stop_event.is_set():  #do we need to stop
                 _log.debug('%s received stop event' % self.name)
                 break
 
-        self.stop_consumers()  #stop the consumers
+        self.set_consumers(0)  #stop the consumers
         Job.destroy_extractor()  #stop extractor for metrics evaluation
         self.executer.stop()  #stop executer for subprocess
         
+    def set_consumers(self, count):
+        """
+        Method to start/stop job consumers.
+        
+        Args:
+            count: count of total consumers to run
+        """
+        
+        start_count = min(8, count)  #limit the number of consumers
+        start_count - self.consumer_count > 0 and _log.info('Starting %d job consumers' % (start_count - self.consumer_count))
+        
+        while self.consumer_count < start_count:  #start consumers
+            self.consumer_count += 1
+            JobConsumer().start()
+            
+        self.consumer_count - count > 0 and _log.info('Stopping %d job consumers' % (self.consumer_count - count))
+        
+        while self.consumer_count > count:  #stop consumers
+            self.queue.put(None)  #put None in the job queue and the job consumer getting it will stop
+            self.consumer_count -= 1
+            
     def start_consumers(self, count):
         """
         Method to start job consumers.
@@ -925,20 +949,6 @@ class JobProducer(singleton(ThreadEx)):
         while self.consumer_count < count:  #start consumers
             self.consumer_count += 1
             JobConsumer().start()
-
-    def stop_consumers(self, count = 0):
-        """
-        Method to stop job consumers.
-        
-        Args:
-            count: count of total consumers to run
-        """
-        
-        self.consumer_count - count > 0 and _log.info('Stopping %d job consumers' % (self.consumer_count - count))
-        
-        while self.consumer_count > count:  #stop consumers
-            self.queue.put(None)  #put None in the job queue and the job consumer getting it will stop
-            self.consumer_count -= 1
             
     def get_activity_funct(self, *args, **kwargs):
         """

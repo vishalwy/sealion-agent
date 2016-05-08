@@ -462,7 +462,7 @@ class Sender(ThreadEx):
         ThreadEx.__init__(self)  #initialize base class
         self.univ = universal.Universal()  #save a reference to Universal for optimized access
         self.off_store = off_store  #offline store instance to be used
-        self.queue_max_size = 150  #max sending queue count
+        self.queue_max_size = 80  #max sending queue count
         self.ping_interval = 10  #the ping interval for retry after an failed api request
         self.queue = queue.Queue(self.queue_max_size)  #sending queue
         self.last_ping_time = int(time.time())  #saves the last time api was pinged

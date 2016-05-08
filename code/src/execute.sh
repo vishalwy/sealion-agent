@@ -17,8 +17,15 @@ terminate() {
     local pid= timestamp="                       "
     exec 1>&- 1>/dev/null  #close and redirect stdout
     exec 2>&- 2>/dev/null  #close and redirect stderr
-    kill -SIGTERM $(jobs -p)  #kill all the children
-    read pid <"${exe_dir}/var/run/sealion.pid"  #read pid from file
+
+    #kill all the children
+    #kill them individually to avoid kill throwing error for non-existing processes
+    #that can result in the running process ids being ignored
+    while read -r pid ; do
+        kill -SIGTERM $pid
+    done <<<"$(jobs -pr)"
+
+    pid= ; read pid <"${exe_dir}/var/run/sealion.pid"  #read pid from file
 
     #resurrect agent if the pid read from the file is matching to the original pid and is not running
     #we do resurrection only if the agent is running as daemon
@@ -61,7 +68,7 @@ fi
 while IFS=" " read -r -d $'\r' timestamp command_interval output_file command_line ; do
     #execute maintenance commands; they are identified by looking at timestamp which is zero
     if [[ "$timestamp" == "0" ]] ; then
-        eval $command_line >"$output_file" 2>&1
+        $command_line >"$output_file" 2>&1
         continue
     fi
 
@@ -73,15 +80,15 @@ while IFS=" " read -r -d $'\r' timestamp command_interval output_file command_li
 
         trap "kill_children" EXIT  #trap exit, and kill the process group
         trap "exit" SIGTERM  #exit on SIGTERM 
-        set -m  #enable job control so that the first level of background jobs runs in a new process group
+        set -m  #enable job control so that the background jobs runs in a new process group
 
         #export the interval for the command; useful to perform any time based calculation
         export COMMAND_INTERVAL="$command_interval"
 
-        bash -c "$command_line" >"$output_file" 2>&1 &  #execute the command
+        bash -c "$command_line" >"$output_file" 2>&1 </dev/null &  #execute the command
         pgid=$!  #process group id of the last background job
         echo "data: ${timestamp} pid ${pgid}"  #write out the process id for tracking purpose
-        wait >/dev/null 2>&1  #wait for the background job to finish
+        wait >/dev/null 2>&1  #wait for the background job to finish; redirect the output so that it wont print any errors
         echo "data: ${timestamp} return_code ${?}"  #write out the return code which indicates that the process has finished
     ) &
 done
