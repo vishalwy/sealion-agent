@@ -68,7 +68,7 @@ fi
 while IFS=" " read -r -d $'\r' timestamp command_interval output_file command_line ; do
     #execute maintenance commands; they are identified by looking at timestamp which is zero
     if [[ "$timestamp" == "0" ]] ; then
-        $command_line >"$output_file" 2>&1
+        eval "$command_line" >"$output_file" 2>&1
         continue
     fi
 
