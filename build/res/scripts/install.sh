@@ -182,7 +182,7 @@ migrate_agent_json() {
     code="import json"
     code="${code}\nwith open('$config_file') as f:"
     code="${code}\n\td = json.load(f)"
-    code="${code}\nd['config'] = {}"
+    code="${code}\nd['config'] = d.get('config', {})"
     code="${code}\nfor k in [k for k in ['_id', 'name', 'activities', 'org', 'envVariables'] if k in d]:"
     code="${code}\n\td['config'][k] = d[k]"
     code="${code}\n\tdel d[k]"
