@@ -10,7 +10,7 @@ import sys
 
 MAJOR_VERSION = 4  #major changes introduced
 MINOR_VERSION = 0  #minor changes introduced
-UPDATE_VERSION = 1  #bug fixes for the last minor version
+UPDATE_VERSION = 2  #bug fixes for the last minor version
 RELEASE_VERSION = ''  #update this whenever a change need to be tested or released
 
 #version string; do not update this directly!
