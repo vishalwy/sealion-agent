@@ -66,7 +66,7 @@ class Controller(singleton(ThreadEx)):
         elif status == api.Status.NOT_FOUND:  #uninstall if the agent is not found in the organization
             try:
                 _log.info('Uninstalling agent')
-                subprocess.Popen([self.univ.exe_path + '/uninstall.sh'])
+                subprocess.Popen([self.univ.exe_path + '/uninstall.sh'], close_fds = True)
             except Exception as e:
                 _log.error('Failed to open uninstall script; %s' % unicode(e))
         elif status == api.Status.UNAUTHORIZED:
@@ -161,7 +161,7 @@ class Controller(singleton(ThreadEx)):
             environ = dict(os.environ)
             environ['URL_CALLER'] = url_caller
             
-            subprocess.call(['bash', '-c', format % format_spec], preexec_fn = os.setpgrp, env = environ)  #execute the commandline
+            subprocess.call(['bash', '-c', format % format_spec], preexec_fn = os.setpgrp, env = environ, close_fds = True)  #execute the commandline
             time.sleep(5)  #it will not reach here if the update was successful
             raise Exception('')  #raise an exception to indicate failed update
         except Exception as e:

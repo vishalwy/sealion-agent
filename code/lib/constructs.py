@@ -402,7 +402,7 @@ class WorkerProcess():
                 self.write_count = 0  #reset the number of writes performed
 
                 #create the process with stream handles redirected. make sure the bufsize is set to 0 to have the pipe unbuffered
-                self.exec_process = subprocess.Popen(self.args, preexec_fn = self.init_process, bufsize = 0,
+                self.exec_process = subprocess.Popen(self.args, preexec_fn = self.init_process, bufsize = 0, close_fds = True,
                     stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
                 _log.info('Worker process %s has been created' % self)
             except Exception as e:

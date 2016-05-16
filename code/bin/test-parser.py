@@ -93,7 +93,7 @@ def execute(file):
         log.debug('$> ./%s' % file)
         
         #execute the script and get the output
-        process = subprocess.Popen(['bash', file], bufsize = 0, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+        process = subprocess.Popen(['bash', file], close_fds = True, bufsize = 0, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
         output = process.communicate()[0]  
         
         log.debug('%s' % output)
