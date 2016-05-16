@@ -911,7 +911,6 @@ class JobProducer(singleton(ThreadEx)):
                 break
 
         self.set_consumers(0)  #stop the consumers
-        Job.destroy_extractor()  #stop extractor for metrics evaluation
         self.executer.stop()  #stop executer for subprocess
         
     def set_consumers(self, count):

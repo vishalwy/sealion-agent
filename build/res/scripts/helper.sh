@@ -56,11 +56,11 @@ opt_parse() {
                 elif [[ $arg_required -eq 1 && "$long_opt_arg" == "" ]] ; then  #error since we could not read the argument for the option
                     eval "${3}=\"Option --$long_opt requires an argument\""
                     return 2
-                elif [[ $arg_required -eq 0 ]] ; then  #set option argument to special string
-                    long_opt_arg="NONE"
+                elif [[ $arg_required -eq 0 ]] ; then 
+                    long_opt_arg=  #reset the long option argument as the option is not expecting an argument
                 fi
 
-                eval "${3}=(\"\${${3}[@]}\" \"${long_opt}\" \"${long_opt_arg}\")"  #add it to the array
+                eval "${3}=(\"\${${3}[@]}\" \"\${long_opt}\" \"\${long_opt_arg}\")"  #add it to the array
                 ;;
             \?)  #unknown option
                 eval "${3}=\"Option -${OPTARG} not recognized\""
@@ -72,8 +72,7 @@ opt_parse() {
                 ;;
             *)  #valid option; add it to the array
                 local opt_arg=$OPTARG
-                [[ -z $OPTARG ]] && opt_arg="NONE"
-                eval "${3}=(\"\${${3}[@]}\" \"${opt}\" \"${opt_arg}\")"
+                eval "${3}=(\"\${${3}[@]}\" \"\${opt}\" \"\${opt_arg}\")"
                 ;;
         esac
     done

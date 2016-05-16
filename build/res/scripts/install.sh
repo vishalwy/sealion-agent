@@ -271,8 +271,9 @@ start_agent=1  #whether to start the agent after installation
 #setup variables
 org_token= category= agent_id= install_path=
 host_name= proxy=$https_proxy no_proxy=$no_proxy
+[[ "$proxy" == "" ]] && proxy=$HTTPS_PROXY  #try the upper variant if proxy details are not found in smaller variant
 install_source="tarball"  #the method used to install agent. curl or tarball
-env_vars=()  #any other environment variables to export
+env_vars=()  #environment variables to export
 padding="       "  #padding for messages
 
 #check if it is Linux
@@ -382,8 +383,8 @@ install_path=${install_path%/}
 
 cd "$script_base_dir"  #move to the script base dir so that all paths can be found
 check_dependency  #perform dependency check
-[[ "$proxy" != "" ]] && env_vars=("${env_vars[@]}" "{\"https_proxy\": \"${proxy}\"}")  #export proxy
-[[ "$no_proxy" != "" ]] && env_vars=("${env_vars[@]}" "{\"no_proxy\": \"${no_proxy}\"}")  #export no_proxy
+[[ "$proxy" != "" ]] && env_vars=("{\"https_proxy\": \"${proxy}\"}"  "{\"HTTPS_PROXY\": \"${proxy}\"}" "${env_vars[@]}")  #export proxy
+[[ "$no_proxy" != "" ]] && env_vars=("{\"no_proxy\": \"${no_proxy}\"}" "${env_vars[@]}")  #export no_proxy
 service_file="${install_path}/etc/init.d/sealion"  #service file for the agent
 [[ -f "${install_path}/bin/sealion-node" ]] && sealion_node_found=1  #check for existence of evil twin
 
