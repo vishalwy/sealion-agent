@@ -13,6 +13,7 @@ import subprocess
 import os
 import signal
 import logging
+import json
 
 #Python 2.x vs 3.x
 try:
@@ -517,3 +518,113 @@ class WorkerProcess():
   
         self.process_lock.release()
         
+class JSONfig():
+    array_actions = ['get', 'add', 'remove']  #possible operatiions on a JSON array
+    actions = ['set', 'delete', 'merge'] + array_actions  #possible operations on the JSON file
+        
+    @staticmethod
+    def perform(filename = None, action = 'get', keys = None, value = None, pretty_print = True):
+        try:
+            with open(filename, 'r') as f:
+                data = json.load(f)
+        except (IOError, ValueError) as e:
+            if action == 'get':  #ignore exceptions raised by the absense of JSON object if the action implies a write operation
+                raise e
+
+            data = {}  #no JSON available
+
+        temp_data = data   
+        keys = keys.split(':')  #format of the key is decided by the heirarchy; for eg, 'logging:level'
+
+        for key in keys[:-1]:  #navigate the frist key from the last, this is required so that we can have proper reference
+            temp_data = JSONfig.get_value(temp_data, key)
+
+        if action == 'get':  #print the data in stdout in json format
+            if len(keys) == 1 and keys[0] == '':
+                return json.dumps(data, indent = 4 if pretty_print else None)
+            else:
+                return json.dumps(JSONfig.get_value(temp_data, keys[-1]), indent = 4 if pretty_print else None)
+        elif action == 'set':  #set the value
+            if len(keys) == 1 and keys[0] == '':
+                data = json.loads(value)
+            else:
+                JSONfig.set_value(temp_data, keys[-1], json.loads(value))
+        elif action == 'add':  #add a new value in the array
+            temp_value = json.loads(value)
+            temp_data_value = JSONfig.get_value(temp_data, keys[-1])
+
+            if type(temp_value) is list:
+                for i in list(range(len(temp_value))):
+                    temp_value[i] not in temp_data_value and temp_data_value.append(temp_value[i])
+            else:
+                if temp_value in temp_data[keys[-1]]:
+                    raise ValueError('list.append(x): x is already in the list')
+
+                temp_data_value.append(temp_value)
+        elif action == 'remove':  #remove a value from the array
+            temp_value = json.loads(value)
+            temp_data_value = JSONfig.get_value(temp_data, keys[-1])
+
+            if type(temp_value) is list:
+                for i in list(range(len(temp_value))):
+                    temp_value[i] in temp_data_value and temp_data_value.remove(temp_value[i])
+            else:
+                temp_data_value.remove(temp_value)
+        elif action == 'delete':  #delete the key
+            if type(temp_data) is list:
+                raise Exception('possible actions on an array are %s' % '|'.join(array_actions))
+
+            del temp_data[keys[-1]]  #delete the key
+        else:  #merge the values
+            temp_data_value = JSONfig.get_value(temp_data, keys[-1])
+
+            #for merging there key should have a dict as the value
+            if type(temp_data_value) is not dict:
+                raise Exception('merge action can be done only on associative array')
+
+            temp_data_value.update(json.loads(value))  #merge values
+
+        #write JSON to file
+        with open(filename, 'w') as f:
+            json.dump(data, f, indent = 4 if pretty_print else None)
+        
+    @staticmethod
+    def get_value(obj, key):
+        """
+        Function gets the value for the key from the dict given
+
+        Args:
+            obj: the dict from which the value to be extracted
+            key: key for the value
+
+        Returns:
+            Value for the key specified
+        """
+
+        if type(obj) is list:
+            items = [item[key] for item in obj if type(item) is dict and item.get(key) is not None]
+            length = len(items)
+
+            if not length:
+                raise KeyError(key)
+
+            return items[0] if length == 1 else items
+
+        return obj[key]
+
+    @staticmethod
+    def set_value(obj, key, value):
+        """
+        Function sets the value for the key from the dict given
+
+        Args:
+            obj: the dict for which the value to be set
+            key: key for the value
+        """
+
+        if type(obj) is list:
+            raise Exception('possible actions on an array are %s' % '|'.join(array_actions))
+        else:
+            obj[key] = value;
+    
+    
