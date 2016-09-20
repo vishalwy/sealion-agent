@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Provides functionality to export environment variables for agent. 
+Provides functionality to configure environment variables for agent. 
 """
 
 __copyright__ = '(c) Webyog, Inc'
@@ -41,19 +41,19 @@ def usage(is_help = False):
         
     usage_info = 'Usage: %s [options]\nOptions:\n' % sys.argv[0]
     usage_info += '      --eENVIRONMENT_VAR <arg>, ...  ENVIRONMENT_VAR to be exported\n'
-    usage_info += ' -l,  --line <arg>                   Lines containing the environment variable configuration\n'
+    usage_info += ' -f,  --file <arg>, ...              File containing the environment variable configuration\n'
     usage_info += '      --restart                      After configuring, restart the agent\n'
     usage_info += '      --version                      Display version information\n'
     usage_info += ' -h,  --help                         Display this information\n'
     sys.stdout.write(usage_info)
     return True
 
-def read_env_vars(lines):
+def read_env_vars(f):
     """
     Function to show usage information
     
     Args:
-        lines: Lines containing the environment variable details to configure
+        f: File descriptor containing the environment variable details to configure
         
     Returns:
         Environment variables dict
@@ -63,7 +63,7 @@ def read_env_vars(lines):
     env_vars = {}
     
     #there can be multiple lines, so loop through all of them
-    for line in lines.split('\n'):
+    for line in f:
         match = line_regex.match(line)  #extract the variable details 
 
         #not a config
@@ -100,13 +100,14 @@ try:
     #add environment variables specified in the format --eENVIRONMENT_VAR
     #we identify them and add as long options
     long_options = [arg + '=' for arg in sys.argv[1:] if env_vars_regex.match(arg)]
-    options = getopt.getopt(sys.argv[1:], 'l:h', long_options + ['line=', 'restart', 'version', 'help'])[0]
+    options = getopt.getopt(sys.argv[1:], 'f:h', long_options + ['file=', 'restart', 'version', 'help'])[0]
     
     for option, arg in options:        
         if option[:3] == '--e':  #environment variable
             env_vars[option[4:]] = arg
-        elif option in ['-l', '--line']:  #environment variable description
-            env_vars.update(read_env_vars(arg))
+        elif option in ['-f', '--file']:  #environment variable description
+            with open(arg) as f:
+                env_vars.update(read_env_vars(f))
         elif option == '--restart':
             restart_agent = True
         elif option == '--version':
