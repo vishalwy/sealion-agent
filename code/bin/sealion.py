@@ -11,6 +11,7 @@ __email__ = 'hello@sealion.com'
 import sys
 import os
 import getopt
+import signal
 
 #add module lookup paths to sys.path so that import can find them
 #we are inserting at the begining of sys.path so that we can be sure that we are importing the right module
@@ -22,16 +23,17 @@ sys.path.insert(0, exe_path + '/lib')
 sys.path.insert(0, exe_path + '/src')
 
 import version_info
-__insecure_ssl__ = False  #whether to disable SSL; refer lib/request/__init__.py
+import exit_status
 
 try:
     #try parsing the options
     options, args = getopt.getopt(sys.argv[1:], '', ['insecure', 'version', 'debug'])  
     options = [option[0] for option in options]
-except Exception as e:
+except Exception:
     options, args = [], sys.argv[1:]  #reset the options so that the service module takes care 
     
-if '--insecure' in options:  #disable SSL
+#whether to disable SSL verification; refer lib/request/__init__.py
+if '--insecure' in options:
     __insecure_ssl__ = True
     
 if '--version' in options:  #print version and exit
@@ -43,4 +45,5 @@ elif '--debug' in options and len(args) == 1 and args[0] == 'start':
 else:
     import service as main_module  #normal startup
     
+signal.signal(signal.SIGINT, lambda: sys.exit(exit_status.AGENT_ERR_INTERRUPTED))  #setup signal handling for SIGINT
 main_module.run(*(tuple(args)))  #run the selected module with the arguments

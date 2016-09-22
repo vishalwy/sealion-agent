@@ -14,6 +14,9 @@ PATH="${PATH}:/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin"  #co
 script_base_dir=$(readlink -f "$0")
 script_base_dir=${script_base_dir%/*}
 
+#command line option for unregister script
+cmdline_options="<options>"
+
 #Function to uninstall service
 #Returns 0 on success; 1 on error
 uninstall_service() {
@@ -97,12 +100,8 @@ fi
 #the script may not be available if the user already removed the agent from the web interface
 if [[ -f "bin/unregister" ]] ; then
     echo "Unregistering agent..."
-    bin/unregister >/dev/null 2>&1
-
-    if [[ $? -ne 0 ]] ; then  #exit if unregistering the agent failed
-        echo "Error: Failed to unregister agent" >&2
-        exit 1
-    fi
+    bin/unregister ${cmdline_options} >/dev/null 2>&1
+    [[ $? -ne 0 ]] && echo "Failed unregister agent; please remove it from SeaLion web interface"
 fi
 
 #if install dir is the default install dir, then only we will remove user, group and service

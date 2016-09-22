@@ -65,7 +65,7 @@ setup_requests()
 from request import *
 
 #whether to disable SSL verification? read it from main module
-if hasattr(sys.modules['__main__'], '__insecure_ssl__') and sys.modules['__main__'].__insecure_ssl__ == True:
+if getattr(sys.modules['__main__'], '__insecure_ssl__', False):
     Session, get = apply_insecure_patch(Session, get)
 
 #disable urllib3 warnings. https://github.com/kennethreitz/requests/issues/2495

@@ -170,7 +170,7 @@ cp res/scripts/sealion.sh "${build_target}/${output}/agent/etc/init.d/sealion"
 #set command line options inside the service script
 if [[ $insecure -eq 1 ]] ; then
     set_variable "${build_target}/${output}/agent/etc/init.d/sealion" "CMDLINE_OPTIONS" "--insecure"
-    echo "${padding}Disabled SSL verification for https requests"
+    echo "${padding}Disabled SSL verification in service script"
 else
     set_variable "${build_target}/${output}/agent/etc/init.d/sealion" "CMDLINE_OPTIONS" ""
 fi
@@ -179,6 +179,15 @@ echo "${padding}Service script generated"
 
 #copy uninstall script
 cp res/scripts/uninstall.sh "${build_target}/${output}/agent/uninstall.sh"
+
+#set command line options inside the uninstall script
+if [[ $insecure -eq 1 ]] ; then
+    set_variable "${build_target}/${output}/agent/uninstall.sh" "CMDLINE_OPTIONS" "--insecure"
+    echo "${padding}Disabled SSL verification in uninstaller"
+else
+    set_variable "${build_target}/${output}/agent/uninstall.sh" "CMDLINE_OPTIONS" ""
+fi
+
 echo "${padding}Uninstaller generated"
 
 #copy and update install script

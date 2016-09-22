@@ -103,16 +103,16 @@ except:
     env_vars = {}
 
 try:
-    env_vars_count, env_vars_regex, restart_agent = 0, re.compile('^--e[a-zA-Z\\_][a-zA-Z0-9\\_]*$'), False
+    env_vars_count, env_vars_regex, restart_agent = 0, re.compile(r'^--e[a-zA-Z\_][a-zA-Z0-9\_]*$'), False
     
     #add environment variables specified in the format --eENVIRONMENT_VAR
     #we identify them and add as long options
-    long_options = [arg + '=' for arg in sys.argv[1:] if env_vars_regex.match(arg)]
+    long_options = [arg[2:] + '=' for arg in sys.argv[1:] if env_vars_regex.match(arg)]
     options = getopt.getopt(sys.argv[1:], 'f:h', long_options + ['file=', 'restart', 'version', 'help'])[0]
     
     for option, arg in options:        
         if option[:3] == '--e':  #environment variable
-            env_vars[option[4:]] = arg
+            env_vars[option[3:]] = arg
             env_vars_count += 1
         elif option in ['-f', '--file']:  #environment variable description
             with open(arg) as f:

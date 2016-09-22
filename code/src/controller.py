@@ -137,7 +137,7 @@ class Controller(singleton(ThreadEx)):
         url_caller = '"%s" "%s"' % (sys.executable, curllike)  #commandline for curlike
         
         #whether to disable SSL verification? read it from main module
-        if hasattr(sys.modules['__main__'], '__insecure_ssl__') and sys.modules['__main__'].__insecure_ssl__ == True:
+        if getattr(sys.modules['__main__'], '__insecure_ssl__', False):
             url_caller += ' -k'
         
         #frame the full commandline to download and execute the curl-install.sh
