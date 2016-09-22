@@ -22,7 +22,8 @@ sys.path.insert(0, exe_path + '/lib')
 sys.path.insert(0, exe_path + '/src')
 
 import version_info
-from constructs import unicode, JSONfig
+from universal import Universal 
+from constructs import unicode, read_input, JSONfig
 
 def usage(is_help = False):
     """
@@ -48,19 +49,20 @@ def usage(is_help = False):
     sys.stdout.write(usage_info)
     return True
 
-def read_env_vars(f):
+def read_env_vars(f, env_vars):
     """
     Function to show usage information
     
     Args:
         f: File descriptor containing the environment variable details to configure
+        env_vars: dict representing the env vars to update
         
     Returns:
-        Environment variables dict
+        The number of env variables parsed
     """
     
-    line_regex = re.compile('^[# \\t]+([a-zA-Z\\_][a-zA-Z0-9\\_]*)([ \\t]*:[ \\t]*([^ \\t\\n;]+[^\\n;]+)(;[ \\t]*(default[ \\t]+([^\\n])+|optional))?)?[ \\t]*$')
-    env_vars = {}
+    line_regex = re.compile(r'^[# \t]+(SL\_[A-Z\_0-9]+)([ \t]*:[ \t]*([^ \t\n;]+[^\n;]*)(;[ \t]*((default[ \t]+([^ \t\n]+[^\n]*))|optional))?)?[ \t]*$')
+    env_vars_count = 0
     
     #there can be multiple lines, so loop through all of them
     for line in f:
@@ -72,30 +74,36 @@ def read_env_vars(f):
 
         match, value = match.groups(), ''
         required = False if match[4] == 'optional' else True
-        default = match[5].strip() if match[5] else '' 
-        prompt = '%(caption)s%(optional)s%(default)s: ' % {
-            'caption': match[2].strip() if match[2] else match[0],
-            'optional': ' (%s)' % match[4] if not required else '',
-            'default': ' [%s]' % default if default else ''
-        }
+        default = env_vars.get(match[0], match[6].strip() if match[6] else '' )
+        prompt = '%s%s: ' % (match[2].strip() if match[2] else match[0], ' (%s)' % match[4] if not required else '')
+        env_vars_count += 1
 
         #read the value from the terminal
         while not value:
-            value = raw_input(prompt)
-            value = value if value else default  #use the default value if nothing is read from the terminal
+            value = read_input(prompt, default)  #use the default value if nothing is read from the terminal
 
             #for a required variable continue as long as it available
             if not required:
                 break
 
-        #discard any unset variables
         if value:  
             env_vars[match[0]] = value
+        else:  #discard any unset variables
+            try:
+                del env_vars[match[0]]  #it could be possible the key does not even exists
+            except:
+                pass  
                 
-    return env_vars
+    return env_vars_count
 
 try:
-    env_vars, env_vars_regex, restart_agent = {}, re.compile('^--e[a-zA-Z\\_][a-zA-Z0-9\\_]*$'), False
+    #try to read the environment variables from sealion config
+    env_vars = Universal().config.sealion.get_dict(('env', {}))['env']
+except:
+    env_vars = {}
+
+try:
+    env_vars_count, env_vars_regex, restart_agent = 0, re.compile('^--e[a-zA-Z\\_][a-zA-Z0-9\\_]*$'), False
     
     #add environment variables specified in the format --eENVIRONMENT_VAR
     #we identify them and add as long options
@@ -105,9 +113,10 @@ try:
     for option, arg in options:        
         if option[:3] == '--e':  #environment variable
             env_vars[option[4:]] = arg
+            env_vars_count += 1
         elif option in ['-f', '--file']:  #environment variable description
             with open(arg) as f:
-                env_vars.update(read_env_vars(f))
+                env_vars_count += read_env_vars(f, env_vars)
         elif option == '--restart':
             restart_agent = True
         elif option == '--version':
@@ -115,8 +124,8 @@ try:
         elif option in ['-h', '--help']:
             usage(True) and sys.exit(0)
             
-    if not env_vars:
-        sys.stderr.write('Please specify the environment variabes to configure\n')
+    if not env_vars_count:
+        sys.stderr.write('Please specify the environment variables to configure\n')
         usage() and sys.exit(1)
 except getopt.GetoptError as e:
     sys.stderr.write(unicode(e).capitalize() + '\n')  #missing option value
@@ -130,7 +139,7 @@ except Exception as e:
     
 try:
     #perform the action
-    JSONfig.perform(filename = exe_path + '/etc/config.json', action = 'merge', keys = 'env', value = json.dumps(env_vars), pretty_print = True)
+    JSONfig.perform(filename = exe_path + '/etc/config.json', action = 'set', keys = 'env', value = json.dumps(env_vars), pretty_print = True)
 except KeyError as e:
     sys.stderr.write('Error: unknown key ' + unicode(e) + '\n')
     sys.exit(1)

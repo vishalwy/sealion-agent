@@ -1,6 +1,6 @@
 """
 Some useful constructs
-Implements EmptyClass, SingletonType, Namespace, enum, with_static_vars, ThreadEx, EventDispatcher, NavigationDict and WorkerProcess
+Implements EmptyClass, SingletonType, Namespace, read_input, enum, with_static_vars, ThreadEx, EventDispatcher, NavigationDict and WorkerProcess
 """
 
 __copyright__ = '(c) Webyog, Inc'
@@ -30,6 +30,42 @@ except:
     
 queue = queue  #export symbol queue 
 _log = logging.getLogger(__name__)  #module level logging
+
+def read_input(prompt, prefill = ''):
+    """
+    Function to read input from stdin
+    
+    Args:
+        prompt: Prompt for the input
+        prefill: A default value for the input
+    """
+    
+    try:
+        if not prefill:
+            raise Exception
+            
+        #if readline is present, use to prefill the input
+        import readline as c_readline
+        value, prefill = prefill, ''  #in this case we are resetting the prefill so as to not return the prefill
+        c_readline.set_startup_hook(lambda: c_readline.insert_text(value))
+    except ImportError:
+        #otherwise modify the prompt to show the prefill
+        c_readline = None
+        prompt = '%s[%s] ' % (prompt, prefill)
+    except:
+        c_readline = None
+
+    #Python 2.x vs 3.x
+    try:
+        c_input = raw_input
+    except:
+        c_input = input
+    
+    try:
+        #read the input or return any prefill values
+        return c_input(prompt) or prefill
+    finally:
+        c_readline and c_readline.set_startup_hook()  #unbind startup hook
 
 def enum(*sequential, **named):
     """
