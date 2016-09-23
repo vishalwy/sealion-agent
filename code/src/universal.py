@@ -38,7 +38,7 @@ class SealionConfig(helper.Config):
         },
         'env': {
             'type': {
-                re.compile('^.+$'): {
+                re.compile('^[a-zA-Z_][a-zA-Z0-9_]*$'): {
                     'type': 'str,unicode'
                 }
             },
@@ -48,7 +48,7 @@ class SealionConfig(helper.Config):
             'type': {
                 'level': {
                     'type': 'str,unicode', 
-                    'regex': '^\\s*(info|error|debug|none)\\s*$', 
+                    'regex': r'^\s*(info|error|debug|none)\s*$', 
                     'optional': True
                 },
                 'modules': {
@@ -63,12 +63,12 @@ class SealionConfig(helper.Config):
         'commandTimeout': {
             'type': 'int,float', 
             'optional': True, 
-            'regex': '^\\+?((0?[5-9]{1}|(0?[1-9][0-9]+))|((0?[5-9]{1}|(0?[1-9][0-9]+))\\.[0-9]*))$'
+            'regex': r'^\+?((0?[5-9]{1}|(0?[1-9][0-9]+))|((0?[5-9]{1}|(0?[1-9][0-9]+))\.[0-9]*))$'
         },
         'metricTimeout': {
             'type': 'int', 
             'optional': True, 
-            'regex': '^\\+?(\\d+)'
+            'regex': r'^\+?(\d+)'
         },
         'user': {
             'type': 'str,unicode', 
@@ -86,12 +86,12 @@ class AgentConfig(helper.Config):
     schema = {
         'orgToken': {
             'type': 'str,unicode', 
-            'regex': '^[a-zA-Z0-9\\-]{36}$'
+            'regex': r'^[a-zA-Z0-9\-]{36}$'
         },
         
         'apiUrl': {
             'type': 'str,unicode', 
-            'regex': '^https://[^\\s:]+(:[0-9]+)?$' 
+            'regex': r'^https://[^\s:]+(:[0-9]+)?$' 
         },
         
         'category': {

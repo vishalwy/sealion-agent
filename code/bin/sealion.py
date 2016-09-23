@@ -36,6 +36,8 @@ except Exception:
 if '--insecure' in options:
     __insecure_ssl__ = True
     
+signal.signal(signal.SIGINT, lambda x, y: sys.exit(exit_status.AGENT_ERR_INTERRUPTED))  #setup signal handling for SIGINT
+    
 if '--version' in options:  #print version and exit
     version_info.print_version()
     sys.exit()  
@@ -45,5 +47,4 @@ elif '--debug' in options and len(args) == 1 and args[0] == 'start':
 else:
     import service as main_module  #normal startup
     
-signal.signal(signal.SIGINT, lambda: sys.exit(exit_status.AGENT_ERR_INTERRUPTED))  #setup signal handling for SIGINT
 main_module.run(*(tuple(args)))  #run the selected module with the arguments

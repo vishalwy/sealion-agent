@@ -183,7 +183,7 @@ class API(requests.Session):
             kwargs['headers'] = {'Content-type': 'application/json', 'Accept': 'text/plain'}
             kwargs['data'] = json.dumps(kwargs['data'])
         
-        is_check_auth = True if re.match('^.+/agents/1(/.*)?\s*$', url) else False  #is this call requires session authentication
+        is_check_auth = True if re.match(r'^.+/agents/1(/.*)?\s*$', url) else False  #is this call requires session authentication
         
         while retry_count == -1 or i <= retry_count:  #retry as many time as requested
             if i > 0:  #wait for stop event, before retrying

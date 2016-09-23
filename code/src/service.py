@@ -12,7 +12,6 @@ import os
 import sys
 import time
 import traceback
-import signal
 import pwd
 import grp
 import json
@@ -89,8 +88,8 @@ class SeaLion(Daemon):
         self.crash_loop_timeout = 30  #timeout between each crash and resurrect
         self.crash_loop_count = 5  #count of crash dumps to determine crash loop
         self.crash_dump_path = '%s/var/crash/' % exe_path  #crash dump path
-        self.crash_dump_pattern = '^sealion-%s-[0-9]+\.dmp$'
-        self.agent_version_regex = '(\d+\.){2}\d+(\.[a-z0-9]+)?'
+        self.crash_dump_pattern = r'^sealion-%s-[0-9]+\.dmp$'
+        self.agent_version_regex = r'(\d+\.){2}\d+(\.[a-z0-9]+)?'
     
     def save_dump(self, stack_trace):
         """
@@ -264,7 +263,7 @@ class SeaLion(Daemon):
         file_count, loop_file_count = 0, 0
         
         #crash loop is detected only for the current agent version running
-        loop_regex = self.crash_dump_pattern % univ.config.agent.agentVersion.replace('.', '\.')
+        loop_regex = self.crash_dump_pattern % univ.config.agent.agentVersion.replace('.', r'\.')
         
         try:
             for f in os.listdir(self.crash_dump_path):  #loop though files in the crash dump directory
@@ -331,20 +330,12 @@ class SeaLion(Daemon):
                 _log.info('Dump file saved at %s' % dump_file)
             else:
                 _log.info('Failed to save dump file')
-            
-def sigint_handler(*args):    
-    """
-    Callback function to handle SIGINT signal.
-    """
-    
-    sys.exit(exit_status.AGENT_ERR_INTERRUPTED)
-        
+                    
 def run(*args):
     """
     Function to run the module.
     """
     
-    signal.signal(signal.SIGINT, sigint_handler)  #setup signal handling for SIGINT
     daemon = SeaLion(exe_path + '/var/run/sealion.pid')  #SeaLion daemon instance
     valid_usage = ['start', 'stop', 'restart', 'status']
 

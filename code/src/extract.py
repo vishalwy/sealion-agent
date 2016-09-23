@@ -86,7 +86,7 @@ def sanitize_parser(code):
         Sanitized code
     """
     
-    exception_pattern = re.compile('(\\s*except)((\\s*)|(((\\s*\\(\\b[^\\b]+\\b\)\\s*)|(\\s+\\b[^\\s,]+\\b\\s*))((as|,)\\s*[^\\s]+\\s*)?))(:)')
+    exception_pattern = re.compile(r'(\s*except)((\s*)|(((\s*\(\b[^\b]+\b\)\s*)|(\s+\b[^\s,]+\b\s*))((as|,)\s*[^\s]+\s*)?))(:)')
     
     def replace_exception(match):
         """
@@ -103,7 +103,7 @@ def sanitize_parser(code):
             group_2 = ' Exception'
         else:  #if we have exception BaseException handler
             group_5, group_8 = match.group(6) or match.group(7), match.group(8)
-            group_2 = '' if not group_5 else re.sub('\\bBaseException\\b', 'Exception', group_5 ) + (group_8 if group_8 else '')
+            group_2 = '' if not group_5 else re.sub(r'\bBaseException\b', 'Exception', group_5 ) + (group_8 if group_8 else '')
         
         return match.group(0) if not group_2 else '%s%s%s' % (match.group(1), group_2, match.group(10))
     

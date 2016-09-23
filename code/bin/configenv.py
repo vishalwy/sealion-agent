@@ -103,12 +103,21 @@ except:
     env_vars = {}
 
 try:
-    env_vars_count, env_vars_regex, restart_agent = 0, re.compile(r'^--e[a-zA-Z\_][a-zA-Z0-9\_]*$'), False
+    env_vars_count, env_vars_regex, restart_agent = 0, re.compile(r'^--(e[a-zA-Z\_][a-zA-Z0-9\_]*)=?$'), False
+    long_options = ['file=', 'restart', 'version', 'help']
     
     #add environment variables specified in the format --eENVIRONMENT_VAR
     #we identify them and add as long options
-    long_options = [arg[2:] + '=' for arg in sys.argv[1:] if env_vars_regex.match(arg)]
-    options = getopt.getopt(sys.argv[1:], 'f:h', long_options + ['file=', 'restart', 'version', 'help'])[0]
+    for arg in sys.argv[1:]:
+        match = env_vars_regex.match(arg)
+        
+        if not match:
+            continue
+            
+        long_options.append(match.groups()[0] + '=')  #these variables need a value; hence append =
+    
+    long_options = dict(zip(long_options, [True] * len(long_options))).keys()  #extract out unique options only
+    options = getopt.getopt(sys.argv[1:], 'f:h', long_options)[0]
     
     for option, arg in options:        
         if option[:3] == '--e':  #environment variable
